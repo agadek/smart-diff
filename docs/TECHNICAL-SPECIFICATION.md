@@ -1,8 +1,8 @@
 # Technical Specification: SMART Diff first release
 
-Status: draft, 2026-10-21. Refines the [product specification](SPECIFICATION.md). Terms follow the [glossary](GLOSSARY.md). Decisions are recorded in [ADR 0001](adr/0001-declaration-level-first-release.md), [ADR 0002](adr/0002-parser-neutral-model-with-psi-first.md), [ADR 0003](adr/0003-conservative-classification.md) and [ADR 0004](adr/0004-pluggable-comparison-engines.md).
+Status: draft, 2026-10-21. Refines the [product specification](SPECIFICATION.md). Terms follow the [glossary](GLOSSARY.md). Decisions are recorded in [ADR 0001](adr/0001-declaration-level-first-release.md), [ADR 0002](adr/0002-parser-neutral-model-with-psi-first.md), [ADR 0003](adr/0003-conservative-classification.md), [ADR 0004](adr/0004-pluggable-comparison-engines.md) and [ADR 0005](adr/0005-outline-attaches-to-the-native-diff-viewer.md).
 
-IntelliJ Platform API names below are the expected entry points; items marked **(verify)** must be confirmed in the prototype against IntelliJ Platform 2025.1.
+IntelliJ Platform API names below are the expected entry points. The items that needed checking against IntelliJ Platform 2025.1 were confirmed or rewritten by spikes S1 and S2 (§13); each is marked **(confirmed by S1)** or **(confirmed by S2)**.
 
 ## 1. Scope
 
@@ -114,17 +114,17 @@ interface ComparisonEngineFactory {          // extension point implementation
 ```xml
 <extensionPoints>
   <extensionPoint name="comparisonEngine"
-                  beanClass="com.intellij.openapi.extensions.KeyedLazyInstanceEP"
+                  interface="io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory"
                   dynamic="true"/>
 </extensionPoints>
 
 <extensions defaultExtensionNs="io.github.agadek.smartdiff">
-  <comparisonEngine key="smartdiff.declarations" order="first"
-                    implementationClass="…engine.declarations.psi.DeclarationEngineFactory"/>
+  <comparisonEngine order="first"
+                    implementation="io.github.agadek.smartdiff.engine.declarations.psi.DeclarationEngineFactory"/>
 </extensions>
 ```
 
-The bean class and attribute names are illustrative **(verify the best-fitting bean class)**. The extension point is dynamic, so SMART Diff's own add-on engines can be installed or removed without restarting. The extension point is internal (Q5): it is not documented or supported for other plugins, so the engine interface and result model can change without a compatibility policy.
+The extension point is interface-based: each extension is a `ComparisonEngineFactory`, and the engine id comes from the engine it creates, so it is written in one place. A keyed bean such as `KeyedLazyInstanceEP` would duplicate the id in `plugin.xml` and serves lookup by key, which the registry does not need: selection (§4) walks all engines in extension order. `order` is available on every extension. The extension point is dynamic, so SMART Diff's own add-on engines can be installed or removed without restarting. The extension point is internal (Q5): it is not documented or supported for other plugins, so the engine interface and result model can change without a compatibility policy.
 
 ## 4. Engine selection
 
@@ -224,8 +224,10 @@ enum class WhitespacePolicy {
 
 ### 6.2 Parsing transient text
 
-- PSI: inside a cancellable read action, `PsiFileFactory.getInstance(project).createFileFromText(name, language, text, false, false)`; `project` is the one passed to the factory, or the default project when there is none **(verify that the default project parses Java and Kotlin correctly)**.
-- Offsets from the PSI equal offsets into the request text.
+- PSI: inside a cancellable read action, `PsiFileFactory.getInstance(project).createFileFromText(name, language, text, false, false)`; `project` is the one passed to the factory, or the default project when there is none **(confirmed by S2)**.
+- Java files are parsed at the highest language level the platform knows, set with `PsiUtil.FILE_LANGUAGE_LEVEL_KEY` before the tree is built. Without it the level comes from the default project's settings, which the user can change. S2 saw `JDK_24` on 2025.1 either way, with records, sealed types, record patterns and text blocks parsed without errors.
+- Offsets from the PSI equal offsets into the request text **(confirmed by S2)**: for every declaration, the PSI element's text equals the request text sliced by its range. A declaration's range includes its doc comment and annotations in both languages.
+- The request texts are document snapshots, which are always LF-separated: a VCS revision with CRLF line ends arrives as an LF document, and the content only records the original separator. Ranges therefore match the diff editors.
 - Providers must not resolve references or types (no classpath; see ADR 0002).
 
 ### 6.3 Tokens
@@ -259,7 +261,7 @@ Fields declared together (`int a, b;`) are separate declarations; the shared typ
 | `KtTypeAlias` | TYPE_ALIAS | `name` | — |
 | `KtAnonymousInitializer` | INITIALIZER | `""` | — |
 
-The primary constructor and its `val`/`var` parameters are part of the class's own tokens. Requires the bundled Kotlin plugin, declared as an optional dependency with its own descriptor. The descriptor declares `supportsKotlinPluginMode` for both K1 and K2, because the provider uses only PSI and no analysis API **(verify K2 mode PSI compatibility)**.
+The primary constructor and its `val`/`var` parameters are part of the class's own tokens. Requires the bundled Kotlin plugin, declared as an optional dependency with its own descriptor. The descriptor declares `supportsKotlinPluginMode` for both K1 and K2, because the provider uses only PSI and no analysis API. In K2 mode, PSI files from text in the default project give the declarations and offsets this table expects **(confirmed by S2)**; tests run the Kotlin plugin in K2 mode. The PSI already names an unnamed companion object `"Companion"`, and it also contains local declarations (properties inside function bodies and lambdas), which the provider skips.
 
 ### 6.6 Signature normalization
 
@@ -312,16 +314,19 @@ The steps are applied in order, and the first that applies decides the content:
 
 ## 9. Integration and threading
 
-### 9.1 Attachment (decided by spike S1)
+### 9.1 Attachment (decided by spike S1, [ADR 0005](adr/0005-outline-attaches-to-the-native-diff-viewer.md))
 
-- **Option A, structure panel:** a `DiffExtension` whose `onViewerCreated(viewer, context, request)` attaches the outline to a `TwosideTextDiffViewer` **(verify that a side or bottom panel can be added to the viewer component for all in-scope requests)**.
-- **Option B, alternate viewer:** a `FrameDiffTool` registered as `com.intellij.diff.DiffTool` that embeds a native side-by-side viewer and the outline.
+A `DiffExtension` whose `onViewerCreated(viewer, context, request)` attaches the outline to a `TwosideTextDiffViewer` **(confirmed by S1)**, for local-change, VCS-history and "Compare with…" diffs in Java and Kotlin:
 
-Both options use the same outline component and engine registry, so the choice only affects `ui`.
+- The viewer's component is a `DiffPanelBase` whose `BorderLayout` centre holds the editors. The extension moves that centre component into a `OnePixelSplitter` with the outline as the second component.
+- If the viewer is not a `TwosideTextDiffViewer`, or its component does not have that shape, the extension does nothing and the native diff shows as usual.
+- The outline toggle (§10) is an action in the `Diff.ViewerToolbar` group (`IdeActions.DIFF_VIEWER_TOOLBAR`), which every native viewer adds to its toolbar; it finds its viewer through `DiffDataKeys.DIFF_VIEWER`.
+
+An alternate viewer registered as a `DiffTool` (Option B) was rejected: other `DiffExtension`s would see the wrapper instead of the native viewer, and choosing it reorders the global diff tool list instead of affecting one diff.
 
 ### 9.2 Lifecycle
 
-1. Viewer created → if the request is in scope and engine selection (§4) yields an engine, show the outline in a loading state, unless the outline is switched off for this diff (§10) or by the setting (§11); otherwise show nothing (Option A) or the unsupported state (Option B).
+1. Viewer created → if the request is in scope and engine selection (§4) yields an engine, show the outline in a loading state, unless the outline is switched off for this diff (§10) or by the setting (§11); otherwise show nothing.
 2. Snapshot both documents (`getImmutableCharSequence()`) with their modification stamps, and call `engine.compare` on a pooled background thread under a progress indicator bound to the viewer's disposable. The host does not take a read action (§3.1 rule 1).
 3. On completion, on the UI thread: discard the result if either document's modification stamp changed or the selected engine changed since the request; otherwise render.
 4. Document changes (the new side is often editable) and engine changes from the dropdown cancel the running comparison and start a new one, after a 300 ms debounce for document changes.
@@ -340,7 +345,7 @@ Limits are configurable in settings and passed to engines in `ComparisonRequest.
 
 ## 10. Structural outline
 
-- **Outline toggle:** a toolbar button on every in-scope diff switches between the outline and the plain native diff. With Option A it shows or hides the panel; with Option B it switches between the SMART Diff viewer and the native viewer. Its initial state comes from the setting in §11, and it affects only the current diff window. While the outline is off, no comparison runs.
+- **Outline toggle:** a toolbar button on every in-scope diff switches between the outline and the plain native diff by showing or hiding the outline panel; the editors stay as they are. Its initial state comes from the setting in §11, and it affects only the current diff window. While the outline is off, no comparison runs.
 - Outline toolbar: the **engine dropdown** (§4), shown only with two or more candidate engines, listing `displayName`s with the selected one checked; and a refresh action.
 - Root: a file summary line, e.g. `3 changed · 1 added · 2 removed · 1 moved · 2 formatting-only`.
 - Nodes follow the result's `ChangeNode` tree. Only reported nodes and their containers are shown. A container shown only because of its children has no change label.
@@ -357,7 +362,7 @@ Application-level, under *Settings → Tools → SMART Diff*:
 
 | Setting | Default |
 | --- | --- |
-| Show structural outline automatically | On (decided 2026-10-21). When off, the outline toggle (§10) starts off: Option A panel collapsed; Option B native viewer stays default |
+| Show structural outline automatically | On (decided 2026-10-21). When off, the outline toggle (§10) starts off and the panel is hidden |
 | Default comparison engine, per language | One row per language that has at least one engine, each with a choice of the engines that support it; unset means the first registered engine (`smartdiff.declarations` in the first release); also set from the dropdown |
 | Formatting-only changes | Collapsed group / inline |
 | Size, declaration and time limits | §9.3 |
@@ -381,11 +386,13 @@ Application-level, under *Settings → Tools → SMART Diff*:
 
 This table is the single list of spikes; the product specification and roadmap refer to it.
 
-| Spike | Question | Done when |
-| --- | --- | --- |
-| S1 | Option A or B (§9.1)? | Both attach to local-change and VCS-history diffs in Java and Kotlin, or one is shown not to |
-| S2 | Do PSI files from text (default project, K2 Kotlin) give correct declarations and offsets? | Provider tests pass for both languages on VCS-revision content |
-| S3 | Are the limits in §9.3 realistic? | Analysis time measured on the 20 largest Java/Kotlin files in the IntelliJ Community repository |
+Spikes run as platform tests in `src/test/kotlin/io/github/agadek/smartdiff/spike`, so CI repeats them on every build; they print their findings as `SPIKE` lines in the build log. They stay until the provider and integration tests of §12 cover the same ground.
+
+| Spike | Question | Done when | Result |
+| --- | --- | --- | --- |
+| S1 | Option A or B (§9.1)? | Both attach to local-change and VCS-history diffs in Java and Kotlin, or one is shown not to | Done 2026-10-21: Option A, [ADR 0005](adr/0005-outline-attaches-to-the-native-diff-viewer.md); `S1DiffIntegrationSpikeTest` |
+| S2 | Do PSI files from text (default project, K2 Kotlin) give correct declarations and offsets? | Provider tests pass for both languages on VCS-revision content | Done 2026-10-21: yes, with the Java language level forced (§6.2); `S2TransientPsiSpikeTest` |
+| S3 | Are the limits in §9.3 realistic? | Analysis time measured on the 20 largest Java/Kotlin files in the IntelliJ Community repository | Milestone 5 |
 
 ## 14. Open questions
 

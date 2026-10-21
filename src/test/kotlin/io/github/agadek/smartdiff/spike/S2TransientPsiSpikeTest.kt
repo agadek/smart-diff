@@ -23,7 +23,6 @@ import org.jetbrains.kotlin.idea.base.plugin.KotlinPluginModeProvider
 import org.jetbrains.kotlin.psi.KtAnonymousInitializer
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtFile
-import org.jetbrains.kotlin.psi.KtObjectDeclaration
 import org.jetbrains.kotlin.psi.KtSecondaryConstructor
 import java.util.concurrent.Callable
 
@@ -91,9 +90,10 @@ class S2TransientPsiSpikeTest : BasePlatformTestCase() {
             parsed.declarations.map { it.label },
             "KtClass Shapes", "KtClassInitializer", "KtSecondaryConstructor", "KtNamedFunction second",
             "KtProperty size2", "KtProperty local", "KtClass Kind", "KtEnumEntry CIRCLE", "KtEnumEntry SQUARE",
-            "KtObjectDeclaration companion", "KtProperty K", "KtObjectDeclaration Named", "KtClass Shape",
+            "KtObjectDeclaration Companion", "KtProperty K", "KtObjectDeclaration Named", "KtClass Shape",
             "KtClass Marker", "KtClass Point", "KtTypeAlias Name", "KtNamedFunction top", "KtProperty topLevel",
         )
+        // An unnamed companion object reports the name "Companion", as §6.5 expects.
         assertEquals("the class range starts at its KDoc", text.indexOf("/** Shapes."), declaration(parsed, "KtClass Shapes").start)
         spike("S2 Kotlin (${KotlinPluginModeProvider.currentPluginMode}): ${parsed.declarations.size} declarations, ${parsed.errors.size} errors; ${parsed.note}")
     }
@@ -146,7 +146,6 @@ class S2TransientPsiSpikeTest : BasePlatformTestCase() {
     private fun label(element: PsiElement): String {
         val kind = element.javaClass.simpleName.removeSuffix("Impl")
         val name = when (element) {
-            is KtObjectDeclaration -> if (element.isCompanion() && element.name == null) "companion" else element.name
             is KtAnonymousInitializer, is KtSecondaryConstructor -> null
             is PsiNamedElement -> element.name
             else -> null
