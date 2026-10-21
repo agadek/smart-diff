@@ -21,6 +21,7 @@ import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtObjectDeclaration
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtScript
+import org.jetbrains.kotlin.psi.KtScriptInitializer
 import org.jetbrains.kotlin.psi.KtSecondaryConstructor
 import org.jetbrains.kotlin.psi.KtTypeAlias
 import org.jetbrains.kotlin.psi.KtTypeReference
@@ -59,6 +60,8 @@ class KotlinDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_B
             DeclarationInfo(DeclarationKind.PROPERTY, it, element.receiverTypeReference?.let(::type))
         }
         is KtTypeAlias -> element.name?.let { DeclarationInfo(DeclarationKind.TYPE_ALIAS, it, signature = null) }
+        // A script's statements are wrapped in initializers; they are part of the file region.
+        is KtScriptInitializer -> null
         is KtAnonymousInitializer -> DeclarationInfo(DeclarationKind.INITIALIZER, "", signature = null)
         else -> null
     }

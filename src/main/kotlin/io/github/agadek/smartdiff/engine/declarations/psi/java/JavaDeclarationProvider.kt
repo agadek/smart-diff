@@ -1,8 +1,6 @@
 package io.github.agadek.smartdiff.engine.declarations.psi.java
 
 import com.intellij.lang.java.JavaLanguage
-import com.intellij.lang.java.lexer.JavaLexer
-import com.intellij.lexer.Lexer
 import com.intellij.openapi.project.Project
 import com.intellij.pom.java.LanguageLevel
 import com.intellij.psi.PsiAnnotation
@@ -43,8 +41,6 @@ class JavaDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.INSIGNIF
         file.putUserData(PsiUtil.FILE_LANGUAGE_LEVEL_KEY, LanguageLevel.HIGHEST)
         return file
     }
-
-    override fun createLexer(file: PsiFile): Lexer = JavaLexer((file as PsiJavaFile).languageLevel)
 
     // A class without a name identifier is implicitly declared (a file of top-level methods and fields, JEP 512), or its
     // name was not parsed; either way its members are top-level declarations.

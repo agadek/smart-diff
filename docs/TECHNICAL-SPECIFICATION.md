@@ -244,7 +244,7 @@ enum class WhitespacePolicy {
 
 ### 6.3 Tokens
 
-Tokens come from the language's lexer: `LanguageParserDefinitions.INSTANCE.forLanguage(language).createLexer(project)`, except for Java, which lexes at the file's forced language level (`JavaParserDefinition.createLexer(level)`) so that tokens agree with the parse. Token types are classified with the same `ParserDefinition`: `getWhitespaceTokens()` → `WHITESPACE`, `getCommentTokens()` → `COMMENT`, everything else → `OTHER`. One lexer pass over the whole file is sliced by range; a token that crosses a range boundary belongs to the range containing its start.
+Tokens come from the language's lexer: `LanguageParserDefinitions.INSTANCE.forLanguage(language).createLexer(project)`. For Java this lexes at the default project's language level rather than the forced one (the Java lexer classes that take a level are deprecated from 2026.2); tokens are only compared with each other, so a lexing difference cannot hide a change. Token types are classified with the same `ParserDefinition`: `getWhitespaceTokens()` → `WHITESPACE`, `getCommentTokens()` → `COMMENT`, everything else → `OTHER`. One lexer pass over the whole file is sliced by range; a token that crosses a range boundary belongs to the range containing its start.
 
 ### 6.4 Java provider
 
@@ -277,7 +277,7 @@ The primary constructor and its `val`/`var` parameters are part of the class's o
 
 ### 6.6 Signature normalization
 
-The signature is the list of parameter type texts as written, joined with `,`, after removing all whitespace and comments, e.g. `foo(final  Map<String, List<Integer>> m, int... xs)` → `Map<String,List<Integer>>,int...`. Annotations, modifiers and parameter names are excluded; Java C-style array brackets after the name stay (`int values[]` → `int[]`), and so do Kotlin modifiers that are part of a type (`suspend () -> Unit` → `suspend()->Unit`). A Kotlin function with a receiver puts the receiver type and a `.` first: `fun List<T>.second(x: Int, vararg ys: String)` → `List<T>.Int,String`; a property's signature is its receiver type alone. Type names are not resolved, so `List` and `java.util.List` differ; that is reported as a signature change (rule M3), not hidden.
+The signature is the list of parameter type texts as written, joined with `,`, after removing all whitespace and comments, e.g. `foo(final  Map<String, List<Integer>> m, int... xs)` → `Map<String,List<Integer>>,int...`. Annotations, modifiers and parameter names are excluded; Java C-style array brackets after the name stay (`int values[]` → `int[]`), and so do Kotlin modifiers that are part of a type (`suspend () -> Unit` → `suspend()->Unit`). A Kotlin function with a receiver puts the receiver type and a `.` first: `fun List<T>.second(x: Int, vararg ys: String)` → `List<T>.Int,String`, and `fun Cart.isFull()` → `Cart.`; a property's signature is its receiver type alone. A script's statements are part of the file region. Type names are not resolved, so `List` and `java.util.List` differ; that is reported as a signature change (rule M3), not hidden.
 
 ### 6.7 Parse errors
 
@@ -359,6 +359,8 @@ An alternate viewer registered as a `DiffTool` (Option B) was rejected: other `D
 
 Limits are configurable in settings and passed to engines in `ComparisonRequest.limits`.
 
+Spike S3 measured them on the 20 largest Java and Kotlin files in IntelliJ Community outside test data (16 Java, 4 Kotlin; 238 KB to 1.6 MB), on an Apple M1 Pro, each compared with itself, with an empty line inserted after every 10th line and with a comment line inserted after every 10th line. The median of five runs was at most 333 ms for any file, including the 1.6 MB one (32 000 lines, about 280 ms with changes everywhere), 142 ms for the largest Kotlin file (1 MB), and under 100 ms for files under 350 KB. The 5 s timeout leaves more than ten times that headroom for slower machines, and the 1 MB size limit, not time, is what stops the largest generated files. The limits stay as they are. Rerun with `-Psmartdiff.s3.corpus=<file listing paths>`.
+
 ## 10. Structural outline
 
 - **Outline toggle:** a toolbar button on every in-scope diff switches between the outline and the plain native diff by showing or hiding the outline panel; the editors stay as they are. Its initial state comes from the setting in §11, and it affects only the current diff window. While the outline is off, no comparison runs.
@@ -408,7 +410,7 @@ Spikes run as platform tests in `src/test/kotlin/io/github/agadek/smartdiff/spik
 | --- | --- | --- | --- |
 | S1 | Option A or B (§9.1)? | Both attach to local-change and VCS-history diffs in Java and Kotlin, or one is shown not to | Done 2026-10-21: Option A, [ADR 0005](adr/0005-outline-attaches-to-the-native-diff-viewer.md); `S1DiffIntegrationSpikeTest` |
 | S2 | Do PSI files from text (default project, K2 Kotlin) give correct declarations and offsets? | Provider tests pass for both languages on VCS-revision content | Done 2026-10-21: yes, with the Java language level forced (§6.2); `S2TransientPsiSpikeTest` |
-| S3 | Are the limits in §9.3 realistic? | Analysis time measured on the 20 largest Java/Kotlin files in the IntelliJ Community repository | Milestone 5 |
+| S3 | Are the limits in §9.3 realistic? | Analysis time measured on the 20 largest Java/Kotlin files in the IntelliJ Community repository | Done 2026-10-21: yes, kept as they are (§9.3); `S3LimitsSpikeTest` |
 | S4 | After the first release, for [Scala](ROADMAP.md#scala): can the provider choose the Scala 2 or Scala 3 dialect for text-built PSI (from the file's module, `scalaVersion`, or syntax), and does the Scala plugin's PSI give correct declarations and offsets for both? | Provider tests pass for both dialects on VCS-revision content, with a documented fallback when the dialect is unknown | After the first release |
 
 ## 14. Open questions

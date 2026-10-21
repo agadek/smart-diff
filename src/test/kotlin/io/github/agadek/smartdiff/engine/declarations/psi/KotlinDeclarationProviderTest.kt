@@ -30,7 +30,12 @@ class KotlinDeclarationProviderTest : ProviderTestCase() {
 
                 val String.size2: Int get() = length
 
-                private val local = run { val inner = 1; fun helper() = inner; helper() }
+                private val local = run { val inner = 1; inner }
+
+                fun withLocal(): Int {
+                    fun helper() = 1
+                    return helper()
+                }
 
                 val listener = object : Runnable { override fun run() {} }
 
@@ -64,7 +69,8 @@ class KotlinDeclarationProviderTest : ProviderTestCase() {
               function second(List<T>.Int,String)  "fun <T> List<T>.second(x: Int, vararg ys: String): T = this[1]"
               function run(suspend()->Unit,(Int)->Unit)  "suspend fun run(block: suspend () -> Unit, handler: @Suppress("x") (Int) -> Unit) = block()"
               property size2(String)  "val String.size2: Int get() = length"
-              property local  "private val local = run { val inner = 1; fun helper() = inner; helper() }"
+              property local  "private val local = run { val inner = 1; inner }"
+              function withLocal()  "fun withLocal(): Int {"
               property listener  "val listener = object : Runnable { override fun run() {} }"
               enum Kind  "enum class Kind { CIRCLE, SQUARE { override fun toString() = "square" } }"
                 enum constant CIRCLE  "CIRCLE,"

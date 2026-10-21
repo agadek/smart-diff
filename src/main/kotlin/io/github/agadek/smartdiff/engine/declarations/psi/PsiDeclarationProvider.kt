@@ -41,8 +41,8 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
      */
     protected abstract fun describe(element: PsiElement): DeclarationInfo?
 
-    /** The lexer for the tokens; by default the one of the file language's parser definition. */
-    protected open fun createLexer(file: PsiFile): Lexer = parserDefinition(file).createLexer(file.project)
+    /** The lexer for the tokens: the one of the file language's parser definition. */
+    private fun createLexer(file: PsiFile): Lexer = parserDefinition(file).createLexer(file.project)
 
     override fun build(file: PsiFile, cancellation: Cancellation): DeclarationTree {
         val text = file.viewProvider.contents

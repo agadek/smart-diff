@@ -13,7 +13,6 @@ import io.github.agadek.smartdiff.engine.api.contract.request
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
 import java.util.concurrent.CancellationException
 import java.util.concurrent.Callable
-import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 
 /** The declaration engine over the engine contract suite (technical specification §12) and its own rules. */
@@ -71,13 +70,11 @@ class DeclarationEngineTest : BasePlatformTestCase() {
     fun `test cancellation on a background thread reaches the caller unchanged`() {
         val engine = DeclarationEngine(null)
         val canceled = CancellationException("canceled by the test")
-        val thrown = try {
-            val result = onPooledThread { engine.compare(ContractCorpus.large(ContractCorpus.KOTLIN).request(), Cancellation { throw canceled }) }
-            throw AssertionError("expected cancellation, got ${result.status}")
-        } catch (e: ExecutionException) {
-            e.cause
-        }
-        assertSame(canceled, thrown)
+        // Caught on the pooled thread, so the platform does not log it as an uncaught exception.
+        val outcome = ApplicationManager.getApplication().executeOnPooledThread(Callable {
+            runCatching { engine.compare(ContractCorpus.large(ContractCorpus.KOTLIN).request(), Cancellation { throw canceled }) }
+        }).get(30, TimeUnit.SECONDS)
+        assertSame(canceled, outcome.exceptionOrNull())
     }
 
     /** Runs [compare] on a pooled thread, where the engine takes read actions that give way to write actions. */

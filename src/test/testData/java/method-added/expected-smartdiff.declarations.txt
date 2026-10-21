@@ -1,0 +1,3 @@
+status: ANALYZED
+class Cart  old 6-31  new 6-35
+  method clear()  added  new 26-28
