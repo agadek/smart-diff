@@ -1,6 +1,7 @@
 package io.github.agadek.smartdiff.ui
 
 import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
+import com.intellij.diff.util.DiffUtil
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.editor.colors.EditorColors
@@ -19,12 +20,21 @@ internal class OutlineNavigator(private val viewer: TwosideTextDiffViewer) {
 
     private val highlighters = mutableListOf<RangeHighlighter>()
 
-    /** Highlights [item] on both sides and scrolls to it; the new side scrolls last, so it wins when scrolling is synchronized. */
+    /**
+     * Highlights [item] on both sides and scrolls each side to it. Synchronized scrolling is paused meanwhile, so a moved
+     * declaration shows on both sides; the user's next scroll synchronizes the editors again.
+     */
     fun select(item: OutlineItem?) {
         clear()
         if (item == null || item.isGroup) return
-        show(viewer.editor1, item.oldRange, item.details.mapNotNull { it.old })
-        show(viewer.editor2, item.newRange, item.details.mapNotNull { it.new })
+        val sync = viewer.syncScrollSupport
+        sync?.enterDisableScrollSection()
+        try {
+            show(viewer.editor1, item.oldRange, item.details.mapNotNull { it.old })
+            show(viewer.editor2, item.newRange, item.details.mapNotNull { it.new })
+        } finally {
+            sync?.exitDisableScrollSection()
+        }
     }
 
     /** Moves the caret into the new side's editor, or the old side's when the item is only there (Enter or double-click). */
@@ -50,7 +60,8 @@ internal class OutlineNavigator(private val viewer: TwosideTextDiffViewer) {
     private fun show(editor: Editor, range: TextRange?, details: List<TextRange>) {
         if (range != null) {
             highlight(editor, range, SELECTED, HighlighterTargetArea.LINES_IN_RANGE)
-            editor.scrollingModel.scrollTo(editor.offsetToLogicalPosition(clamp(editor, range.start)), ScrollType.CENTER)
+            // Without animation, so the scroll is done before synchronized scrolling resumes.
+            DiffUtil.scrollEditor(editor, editor.document.getLineNumber(clamp(editor, range.start)), false)
         }
         details.forEach { highlight(editor, it, DETAIL, HighlighterTargetArea.EXACT_RANGE) }
     }

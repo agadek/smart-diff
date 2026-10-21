@@ -14,6 +14,7 @@ import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.registry.EngineDefaults
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
+import javax.swing.JList
 
 /** Settings | Tools | SMART Diff (technical specification §11). */
 class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
@@ -68,10 +69,12 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
         }
     }
 
-    private fun engineRenderer(candidates: List<ComparisonEngine>) = SimpleListCellRenderer.create<String?> { label, id, _ ->
-        label.text = when (id) {
-            null -> "First registered" + (candidates.firstOrNull()?.let { " (${it.displayName})" } ?: "")
-            else -> candidates.firstOrNull { it.id.value == id }?.displayName ?: "$id (not installed)"
+    private fun engineRenderer(candidates: List<ComparisonEngine>) = object : SimpleListCellRenderer<String?>() {
+        override fun customize(list: JList<out String?>, id: String?, index: Int, selected: Boolean, hasFocus: Boolean) {
+            text = when (id) {
+                null -> "First registered" + (candidates.firstOrNull()?.let { " (${it.displayName})" } ?: "")
+                else -> candidates.firstOrNull { it.id.value == id }?.displayName ?: "$id (not installed)"
+            }
         }
     }
 

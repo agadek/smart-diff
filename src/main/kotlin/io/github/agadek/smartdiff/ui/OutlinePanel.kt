@@ -26,6 +26,7 @@ import java.awt.FlowLayout
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
+import javax.swing.JList
 import javax.swing.JPanel
 import javax.swing.JTree
 import javax.swing.SwingConstants
@@ -62,7 +63,11 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         val toolbar = ActionManager.getInstance().createActionToolbar("SmartDiffOutline", DefaultActionGroup(refresh), true)
         toolbar.targetComponent = this
 
-        engines.renderer = SimpleListCellRenderer.create<ComparisonEngine>("") { it.displayName }
+        engines.renderer = object : SimpleListCellRenderer<ComparisonEngine>() {
+            override fun customize(list: JList<out ComparisonEngine>, value: ComparisonEngine?, index: Int, selected: Boolean, hasFocus: Boolean) {
+                text = value?.displayName ?: ""
+            }
+        }
         engines.accessibleContext.accessibleName = "Comparison engine"
         engines.isVisible = false
         engines.addActionListener {

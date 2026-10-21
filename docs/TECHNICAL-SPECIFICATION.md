@@ -363,7 +363,7 @@ Spike S3 measured them on the 20 largest Java and Kotlin files in IntelliJ Commu
 
 ## 10. Structural outline
 
-- **Outline toggle:** a toolbar button on every in-scope diff switches between the outline and the plain native diff by showing or hiding the outline panel; the editors stay as they are. Its initial state comes from the setting in §11, and it affects only the current diff window. While the outline is off, no comparison runs.
+- **Outline toggle:** a toolbar button on every in-scope diff switches between the outline and the plain native diff by showing or hiding the outline panel; the editors stay as they are. Its initial state comes from the setting in §11, and it affects only the current diff window: the window keeps the choice (in its `DiffContext`) for the next files it shows, and other windows are unaffected. While the outline is off, no comparison runs.
 - Outline toolbar: the **engine dropdown** (§4), shown only with two or more candidate engines, listing `displayName`s with the selected one checked; and a refresh action.
 - Root: a file summary line, e.g. `3 changed · 1 added · 2 removed · 1 moved · 2 formatting-only`.
 - Nodes follow the result's `ChangeNode` tree. Only reported nodes and their containers are shown. A container shown only because of its children has no change label.
@@ -371,7 +371,7 @@ Spike S3 measured them on the 20 largest Java and Kotlin files in IntelliJ Commu
 - Groups: formatting-only changes are collapsed into a "Formatting-only" group per container (setting: show inline instead). Uncertain nodes are listed under an "Uncertain" group at the top level, each with its candidates as children.
 - The file region appears as a node "File region" when reported. Unanalyzed ranges appear under an "Unanalyzed" group.
 - Status messages replace the tree for `UNSUPPORTED`, `TOO_LARGE` and `FAILED`, with the reason. For `PARTIAL`, a banner says some source was not analyzed.
-- Selecting a node scrolls the old side editor to `oldRange` and the new side editor to `newRange` and highlights both ranges, plus `details` if present; an absent side shows "not present" in the panel. Enter/double-click moves the caret into the new side editor (old side if removed).
+- Selecting a node scrolls the old side editor to `oldRange` and the new side editor to `newRange` and highlights both ranges, plus `details` if present; an absent side shows "not present" in the panel. Synchronized scrolling is paused while both editors scroll, so a moved declaration is visible on both sides; the user's next scroll synchronizes them again. Enter/double-click moves the caret into the new side editor (old side if removed).
 - Colors use the IDE's diff color keys (inserted, deleted, modified); labels are text, not color only. Every node has an accessible name equal to its label.
 
 ## 11. Settings
@@ -393,7 +393,7 @@ Application-level, under *Settings → Tools → SMART Diff*:
 - **Declaration engine, `analysis` unit tests (no IDE):** declaration trees built by hand; one test per matching rule, the LCS ordering, each whitespace policy, and every status.
 - **Declaration engine, provider tests:** `BasePlatformTestCase` (Java via the light Java fixture); parse fixture text and compare the produced tree with an expected outline.
 - **Golden fixtures:** `src/test/testData/<language>/<case>/{old,new}.<ext>` plus `expected-<engine id>.txt`, a text rendering of the outline per engine: the status, then one line per reported node and per container of reported nodes, with its labels and the lines it spans on each side. Every fixture is also checked for nothing hidden. `-Psmartdiff.updateGolden=true` rewrites the expected files from the current results, for review before committing. Each language must cover: added/removed/changed method, overloads, signature change, reorder, move between classes, class rename, formatting-only, comment-only change, string literal change, parse error on one side, empty and identical files, and (Kotlin) a line-break-only change.
-- **Integration test:** opening a `SimpleDiffRequest` produces an outline and selecting a node scrolls both editors; the outline toggle hides it and shows the native diff.
+- **Integration test:** `OutlineIntegrationTest` opens `SimpleDiffRequest`s through `DiffManager.createRequestPanel`: the outline appears for Java and Kotlin, selecting a node highlights its range on both sides, the outline toggle hides it and shows the native diff, edits rerun the comparison, and the size limit, time limit and viewer disposal behave as in §9.2. The test-only engine appears in the dropdown there and can be selected. `OutlineModelTest` checks the outline rows and summary (§10) without the IDE.
 
 ### 12.1 Build and CI
 
