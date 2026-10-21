@@ -1,0 +1,344 @@
+package io.github.agadek.smartdiff.ui
+
+import com.intellij.diff.DiffContext
+import com.intellij.diff.DiffExtension
+import com.intellij.diff.DiffManager
+import com.intellij.diff.DiffRequestPanel
+import com.intellij.diff.FrameDiffTool
+import com.intellij.diff.contents.DocumentContent
+import com.intellij.diff.requests.DiffRequest
+import com.intellij.diff.requests.SimpleDiffRequest
+import com.intellij.diff.tools.util.DiffDataKeys
+import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.IdeActions
+import com.intellij.openapi.actionSystem.impl.SimpleDataContext
+import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
+import com.intellij.testFramework.ExtensionTestUtil
+import com.intellij.testFramework.PlatformTestUtil
+import com.intellij.testFramework.TestActionEvent
+import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.util.ui.UIUtil
+import io.github.agadek.smartdiff.engine.api.Cancellation
+import io.github.agadek.smartdiff.engine.api.ComparisonEngine
+import io.github.agadek.smartdiff.engine.api.ComparisonRequest
+import io.github.agadek.smartdiff.engine.api.ComparisonResult
+import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.Limits
+import io.github.agadek.smartdiff.engine.api.Status
+import io.github.agadek.smartdiff.engine.lines.LineEngine
+import io.github.agadek.smartdiff.engine.lines.LineEngineFactory
+import io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory
+import io.github.agadek.smartdiff.engine.registry.EngineDefaults
+import io.github.agadek.smartdiff.spike.SpikeContents
+import javax.swing.tree.DefaultMutableTreeNode
+import javax.swing.tree.TreePath
+
+/**
+ * The outline in IntelliJ's own diff (technical specification §12 integration test and abstraction test): diffs are
+ * opened through `DiffManager.createRequestPanel`, which runs the same request processor as diff windows and editor tabs.
+ */
+class OutlineIntegrationTest : BasePlatformTestCase() {
+
+    private val created = mutableListOf<Pair<DiffRequest, FrameDiffTool.DiffViewer>>()
+    private val settings get() = SmartDiffSettings.getInstance()
+    private var savedSettings: SmartDiffSettings.SettingsState? = null
+
+    override fun setUp() {
+        super.setUp()
+        savedSettings = settings.state
+        // Registered after the plugin's own extension, so the outline is attached when this one runs.
+        val extension = object : DiffExtension() {
+            override fun onViewerCreated(viewer: FrameDiffTool.DiffViewer, context: DiffContext, request: DiffRequest) {
+                created += request to viewer
+            }
+        }
+        ExtensionTestUtil.addExtensions(DiffExtension.EP_NAME, listOf(extension), testRootDisposable)
+    }
+
+    override fun tearDown() {
+        try {
+            savedSettings?.let(settings::loadState)
+            listOf("JAVA", "kotlin").forEach { EngineDefaults.getInstance().set(it, null) }
+        } catch (e: Throwable) {
+            addSuppressedException(e)
+        } finally {
+            super.tearDown()
+        }
+    }
+
+    fun `test a Java diff shows the outline and selecting a node highlights both sides`() {
+        val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+        val outline = shown.awaitResult()
+
+        assertTrue(UIUtil.isAncestor(shown.viewer.component, outline.panel))
+        assertTrue(UIUtil.isAncestor(shown.viewer.component, shown.viewer.editor1.component))
+        assertTrue(UIUtil.isAncestor(shown.viewer.component, shown.viewer.editor2.component))
+        assertEquals("1 changed · 1 added", outline.panel.summary.text)
+        assertEquals(listOf("class Greeter", "  method hello()  changed", "  method bye()  added"), rows(outline))
+
+        select(outline, "method hello()  changed")
+        assertHighlightedAt(shown.viewer.editor1, JAVA_OLD.indexOf("String hello()"))
+        assertHighlightedAt(shown.viewer.editor2, JAVA_NEW.indexOf("String hello()"))
+        assertEquals("", outline.panel.absence.text)
+
+        select(outline, "method bye()  added")
+        assertTrue("an absent side shows no highlight", outline.navigator.shown.none { it.document === shown.viewer.editor1.document })
+        assertHighlightedAt(shown.viewer.editor2, JAVA_NEW.indexOf("void bye()"))
+        assertEquals("Not present on the old side", outline.panel.absence.text)
+
+        outline.navigator.navigate(outline.panel.selectedItem()!!)
+        assertEquals(JAVA_NEW.indexOf("void bye()"), shown.viewer.editor2.caretModel.offset)
+    }
+
+    fun `test a Kotlin diff shows the outline`() {
+        val outline = open(history(KOTLIN_OLD, KOTLIN_NEW, "Greeter.kt")).awaitResult()
+
+        assertEquals(listOf("class Greeter", "  function hello()  changed", "  function bye()  added"), rows(outline))
+    }
+
+    fun `test the toggle hides the outline and shows the native diff`() {
+        val action = ActionManager.getInstance().getAction("SmartDiff.ToggleOutline") as ToggleOutlineAction
+        val toolbar = ActionManager.getInstance().getAction(IdeActions.DIFF_VIEWER_TOOLBAR) as DefaultActionGroup
+        assertContainsElements(toolbar.childActionsOrStubs.toList(), action)
+
+        val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+        val outline = shown.awaitResult()
+        val event = TestActionEvent.createTestEvent(action, SimpleDataContext.getSimpleContext(DiffDataKeys.DIFF_VIEWER, shown.viewer))
+        action.update(event)
+        assertTrue(event.presentation.isEnabledAndVisible)
+        assertTrue(action.isSelected(event))
+
+        action.setSelected(event, false)
+
+        assertFalse(UIUtil.isAncestor(shown.viewer.component, outline.panel))
+        assertTrue(UIUtil.isAncestor(shown.viewer.component, shown.viewer.editor1.component))
+        assertTrue(UIUtil.isAncestor(shown.viewer.component, shown.viewer.editor2.component))
+        assertEquals(OutlineState.Hidden, outline.state)
+        assertFalse(action.isSelected(event))
+
+        // The choice applies to this diff window: the next file in it starts without the outline, another window with it.
+        val next = shown.show(history(KOTLIN_OLD, KOTLIN_NEW, "Greeter.kt"))
+        assertFalse(next.outline.isOutlineVisible)
+        assertEquals(OutlineState.Hidden, next.outline.state)
+        assertTrue(open(history(JAVA_OLD, JAVA_NEW, "Other.java")).outline.isOutlineVisible)
+
+        action.setSelected(TestActionEvent.createTestEvent(action, SimpleDataContext.getSimpleContext(DiffDataKeys.DIFF_VIEWER, next.viewer)), true)
+        assertTrue(UIUtil.isAncestor(next.viewer.component, next.outline.panel))
+        next.awaitResult()
+    }
+
+    fun `test the outline starts hidden when the setting is off`() {
+        settings.showOutline = false
+
+        val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+
+        assertFalse(shown.outline.isOutlineVisible)
+        assertEquals(OutlineState.Hidden, shown.outline.state)
+        assertFalse(UIUtil.isAncestor(shown.viewer.component, shown.outline.panel))
+    }
+
+    fun `test a test-only engine appears in the dropdown and can be selected`() {
+        ExtensionTestUtil.addExtensions(ComparisonEngineFactory.EP_NAME, listOf(LineEngineFactory()), testRootDisposable)
+
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+        val engines = outline.panel.engines
+        assertTrue("the dropdown is shown when two engines apply", engines.isVisible)
+        assertEquals(listOf("Declarations", "Lines (test)"), (0 until engines.itemCount).map { engines.getItemAt(it).displayName })
+        assertEquals("Declarations", (engines.selectedItem as ComparisonEngine).displayName)
+
+        engines.selectedItem = (0 until engines.itemCount).map { engines.getItemAt(it) }.single { it.id == LineEngine.ID }
+
+        val result = awaitResult(outline) { it.result.engineId == LineEngine.ID }
+        assertEquals(LineEngine.ID, result.result.engineId)
+        assertEquals(listOf("lines 2 changed to 2-4  changed"), rows(outline))
+        assertEquals("the choice is stored for the language", LineEngine.ID, EngineDefaults.getInstance().get("JAVA"))
+    }
+
+    fun `test the dropdown is hidden with a single engine`() {
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+
+        assertFalse(outline.panel.engines.isVisible)
+    }
+
+    fun `test editing a side compares again`() {
+        val local = myFixture.addFileToProject("local/Greeter.java", JAVA_NEW).virtualFile
+        val shown = open(SimpleDiffRequest("local", SpikeContents.vcsRevision(project, JAVA_OLD, "/repo/Greeter.java"), SpikeContents.localFile(project, local), "HEAD", "Current"))
+        val outline = shown.awaitResult()
+        assertEquals("1 changed · 1 added", outline.panel.summary.text)
+
+        val document = (shown.request.contents[1] as DocumentContent).document
+        WriteCommandAction.runWriteCommandAction(project) {
+            document.insertString(document.text.lastIndexOf("}"), "    void more() {}\n")
+        }
+
+        awaitResult(outline) { it.summary == "1 changed · 2 added" }
+    }
+
+    fun `test a result over the size limit shows a status message`() {
+        settings.limits = Limits.DEFAULT.copy(maxChars = 10)
+
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+
+        assertEquals(Status.TOO_LARGE, (outline.state as OutlineState.Shown).result.status)
+        assertTrue(outline.panel.message.text, outline.panel.message.text.contains("Too large to analyze"))
+        assertEquals(emptyList<String>(), rows(outline))
+    }
+
+    fun `test a comparison over the time limit is canceled and shown as failed`() {
+        val engine = SlowEngine()
+        ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(engine)), testRootDisposable)
+        settings.limits = Limits.DEFAULT.copy(timeoutMillis = 100)
+
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+
+        val result = (outline.state as OutlineState.Shown).result
+        assertEquals(Status.FAILED, result.status)
+        assertEquals("timed out after 100 ms", result.fallbackReason)
+        assertTrue(outline.panel.message.text, outline.panel.message.text.contains("timed out"))
+        assertTrue(engine.canceled)
+    }
+
+    fun `test disposing the viewer cancels the comparison and releases the outline`() {
+        val engine = SlowEngine()
+        ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(engine)), testRootDisposable)
+
+        val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+        assertEquals(OutlineState.Loading, shown.outline.state)
+        PlatformTestUtil.waitWithEventsDispatching("the engine did not start", { engine.started }, 10)
+
+        Disposer.dispose(shown.disposable)
+
+        PlatformTestUtil.waitWithEventsDispatching("the comparison was not canceled", { engine.canceled }, 10)
+        assertEquals(OutlineState.Hidden, shown.outline.state)
+        assertNull(OutlineController.of(shown.viewer))
+    }
+
+    fun `test a language without an engine gets no outline`() {
+        val shown = openAny(history("one\n", "two\n", "notes.txt"))
+
+        assertNull(OutlineController.of(shown))
+        val action = ActionManager.getInstance().getAction("SmartDiff.ToggleOutline")
+        val event = TestActionEvent.createTestEvent(action, SimpleDataContext.getSimpleContext(DiffDataKeys.DIFF_VIEWER, shown))
+        action.update(event)
+        assertFalse(event.presentation.isEnabledAndVisible)
+    }
+
+    private inner class Shown(val panel: DiffRequestPanel, val disposable: Disposable, val request: SimpleDiffRequest, val viewer: TwosideTextDiffViewer) {
+        val outline: OutlineController = OutlineController.of(viewer) ?: error("no outline attached to ${request.title}")
+
+        fun awaitResult(): OutlineController = outline.also { awaitResult(it) { true } }
+
+        /** Shows [next] in the same diff panel, as a diff window does when the user moves to the next file. */
+        fun show(next: SimpleDiffRequest): Shown {
+            panel.setRequest(next)
+            return Shown(panel, disposable, next, awaitViewer(next) as TwosideTextDiffViewer)
+        }
+    }
+
+    private fun open(request: SimpleDiffRequest): Shown {
+        val disposable = Disposer.newDisposable(testRootDisposable)
+        val panel = DiffManager.getInstance().createRequestPanel(project, disposable, null)
+        panel.setRequest(request)
+        return Shown(panel, disposable, request, awaitViewer(request) as TwosideTextDiffViewer)
+    }
+
+    private fun openAny(request: SimpleDiffRequest): FrameDiffTool.DiffViewer {
+        val panel = DiffManager.getInstance().createRequestPanel(project, Disposer.newDisposable(testRootDisposable), null)
+        panel.setRequest(request)
+        return awaitViewer(request)
+    }
+
+    private fun awaitViewer(request: DiffRequest): FrameDiffTool.DiffViewer {
+        PlatformTestUtil.waitWithEventsDispatching("no diff viewer was created", { created.any { it.first === request } }, 10)
+        return created.last { it.first === request }.second
+    }
+
+    private fun awaitResult(outline: OutlineController, condition: (OutlineState.Shown) -> Boolean): OutlineState.Shown {
+        PlatformTestUtil.waitWithEventsDispatching(
+            { "no matching outline; state is ${outline.state}" },
+            { (outline.state as? OutlineState.Shown)?.let(condition) == true },
+            10,
+        )
+        return outline.state as OutlineState.Shown
+    }
+
+    private fun history(old: String, new: String, fileName: String) = SimpleDiffRequest(
+        fileName,
+        SpikeContents.vcsRevision(project, old, "/repo/$fileName"),
+        SpikeContents.vcsRevision(project, new, "/repo/$fileName"),
+        "abc123",
+        "def456",
+    )
+
+    /** The outline's rows as shown, indented by depth, with every row expanded. */
+    private fun rows(outline: OutlineController): List<String> {
+        val rows = mutableListOf<String>()
+        fun visit(node: DefaultMutableTreeNode, depth: Int) {
+            for (child in node.children()) {
+                child as DefaultMutableTreeNode
+                rows += "  ".repeat(depth) + (child.userObject as OutlineItem).label
+                visit(child, depth + 1)
+            }
+        }
+        visit(outline.panel.tree.model.root as DefaultMutableTreeNode, 0)
+        return rows
+    }
+
+    private fun select(outline: OutlineController, label: String) {
+        val root = outline.panel.tree.model.root as DefaultMutableTreeNode
+        val node = root.depthFirstEnumeration().toList().map { it as DefaultMutableTreeNode }
+            .single { (it.userObject as? OutlineItem)?.label == label }
+        outline.panel.tree.selectionPath = TreePath(node.path)
+    }
+
+    private fun assertHighlightedAt(editor: Editor, offset: Int) {
+        assertTrue("offset $offset not found in the text", offset >= 0)
+        val starts = editor.markupModel.allHighlighters.map { it.startOffset }
+        assertTrue("no highlighter starts at $offset; highlighters start at $starts", offset in starts)
+    }
+
+    private fun factory(engine: ComparisonEngine) = object : ComparisonEngineFactory {
+        override fun create(project: Project?): ComparisonEngine = engine
+    }
+
+    /** Never finishes; it checks for cancellation until it is canceled. */
+    private class SlowEngine : ComparisonEngine {
+        override val id = EngineId("smartdiff.test.slow")
+        override val displayName = "Slow (test)"
+        override val version = "1"
+
+        @Volatile
+        var started = false
+
+        @Volatile
+        var canceled = false
+
+        override fun supports(languageId: String) = true
+
+        override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult {
+            started = true
+            while (true) {
+                try {
+                    cancellation.checkCanceled()
+                } catch (e: Throwable) {
+                    canceled = true
+                    throw e
+                }
+                Thread.sleep(5)
+            }
+        }
+    }
+
+    private companion object {
+        const val JAVA_OLD = "class Greeter {\n    String hello() { return \"hi\"; }\n}\n"
+        const val JAVA_NEW = "class Greeter {\n    String hello() { return \"hello\"; }\n\n    void bye() {}\n}\n"
+        const val KOTLIN_OLD = "class Greeter {\n    fun hello() = \"hi\"\n}\n"
+        const val KOTLIN_NEW = "class Greeter {\n    fun hello() = \"hello\"\n\n    fun bye() {}\n}\n"
+    }
+}
