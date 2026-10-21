@@ -2,6 +2,8 @@
 
 Status: initial proposal, 2026-10-20; revised 2026-10-21 (declaration-level first release, PSI as first parser provider, native-viewer panel as a candidate integration).
 
+Related: [technical specification](TECHNICAL-SPECIFICATION.md), [roadmap](ROADMAP.md), [decision records](adr/), [glossary](GLOSSARY.md).
+
 ## Summary
 
 A structure-aware addition to the IntelliJ diff that presents source changes in terms of declarations, so developers can see which classes, functions, and members changed without losing access to the normal line diff. SMART Diff is multi-language by design. The first release should be conservative: parse both sides, match declarations by identity, classify the result, and show details with the native diff, labeling uncertain matches rather than claiming program equivalence. Fine-grained syntax-node differencing is a later stage.
@@ -45,11 +47,23 @@ Developers reviewing local, VCS, or arbitrary two-file changes in an IntelliJ-ba
 - Selecting an item focuses the matching old/new source region. Where there is no reliable counterpart, show it as added or removed.
 - Use IDE diff colors and theme-aware presentation; retain keyboard navigation and accessibility labels.
 
-### Change analysis
+### Comparison engines
+
+Comparing the two sides is done by a **comparison engine**: a replaceable component behind one abstract interface ([ADR 0004](adr/0004-pluggable-comparison-engines.md)). This is a hard requirement:
+
+- The viewer, outline, navigation, and settings depend only on the engine interface and its engine-neutral result, never on a concrete engine.
+- An engine receives the old and new text plus a language id and returns the structural result. Each engine does its own parsing, so engines with different parsers (IntelliJ PSI, Tree-sitter, Difftastic, GumTree) fit the same interface.
+- Engines are registered through an extension point and identified by a stable id. Adding an engine or changing the default requires no change outside the engine.
+- When more than one engine supports the current language, the outline shows an engine dropdown; the choice is remembered as the default for that language. With a single engine, as in the first release, the dropdown is hidden.
+- Every engine must pass a shared contract test suite, including "nothing hidden" and determinism.
+
+The first release ships one engine, the declaration engine described below.
+
+### Change analysis (declaration engine)
 
 The first-release analysis is declaration-level:
 
-1. Parse each side and extract declarations: kind, name, signature where available, parent, and source range.
+1. Parse each side and extract declarations: kind, name, signature where available, container, and source range.
 2. Match declarations by kind, qualified name, and signature. Overloads and duplicate names are matched only when unambiguous; otherwise the pair is uncertain.
 3. For each matched pair, compare token sequences to decide changed versus formatting-only; show the detailed edit with the native diff.
 4. Source outside any declaration (imports, top-level statements, file headers) is grouped as a file-level region and compared the same way.
@@ -57,7 +71,7 @@ The first-release analysis is declaration-level:
 ### Change classification
 
 - Initial classes: added, removed, changed, moved, formatting-only, and uncertain.
-- “Moved” means a declaration matched by identity whose position or parent changed. It is not presented as a refactoring.
+- “Moved” means a declaration matched by identity whose container or order among its siblings changed. It is not presented as a refactoring.
 - Renames are not detected in the first release. A rename appears as one removed and one added declaration; a later stage may pair them as a “rename candidate” using body similarity, labeled uncertain.
 - Mark unmatched or ambiguous structure as uncertain. Do not silently suppress it.
 - Formatting-only means the two token sequences are equal after ignoring whitespace tokens, except where the language makes whitespace significant (for example indentation in Python or YAML, and inside literals). Comments and string contents count as changes. It does not mean runtime behavior is unchanged.
@@ -65,8 +79,9 @@ The first-release analysis is declaration-level:
 
 ### Language support
 
-- Design the analysis for multiple languages from the start: the shared model is a parser-neutral declaration/region model, not any one language's PSI tree.
-- Keep parser integration behind a provider interface that supplies declarations, tokens, and source ranges.
+- A language is supported when at least one comparison engine supports it.
+- Within the declaration engine, design for multiple languages from the start: its model is a parser-neutral declaration/region model, not any one language's PSI tree.
+- Keep the declaration engine's parser integration behind a provider interface that supplies declarations, tokens, and source ranges.
 - The first provider is IntelliJ PSI: it parses in-memory text, needs no bundled native code or grammars, and covers the languages the host IDE supports. Language coverage therefore varies by IDE (for example, IntelliJ IDEA Community lacks JavaScript/TypeScript and Python support without additional plugins).
 - A Tree-sitter provider is a later option for languages the host IDE cannot parse, subject to native packaging and grammar license review.
 - Choose the prototype languages from what PSI supports in the target IDEs; the exact first-release list is open.
@@ -77,6 +92,7 @@ The first-release analysis is declaration-level:
 ### Settings
 
 - Whether the structural view opens by default (initial default: off, native diff only).
+- Default comparison engine per language (initial default for every language: the declaration engine); also changeable from the outline's engine dropdown when several engines apply.
 - Show or de-emphasize formatting-only changes (initial behavior: show them in a collapsible category; never discard source evidence).
 - No global “ignore comments/whitespace” rule in the first release.
 
@@ -87,23 +103,27 @@ The first-release analysis is declaration-level:
 - As a reviewer, I can use the native text diff whenever structure matching is confusing.
 - As a reviewer, I can distinguish an actual detected change from a formatting-only or uncertain match.
 - As a reviewer, malformed or unsupported input still opens in the normal diff viewer.
+- As a reviewer, when several comparison engines support my language, I can switch between them from the outline and compare their results.
 
 ## Functional requirements
 
 1. Accept the same old/new text contents and metadata supplied to the IDE diff viewer.
-2. Analyze each side independently with the parser provider for its language when available.
-3. Build a deterministic mapping from declarations on the old side to declarations on the new side.
-4. Classify mapped and unmapped declarations and file-level regions; retain source ranges for navigation.
-5. Render a usable result for empty files, identical files, add/delete, syntax errors, and large inputs.
-6. Provide native diff fallback for unsupported input and analysis failures.
-7. Recompute safely when the diff request changes; do not perform parsing or matching on the UI thread for expensive inputs.
-8. Respect cancellation and avoid retaining project/file content after the viewer is disposed.
+2. Perform all comparison through the comparison engine interface; no viewer, outline, or settings code depends on a concrete engine.
+3. Select the engine by stable id: the user's default for that language if set and supported, otherwise the first registered engine that does; show the dropdown when more than one applies.
+4. Analyze each side independently with the parser provider for its language when available (declaration engine).
+5. Build a deterministic mapping from declarations on the old side to declarations on the new side (declaration engine).
+6. Classify mapped and unmapped declarations and file-level regions; retain source ranges for navigation.
+7. Render a usable result for empty files, identical files, add/delete, syntax errors, and large inputs.
+8. Provide native diff fallback for unsupported input, analysis failures, and an unavailable engine.
+9. Recompute safely when the diff request or the selected engine changes; do not perform parsing or matching on the UI thread for expensive inputs.
+10. Respect cancellation and avoid retaining project/file content after the viewer is disposed.
 
 ## Quality requirements
 
 - No source content leaves the IDE process.
 - Analysis is deterministic for fixed inputs and platform/parser versions.
 - Analysis failure never loses or hides source text.
+- Engine replaceability: a new engine is added by implementing the interface, registering it, and passing the contract test suite, with no changes to UI or other engines.
 - Large-file limits must be configurable or produce a clear fallback; avoid blocking the UI.
 - Accessibility: keyboard-accessible change navigation, meaningful labels, theme-aware contrast.
 - Compatibility baseline follows the plugin skeleton: IntelliJ Platform 2025.1+, subject to prototype/API verification.
@@ -130,11 +150,12 @@ The first-release analysis is declaration-level:
 ## Initial implementation sequence
 
 1. Spike both diff integrations (`DiffExtension` panel and `FrameDiffTool` viewer) and choose one.
-2. Define the parser-neutral declaration/region model and the provider interface.
-3. Implement the PSI provider for one or two languages the target IDEs support (Java and Kotlin are natural first candidates in IntelliJ IDEA), with fixtures.
-4. Implement declaration matching and classification; render the declaration tree with source navigation; keep the native diff as the detail view.
-5. Add token-level formatting-only detection with explicit examples and regression fixtures, one language rule at a time.
-6. Validate on a representative corpus of real changes; then decide on further languages, a Tree-sitter provider, and fine-grained differencing.
+2. Define the comparison engine interface, the engine-neutral result, the engine registry, and the contract test suite; build the outline against them using a stub engine.
+3. Define the declaration engine's parser-neutral declaration/region model and the provider interface.
+4. Implement the PSI provider for one or two languages the target IDEs support (Java and Kotlin are natural first candidates in IntelliJ IDEA), with fixtures.
+5. Implement declaration matching and classification; render the declaration tree with source navigation; keep the native diff as the detail view.
+6. Add token-level formatting-only detection with explicit examples and regression fixtures, one language rule at a time.
+7. Validate on a representative corpus of real changes; then decide on further languages, a Tree-sitter provider, and fine-grained differencing.
 
 ## Acceptance checks for the prototype
 
@@ -143,3 +164,4 @@ The first-release analysis is declaration-level:
 - Handles added and removed methods, identical files, empty files, parse errors, and unsupported files.
 - Native text diff remains available.
 - Ambiguous mappings remain visible and are not called equivalent.
+- A second (test-only) engine registered through the extension point appears in the engine dropdown and can be selected, with no change to UI code.
