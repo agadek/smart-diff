@@ -1,5 +1,8 @@
 # SMART Diff
 
+[![Sponsor on GitHub](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/agadek)
+[![Support on Ko-fi](https://img.shields.io/badge/Support-Ko--fi-ff5e5b?logo=kofi&logoColor=white)](https://ko-fi.com/gadek)
+
 A structure-aware diff viewer for IntelliJ-based IDEs.
 
 Source code: [github.com/agadek/smart-diff](https://github.com/agadek/smart-diff)
@@ -17,3 +20,9 @@ Source code: [github.com/agadek/smart-diff](https://github.com/agadek/smart-diff
 ```
 
 The distributable plugin is written to `build/distributions/`.
+
+## Support
+
+SMART Diff is maintained in spare time. It is developed with the help of Claude Code, and sponsorships help cover the
+AI token budget that goes into new features and fixes. If the plugin saves you time in reviews, you can chip in through
+[GitHub Sponsors](https://github.com/sponsors/agadek) or [Ko-fi](https://ko-fi.com/gadek).
