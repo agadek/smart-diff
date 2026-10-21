@@ -1,6 +1,5 @@
 package io.github.agadek.smartdiff.engine.registry
 
-import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.thisLogger
@@ -15,17 +14,18 @@ import io.github.agadek.smartdiff.engine.api.EngineId
  * belongs to no project, use the default project's registry.
  */
 @Service(Service.Level.PROJECT)
-class EngineRegistry(private val project: Project) : Disposable {
+class EngineRegistry(private val project: Project) {
 
+    /** The engines, with the extension list they were created from; the platform replaces that list when it changes. */
     @Volatile
-    private var cached: List<ComparisonEngine>? = null
-
-    init {
-        ComparisonEngineFactory.EP_NAME.addChangeListener({ cached = null }, this)
-    }
+    private var cached: Pair<List<ComparisonEngineFactory>, List<ComparisonEngine>>? = null
 
     /** All registered engines in extension order. A later engine with an id already taken is skipped. */
-    fun engines(): List<ComparisonEngine> = cached ?: createEngines().also { cached = it }
+    fun engines(): List<ComparisonEngine> {
+        val factories = ComparisonEngineFactory.EP_NAME.extensionList
+        cached?.let { (from, engines) -> if (from === factories) return engines }
+        return createEngines(factories).also { cached = factories to it }
+    }
 
     fun findEngine(id: EngineId): ComparisonEngine? = engines().firstOrNull { it.id == id }
 
@@ -38,9 +38,9 @@ class EngineRegistry(private val project: Project) : Disposable {
         EngineDefaults.getInstance().set(languageId, engineId)
     }
 
-    private fun createEngines(): List<ComparisonEngine> {
+    private fun createEngines(factories: List<ComparisonEngineFactory>): List<ComparisonEngine> {
         val engines = mutableListOf<ComparisonEngine>()
-        for (factory in ComparisonEngineFactory.EP_NAME.extensionList) {
+        for (factory in factories) {
             val engine = try {
                 factory.create(project.takeUnless { it.isDefault })
             } catch (e: Exception) {
@@ -55,10 +55,6 @@ class EngineRegistry(private val project: Project) : Disposable {
             engines += engine
         }
         return engines
-    }
-
-    override fun dispose() {
-        cached = null
     }
 
     companion object {
