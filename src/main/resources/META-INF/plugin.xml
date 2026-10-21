@@ -34,6 +34,25 @@
         <supportsKotlinPluginMode supportsK1="true" supportsK2="true"/>
     </extensions>
 
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- The outline attaches to the native side-by-side viewer (ADR 0005). -->
+        <diff.DiffExtension implementation="io.github.agadek.smartdiff.ui.OutlineDiffExtension"/>
+        <applicationConfigurable parentId="tools"
+                                 id="io.github.agadek.smartdiff.settings"
+                                 displayName="SMART Diff"
+                                 instance="io.github.agadek.smartdiff.ui.SmartDiffConfigurable"/>
+    </extensions>
+
+    <actions>
+        <action id="SmartDiff.ToggleOutline"
+                class="io.github.agadek.smartdiff.ui.ToggleOutlineAction"
+                text="Structural Outline"
+                description="Show or hide the SMART Diff structural outline in this diff"
+                icon="AllIcons.Toolwindows.ToolWindowStructure">
+            <add-to-group group-id="Diff.ViewerToolbar" anchor="last"/>
+        </action>
+    </actions>
+
     <extensions defaultExtensionNs="io.github.agadek.smartdiff">
         <comparisonEngine order="first"
                           implementation="io.github.agadek.smartdiff.engine.declarations.psi.DeclarationEngineFactory"/>
