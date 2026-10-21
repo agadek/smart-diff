@@ -34,6 +34,23 @@ public class OrderService {
         return sum;
     }
 
+    public String summary(Order order) {
+        StringBuilder text = new StringBuilder(order.customer());
+        for (Item item : order.items()) {
+            text.append("\n  ").append(item.name()).append(" x").append(item.quantity());
+        }
+        text.append("\nTotal: ").append(total(order));
+        return text.toString();
+    }
+
+    public int shippingCost(Order order) {
+        int weight = 0;
+        for (Item item : order.items()) {
+            weight += item.weight() * item.quantity();
+        }
+        return weight > 10 ? 0 : 5 + weight / 2;
+    }
+
     public int applyDiscount(Order order, double percent) {
         return (int) (total(order) * (1 - percent / 100));
     }
