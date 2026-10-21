@@ -393,6 +393,7 @@ Spikes run as platform tests in `src/test/kotlin/io/github/agadek/smartdiff/spik
 | S1 | Option A or B (§9.1)? | Both attach to local-change and VCS-history diffs in Java and Kotlin, or one is shown not to | Done 2026-10-21: Option A, [ADR 0005](adr/0005-outline-attaches-to-the-native-diff-viewer.md); `S1DiffIntegrationSpikeTest` |
 | S2 | Do PSI files from text (default project, K2 Kotlin) give correct declarations and offsets? | Provider tests pass for both languages on VCS-revision content | Done 2026-10-21: yes, with the Java language level forced (§6.2); `S2TransientPsiSpikeTest` |
 | S3 | Are the limits in §9.3 realistic? | Analysis time measured on the 20 largest Java/Kotlin files in the IntelliJ Community repository | Milestone 5 |
+| S4 | After the first release, for [Scala](ROADMAP.md#scala): can the provider choose the Scala 2 or Scala 3 dialect for text-built PSI (from the file's module, `scalaVersion`, or syntax), and does the Scala plugin's PSI give correct declarations and offsets for both? | Provider tests pass for both dialects on VCS-revision content, with a documented fallback when the dialect is unknown | After the first release |
 
 ## 14. Open questions
 
@@ -402,3 +403,4 @@ Spikes run as platform tests in `src/test/kotlin/io/github/agadek/smartdiff/spik
 - **Q4 Plugin ID (resolved 2026-10-21).** The plugin ID, Gradle group and root package are `io.github.agadek.smartdiff`, which also names the extension point namespace (§3.2).
 - **Q5 Third-party engines (resolved 2026-10-21).** The `comparisonEngine` extension point stays internal: only SMART Diff and its own optional descriptors register engines, and the engine interface and result model may change freely. Revisit after a second production engine has used the result model without breaking changes.
 - **Q6 Engine choice scope (resolved 2026-10-21).** The default engine is chosen per language (§4, §11).
+- **Q7 Scala declaration model (open, after the first release).** For the [Scala provider](ROADMAP.md#scala): add `TRAIT`, `GIVEN` and `EXTENSION` to `DeclarationKind`, or map traits to `INTERFACE`; how to name anonymous givens (the compiler-synthesized name or the type as written); whether an extension block is a container or its methods are flattened with the receiver type in their signatures; how pattern definitions such as `val (a, b) = …` produce declarations; and how signatures render several parameter lists and `using`/`implicit` clauses.
