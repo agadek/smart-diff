@@ -20,6 +20,17 @@ The first item after the first release. Show changed declarations for each file 
 - **Level 2:** expandable declarations under each file. Every file is parsed as the tree loads, so performance on large commits needs care.
 - **Spike first:** which Changes tree extension points can add text or child nodes to file entries.
 
+### Scala
+
+Planned for the release after the first one (decided 2026-10-21). A Scala provider for the declaration engine, using the JetBrains Scala plugin's PSI. It needs no change to the engine interface, the matcher or the UI.
+
+- **Packaging:** the provider registers in its own optional descriptor, `META-INF/smartdiff-scala.xml`, which depends on `org.intellij.scala`. The plugin keeps loading without Scala.
+- **Dialects:** Scala 2 and Scala 3. Text-built PSI has no module, so the provider must choose the dialect itself (spike S4). Scala 3 optional braces make indentation significant, so the formatting-only rule needs an indentation-significant mode next to the Kotlin line-break mode.
+- **Declaration kinds:** classes, traits, objects (including companions and package objects), enums and enum cases, `def`, `val`/`var`, type aliases, Scala 3 givens and extension methods, and top-level definitions. This adds `TRAIT`, `GIVEN` and `EXTENSION` to `DeclarationKind` (technical spec Q7).
+- **Naming and signatures:** rules for anonymous givens, extension blocks, pattern definitions such as `val (a, b) = …`, and signatures with several parameter lists or `using`/`implicit` clauses (technical spec Q7).
+- **Build and CI:** the Scala plugin is not bundled, so the build pins a Marketplace version compatible with the lowest supported IDE, and Plugin Verifier needs a compatible Scala plugin for every IDE it checks. The Scala PSI is not a public API, so internal-API usage is expected in verifier reports and must be reviewed each release.
+- **Fixtures:** the standard set from the product spec for both dialects, plus companion objects, givens, extension methods and a braces-versus-indentation change in Scala 3.
+
 ### Structural outline for three-way merges
 
 Show which declarations changed on each side of a merge, to help the user understand conflicts before resolving them. SMART Diff still never resolves or edits anything (merge conflict resolution stays a non-goal).
@@ -32,7 +43,7 @@ Show which declarations changed on each side of a merge, to help the user unders
 
 ### More languages
 
-Add declaration-engine providers for further languages the host IDE parses (for example JavaScript/TypeScript in Ultimate/WebStorm, Python in PyCharm), each with the fixtures the product spec requires.
+Add declaration-engine providers for further languages the host IDE parses, after [Scala](#scala) (for example JavaScript/TypeScript in Ultimate/WebStorm, Python in PyCharm), each with the fixtures the product spec requires.
 
 ### Tree-sitter support
 
