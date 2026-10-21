@@ -57,6 +57,10 @@ A second comparison engine that highlights changed expressions inside declaratio
 
 Pair a removed and an added declaration with similar bodies as an uncertain rename candidate; includes renamed classes. The first release keeps renames literal; revisit after validation shows how noisy that is (technical spec Q2).
 
+### Extraction detection
+
+Link an added method or function to the code it was extracted from. When most of its body repeats one run of code that a changed declaration on the old side no longer has, label it "extracted from <declaration>" and frame that code on the old side when it is selected; the source declaration shows the extracted code in its details. Extracting into a new class is covered through the class's added methods. The first release reports such code as a changed declaration plus an added one, with no link between them (see the `noisy-change` Java fixture).
+
 ### Third-party engines
 
 Consider making the `comparisonEngine` extension point public once a second production engine has used the result model without breaking changes (technical spec Q5).
