@@ -150,7 +150,7 @@ The first-release analysis is declaration-level:
 
 ## Initial implementation sequence
 
-1. Run the prototype spikes listed in [technical specification §13](TECHNICAL-SPECIFICATION.md#13-prototype-spikes), the single source for spikes; S1 chooses between the `DiffExtension` panel and the `FrameDiffTool` viewer.
+1. Run the prototype spikes listed in [technical specification §13](TECHNICAL-SPECIFICATION.md#13-prototype-spikes), the single source for spikes. S1 chose the `DiffExtension` panel over the `FrameDiffTool` viewer ([ADR 0005](adr/0005-outline-attaches-to-the-native-diff-viewer.md)).
 2. Define the comparison engine interface, the engine-neutral result, the engine registry, and the contract test suite; build the outline against them using a stub engine.
 3. Define the declaration engine's parser-neutral declaration/region model and the provider interface.
 4. Implement the PSI provider for one or two languages the target IDEs support (Java and Kotlin are natural first candidates in IntelliJ IDEA), with fixtures.
