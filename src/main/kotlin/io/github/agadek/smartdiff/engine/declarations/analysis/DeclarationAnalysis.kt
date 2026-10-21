@@ -160,6 +160,8 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
                 declaration = match.new,
                 oldRange = match.old.range,
                 newRange = match.new.range,
+                oldDeclaration = match.old,
+                newDeclaration = match.new,
                 presence = Presence.MATCHED,
                 children = children,
                 moved = match.moved,
@@ -196,17 +198,29 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
             signatureChanged: Boolean = false,
             content: Content = Content.UNCHANGED,
             candidates: List<Candidate> = emptyList(),
-        ) = ChangeNode(
-            subject = subject(declaration),
-            oldRange = oldRange,
-            newRange = newRange,
-            presence = presence,
-            moved = moved,
-            signatureChanged = signatureChanged,
-            content = content,
-            candidates = candidates,
-            children = children,
-        )
+            oldDeclaration: Declaration? = declaration.takeIf { oldRange != null },
+            newDeclaration: Declaration? = declaration.takeIf { newRange != null },
+        ): ChangeNode {
+            val node = ChangeNode(
+                subject = subject(declaration),
+                oldRange = oldRange,
+                newRange = newRange,
+                presence = presence,
+                moved = moved,
+                signatureChanged = signatureChanged,
+                content = content,
+                candidates = candidates,
+                children = children,
+            )
+            // A change covers the declaration's leading whitespace too, which is part of its own tokens (§8).
+            val oldLeading = oldDeclaration?.leadingWhitespace
+            val newLeading = newDeclaration?.leadingWhitespace
+            return if (node.isChangedItself && (oldLeading != null || newLeading != null)) {
+                node.copy(details = listOf(RangePair(oldLeading, newLeading)))
+            } else {
+                node
+            }
+        }
 
         private fun subject(declaration: Declaration) = Subject.Declaration(declaration.kind, declaration.name, declaration.signature)
     }

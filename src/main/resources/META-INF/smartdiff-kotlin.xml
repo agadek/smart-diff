@@ -1,6 +1,7 @@
-<!-- Loaded when the Kotlin plugin is present. The Kotlin declaration provider registers here. -->
+<!-- Loaded when the Kotlin plugin is present. The Kotlin declaration provider registers here; the Kotlin plugin mode
+     is declared in plugin.xml. -->
 <idea-plugin>
-    <extensions defaultExtensionNs="org.jetbrains.kotlin">
-        <supportsKotlinPluginMode supportsK1="true" supportsK2="true"/>
+    <extensions defaultExtensionNs="io.github.agadek.smartdiff">
+        <declarationProvider implementation="io.github.agadek.smartdiff.engine.declarations.psi.kotlin.KotlinDeclarationProvider"/>
     </extensions>
 </idea-plugin>

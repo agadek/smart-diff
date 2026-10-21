@@ -4,12 +4,16 @@ import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.Content
+import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.api.Presence
+import io.github.agadek.smartdiff.engine.api.RangePair
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
+import io.github.agadek.smartdiff.engine.declarations.model.Declaration
 import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
+import io.github.agadek.smartdiff.engine.declarations.model.FileRegion
 import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -286,6 +290,25 @@ class DeclarationAnalysisTest {
         val new = tree(fileRegion = "import b;") { cls("B") { method("b") }; cls("A") { method("foo", "long") } }
 
         assertEquals(compare(build(), new), compare(build(), new))
+    }
+
+    @Test
+    fun `a change covers the leading whitespace of its declaration, an unchanged declaration does not`() {
+        fun method(name: String, start: Int, body: String = "{}") = Declaration(
+            DeclarationKind.METHOD, name, "", TextRange(start, start + 10), ownTokens = tokens("\n\n    void $name() $body"),
+            leadingWhitespace = TextRange(start - 6, start),
+        )
+        val old = DeclarationTree(listOf(method("kept", 6), method("edited", 22)), FileRegion(emptyList(), emptyList()), WhitespacePolicy.INSIGNIFICANT)
+        val new = DeclarationTree(
+            listOf(method("kept", 6), method("edited", 22, "{ x(); }"), method("added", 38)),
+            FileRegion(emptyList(), emptyList()), WhitespacePolicy.INSIGNIFICANT,
+        )
+
+        val (kept, edited, added) = compare(old, new).changes
+
+        assertEquals(emptyList<RangePair>(), kept.details)
+        assertEquals(listOf(RangePair(TextRange(16, 22), TextRange(16, 22))), edited.details)
+        assertEquals(listOf(RangePair(null, TextRange(32, 38))), added.details)
     }
 
     private fun compare(old: DeclarationTree, new: DeclarationTree): ComparisonResult =

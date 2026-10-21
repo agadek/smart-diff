@@ -187,11 +187,16 @@ The declaration engine turns each side into a `DeclarationTree` through a per-la
 ```kotlin
 interface DeclarationProvider {
     fun supports(languageId: String): Boolean
+    fun parse(project: Project, text: CharSequence, fileName: String?): PsiFile   // §6.2
     fun build(file: PsiFile, cancellation: Cancellation): DeclarationTree
 }
 ```
 
-Providers are registered on an engine-internal extension point `declarationProvider`, so language providers can live in optional plugin descriptors. Both languages are optional dependencies, so the plugin still loads in IDEs without them: the Java provider registers in `META-INF/smartdiff-java.xml` (depends on `com.intellij.java`) and the Kotlin provider in `META-INF/smartdiff-kotlin.xml` (depends on `org.jetbrains.kotlin`). The engine's `supports` returns true when any provider supports the language.
+Both are called inside the engine's read action, one per side. The read action gives way to write actions: on a pooled thread it runs through `ProgressManager.runInReadActionWithWriteActionPriority` and starts over after a write, so typing in the new side never waits for a parse. Matching and classification run after it, on the model only, so no PSI outlives the read action. The engine version is the engine's own version followed by the platform build, since a parser change can change results.
+
+The shared base `PsiDeclarationProvider` builds the tree: a language provider only says which PSI elements are declarations, with their kind, name, signature and member elements. An element it does not describe, such as a class whose name was not parsed, is not a declaration; its source and parse errors belong to its container.
+
+Providers are registered on an engine-internal extension point `declarationProvider`, so language providers can live in optional plugin descriptors. Both languages are optional dependencies, so the plugin still loads in IDEs without them: the Java provider registers in `META-INF/smartdiff-java.xml` (depends on `com.intellij.java`) and the Kotlin provider in `META-INF/smartdiff-kotlin.xml` (depends on `org.jetbrains.kotlin`). The `supportsKotlinPluginMode` declaration must be in `plugin.xml`: in K2 mode the Kotlin plugin reads it from the main descriptor only and otherwise skips the optional one. The engine's `supports` returns true when any provider supports the language.
 
 Internal model (not visible outside the engine):
 
@@ -202,12 +207,17 @@ class Declaration(
     val signature: String?,              // normalized parameter types; null for non-callables
     val range: TextRange,                // whole declaration incl. doc comment and annotations
     val children: List<Declaration>,     // nested declarations, in source order
-    val ownTokens: List<Token>,          // tokens in range minus children's ranges
+    val ownTokens: List<Token>,          // leading whitespace, then tokens in range minus children's extents
     val hasParseError: Boolean,          // a parse error lies in range but outside children
+    val leadingWhitespace: TextRange?,   // whitespace right before range that belongs to it
 )
 
 class FileRegion(val ranges: List<TextRange>, val tokens: List<Token>, val hasParseError: Boolean)
+```
 
+A declaration's *leading whitespace* is the run of whitespace tokens between it and its previous sibling (or its container's start, or the previous top-level declaration); its *extent* is its range with that whitespace. The leading whitespace is the declaration's own source, not its container's, so adding, removing or moving a declaration takes the blank line before it along and leaves its container unchanged. A container's own tokens and the file region skip the children's extents. A node that is a change itself lists its leading whitespace on each side in `details`, so that whitespace is covered (§3.1 rule 6); `range` stays the declaration itself, for navigation.
+
+```kotlin
 class DeclarationTree(
     val topLevel: List<Declaration>,
     val fileRegion: FileRegion,          // everything not covered by a top-level declaration
@@ -234,7 +244,7 @@ enum class WhitespacePolicy {
 
 ### 6.3 Tokens
 
-Tokens come from the language's lexer: `LanguageParserDefinitions.INSTANCE.forLanguage(language).createLexer(project)`. Token types are classified with the same `ParserDefinition`: `getWhitespaceTokens()` → `WHITESPACE`, `getCommentTokens()` → `COMMENT`, everything else → `OTHER`. One lexer pass over the whole file is sliced by range; a token that crosses a range boundary belongs to the range containing its start.
+Tokens come from the language's lexer: `LanguageParserDefinitions.INSTANCE.forLanguage(language).createLexer(project)`, except for Java, which lexes at the file's forced language level (`JavaParserDefinition.createLexer(level)`) so that tokens agree with the parse. Token types are classified with the same `ParserDefinition`: `getWhitespaceTokens()` → `WHITESPACE`, `getCommentTokens()` → `COMMENT`, everything else → `OTHER`. One lexer pass over the whole file is sliced by range; a token that crosses a range boundary belongs to the range containing its start.
 
 ### 6.4 Java provider
 
@@ -248,7 +258,7 @@ Tokens come from the language's lexer: `LanguageParserDefinitions.INSTANCE.forLa
 
 Not declarations: anonymous and local classes, lambdas, local variables, record components (part of the record), annotation methods' default values (part of the method).
 
-Fields declared together (`int a, b;`) are separate declarations; the shared type tokens belong to the first field.
+Fields declared together (`int a, b;`) are separate declarations; the shared type tokens belong to the first field. In an implicitly declared class (a file of top-level methods and fields, JEP 512), the members are top-level declarations.
 
 ### 6.5 Kotlin provider
 
@@ -263,11 +273,11 @@ Fields declared together (`int a, b;`) are separate declarations; the shared typ
 | `KtTypeAlias` | TYPE_ALIAS | `name` | — |
 | `KtAnonymousInitializer` | INITIALIZER | `""` | — |
 
-The primary constructor and its `val`/`var` parameters are part of the class's own tokens. Requires the bundled Kotlin plugin, declared as an optional dependency with its own descriptor. The descriptor declares `supportsKotlinPluginMode` for both K1 and K2, because the provider uses only PSI and no analysis API. In K2 mode, PSI files from text in the default project give the declarations and offsets this table expects **(confirmed by S2)**; tests run the Kotlin plugin in K2 mode. The PSI already names an unnamed companion object `"Companion"`, and it also contains local declarations (properties inside function bodies and lambdas), which the provider skips.
+The primary constructor and its `val`/`var` parameters are part of the class's own tokens. Requires the bundled Kotlin plugin, declared as an optional dependency with its own descriptor. `plugin.xml` declares `supportsKotlinPluginMode` for both K1 and K2, because the provider uses only PSI and no analysis API. In K2 mode, PSI files from text in the default project give the declarations and offsets this table expects **(confirmed by S2)**; tests run the Kotlin plugin in K2 mode. The PSI already names an unnamed companion object `"Companion"`, and it also contains local declarations (properties inside function bodies and lambdas), which the provider skips.
 
 ### 6.6 Signature normalization
 
-The signature is the list of parameter type texts as written, joined with `,`, after removing all whitespace and comments, e.g. `foo(final  Map<String, List<Integer>> m, int... xs)` → `Map<String,List<Integer>>,int...`. Annotations, modifiers and parameter names are excluded. Type names are not resolved, so `List` and `java.util.List` differ; that is reported as a signature change (rule M3), not hidden.
+The signature is the list of parameter type texts as written, joined with `,`, after removing all whitespace and comments, e.g. `foo(final  Map<String, List<Integer>> m, int... xs)` → `Map<String,List<Integer>>,int...`. Annotations, modifiers and parameter names are excluded; Java C-style array brackets after the name stay (`int values[]` → `int[]`), and so do Kotlin modifiers that are part of a type (`suspend () -> Unit` → `suspend()->Unit`). A Kotlin function with a receiver puts the receiver type and a `.` first: `fun List<T>.second(x: Int, vararg ys: String)` → `List<T>.Int,String`; a property's signature is its receiver type alone. Type names are not resolved, so `List` and `java.util.List` differ; that is reported as a signature change (rule M3), not hidden.
 
 ### 6.7 Parse errors
 
@@ -314,9 +324,9 @@ The steps are applied in order, and the first that applies decides the content:
    - `SIGNIFICANT`: no normalization (step 4 can never produce formatting-only).
    Equal → `FORMATTING_ONLY`; otherwise → `CHANGED`.
 
-In step 4 a run of adjacent `WHITESPACE` tokens counts as one: own tokens skip the children's ranges, so the whitespace before and after a child becomes adjacent, and adding or removing a child must not change the count of line breaks. The whitespace around an added or removed child still makes its container `FORMATTING_ONLY`, which keeps that whitespace covered (§3.1 rule 6).
+In step 4 a run of adjacent `WHITESPACE` tokens counts as one: own tokens skip the children's extents, so the whitespace before and after a child can become adjacent, and adding or removing a child must not change the count of line breaks. Because each child owns its leading whitespace (§6.1), adding, removing, moving or reordering members leaves their container `UNCHANGED`. Removing the first member is the exception: the next member's leading whitespace changes (the blank line after `{` goes), so that member is `FORMATTING_ONLY`.
 
-`COMMENT` tokens are compared by exact text, including whitespace inside them. The declaration engine leaves `details` empty; the native diff shows the detail.
+`COMMENT` tokens are compared by exact text, including whitespace inside them. The declaration engine puts only leading whitespace in `details` (§6.1); the native diff shows the detail.
 
 ## 9. Integration and threading
 
@@ -380,7 +390,7 @@ Application-level, under *Settings → Tools → SMART Diff*:
 - **Architecture test:** an [ArchUnit](https://www.archunit.org/) test over the compiled classes that fails the build if any rule in §2 is broken, and if `engine.api`, `engine.declarations.model` or `engine.declarations.analysis` use IntelliJ or Kotlin plugin classes. A fixture of deliberately violating classes checks that every rule can fail.
 - **Declaration engine, `analysis` unit tests (no IDE):** declaration trees built by hand; one test per matching rule, the LCS ordering, each whitespace policy, and every status.
 - **Declaration engine, provider tests:** `BasePlatformTestCase` (Java via the light Java fixture); parse fixture text and compare the produced tree with an expected outline.
-- **Golden fixtures:** `src/test/testData/<language>/<case>/{old,new}.<ext>` plus `expected-<engine id>.txt`, a text rendering of the outline per engine. Each language must cover: added/removed/changed method, overloads, signature change, reorder, move between classes, class rename, formatting-only, comment-only change, string literal change, parse error on one side, empty and identical files, and (Kotlin) a line-break-only change.
+- **Golden fixtures:** `src/test/testData/<language>/<case>/{old,new}.<ext>` plus `expected-<engine id>.txt`, a text rendering of the outline per engine: the status, then one line per reported node and per container of reported nodes, with its labels and the lines it spans on each side. Every fixture is also checked for nothing hidden. `-Psmartdiff.updateGolden=true` rewrites the expected files from the current results, for review before committing. Each language must cover: added/removed/changed method, overloads, signature change, reorder, move between classes, class rename, formatting-only, comment-only change, string literal change, parse error on one side, empty and identical files, and (Kotlin) a line-break-only change.
 - **Integration test:** opening a `SimpleDiffRequest` produces an outline and selecting a node scrolls both editors; the outline toggle hides it and shows the native diff.
 
 ### 12.1 Build and CI
