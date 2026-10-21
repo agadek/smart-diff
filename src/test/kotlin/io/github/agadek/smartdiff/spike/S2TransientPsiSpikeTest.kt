@@ -86,6 +86,7 @@ class S2TransientPsiSpikeTest : BasePlatformTestCase() {
         val parsed = parse("Shapes.kt", KotlinLanguage.INSTANCE, text, forceHighestJavaLevel = false)
 
         assertParsedExactly(text, parsed)
+        spike("S2 Kotlin declarations: ${parsed.declarations.map { it.label }}")
         assertContainsElements(
             parsed.declarations.map { it.label },
             "KtClass Shapes", "KtClassInitializer", "KtSecondaryConstructor", "KtNamedFunction second",
