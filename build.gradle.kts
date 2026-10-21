@@ -57,3 +57,12 @@ intellijPlatform {
 kotlin {
     jvmToolchain(21)
 }
+
+tasks.test {
+    // K2 is the Kotlin plugin's default mode from 2025.1; set it explicitly so the Kotlin tests always run in it.
+    systemProperty("idea.kotlin.plugin.use.k2", "true")
+    // Spike tests print their findings as "SPIKE ..." lines; copy them into the build log.
+    addTestOutputListener(TestOutputListener { _, event ->
+        if (event.message.startsWith("SPIKE ")) logger.lifecycle(event.message.trimEnd())
+    })
+}
