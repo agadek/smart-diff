@@ -364,8 +364,9 @@ Spike S3 measured them on the 20 largest Java and Kotlin files in IntelliJ Commu
 ## 10. Structural outline
 
 - **Outline toggle:** a toolbar button on every in-scope diff switches between the outline and the plain native diff by showing or hiding the outline panel; the editors stay as they are. Its initial state comes from the setting in §11, and it affects only the current diff window: the window keeps the choice (in its `DiffContext`) for the next files it shows, and other windows are unaffected. While the outline is off, no comparison runs.
-- Outline toolbar: the **engine dropdown** (§4), shown only with two or more candidate engines, listing `displayName`s with the selected one checked; and a refresh action.
-- Root: a file summary line, e.g. `3 changed · 1 added · 2 removed · 1 moved · 2 formatting-only`.
+- Outline toolbar: the **engine dropdown** (§4), shown only with two or more candidate engines, listing `displayName`s with the selected one checked; a **change type filter**; and a refresh action.
+- **Change type filter:** a menu of change types the user can hide from the outline: changed (including signature changes), added, removed, moved and formatting-only. A change is hidden when every one of its labels is of a hidden type, so a method that is moved and changed stays while either is shown; a hidden change with shown changes inside it stays as a container without labels. Uncertain and unanalyzed changes have no type and are never hidden ([ADR 0003](adr/0003-conservative-classification.md)). The filter is remembered as a setting (§11) and applies to every outline; changing it rebuilds the current outline without comparing again. Renames are not a type, since they are not detected (Q2).
+- Root: a file summary line, e.g. `3 changed · 1 added · 2 removed · 1 moved · 2 formatting-only`. It counts hidden changes too and ends with how many are hidden (`· 2 hidden`); when every change is hidden, the tree says so instead of "No structural changes".
 - Nodes follow the result's `ChangeNode` tree. Only reported nodes and their containers are shown. A container shown only because of its children has no change label.
 - Node label: for a declaration subject, kind, name and signature (`method parse(String,int)`); for a region subject, its description. Followed by labels for presence, moved, content and "signature changed".
 - Groups: formatting-only changes are collapsed into a "Formatting-only" group per container (setting: show inline instead). Uncertain nodes are listed under an "Uncertain" group at the top level, each with its candidates as children.
@@ -383,6 +384,7 @@ Application-level, under *Settings → Tools → SMART Diff*:
 | Show structural outline automatically | On (decided 2026-10-21). When off, the outline toggle (§10) starts off and the panel is hidden |
 | Default comparison engine, per language | One row per language that has at least one engine, each with a choice of the engines that support it; unset means the first registered engine (`smartdiff.declarations` in the first release); also set from the dropdown |
 | Formatting-only changes | Collapsed group / inline |
+| Hide from the outline | None. One checkbox per change type of the filter (§10); also set from the outline toolbar |
 | Size, declaration and time limits | §9.3 |
 
 ## 12. Testing

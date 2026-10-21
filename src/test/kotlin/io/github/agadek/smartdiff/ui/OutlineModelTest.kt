@@ -189,6 +189,63 @@ class OutlineModelTest {
     }
 
     @Test
+    fun `a change whose every label is hidden is left out, and the summary says how many are hidden`() {
+        val result = result(
+            node(
+                "Parser",
+                content = Content.FORMATTING_ONLY,
+                children = listOf(
+                    node("a", content = Content.FORMATTING_ONLY),
+                    node("b", content = Content.CHANGED),
+                    node("c", moved = true, content = Content.FORMATTING_ONLY),
+                    node("d", moved = true),
+                ),
+            ),
+            node("e", presence = Presence.ADDED, old = null),
+            node("f", content = Content.FORMATTING_ONLY),
+        )
+        val hidden = setOf(ChangeType.FORMATTING_ONLY, ChangeType.ADDED)
+
+        assertEquals(
+            """
+            class Parser
+              method b()  changed
+              method c()  moved, formatting-only
+              method d()  moved
+            """.trimIndent(),
+            render(OutlineModel.build(result, "", "", formattingInline = false, hidden = hidden)),
+        )
+        assertEquals("a hidden container still counts", 4, OutlineModel.hiddenCount(result, hidden))
+        assertEquals("1 changed · 1 added · 2 moved · 4 formatting-only · 4 hidden", OutlineModel.summary(result, hidden))
+    }
+
+    @Test
+    fun `hiding changed covers signature changes, and uncertain and unanalyzed changes are never hidden`() {
+        val result = ComparisonResult(
+            EngineId("e"), "1", Status.PARTIAL,
+            fileRegion = ChangeNode(Subject.Region("file"), TextRange(0, 1), TextRange(0, 1), Presence.MATCHED, content = Content.CHANGED),
+            changes = listOf(
+                node("a", signatureChanged = true, content = Content.CHANGED),
+                node("b", content = Content.UNANALYZED),
+                node("c", presence = Presence.UNCERTAIN, old = null),
+            ),
+            unanalyzed = listOf(RangePair(TextRange(0, 1), null)),
+        )
+
+        assertEquals(
+            """
+            method b()  unanalyzed
+            Uncertain (1)
+              method c()  uncertain
+            Unanalyzed (1)
+              Unanalyzed source, old line 1
+            """.trimIndent(),
+            render(OutlineModel.build(result, "a\n", "", formattingInline = false, hidden = ChangeType.entries.toSet())),
+        )
+        assertEquals(2, OutlineModel.hiddenCount(result, ChangeType.entries.toSet()))
+    }
+
+    @Test
     fun `every row's label is its title followed by its change labels`() {
         val item = OutlineModel.build(result(node("a", moved = true, content = Content.CHANGED)), "", "", formattingInline = false).single()
 

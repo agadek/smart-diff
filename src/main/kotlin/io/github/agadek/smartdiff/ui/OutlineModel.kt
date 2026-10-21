@@ -20,6 +20,18 @@ enum class Tag(val text: String) {
     SIGNATURE_CHANGED("signature changed"),
 }
 
+/**
+ * A type of change the user can hide from the outline (technical specification §10). Uncertain and unanalyzed changes
+ * have no type here: they are never hidden (ADR 0003).
+ */
+enum class ChangeType(val text: String, val tags: Set<Tag>) {
+    CHANGED("Changed", setOf(Tag.CHANGED, Tag.SIGNATURE_CHANGED)),
+    ADDED("Added", setOf(Tag.ADDED)),
+    REMOVED("Removed", setOf(Tag.REMOVED)),
+    MOVED("Moved", setOf(Tag.MOVED)),
+    FORMATTING_ONLY("Formatting-only", setOf(Tag.FORMATTING_ONLY)),
+}
+
 enum class ItemKind {
     /** A [ChangeNode] of the result, a change or a container of changes. */
     CHANGE,
@@ -63,13 +75,20 @@ object OutlineModel {
      * The outline's top-level rows: the file region, the reported changes in the result's order, then the Uncertain and
      * Unanalyzed groups. Only reported nodes and their containers are shown, and a container shown only because of its
      * children has no change label. Formatting-only changes are collected in a group per container unless [formattingInline].
+     * A change whose every label is of a [hidden] type is left out, or shown only as a container of its other changes.
      * [oldText] and [newText] are read only to name the lines of unanalyzed ranges.
      */
-    fun build(result: ComparisonResult, oldText: CharSequence, newText: CharSequence, formattingInline: Boolean): List<OutlineItem> {
+    fun build(
+        result: ComparisonResult,
+        oldText: CharSequence,
+        newText: CharSequence,
+        formattingInline: Boolean,
+        hidden: Set<ChangeType> = emptySet(),
+    ): List<OutlineItem> {
         val uncertain = mutableListOf<OutlineItem>()
-        val builder = Builder(formattingInline, uncertain)
+        val builder = Builder(formattingInline, hidden, uncertain)
         val rows = mutableListOf<OutlineItem>()
-        result.fileRegion?.takeIf { it.isReported }?.let { region ->
+        result.fileRegion?.takeIf { it.isReported && !isHidden(it, hidden) }?.let { region ->
             rows += OutlineItem(ItemKind.FILE_REGION, "File region", tags(region), region.oldRange, region.newRange, region.details)
         }
         rows += builder.children(result.changes)
@@ -84,8 +103,11 @@ object OutlineModel {
         return rows
     }
 
-    /** The file summary line, such as `3 changed · 1 added · 2 removed · 1 moved · 2 formatting-only`. */
-    fun summary(result: ComparisonResult): String {
+    /**
+     * The file summary line, such as `3 changed · 1 added · 2 removed · 1 moved · 2 formatting-only`. It counts every
+     * change, hidden or not, and ends with how many are [hidden], such as `· 2 hidden`.
+     */
+    fun summary(result: ComparisonResult, hidden: Set<ChangeType> = emptySet()): String {
         val counts = LinkedHashMap<Tag, Int>()
         listOf(Tag.CHANGED, Tag.ADDED, Tag.REMOVED, Tag.MOVED, Tag.FORMATTING_ONLY, Tag.UNCERTAIN, Tag.UNANALYZED).forEach { counts[it] = 0 }
         fun count(node: ChangeNode) {
@@ -97,8 +119,24 @@ object OutlineModel {
         result.fileRegion?.let(::count)
         result.changes.forEach(::count)
         counts[Tag.UNANALYZED] = counts.getValue(Tag.UNANALYZED) + result.unanalyzed.size
-        val parts = counts.filterValues { it > 0 }.map { (tag, n) -> "$n ${tag.text}" }
+        val parts = counts.filterValues { it > 0 }.map { (tag, n) -> "$n ${tag.text}" } +
+            listOfNotNull(hiddenCount(result, hidden).takeIf { it > 0 }?.let { "$it hidden" })
         return if (parts.isEmpty()) "No structural changes" else parts.joinToString(" · ")
+    }
+
+    /** How many changes [build] leaves out, or shows only as containers, because their types are [hidden]. */
+    fun hiddenCount(result: ComparisonResult, hidden: Set<ChangeType>): Int {
+        if (hidden.isEmpty()) return 0
+        fun count(node: ChangeNode): Int =
+            (if (node.isReported && isHidden(node, hidden)) 1 else 0) + node.children.sumOf(::count)
+        return (result.fileRegion?.let(::count) ?: 0) + result.changes.sumOf(::count)
+    }
+
+    /** A change itself whose every label is of a [hidden] type; an uncertain or unanalyzed change never is. */
+    fun isHidden(node: ChangeNode, hidden: Set<ChangeType>): Boolean {
+        if (!node.isChangedItself || hidden.isEmpty()) return false
+        val hiddenTags = hidden.flatMapTo(HashSet()) { it.tags }
+        return tags(node).all { it in hiddenTags }
     }
 
     /** A subject's title: kind, name and signature for a declaration (`method parse(String,int)`), or a region's description. */
@@ -130,7 +168,11 @@ object OutlineModel {
         }
     }
 
-    private class Builder(private val formattingInline: Boolean, private val uncertain: MutableList<OutlineItem>) {
+    private class Builder(
+        private val formattingInline: Boolean,
+        private val hidden: Set<ChangeType>,
+        private val uncertain: MutableList<OutlineItem>,
+    ) {
 
         /** The rows for [nodes], the children of one container; uncertain nodes go to [uncertain] instead. */
         fun children(nodes: List<ChangeNode>): List<OutlineItem> {
@@ -149,9 +191,16 @@ object OutlineModel {
             return rows
         }
 
-        /** The row for a reported node, or null for a container whose only reported children were uncertain. */
+        /**
+         * The row for a reported node, or null for a container whose only reported children were uncertain or hidden. A
+         * hidden node with shown children is a container without change labels.
+         */
         private fun item(node: ChangeNode): OutlineItem? {
             val children = children(node.children)
+            if (isHidden(node, hidden)) {
+                if (children.isEmpty()) return null
+                return OutlineItem(ItemKind.CHANGE, title(node.subject), emptyList(), node.oldRange, node.newRange, children = children)
+            }
             if (!node.isChangedItself && children.isEmpty()) return null
             return OutlineItem(ItemKind.CHANGE, title(node.subject), tags(node), node.oldRange, node.newRange, node.details, children)
         }

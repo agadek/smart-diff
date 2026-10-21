@@ -7,6 +7,7 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.project.DumbAwareAction
+import com.intellij.openapi.project.DumbAwareToggleAction
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.ui.ColoredTreeCellRenderer
 import com.intellij.ui.DoubleClickListener
@@ -60,7 +61,12 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
             override fun actionPerformed(e: AnActionEvent) = controller.refresh()
             override fun getActionUpdateThread() = ActionUpdateThread.BGT
         }
-        val toolbar = ActionManager.getInstance().createActionToolbar("SmartDiffOutline", DefaultActionGroup(refresh), true)
+        val filter = DefaultActionGroup("Hide Change Types", ChangeType.entries.map(::HideAction)).apply {
+            templatePresentation.description = "Hide types of changes from the outline"
+            templatePresentation.icon = AllIcons.General.Filter
+            isPopup = true
+        }
+        val toolbar = ActionManager.getInstance().createActionToolbar("SmartDiffOutline", DefaultActionGroup(filter, refresh), true)
         toolbar.targetComponent = this
 
         engines.renderer = object : SimpleListCellRenderer<ComparisonEngine>() {
@@ -152,7 +158,7 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
                     summary.text = state.summary
                     banner.isVisible = state.result.status == Status.PARTIAL
                     setTree(state.items)
-                    tree.emptyText.text = "No structural changes"
+                    tree.emptyText.text = if (state.hiddenCount > 0) "All changes are hidden by the filter" else "No structural changes"
                     (body.layout as CardLayout).show(body, TREE)
                 }
             }
@@ -208,6 +214,13 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
             item.newRange == null -> "Not present on the new side"
             else -> ""
         }
+    }
+
+    /** One entry of the filter menu: checked while changes of [type] are hidden. */
+    private inner class HideAction(private val type: ChangeType) : DumbAwareToggleAction(type.text) {
+        override fun isSelected(e: AnActionEvent): Boolean = type in SmartDiffSettings.getInstance().hiddenChangeTypes
+        override fun setSelected(e: AnActionEvent, state: Boolean) = controller.setHidden(type, state)
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
     }
 
     /** Draws an item's title, then its change labels in the IDE's diff colors; the text alone carries the meaning (§10). */

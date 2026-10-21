@@ -97,6 +97,27 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertEquals(JAVA_NEW.indexOf("void bye()"), shown.viewer.editor2.caretModel.offset)
     }
 
+    fun `test hiding a change type rebuilds the outline and is remembered`() {
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+
+        outline.setHidden(ChangeType.ADDED, true)
+
+        assertEquals(setOf(ChangeType.ADDED), settings.hiddenChangeTypes)
+        assertEquals(listOf("class Greeter", "  method hello()  changed"), rows(outline))
+        assertEquals("1 changed · 1 added · 1 hidden", outline.panel.summary.text)
+
+        outline.setHidden(ChangeType.CHANGED, true)
+        assertEquals(emptyList<String>(), rows(outline))
+        assertEquals("All changes are hidden by the filter", outline.panel.tree.emptyText.text)
+
+        // Another diff starts with the same filter.
+        assertEquals(emptyList<String>(), rows(open(history(KOTLIN_OLD, KOTLIN_NEW, "Greeter.kt")).awaitResult()))
+
+        outline.setHidden(ChangeType.ADDED, false)
+        outline.setHidden(ChangeType.CHANGED, false)
+        assertEquals(listOf("class Greeter", "  method hello()  changed", "  method bye()  added"), rows(outline))
+    }
+
     fun `test a Kotlin diff shows the outline`() {
         val outline = open(history(KOTLIN_OLD, KOTLIN_NEW, "Greeter.kt")).awaitResult()
 

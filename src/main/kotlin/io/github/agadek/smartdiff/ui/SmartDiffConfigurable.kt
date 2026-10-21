@@ -33,6 +33,19 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                 row { radioButton("Collapsed in a group", false) }
                 row { radioButton("Inline", true) }
             }.bind(settings::formattingOnlyInline)
+            buttonsGroup("Hide from the outline:") {
+                for (type in ChangeType.entries) {
+                    row {
+                        checkBox(type.text).bindSelected(
+                            { type in settings.hiddenChangeTypes },
+                            { hide -> settings.hiddenChangeTypes = if (hide) settings.hiddenChangeTypes + type else settings.hiddenChangeTypes - type },
+                        )
+                    }
+                }
+                row {
+                    comment("Hidden changes still count in the file summary. Uncertain and unanalyzed changes are always shown.")
+                }
+            }
 
             group("Default Comparison Engine") {
                 val languages = languagesWithEngines(engines)
