@@ -4,12 +4,21 @@ Status: 2026-10-21. Items after the first release are candidates, not commitment
 
 ## First release
 
-- Structural outline for two-sided diffs, attached to the native diff.
+- Structural outline for two-sided diffs, attached to the native diff, per file only. It opens by default, with a setting to turn it off and a toolbar button in every diff to switch to the plain native diff.
 - Comparison engine interface, registry, per-language default, and engine dropdown ([ADR 0004](adr/0004-pluggable-comparison-engines.md)).
 - Declaration engine for Java and Kotlin, using IntelliJ PSI ([ADR 0001](adr/0001-declaration-level-first-release.md), [ADR 0002](adr/0002-parser-neutral-model-with-psi-first.md)).
-- Conservative classification: added, removed, changed, moved, formatting-only, uncertain, unanalyzed ([ADR 0003](adr/0003-conservative-classification.md)).
+- Conservative classification: added, removed, changed, moved, formatting-only, uncertain, unanalyzed ([ADR 0003](adr/0003-conservative-classification.md)). Renamed declarations, including classes, stay literal (removed + added).
+- IntelliJ Platform 2025.1 and newer, checked by Plugin Verifier on 2025.1 and the latest release.
 
 ## Later
+
+### Multi-file summary in the Changes tree
+
+The first item after the first release. Show changed declarations for each file inside the IDE's existing Changes/Commit tree, rather than in a new panel (technical spec Q3).
+
+- **Level 1:** a summary next to each file, for example `Parser.kt  2 changed · 1 added`.
+- **Level 2:** expandable declarations under each file. Every file is parsed as the tree loads, so performance on large commits needs care.
+- **Spike first:** which Changes tree extension points can add text or child nodes to file entries.
 
 ### Structural outline for three-way merges
 
@@ -35,11 +44,7 @@ A second comparison engine that highlights changed expressions inside declaratio
 
 ### Rename candidates
 
-Pair a removed and an added declaration with similar bodies as an uncertain rename candidate; includes renamed classes (technical spec Q2).
-
-### Multi-file overview
-
-A change-list-level summary of changed declarations across all files in a review (technical spec Q3).
+Pair a removed and an added declaration with similar bodies as an uncertain rename candidate; includes renamed classes. The first release keeps renames literal; revisit after validation shows how noisy that is (technical spec Q2).
 
 ### Third-party engines
 
