@@ -1,0 +1,11 @@
+<idea-plugin>
+    <id>com.example.smartdiff</id>
+    <name>SMART Diff</name>
+    <vendor url="https://github.com/agadek">agadek</vendor>
+
+    <description><![CDATA[
+        Review code changes by structure in IntelliJ-based IDEs, with the native text diff always available.
+    ]]></description>
+
+    <depends>com.intellij.modules.platform</depends>
+</idea-plugin>
