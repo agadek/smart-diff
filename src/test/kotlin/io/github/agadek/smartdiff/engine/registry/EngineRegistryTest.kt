@@ -1,7 +1,9 @@
 package io.github.agadek.smartdiff.engine.registry
 
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
@@ -25,8 +27,14 @@ class EngineRegistryTest : BasePlatformTestCase() {
         }
     }
 
+    private var registration: Disposable? = null
+
+    /** Replaces the registered engine factories; an extension point can be masked only once at a time. */
     private fun register(vararg factories: ComparisonEngineFactory) {
-        ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, factories.toList(), testRootDisposable)
+        registration?.let(Disposer::dispose)
+        registration = Disposer.newDisposable(testRootDisposable).also {
+            ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, factories.toList(), it)
+        }
     }
 
     fun `test plugin declares the comparison engine extension point`() {

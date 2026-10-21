@@ -2,7 +2,7 @@ package io.github.agadek.smartdiff
 
 import com.tngtech.archunit.core.domain.JavaClasses
 import com.tngtech.archunit.core.importer.ClassFileImporter
-import com.tngtech.archunit.core.importer.ImportOption
+import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -11,9 +11,12 @@ class ArchitectureTest {
 
     @Test
     fun `plugin classes follow the package dependency rules`() {
-        val classes = ClassFileImporter()
-            .withImportOption(ImportOption.Predefined.DO_NOT_INCLUDE_TESTS)
-            .importPackages("io.github.agadek.smartdiff")
+        // Import from where the plugin's own classes were loaded: the test classes share its packages, and the
+        // instrumented test output is not recognized by ImportOption.Predefined.DO_NOT_INCLUDE_TESTS.
+        val mainClasses = ComparisonEngine::class.java.protectionDomain.codeSource.location
+        val classes = ClassFileImporter().importUrl(mainClasses)
+        assertTrue("no plugin classes imported from $mainClasses", classes.contain(ComparisonEngine::class.java))
+        assertFalse("test classes imported from $mainClasses", classes.contain(ArchitectureTest::class.java))
 
         ArchitectureRules("io.github.agadek.smartdiff").all.forEach { it.check(classes) }
     }
