@@ -78,7 +78,7 @@ interface ComparisonEngine {
 
 @JvmInline value class EngineId(val value: String)  // e.g. "smartdiff.declarations"
 
-class ComparisonRequest(
+data class ComparisonRequest(
     val oldText: CharSequence,             // immutable snapshots
     val newText: CharSequence,
     val languageId: String,                // IntelliJ Language.getID(), e.g. "JAVA", "kotlin"
@@ -86,9 +86,9 @@ class ComparisonRequest(
     val limits: Limits,
 )
 
-class Limits(val maxChars: Int, val maxDeclarations: Int, val timeoutMillis: Long)
+data class Limits(val maxChars: Int, val maxDeclarations: Int, val timeoutMillis: Long)  // Limits.DEFAULT: §9.3
 
-fun interface Cancellation { fun checkCanceled() }  // throws when canceled
+fun interface Cancellation { fun checkCanceled() }  // throws java.util.concurrent.CancellationException when canceled
 ```
 
 Rules every engine must follow:
@@ -96,9 +96,9 @@ Rules every engine must follow:
 1. `compare` is called on a background thread, never inside a read action. An engine that needs PSI takes its own cancellable read actions; an engine that runs an external process must not hold a read lock while waiting.
 2. `compare` is pure with respect to its inputs: same request and engine version → equal result. No global state between calls.
 3. `compare` calls `checkCanceled()` regularly and returns promptly after cancellation.
-4. Failures are reported as a result with status `FAILED` and a reason; exceptions other than cancellation are caught by the host and treated the same way.
+4. Failures are reported as a result with status `FAILED` and a reason; exceptions other than cancellation are caught by the host and treated the same way. The host calls engines through `compareSafely`, which also applies the size limit (§9.3) before calling the engine.
 5. All ranges in the result are offsets into the request's texts.
-6. **Nothing hidden:** every character that differs between the sides (per a character-level diff of the two texts) lies inside the range of some reported change, the reported file region, or an unanalyzed range.
+6. **Nothing hidden:** every character that differs between the sides (per a character-level diff of the two texts) lies inside the range of some reported change, the reported file region, or an unanalyzed range. A node's own ranges count only if it is a change itself, not a container shown only because of its children; its `details` always count. The contract suite (§12) accepts any character-level alignment, so the check does not depend on one diff algorithm's choices.
 7. No source content leaves the IDE process unless an engine documents otherwise and is disabled by default (no first-release engine does).
 
 ### 3.2 Engine factory and registration
@@ -134,10 +134,12 @@ The extension point is interface-based: each extension is a `ComparisonEngineFac
 4. If the stored default id is not registered (for example its plugin was removed), it stays stored but is ignored until it comes back.
 5. The dropdown (§10) lists the candidates and is shown only when there are two or more. Choosing an engine reruns the comparison with it and stores its id as the default for that language only.
 
+`EngineRegistry` is a project service that creates each factory's engine on first use, passing `null` for the default project, and recreates them when the extension point changes. If two engines have the same id, the later one is skipped with a warning. `EngineSelection.of` applies the rules above without the IntelliJ Platform. Defaults are stored by the application service `EngineDefaults` in `smartdiff.xml`.
+
 ## 5. Engine-neutral result
 
 ```kotlin
-class ComparisonResult(
+data class ComparisonResult(
     val engineId: EngineId,
     val engineVersion: String,
     val status: Status,                    // ANALYZED, PARTIAL, UNSUPPORTED, TOO_LARGE, FAILED
@@ -147,7 +149,7 @@ class ComparisonResult(
     val fallbackReason: String?,
 )
 
-class ChangeNode(
+data class ChangeNode(
     val subject: Subject,
     val oldRange: TextRange?,              // null when absent on that side
     val newRange: TextRange?,
@@ -165,8 +167,8 @@ sealed interface Subject {
     data class Region(val description: String) : Subject   // for engines without declarations
 }
 
-class Candidate(val subject: Subject, val range: TextRange)
-class RangePair(val old: TextRange?, val new: TextRange?)
+data class Candidate(val subject: Subject, val range: TextRange)    // range on the side where the node is absent
+data class RangePair(val old: TextRange?, val new: TextRange?)      // at least one side
 data class TextRange(val start: Int, val end: Int)           // [start, end)
 ```
 
@@ -174,7 +176,7 @@ data class TextRange(val start: Int, val end: Int)           // [start, end)
 
 A `ChangeNode` is *reported* if it is not `MATCHED`, or is moved, or its content is not `UNCHANGED`, or any child is reported. Engines may include unreported nodes for navigation; the outline hides them.
 
-Adding fields to the result is allowed; renaming or removing them requires updating every engine and the contract tests.
+The result types are data classes, so results compare by value (the contract suite's determinism check relies on it). Adding fields to the result is allowed; renaming or removing them requires updating every engine and the contract tests.
 
 ## 6. Declaration engine: providers (PSI)
 
@@ -369,8 +371,8 @@ Application-level, under *Settings → Tools → SMART Diff*:
 
 ## 12. Testing
 
-- **Engine contract suite:** an abstract test class in `engine.api`'s test fixtures that every engine's tests extend, run over a shared corpus of text pairs. It checks: identical texts → no reported changes; empty and one-side-empty texts; determinism (two runs → equal results); all ranges within bounds and on the right side; **nothing hidden** (§3.1 rule 6); prompt return after cancellation; `FAILED` rather than an exception for malformed input.
-- **Abstraction test:** a test-only engine registered through the extension point (for example one that reports each changed line as a `Region`) passes the contract suite, appears in the dropdown next to the declaration engine, and can be selected; this verifies that the UI has no dependency on the declaration engine.
+- **Engine contract suite:** `ComparisonEngineContractTest`, an abstract JUnit 4 class in `src/test/kotlin/.../engine/api/contract` that every engine's tests extend, run over a shared corpus of Java, Kotlin and plain-text pairs (`ContractCorpus`). Engines whose tests need the IntelliJ test framework run the same checks through `ComparisonEngineContract`. It checks: identical texts → no reported changes; empty and one-side-empty texts; determinism (two runs → equal results); all ranges within bounds and on the right side; **nothing hidden** (§3.1 rule 6); prompt return after cancellation (the engine checks regularly on a large input, and the exception from `checkCanceled` propagates unchanged whether it is thrown at the first, a middle or the last check); `FAILED` rather than an exception for malformed input.
+- **Abstraction test:** a test-only engine registered through the extension point (`LineEngine`, which reports each run of changed lines as a `Region`) passes the contract suite, appears in the dropdown next to the declaration engine, and can be selected; this verifies that the UI has no dependency on the declaration engine.
 - **Architecture test:** an [ArchUnit](https://www.archunit.org/) test over the compiled classes that fails the build if any rule in §2 is broken, and if `engine.api`, `engine.declarations.model` or `engine.declarations.analysis` use IntelliJ or Kotlin plugin classes. A fixture of deliberately violating classes checks that every rule can fail.
 - **Declaration engine, `analysis` unit tests (no IDE):** declaration trees built by hand; one test per matching rule, the LCS ordering, each whitespace policy, and every status.
 - **Declaration engine, provider tests:** `BasePlatformTestCase` (Java via the light Java fixture); parse fixture text and compare the produced tree with an expected outline.
