@@ -285,17 +285,19 @@ Keys (the *path* is the chain of container `(kind, name)` pairs from the top lev
 | Rule | Key | Result when the key occurs exactly once on each side |
 | --- | --- | --- |
 | M1 | kind, path, name, signature | MATCHED |
-| M2 | kind, name, signature | MATCHED, moved (container differs) |
+| M2 | kind, name, signature | MATCHED; moved if the containers are not a match of each other |
 | M3 | kind, path, name | MATCHED, signature changed (content is CHANGED) |
 | M4 | kind, path, name, occurring on both sides but not once each | UNCERTAIN, with all same-key declarations of the other side as candidates |
 
 Remaining old-side declarations are REMOVED and new-side ones ADDED.
 
-Kinds must be equal in every rule, so a class turned into an interface is REMOVED + ADDED. Container kind/name changes affect the path, so the members of a renamed class match by M2 (moved) while the class itself is REMOVED + ADDED (see Q2).
+Kinds must be equal in every rule, so a class turned into an interface is REMOVED + ADDED. Container kind/name changes affect the path, so the members of a renamed class match by M2 (moved) while the class itself is REMOVED + ADDED (see Q2). Moved by container means the old and new containers are not matched to each other (or only one of them is top level); the members of a class that itself moved by M2 have a different path too, but they stay in the same matched container and are not moved.
 
 **Order within a container.** For each matched container pair (and the top level), take the matched children in source order on both sides and compute the longest common subsequence of matches. Matched children outside the subsequence are marked moved. Ties are broken by the earliest old-side offset.
 
-**Result tree.** Changes are arranged by the new side's containment; REMOVED declarations and those whose counterpart moved away are placed under their old container's counterpart if it exists, otherwise at the top level.
+**Result tree.** Changes are arranged by the new side's containment. Declarations present only on the old side (REMOVED, and old-side UNCERTAIN) are placed under their old container's counterpart if it exists, under their old container's own node if that container is only on the old side too, otherwise at the top level. Among their new siblings they follow the counterpart of their nearest preceding old sibling, so a removed declaration comes before one added in its place. Every declaration of both sides appears exactly once. The file region is one node spanning its ranges on each side (an empty range at offset 0 for a side without one), with the separate ranges in `details`; it is null when its tokens are identical.
+
+The matcher and classifier are `DeclarationMatcher` and `ContentClassifier`; `DeclarationAnalysis` runs them and builds the result, including `TOO_LARGE` (§9.3) and `FAILED` (§6.7).
 
 ## 8. Declaration engine: classification
 
@@ -311,6 +313,8 @@ The steps are applied in order, and the first that applies decides the content:
    - `LINE_BREAKS_SIGNIFICANT`: replace each `WHITESPACE` token with `⏎` if it contains a line break, otherwise drop it.
    - `SIGNIFICANT`: no normalization (step 4 can never produce formatting-only).
    Equal → `FORMATTING_ONLY`; otherwise → `CHANGED`.
+
+In step 4 a run of adjacent `WHITESPACE` tokens counts as one: own tokens skip the children's ranges, so the whitespace before and after a child becomes adjacent, and adding or removing a child must not change the count of line breaks. The whitespace around an added or removed child still makes its container `FORMATTING_ONLY`, which keeps that whitespace covered (§3.1 rule 6).
 
 `COMMENT` tokens are compared by exact text, including whitespace inside them. The declaration engine leaves `details` empty; the native diff shows the detail.
 
