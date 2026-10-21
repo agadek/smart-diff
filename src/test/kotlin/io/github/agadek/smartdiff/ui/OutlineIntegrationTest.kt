@@ -86,6 +86,7 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertHighlightedAt(shown.viewer.editor1, JAVA_OLD.indexOf("String hello()"))
         assertHighlightedAt(shown.viewer.editor2, JAVA_NEW.indexOf("String hello()"))
         assertEquals("", outline.panel.absence.text)
+        assertEquals("each side gets a framed range, marked on the scrollbar", 2, outline.navigator.shown.count { it.customRenderer != null && it.getErrorStripeMarkColor(null) != null })
 
         select(outline, "method bye()  added")
         assertTrue("an absent side shows no highlight", outline.navigator.shown.none { it.document === shown.viewer.editor1.document })
