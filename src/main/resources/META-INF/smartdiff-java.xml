@@ -1,0 +1,3 @@
+<!-- Loaded when the Java plugin is present. The Java declaration provider registers here. -->
+<idea-plugin>
+</idea-plugin>

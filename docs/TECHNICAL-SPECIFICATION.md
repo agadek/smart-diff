@@ -9,14 +9,14 @@ IntelliJ Platform API names below are the expected entry points; items marked **
 In scope:
 
 - Two-sided text comparisons: `ContentDiffRequest` with exactly two `DocumentContent`s, from local changes, VCS history, and "Compare with…" actions.
-- One comparison engine, the **declaration engine**, for Java and Kotlin in IntelliJ IDEA (Community and Ultimate), 2025.1+.
+- One comparison engine, the **declaration engine**, for Java and Kotlin in IntelliJ IDEA (Community and Ultimate, and the unified IntelliJ IDEA from 2025.3), 2025.1 and newer with no upper bound. CI runs Plugin Verifier on 2025.1 and the latest release (§12).
 - The engine abstraction, registry, selection logic and dropdown, ready for further engines.
 
 Out of scope for the first release:
 
 - Three-way merge (planned, see [roadmap](ROADMAP.md#structural-outline-for-three-way-merges)), directory diffs, binary content, and patch previews without full file content.
 - Comparisons where the old side and new side are different languages.
-- A change-list-level overview across files (open question Q3).
+- A change-list-level overview across files (Q3, decided: per-file only; the Changes tree summary comes next on the [roadmap](ROADMAP.md#multi-file-summary-in-the-changes-tree)).
 - Engines other than the declaration engine (except a test-only engine used to verify the abstraction).
 
 ## 2. Architecture
@@ -43,7 +43,7 @@ Out of scope for the first release:
 └────────────────────┘
 ```
 
-Packages (under the plugin's root package):
+Packages (under the plugin's root package, `io.github.agadek.smartdiff`):
 
 | Package | Depends on IntelliJ? | Responsibility |
 | --- | --- | --- |
@@ -54,7 +54,7 @@ Packages (under the plugin's root package):
 | `engine.declarations.psi` | Yes | Declaration engine factory and PSI providers (§6) |
 | `ui` | Yes | Diff integration, outline, engine dropdown, navigation, settings |
 
-Dependency rules, enforced by a build-time architecture test:
+Dependency rules, enforced by an architecture test (§12):
 
 - `ui` may depend on `engine.api` and `engine.registry` only, never on any `engine.<name>` package.
 - `engine.api` depends on nothing in the plugin.
@@ -118,7 +118,7 @@ interface ComparisonEngineFactory {          // extension point implementation
                   dynamic="true"/>
 </extensionPoints>
 
-<extensions defaultExtensionNs="com.example.smartdiff">
+<extensions defaultExtensionNs="io.github.agadek.smartdiff">
   <comparisonEngine key="smartdiff.declarations" order="first"
                     implementationClass="…engine.declarations.psi.DeclarationEngineFactory"/>
 </extensions>
@@ -189,7 +189,7 @@ interface DeclarationProvider {
 }
 ```
 
-Providers are registered on an engine-internal extension point `declarationProvider`, so language providers can live in optional plugin descriptors (Kotlin support depends on the bundled Kotlin plugin). The engine's `supports` returns true when any provider supports the language.
+Providers are registered on an engine-internal extension point `declarationProvider`, so language providers can live in optional plugin descriptors. Both languages are optional dependencies, so the plugin still loads in IDEs without them: the Java provider registers in `META-INF/smartdiff-java.xml` (depends on `com.intellij.java`) and the Kotlin provider in `META-INF/smartdiff-kotlin.xml` (depends on `org.jetbrains.kotlin`). The engine's `supports` returns true when any provider supports the language.
 
 Internal model (not visible outside the engine):
 
@@ -259,7 +259,7 @@ Fields declared together (`int a, b;`) are separate declarations; the shared typ
 | `KtTypeAlias` | TYPE_ALIAS | `name` | — |
 | `KtAnonymousInitializer` | INITIALIZER | `""` | — |
 
-The primary constructor and its `val`/`var` parameters are part of the class's own tokens. Requires a dependency on the bundled Kotlin plugin, declared as an optional dependency with its own descriptor **(verify K2 mode PSI compatibility)**.
+The primary constructor and its `val`/`var` parameters are part of the class's own tokens. Requires the bundled Kotlin plugin, declared as an optional dependency with its own descriptor. The descriptor declares `supportsKotlinPluginMode` for both K1 and K2, because the provider uses only PSI and no analysis API **(verify K2 mode PSI compatibility)**.
 
 ### 6.6 Signature normalization
 
@@ -297,14 +297,16 @@ Kinds must be equal in every rule, so a class turned into an interface is REMOVE
 
 For each MATCHED declaration, compare `ownTokens` of the old side and the new side; do the same for the file region.
 
-1. If either side has a parse error in that range → `UNANALYZED`.
-2. If the token texts are identical, including whitespace → `UNCHANGED`.
-3. Normalize both sequences with the tree's whitespace policy, then compare `(type, text)` pairs:
+The steps are applied in order, and the first that applies decides the content:
+
+1. If either side has a parse error in that range → `UNANALYZED`. This wins over every later step, including a signature change: `signatureChanged` is still reported, but the content is `UNANALYZED`.
+2. If rule M3 matched it (signature changed) → `CHANGED`.
+3. If the token texts are identical, including whitespace → `UNCHANGED`.
+4. Normalize both sequences with the tree's whitespace policy, then compare `(type, text)` pairs:
    - `INSIGNIFICANT`: drop `WHITESPACE` tokens.
    - `LINE_BREAKS_SIGNIFICANT`: replace each `WHITESPACE` token with `⏎` if it contains a line break, otherwise drop it.
-   - `SIGNIFICANT`: no normalization (step 3 can never produce formatting-only).
+   - `SIGNIFICANT`: no normalization (step 4 can never produce formatting-only).
    Equal → `FORMATTING_ONLY`; otherwise → `CHANGED`.
-4. If rule M3 matched it (signature changed) → `CHANGED` regardless.
 
 `COMMENT` tokens are compared by exact text, including whitespace inside them. The declaration engine leaves `details` empty; the native diff shows the detail.
 
@@ -319,7 +321,7 @@ Both options use the same outline component and engine registry, so the choice o
 
 ### 9.2 Lifecycle
 
-1. Viewer created → if the request is in scope and engine selection (§4) yields an engine, show the outline in a loading state; otherwise show nothing (Option A) or the unsupported state (Option B).
+1. Viewer created → if the request is in scope and engine selection (§4) yields an engine, show the outline in a loading state, unless the outline is switched off for this diff (§10) or by the setting (§11); otherwise show nothing (Option A) or the unsupported state (Option B).
 2. Snapshot both documents (`getImmutableCharSequence()`) with their modification stamps, and call `engine.compare` on a pooled background thread under a progress indicator bound to the viewer's disposable. The host does not take a read action (§3.1 rule 1).
 3. On completion, on the UI thread: discard the result if either document's modification stamp changed or the selected engine changed since the request; otherwise render.
 4. Document changes (the new side is often editable) and engine changes from the dropdown cancel the running comparison and start a new one, after a 300 ms debounce for document changes.
@@ -338,7 +340,8 @@ Limits are configurable in settings and passed to engines in `ComparisonRequest.
 
 ## 10. Structural outline
 
-- Toolbar: the **engine dropdown** (§4), shown only with two or more candidate engines, listing `displayName`s with the selected one checked; and a refresh action.
+- **Outline toggle:** a toolbar button on every in-scope diff switches between the outline and the plain native diff. With Option A it shows or hides the panel; with Option B it switches between the SMART Diff viewer and the native viewer. Its initial state comes from the setting in §11, and it affects only the current diff window. While the outline is off, no comparison runs.
+- Outline toolbar: the **engine dropdown** (§4), shown only with two or more candidate engines, listing `displayName`s with the selected one checked; and a refresh action.
 - Root: a file summary line, e.g. `3 changed · 1 added · 2 removed · 1 moved · 2 formatting-only`.
 - Nodes follow the result's `ChangeNode` tree. Only reported nodes and their containers are shown. A container shown only because of its children has no change label.
 - Node label: for a declaration subject, kind, name and signature (`method parse(String,int)`); for a region subject, its description. Followed by labels for presence, moved, content and "signature changed".
@@ -354,7 +357,7 @@ Application-level, under *Settings → Tools → SMART Diff*:
 
 | Setting | Default |
 | --- | --- |
-| Show structural outline automatically | Off (Option A: panel collapsed; Option B: native viewer stays default) |
+| Show structural outline automatically | On (decided 2026-10-21). When off, the outline toggle (§10) starts off: Option A panel collapsed; Option B native viewer stays default |
 | Default comparison engine, per language | One row per language that has at least one engine, each with a choice of the engines that support it; unset means the first registered engine (`smartdiff.declarations` in the first release); also set from the dropdown |
 | Formatting-only changes | Collapsed group / inline |
 | Size, declaration and time limits | §9.3 |
@@ -363,13 +366,20 @@ Application-level, under *Settings → Tools → SMART Diff*:
 
 - **Engine contract suite:** an abstract test class in `engine.api`'s test fixtures that every engine's tests extend, run over a shared corpus of text pairs. It checks: identical texts → no reported changes; empty and one-side-empty texts; determinism (two runs → equal results); all ranges within bounds and on the right side; **nothing hidden** (§3.1 rule 6); prompt return after cancellation; `FAILED` rather than an exception for malformed input.
 - **Abstraction test:** a test-only engine registered through the extension point (for example one that reports each changed line as a `Region`) passes the contract suite, appears in the dropdown next to the declaration engine, and can be selected; this verifies that the UI has no dependency on the declaration engine.
-- **Architecture test:** fails the build if `ui` imports any `engine.<name>` package or engines import each other (§2).
+- **Architecture test:** an [ArchUnit](https://www.archunit.org/) test over the compiled classes that fails the build if any rule in §2 is broken, and if `engine.api`, `engine.declarations.model` or `engine.declarations.analysis` use IntelliJ or Kotlin plugin classes. A fixture of deliberately violating classes checks that every rule can fail.
 - **Declaration engine, `analysis` unit tests (no IDE):** declaration trees built by hand; one test per matching rule, the LCS ordering, each whitespace policy, and every status.
 - **Declaration engine, provider tests:** `BasePlatformTestCase` (Java via the light Java fixture); parse fixture text and compare the produced tree with an expected outline.
 - **Golden fixtures:** `src/test/testData/<language>/<case>/{old,new}.<ext>` plus `expected-<engine id>.txt`, a text rendering of the outline per engine. Each language must cover: added/removed/changed method, overloads, signature change, reorder, move between classes, class rename, formatting-only, comment-only change, string literal change, parse error on one side, empty and identical files, and (Kotlin) a line-break-only change.
-- **Integration test:** opening a `SimpleDiffRequest` produces an outline and selecting a node scrolls both editors.
+- **Integration test:** opening a `SimpleDiffRequest` produces an outline and selecting a node scrolls both editors; the outline toggle hides it and shows the native diff.
+
+### 12.1 Build and CI
+
+- Build target: IntelliJ IDEA Community 2025.1.3 (`platformVersion` in `gradle.properties`), `since-build` 251, no `until-build`. Bundled `com.intellij.java` and `org.jetbrains.kotlin` plugins, IntelliJ Platform test framework with the Java test framework, JUnit 4 and ArchUnit.
+- GitHub Actions (`.github/workflows/build.yml`) on every push to `main` and every pull request: `buildPlugin check` (build and all tests), and `verifyPlugin` with Plugin Verifier on IntelliJ IDEA Community 2025.1.3 and the latest IntelliJ IDEA release.
 
 ## 13. Prototype spikes
+
+This table is the single list of spikes; the product specification and roadmap refer to it.
 
 | Spike | Question | Done when |
 | --- | --- | --- |
@@ -379,9 +389,9 @@ Application-level, under *Settings → Tools → SMART Diff*:
 
 ## 14. Open questions
 
-- **Q1 Default visibility.** Should the outline open automatically once it has proven reliable, or stay opt-in?
-- **Q2 Renamed containers.** When a class is renamed, its members currently show as moved into an added class, with the old class removed. Should the first release pair the classes as a "rename candidate" (uncertain), or keep the literal result?
-- **Q3 Multi-file overview.** Is a change-list-level summary of changed declarations needed in the first release?
-- **Q4 Plugin ID.** The skeleton still uses `com.example.smartdiff`; the final ID is needed before extension point names (§3.2) are fixed.
+- **Q1 Default visibility (resolved 2026-10-21).** The outline opens by default, with a setting to turn it off and a toolbar button in every diff to switch between the outline and the plain native diff (§10, §11).
+- **Q2 Renamed containers (resolved 2026-10-21).** The first release keeps the literal result: the old class removed, the new class added, and its members moved into it. Rename candidates are revisited after validation ([roadmap](ROADMAP.md#rename-candidates)).
+- **Q3 Multi-file overview (resolved 2026-10-21).** Not in the first release, which is per-file only. The next step is a per-file summary inside the IDE's existing Changes/Commit tree ([roadmap](ROADMAP.md#multi-file-summary-in-the-changes-tree)).
+- **Q4 Plugin ID (resolved 2026-10-21).** The plugin ID, Gradle group and root package are `io.github.agadek.smartdiff`, which also names the extension point namespace (§3.2).
 - **Q5 Third-party engines (resolved 2026-10-21).** The `comparisonEngine` extension point stays internal: only SMART Diff and its own optional descriptors register engines, and the engine interface and result model may change freely. Revisit after a second production engine has used the result model without breaking changes.
 - **Q6 Engine choice scope (resolved 2026-10-21).** The default engine is chosen per language (§4, §11).

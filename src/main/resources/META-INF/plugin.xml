@@ -1,5 +1,5 @@
 <idea-plugin>
-    <id>com.example.smartdiff</id>
+    <id>io.github.agadek.smartdiff</id>
     <name>SMART Diff</name>
     <vendor url="https://github.com/agadek">agadek</vendor>
 
@@ -8,4 +8,7 @@
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
+    <!-- Language providers live in optional descriptors, so the plugin also loads in IDEs without Java or Kotlin. -->
+    <depends optional="true" config-file="smartdiff-java.xml">com.intellij.java</depends>
+    <depends optional="true" config-file="smartdiff-kotlin.xml">org.jetbrains.kotlin</depends>
 </idea-plugin>
