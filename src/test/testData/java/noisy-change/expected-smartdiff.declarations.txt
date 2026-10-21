@@ -1,0 +1,14 @@
+status: ANALYZED
+File region  changed  old 1-63  new 1-80
+class OrderService  formatting-only  old 6-48  new 7-56
+  constructor OrderService(OrderRepository)  formatting-only  old 10-12  new 12-15
+  method placeOrder(String,List<Item>)  changed  old 14-21  new 17-25
+  method applyDiscount(Order,BigDecimal)  moved  changed  signature changed  old 37-39  new 27-31
+  method formatReceipt(Order)  removed  old 41-43
+  method cancelOrder(String)  changed  old 23-27  new 33-39
+  method refund(String)  added  new 41-45
+  method total(Order)  formatting-only  old 29-35  new 47-55
+class OrderRepository  formatting-only  old 50-63  new 58-80
+  method find(String)  formatting-only  old 53-58  new 62-69
+  method save(Order)  formatting-only  old 60-62  new 71-74
+  method validate(List<Item>)  moved  changed  old 45-47  new 76-79
