@@ -54,6 +54,13 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@v6
 
+      # IntelliJ Platform Gradle Plugin 2.19.0 can drop bundled plugins such as com.intellij.java from its
+      # IDE layout index when the index is first built in the same run that resolves the verifier IDEs
+      # (fixed upstream after 2.19.0, JetBrains/intellij-platform-gradle-plugin#2192). Building first
+      # writes a complete index to the cache, which verifyPlugin then reuses. Remove once on a fixed release.
+      - name: Build plugin
+        run: ./gradlew buildPlugin
+
       - name: Verify plugin
         run: ./gradlew verifyPlugin
 
