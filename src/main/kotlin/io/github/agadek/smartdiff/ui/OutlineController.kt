@@ -97,6 +97,7 @@ class OutlineController internal constructor(
         } else {
             cancel()
             navigator.clear()
+            (viewer as? FilteringDiffViewer)?.hide(HiddenLines.NONE)
             splitter.secondComponent = null
             show(OutlineState.Hidden)
         }
@@ -178,11 +179,13 @@ class OutlineController internal constructor(
         val items = OutlineModel.build(result, request.oldText, request.newText, settings.formattingOnlyInline, hidden)
         shownRequest = request
         show(OutlineState.Shown(result, OutlineModel.summary(result, hidden), items, OutlineModel.hiddenCount(result, hidden)))
+        (viewer as? FilteringDiffViewer)?.hide(HiddenLines.of(result, hidden, request.oldText, request.newText))
     }
 
     private fun documentChanged() {
         if (disposed || !isOutlineVisible) return
         cancel()
+        (viewer as? FilteringDiffViewer)?.forgetHidden()
         debounce.restart()
     }
 
