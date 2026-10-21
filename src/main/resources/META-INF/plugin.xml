@@ -5,6 +5,11 @@
 
     <description><![CDATA[
         Review code changes by structure in IntelliJ-based IDEs, with the native text diff always available.
+        <br/><br/>
+        Free for noncommercial use under the
+        <a href="https://polyformproject.org/licenses/noncommercial/1.0.0">PolyForm Noncommercial License 1.0.0</a>.
+        Commercial use requires a separate license from the author.
+        Source code and issues: <a href="https://github.com/agadek/smart-diff">github.com/agadek/smart-diff</a>.
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
