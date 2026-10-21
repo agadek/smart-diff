@@ -1,3 +1,6 @@
 <!-- Loaded when the Java plugin is present. The Java declaration provider registers here. -->
 <idea-plugin>
+    <extensions defaultExtensionNs="io.github.agadek.smartdiff">
+        <declarationProvider implementation="io.github.agadek.smartdiff.engine.declarations.psi.java.JavaDeclarationProvider"/>
+    </extensions>
 </idea-plugin>

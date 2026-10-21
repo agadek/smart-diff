@@ -1,0 +1,4 @@
+status: ANALYZED
+class Cart  old 5-28  new 5-29
+  function add(Item)  formatting-only  old 9-11  new 9-11
+  function total()  formatting-only  old 15-21  new 15-22

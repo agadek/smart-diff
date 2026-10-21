@@ -1,0 +1,10 @@
+status: ANALYZED
+class Cart  removed  old 5-28
+class Basket  added  new 5-28
+  property items  moved  old 7  new 7
+  function add(Item)  moved  old 9-11  new 9-11
+  function add(String,Int)  moved  old 13  new 13
+  function total()  moved  old 15-21  new 15-21
+  function describe()  moved  old 23  new 23
+  object Companion  moved  old 25-27  new 25-27
+function isFull(Basket.)  changed  signature changed  old 36  new 36

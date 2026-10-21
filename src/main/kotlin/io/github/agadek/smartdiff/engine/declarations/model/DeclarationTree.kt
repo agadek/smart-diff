@@ -36,10 +36,19 @@ class Declaration(
     val range: TextRange,
     /** Nested declarations, in source order. */
     val children: List<Declaration> = emptyList(),
-    /** Tokens in [range] minus the children's ranges. */
+    /**
+     * Tokens in [range] minus the children's, preceded by the tokens of [leadingWhitespace]. The children's leading
+     * whitespace is theirs, not this declaration's.
+     */
     val ownTokens: List<Token> = emptyList(),
     /** A parse error lies in [range] but outside the children. */
     val hasParseError: Boolean = false,
+    /**
+     * The whitespace right before [range] that belongs to this declaration, such as the blank line before a method;
+     * null when there is none. Adding, removing or moving a declaration takes its leading whitespace with it, so its
+     * container does not change.
+     */
+    val leadingWhitespace: TextRange? = null,
 ) {
     override fun toString(): String = "$kind $name" + (signature?.let { "($it)" } ?: "") + " $range"
 }

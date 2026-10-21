@@ -1,0 +1,3 @@
+status: ANALYZED
+class Cart  old 5-28  new 5-32
+  function clear()  added  new 23-25

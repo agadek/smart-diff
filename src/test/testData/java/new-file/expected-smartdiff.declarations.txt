@@ -1,0 +1,11 @@
+status: ANALYZED
+File region  changed  old 1  new 1-37
+class Cart  added  new 6-31
+  field items  added  new 8
+  method add(Item)  added  new 10-12
+  method add(String,int)  added  new 14-16
+  method total()  added  new 18-24
+  method describe()  added  new 26-28
+  record Item  added  new 30
+class Receipt  added  new 33-37
+  method header()  added  new 34-36

@@ -1,0 +1,3 @@
+status: ANALYZED
+class Cart  old 6-31  new 6-31
+  method describe()  moved  old 26-28  new 18-20

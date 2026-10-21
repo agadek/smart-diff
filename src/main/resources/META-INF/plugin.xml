@@ -22,5 +22,20 @@
         <extensionPoint name="comparisonEngine"
                         interface="io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory"
                         dynamic="true"/>
+        <!-- Internal to the declaration engine: one provider per language, each in its language's optional descriptor. -->
+        <extensionPoint name="declarationProvider"
+                        interface="io.github.agadek.smartdiff.engine.declarations.psi.DeclarationProvider"
+                        dynamic="true"/>
     </extensionPoints>
+
+    <!-- The Kotlin plugin reads this from the main descriptor only; without it, K2 mode skips smartdiff-kotlin.xml.
+         The Kotlin provider uses PSI only, no analysis API, so it supports both modes. -->
+    <extensions defaultExtensionNs="org.jetbrains.kotlin">
+        <supportsKotlinPluginMode supportsK1="true" supportsK2="true"/>
+    </extensions>
+
+    <extensions defaultExtensionNs="io.github.agadek.smartdiff">
+        <comparisonEngine order="first"
+                          implementation="io.github.agadek.smartdiff.engine.declarations.psi.DeclarationEngineFactory"/>
+    </extensions>
 </idea-plugin>

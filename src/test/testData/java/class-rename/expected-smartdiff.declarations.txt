@@ -1,0 +1,9 @@
+status: ANALYZED
+class Cart  removed  old 6-31
+class Basket  added  new 6-31
+  field items  moved  old 8  new 8
+  method add(Item)  moved  old 10-12  new 10-12
+  method add(String,int)  moved  old 14-16  new 14-16
+  method total()  moved  old 18-24  new 18-24
+  method describe()  moved  old 26-28  new 26-28
+  record Item  moved  old 30  new 30

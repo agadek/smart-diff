@@ -1,0 +1,4 @@
+status: ANALYZED
+class Cart  old 5-28  new 5-32
+  function add(String,Int)  changed  old 13  new 13
+  function add(Item,Int)  added  new 15-17

@@ -1,0 +1,4 @@
+status: ANALYZED
+class Cart  old 6-31  new 6-32
+  method add(Item)  formatting-only  old 10-12  new 10-12
+  method total()  formatting-only  old 18-24  new 18-25
