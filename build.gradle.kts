@@ -4,7 +4,9 @@ import org.jetbrains.intellij.platform.gradle.models.ProductRelease
 
 plugins {
     id("org.jetbrains.kotlin.jvm") version "2.1.20"
-    id("org.jetbrains.intellij.platform") version "2.19.0"
+    // 2.16.0 to 2.19.0 can fail to find bundled plugins such as com.intellij.java (ClosedFileSystemException
+    // while indexing the IDE, JetBrains/intellij-platform-gradle-plugin#2192). Move up once a release has the fix.
+    id("org.jetbrains.intellij.platform") version "2.15.0"
 }
 
 group = "io.github.agadek.smartdiff"
