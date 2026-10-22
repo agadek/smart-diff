@@ -63,7 +63,7 @@ class ScalaDeclarationProviderTest : ProviderTestCase() {
 
         assertFalse(tree.fileRegion.hasParseError || tree.all.any { it.hasParseError })
         assertEquals(listOf("A", "After"), tree.topLevel.map { it.name }.filter { it != "Color" })
-        assertEquals(WhitespacePolicy.SIGNIFICANT, tree.whitespacePolicy)
+        assertEquals(WhitespacePolicy.INDENTATION_SIGNIFICANT, tree.whitespacePolicy)
     }
 
     fun `test Scala 2 code that Scala 3 also parses goes to Scala 3`() {
@@ -96,6 +96,16 @@ class ScalaDeclarationProviderTest : ProviderTestCase() {
 
         assertEquals(Status.ANALYZED, result.status)
         assertEquals(Content.CHANGED, result.changes.single().content)
+    }
+
+    fun `test spaces within a Scala 3 line are formatting-only`() {
+        val old = "object A:\n  def f = g(1, 2)\n"
+        val new = "object A:\n  def f  =  g(1,2)\n"
+
+        val result = compare(old, new)
+
+        assertEquals(Status.ANALYZED, result.status)
+        assertEquals(Content.FORMATTING_ONLY, result.changes.single().content)
     }
 
     fun `test a Scala 2 indentation change is formatting-only`() {

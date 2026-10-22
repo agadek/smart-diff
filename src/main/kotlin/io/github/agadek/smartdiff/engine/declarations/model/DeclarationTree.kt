@@ -77,6 +77,12 @@ enum class WhitespacePolicy {
     /** Kotlin: only whether there is a line break between two tokens matters. */
     LINE_BREAKS_SIGNIFICANT,
 
+    /**
+     * Scala 3: whether there is a line break matters, and so does the indentation after the last one, compared as
+     * written; spaces within a line do not.
+     */
+    INDENTATION_SIGNIFICANT,
+
     /** Python, YAML: whitespace always matters, so nothing is formatting-only. */
     SIGNIFICANT,
 }

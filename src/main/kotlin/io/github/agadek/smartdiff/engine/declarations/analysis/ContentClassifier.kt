@@ -20,6 +20,9 @@ object ContentClassifier {
     /** Stands for a whitespace run with a line break under [WhitespacePolicy.LINE_BREAKS_SIGNIFICANT]. */
     private val LINE_BREAK = Token("WHITESPACE", "⏎", TokenKind.WHITESPACE)
 
+    /** Stands for a whitespace run with a line break under [WhitespacePolicy.INDENTATION_SIGNIFICANT]. */
+    private fun lineBreak(indentation: String) = Token("WHITESPACE", "⏎$indentation", TokenKind.WHITESPACE)
+
     fun classify(
         old: List<Token>,
         new: List<Token>,
@@ -42,14 +45,22 @@ object ContentClassifier {
     internal fun normalize(tokens: List<Token>, policy: WhitespacePolicy): List<Token> {
         if (policy == WhitespacePolicy.SIGNIFICANT) return tokens
         val normalized = mutableListOf<Token>()
-        var run: Boolean? = null // null outside a whitespace run, otherwise whether the run has a line break
+        val run = StringBuilder() // the text of the current whitespace run
         fun endRun() {
-            if (run == true && policy == WhitespacePolicy.LINE_BREAKS_SIGNIFICANT) normalized += LINE_BREAK
-            run = null
+            val lastBreak = maxOf(run.lastIndexOf("\n"), run.lastIndexOf("\r"))
+            if (lastBreak >= 0) {
+                when (policy) {
+                    WhitespacePolicy.LINE_BREAKS_SIGNIFICANT -> normalized += LINE_BREAK
+                    // The indentation of the next line: the run's text after its last line break.
+                    WhitespacePolicy.INDENTATION_SIGNIFICANT -> normalized += lineBreak(run.substring(lastBreak + 1))
+                    else -> {}
+                }
+            }
+            run.setLength(0)
         }
         for (token in tokens) {
             if (token.kind == TokenKind.WHITESPACE) {
-                run = run == true || token.text.contains('\n') || token.text.contains('\r')
+                run.append(token.text)
             } else {
                 endRun()
                 normalized += token

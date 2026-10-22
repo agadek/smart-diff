@@ -2,6 +2,7 @@ package io.github.agadek.smartdiff.engine.declarations.analysis
 
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy
+import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy.INDENTATION_SIGNIFICANT
 import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy.INSIGNIFICANT
 import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy.LINE_BREAKS_SIGNIFICANT
 import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy.SIGNIFICANT
@@ -52,6 +53,17 @@ class ContentClassifierTest {
     }
 
     @Test
+    fun `indentation policy ignores spaces within a line but not line breaks or indentation`() {
+        assertEquals(Content.FORMATTING_ONLY, classify("val x = a+b", "val x  =  a + b", INDENTATION_SIGNIFICANT))
+        assertEquals(Content.FORMATTING_ONLY, classify("object A:\n  def f = 1", "object A:\n\n  def f  = 1", INDENTATION_SIGNIFICANT))
+        assertEquals(Content.CHANGED, classify("val x = a + b", "val x = a\n+ b", INDENTATION_SIGNIFICANT))
+        assertEquals(Content.CHANGED, classify("def f =\n    a\n    b", "def f =\n    a\n  b", INDENTATION_SIGNIFICANT))
+        // Indentation is compared as written: re-indenting everything, or a tab for spaces, is not formatting-only.
+        assertEquals(Content.CHANGED, classify("object A:\n  def f = 1", "object A:\n    def f = 1", INDENTATION_SIGNIFICANT))
+        assertEquals(Content.CHANGED, classify("object A:\n  def f = 1", "object A:\n\tdef f = 1", INDENTATION_SIGNIFICANT))
+    }
+
+    @Test
     fun `significant whitespace is never formatting-only`() {
         assertEquals(Content.CHANGED, classify("if a:\n  b", "if a:\n    b", SIGNIFICANT))
         assertEquals(Content.CHANGED, classify("x = 1", "x  = 1", SIGNIFICANT))
@@ -78,6 +90,7 @@ class ContentClassifierTest {
         val withoutChild = tokens("{\n}")
         assertEquals(Content.FORMATTING_ONLY, ContentClassifier.classify(withChild, withoutChild, LINE_BREAKS_SIGNIFICANT, false))
         assertEquals(Content.FORMATTING_ONLY, ContentClassifier.classify(withChild, withoutChild, INSIGNIFICANT, false))
+        assertEquals(Content.FORMATTING_ONLY, ContentClassifier.classify(withChild, withoutChild, INDENTATION_SIGNIFICANT, false))
         assertEquals(Content.CHANGED, ContentClassifier.classify(withChild, withoutChild, SIGNIFICANT, false))
     }
 

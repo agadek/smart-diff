@@ -44,11 +44,11 @@ class ScalaDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_BR
         PsiFileFactory.getInstance(project).createFileFromText("SmartDiff.scala", dialect ?: Scala3Language.INSTANCE, text, false, false)
 
     /**
-     * Scala 3 can make indentation significant (optional braces), so until the indentation-significant policy exists
-     * nothing in a Scala 3 file is formatting-only. Scala 2, like Kotlin, infers semicolons from line breaks.
+     * Scala 3 optional braces make indentation significant, so a change in indentation is never formatting-only. Scala 2,
+     * like Kotlin, infers semicolons from line breaks.
      */
     override fun whitespacePolicy(file: PsiFile): WhitespacePolicy =
-        if (file.language == Scala3Language.INSTANCE) WhitespacePolicy.SIGNIFICANT else WhitespacePolicy.LINE_BREAKS_SIGNIFICANT
+        if (file.language == Scala3Language.INSTANCE) WhitespacePolicy.INDENTATION_SIGNIFICANT else WhitespacePolicy.LINE_BREAKS_SIGNIFICANT
 
     // The Scala PSI returns Scala collections; ScalaInterop turns them into Kotlin ones.
     override fun topLevel(file: PsiFile): List<PsiElement> = ScalaInterop.list((file as ScalaFile).typeDefinitions())

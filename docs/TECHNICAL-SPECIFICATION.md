@@ -174,7 +174,7 @@ data class RangePair(val old: TextRange?, val new: TextRange?)      // at least 
 data class TextRange(val start: Int, val end: Int)           // [start, end)
 ```
 
-`DeclarationKind` is part of the API so engines share labels: `CLASS, INTERFACE, ENUM, RECORD, ANNOTATION_TYPE, OBJECT, CONSTRUCTOR, METHOD, FUNCTION, FIELD, PROPERTY, ENUM_CONSTANT, TYPE_ALIAS, INITIALIZER`.
+`DeclarationKind` is part of the API so engines share labels: `CLASS, INTERFACE, ENUM, RECORD, ANNOTATION_TYPE, OBJECT, CONSTRUCTOR, METHOD, FUNCTION, FIELD, PROPERTY, ENUM_CONSTANT, TYPE_ALIAS, INITIALIZER`, and with the Scala provider (§6.8) `TRAIT, GIVEN, EXTENSION`.
 
 A `ChangeNode` is *reported* if it is not `MATCHED`, or is moved, renamed or signature changed, or its content is not `UNCHANGED`, or any child is reported. A *rename candidate* is a `MATCHED` node with `renamedFrom` set: the engine paired two subjects with different names because their content is similar, which may be wrong, so the outline always shows it (§10). Engines may include unreported nodes for navigation; the outline hides them.
 
@@ -233,6 +233,7 @@ enum class TokenKind { WHITESPACE, COMMENT, OTHER }
 enum class WhitespacePolicy {
     INSIGNIFICANT,           // Java: drop whitespace tokens
     LINE_BREAKS_SIGNIFICANT, // Kotlin: keep "has line break" vs "no line break"
+    INDENTATION_SIGNIFICANT, // Scala 3: keep line breaks and the indentation after them
     SIGNIFICANT,             // Python, YAML: never claim formatting-only
 }
 ```
@@ -241,7 +242,7 @@ enum class WhitespacePolicy {
 
 - PSI: inside a cancellable read action, `PsiFileFactory.getInstance(project).createFileFromText(name, language, text, false, false)`; `project` is the one passed to the factory, or the default project when there is none **(confirmed by S2)**.
 - Java files are parsed at the highest language level the platform knows, set with `PsiUtil.FILE_LANGUAGE_LEVEL_KEY` before the tree is built. Without it the level comes from the default project's settings, which the user can change. S2 saw `JDK_24` on 2025.1 either way, with records, sealed types, record patterns and text blocks parsed without errors.
-- Scala files are parsed as `Scala3Language` or `ScalaLanguage` **(S4)**. The Scala plugin hard-wires the parser and lexer to the file's language, and a file from text has no module whose settings could change it; the language id of a request is always `Scala`, since the file type does not depend on the module. The provider parses both texts as Scala 3 and keeps Scala 3 when neither has a parse error; otherwise it also parses both as Scala 2 and takes Scala 2 only when its error count over both sides is lower. The Scala 3 parser accepts most Scala 2 code, procedure syntax included, so ties go to Scala 3; Scala 2 wins on code Scala 3 dropped, such as `enum` as a name. When neither parses cleanly, the usual parse-error rules apply (§6.7). Until the indentation-significant policy exists, a Scala 3 tree uses `SIGNIFICANT`, so nothing in it is formatting-only; a Scala 2 tree uses `LINE_BREAKS_SIGNIFICANT`.
+- Scala files are parsed as `Scala3Language` or `ScalaLanguage` **(S4)**. The Scala plugin hard-wires the parser and lexer to the file's language, and a file from text has no module whose settings could change it; the language id of a request is always `Scala`, since the file type does not depend on the module. The provider parses both texts as Scala 3 and keeps Scala 3 when neither has a parse error; otherwise it also parses both as Scala 2 and takes Scala 2 only when its error count over both sides is lower. The Scala 3 parser accepts most Scala 2 code, procedure syntax included, so ties go to Scala 3; Scala 2 wins on code Scala 3 dropped, such as `enum` as a name. When neither parses cleanly, the usual parse-error rules apply (§6.7). A Scala 3 tree uses `INDENTATION_SIGNIFICANT`, since optional braces make indentation significant; a Scala 2 tree uses `LINE_BREAKS_SIGNIFICANT`.
 - Offsets from the PSI equal offsets into the request text **(confirmed by S2)**: for every declaration, the PSI element's text equals the request text sliced by its range. A declaration's range includes its doc comment and annotations in both languages.
 - The request texts are document snapshots, which are always LF-separated: a VCS revision with CRLF line ends arrives as an LF document, and the content only records the original separator. Ranges therefore match the diff editors.
 - Providers must not resolve references or types (no classpath; see ADR 0002).
@@ -292,6 +293,32 @@ The signature is a matching key. Labels use a second form of it, the *display si
 - If either side has errors and no declarations were found while the file is non-blank, the result is `FAILED` with the native diff shown.
 - A result with any `UNANALYZED` content has status `PARTIAL`.
 
+### 6.8 Scala provider
+
+Planned for the [Scala](ROADMAP.md#scala) release; it resolves Q7. The provider uses the Scala plugin's PSI only, never its type inference, in the dialect chosen by §6.2. Names are the names as written (`ScNamedElement.name()`; `getName()` gives an object's JVM name, `Shapes$`).
+
+| PSI element | Kind | Name | Signature |
+| --- | --- | --- | --- |
+| `ScClass` (also case and abstract classes) | CLASS | `name()` | — |
+| `ScTrait` | TRAIT | `name()` | — |
+| `ScObject` (also companions and package objects) | OBJECT | `name()`; a package object takes its package's name | — |
+| `ScEnum` (Scala 3) | ENUM | `name()` | — |
+| enum case | ENUM_CONSTANT | `name()` | — |
+| `def` (definition or abstract declaration, not local) | FUNCTION | `name()` | parameter clauses |
+| `def this(…)` | CONSTRUCTOR | `""` | parameter clauses |
+| `val`, `var`, `lazy val` (definition or abstract declaration, not local) | PROPERTY | the bound name; `(a, b)` for a pattern that binds several | — |
+| `type` (alias or abstract type member) | TYPE_ALIAS | `name()` | — |
+| `given` (Scala 3) | GIVEN | `name()`; for an anonymous given, its type as written (`Ordering[Int]`) | `using` clauses, if any |
+| `extension` block (Scala 3) | EXTENSION | the receiver's type as written (`String`, `List[T]`) | `using` clauses, if any |
+
+- **Containers:** classes, traits, objects, enums, givens with a body and extension blocks; an extension block's methods are its `FUNCTION` children, so a change to the receiver shows on one node. Definitions in `package` clauses, braced or not, are top-level declarations; so are Scala 3 top-level definitions.
+- **Not declarations:** local definitions inside blocks, anonymous classes (`new T { … }`), statements in a class body, the primary constructor and its `val`/`var` parameters, `derives` clauses and `import`s. Their source belongs to the declaration that contains them, or to the file region.
+- **Several on one line:** `case A, B` gives two enum constants and `val a, b = 0` two properties; the shared tokens belong to the first, as for Java fields (§6.4). A pattern definition `val (a, b) = …` binds through one pattern, so it is one property named `(a, b)`.
+- **Anonymous givens** are named by their type, normalized like a signature (`given Ordering[List[Int]]` → `Ordering[List[Int]]`), not by the compiler's synthesized name, which is harder to read and has changed between compiler versions. Two anonymous givens of one type in one container repeat a key and follow the matcher's rules for repeated keys.
+- **Signatures:** each parameter clause is normalized as in §6.6 (types only, without whitespace, comments, annotations, modifiers and names), the types joined with `,` and the clauses with `;`. A `using` or `implicit` clause keeps its keyword and one space before its types. So `def f[A](x: A, y: Int)(using Ordering[A])` → `A,Int;using Ordering[A]`. Type parameters and context bounds are left out, as for Java and Kotlin; repeated (`T*`) and by-name (`=> T`, normalized `=>T`) types stay as written. `def f` has no clause and no signature, `def f()` has the empty signature, so changing one into the other is a signature change (rule M3). The display signature follows §6.6, with `=> T` keeping its space.
+- **Kinds and matching:** a class and its companion object share a name but differ in kind, so they never collide. Changing a `class` into a `trait` or a `case class` into an `enum` changes the kind, so it is reported as removed and added; rename candidates (M5) need the same kind and do not pair them.
+- **Whitespace:** Scala 2 trees use `LINE_BREAKS_SIGNIFICANT`, like Kotlin, since Scala also infers semicolons from line breaks. Scala 3 trees use `INDENTATION_SIGNIFICANT` (§8), since optional braces make indentation part of the meaning.
+
 ## 7. Declaration engine: matching
 
 Inputs: the old and new `DeclarationTree`. Matching is global over all declarations in the file, so a declaration can be matched across containers. Each rule runs over the declarations still unmatched after the previous rule. Within a rule, declarations are processed in source order of the old side, which makes the result deterministic.
@@ -334,10 +361,11 @@ The steps are applied in order, and the first that applies decides the content:
 4. Normalize both sequences with the tree's whitespace policy, then compare `(type, text)` pairs:
    - `INSIGNIFICANT`: drop `WHITESPACE` tokens.
    - `LINE_BREAKS_SIGNIFICANT`: replace each `WHITESPACE` token with `⏎` if it contains a line break, otherwise drop it.
+   - `INDENTATION_SIGNIFICANT`: replace each `WHITESPACE` token that contains a line break with `⏎` followed by the indentation after its last line break, as written; drop the others. Indentation is compared as written, not relative to the container, so re-indenting a whole block, or a tab for spaces, is `CHANGED`; that is strict but never hides a change of structure. Blank lines and spaces within a line still count as formatting.
    - `SIGNIFICANT`: no normalization (step 4 can never produce formatting-only).
    Equal → `FORMATTING_ONLY`; otherwise → `CHANGED`.
 
-In step 4 a run of adjacent `WHITESPACE` tokens counts as one: own tokens skip the children's extents, so the whitespace before and after a child can become adjacent, and adding or removing a child must not change the count of line breaks. Because each child owns its leading whitespace (§6.1), adding, removing, moving or reordering members leaves their container `UNCHANGED`. Removing the first member is the exception: the next member's leading whitespace changes (the blank line after `{` goes), so that member is `FORMATTING_ONLY`.
+In step 4 a run of adjacent `WHITESPACE` tokens counts as one: own tokens skip the children's extents, so the whitespace before and after a child can become adjacent, and adding or removing a child must not change the count of line breaks; under `INDENTATION_SIGNIFICANT` the run's indentation is the text after its last line break. Because each child owns its leading whitespace (§6.1), adding, removing, moving or reordering members leaves their container `UNCHANGED`. Removing the first member is the exception: the next member's leading whitespace changes (the blank line after `{` goes), so that member is `FORMATTING_ONLY`.
 
 `COMMENT` tokens are compared by exact text, including whitespace inside them. The declaration engine puts only leading whitespace in `details` (§6.1); the native diff shows the detail.
 
@@ -451,4 +479,4 @@ Spikes S1 to S3 ran as platform tests and were retired once the tests of §12 co
 - **Q4 Plugin ID (resolved 2026-10-21).** The plugin ID, Gradle group and root package are `io.github.agadek.smartdiff`, which also names the extension point namespace (§3.2).
 - **Q5 Third-party engines (resolved 2026-10-21).** The `comparisonEngine` extension point stays internal: only SMART Diff and its own optional descriptors register engines, and the engine interface and result model may change freely. Revisit after a second production engine has used the result model without breaking changes.
 - **Q6 Engine choice scope (resolved 2026-10-21).** The default engine is chosen per language (§4, §11).
-- **Q7 Scala declaration model (open, after the first release).** For the [Scala provider](ROADMAP.md#scala): add `TRAIT`, `GIVEN` and `EXTENSION` to `DeclarationKind`, or map traits to `INTERFACE`; how to name anonymous givens (the compiler-synthesized name or the type as written); whether an extension block is a container or its methods are flattened with the receiver type in their signatures; how pattern definitions such as `val (a, b) = …` produce declarations; and how signatures render several parameter lists and `using`/`implicit` clauses.
+- **Q7 Scala declaration model (resolved 2026-10-22).** For the [Scala provider](ROADMAP.md#scala) (§6.8): `TRAIT`, `GIVEN` and `EXTENSION` are added to `DeclarationKind`, rather than mapping traits to `INTERFACE`, since traits can hold state and code; anonymous givens are named by their type as written; an extension block is an `EXTENSION` container named by its receiver type, with its methods as children; a pattern definition such as `val (a, b) = …` is one property named `(a, b)`; parameter clauses are joined with `;`, and a `using` or `implicit` clause keeps its keyword.
