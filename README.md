@@ -47,6 +47,7 @@ CI runs both on every pull request (`.github/workflows/build.yml`).
 - [Roadmap](docs/ROADMAP.md)
 - [Decision records](docs/adr/)
 - [Glossary](docs/GLOSSARY.md)
+- [Validation on real commits](docs/VALIDATION.md)
 
 ## Support
 
