@@ -1,5 +1,6 @@
 package io.github.agadek.smartdiff.engine.declarations.psi
 
+import com.intellij.lang.Language
 import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
@@ -17,8 +18,8 @@ import java.util.concurrent.CancellationException
  * The declaration engine (technical specification §6 to §8): a language's [DeclarationProvider] turns each side into a
  * declaration tree, then [DeclarationAnalysis] matches and classifies them.
  *
- * Each side is parsed in its own cancellable read action; matching and classification run outside any read action and
- * hold no PSI.
+ * The provider first chooses the dialect from both texts; then each side is parsed in its own cancellable read action.
+ * Matching and classification run outside any read action and hold no PSI.
  */
 class DeclarationEngine(private val project: Project?) : ComparisonEngine {
     override val id: EngineId = ID
@@ -33,8 +34,11 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
         val provider = provider(request.languageId)
             ?: return ComparisonResult.unsupported(this, "no declaration provider for language ${request.languageId}")
         return try {
-            val old = build(provider, request.oldText, request.fileName, cancellation)
-            val new = build(provider, request.newText, request.fileName, cancellation)
+            val dialect = cancellableReadAction(cancellation) {
+                provider.dialect(project(), request.oldText, request.newText, request.fileName)
+            }
+            val old = build(provider, request.oldText, request.fileName, dialect, cancellation)
+            val new = build(provider, request.newText, request.fileName, dialect, cancellation)
             DeclarationAnalysis(id, version).compare(old, new, request.limits.maxDeclarations, cancellation)
         } catch (e: CancellationException) {
             throw e
@@ -45,11 +49,18 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
         }
     }
 
-    private fun build(provider: DeclarationProvider, text: CharSequence, fileName: String?, cancellation: Cancellation): DeclarationTree =
+    private fun build(
+        provider: DeclarationProvider,
+        text: CharSequence,
+        fileName: String?,
+        dialect: Language?,
+        cancellation: Cancellation,
+    ): DeclarationTree =
         cancellableReadAction(cancellation) {
-            val file = provider.parse(project ?: ProjectManager.getInstance().defaultProject, text, fileName)
-            provider.build(file, cancellation)
+            provider.build(provider.parse(project(), text, fileName, dialect), cancellation)
         }
+
+    private fun project(): Project = project ?: ProjectManager.getInstance().defaultProject
 
     private fun provider(languageId: String): DeclarationProvider? =
         DeclarationProvider.EP_NAME.extensionList.firstOrNull { it.supports(languageId) }
@@ -58,6 +69,6 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
         val ID = EngineId("smartdiff.declarations")
 
         /** Raise when a change to a provider, matching or classification can change results. */
-        const val VERSION = "1"
+        const val VERSION = "2"
     }
 }

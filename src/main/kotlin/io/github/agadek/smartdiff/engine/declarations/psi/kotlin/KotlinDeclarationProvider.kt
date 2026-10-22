@@ -1,5 +1,6 @@
 package io.github.agadek.smartdiff.engine.declarations.psi.kotlin
 
+import com.intellij.lang.Language
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -35,7 +36,7 @@ class KotlinDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_B
 
     override fun supports(languageId: String): Boolean = languageId == KotlinLanguage.INSTANCE.id
 
-    override fun parse(project: Project, text: CharSequence, fileName: String?): PsiFile {
+    override fun parse(project: Project, text: CharSequence, fileName: String?, dialect: Language?): PsiFile {
         val name = if (fileName?.endsWith(".kts") == true) "SmartDiff.kts" else "SmartDiff.kt"
         return PsiFileFactory.getInstance(project).createFileFromText(name, KotlinLanguage.INSTANCE, text, false, false)
     }
