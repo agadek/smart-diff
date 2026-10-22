@@ -25,6 +25,11 @@ class ChangesSummaryTest : BasePlatformTestCase() {
         super.setUp()
         saved = settings.state
         settings.loadState(SmartDiffSettings.SettingsState())
+        // The light project, and so the summary cache, is shared by the tests.
+        ChangesSummaryService.getInstance(project).run {
+            waitForSummaries()
+            clear()
+        }
     }
 
     override fun tearDown() {
