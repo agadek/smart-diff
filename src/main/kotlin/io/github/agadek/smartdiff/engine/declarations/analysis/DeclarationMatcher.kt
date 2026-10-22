@@ -15,8 +15,23 @@ enum class MatchRule {
     /** M2: same kind, name and signature in a different path. */
     PATH_CHANGED,
 
-    /** M3: same kind, path and name, different signature. */
+    /**
+     * M3: same kind, path and name, different signature; or, when that path and name occurs more than once on a side
+     * (overloads that all changed), the most similar parameter list and content of the group.
+     */
     SIGNATURE_CHANGED,
+
+    /**
+     * M5: a removed and an added declaration of the same kind, in matched containers, with a different name and
+     * similar content. May be wrong, so it is reported as a candidate.
+     */
+    RENAME_CANDIDATE,
+
+    /**
+     * M5: a Java constructor of a class paired by [RENAME_CANDIDATE]. Its name is the class's, so it follows the class
+     * and is not a rename of its own.
+     */
+    CONTAINER_RENAMED,
 }
 
 /** An old-side declaration and its counterpart on the new side. */
@@ -60,9 +75,11 @@ class Matching(
 
 /**
  * Matches declarations globally over the file (technical specification §7), so a declaration can be matched across
- * containers. Rules M1 to M4 run in order, each over the declarations the earlier rules left unmatched, and pair only
+ * containers. Rules M1 to M5 run in order, each over the declarations the earlier rules left unmatched. M1 to M3 pair
  * declarations whose key occurs exactly once on each side, except that M1 first pairs same-key declarations with the
- * same content. Declarations are processed in old-side source order, which makes the result deterministic.
+ * same content and M3 pairs the rest of a repeated path and name by similarity. M4 marks what is still ambiguous, and
+ * M5 pairs removed and added declarations with similar content as rename candidates. Declarations are processed in
+ * old-side source order, and ties in similarity go to the closest position, which makes the result deterministic.
  */
 object DeclarationMatcher {
 
@@ -110,6 +127,20 @@ object DeclarationMatcher {
         pairUnique(MatchRule.PATH_CHANGED) { _, d -> Key(d.kind, null, d.name, d.signature) }
         pairUnique(MatchRule.SIGNATURE_CHANGED, pathAndName)
 
+        val similarity = Similarity(cancellation)
+
+        // M3, repeated path and name: overloads whose signatures all changed pair with the most similar one. What
+        // remains of the group may then be unique and pair as above.
+        val newOverloads = newSide.groupUnmatched(newMatched, pathAndName, cancellation)
+        for ((k, olds) in oldSide.groupUnmatched(pairs.keys, pathAndName, cancellation)) {
+            val news = newOverloads[k] ?: continue
+            for ((o, n) in similarity.pairs(olds, news, OVERLOAD_THRESHOLD, similarity::overload)) {
+                pairs[o] = n to MatchRule.SIGNATURE_CHANGED
+                newMatched += n
+            }
+        }
+        pairUnique(MatchRule.SIGNATURE_CHANGED, pathAndName)
+
         // M4: a path and name that both sides still have, but not exactly once each.
         val uncertainOld = IdentityHashMap<Declaration, Uncertain>()
         val uncertainNew = IdentityHashMap<Declaration, Uncertain>()
@@ -118,6 +149,32 @@ object DeclarationMatcher {
             val news = newAmbiguous[k] ?: continue
             olds.forEach { uncertainOld[it] = Uncertain(it, news) }
             news.forEach { uncertainNew[it] = Uncertain(it, olds) }
+        }
+
+        // M5: in each pair of matched containers and at the top level, removed and added declarations of one kind with
+        // similar content. Containers come before their children, so the members of a renamed class are paired too.
+        val containers = ArrayDeque<Pair<Declaration?, Declaration?>>()
+        containers += null to null
+        for (o in old.all) pairs[o]?.first?.let { n -> if (o.children.isNotEmpty() && n.children.isNotEmpty()) containers += o to n }
+        while (containers.isNotEmpty()) {
+            val (oldContainer, newContainer) = containers.removeFirst()
+            val removed = (oldContainer?.children ?: old.topLevel).filter { it !in pairs && it !in uncertainOld }
+            val added = (newContainer?.children ?: new.topLevel).filter { it !in newMatched && it !in uncertainNew }
+            for ((kind, olds) in removed.groupBy { it.kind }) {
+                val news = added.filter { it.kind == kind }
+                for ((o, n) in similarity.pairs(olds, news, RENAME_THRESHOLD, similarity::rename, similarity::name)) {
+                    val followsContainer = kind == DeclarationKind.CONSTRUCTOR &&
+                        o.name == oldContainer?.name && n.name == newContainer?.name
+                    pairs[o] = n to when {
+                        followsContainer -> MatchRule.CONTAINER_RENAMED
+                        o.name != n.name -> MatchRule.RENAME_CANDIDATE
+                        o.signature != n.signature -> MatchRule.SIGNATURE_CHANGED
+                        else -> MatchRule.IDENTITY
+                    }
+                    newMatched += n
+                    if (o.children.isNotEmpty() && n.children.isNotEmpty()) containers += o to n
+                }
+            }
         }
 
         // Both top level, or the old container is matched to the new one.
@@ -200,6 +257,149 @@ object DeclarationMatcher {
         return kept
     }
 
+    /**
+     * How alike two declarations are, from 0 to 1: the Dice coefficient of their bags of adjacent token pairs, which
+     * is cheap for large declarations and still sensitive to order.
+     */
+    private class Similarity(private val cancellation: Cancellation) {
+        private val bigrams = IdentityHashMap<Declaration, Bigrams>()
+
+        /**
+         * Pairs [olds] with [news], most similar first, where the similarity is at least [threshold] and beats every
+         * other unpaired option of both declarations by [MARGIN]: a close second leaves both unpaired, since either
+         * could be the counterpart, unless [tiebreak] tells them apart: it must be at least [TIEBREAK_MIN] for the pair
+         * and beat every close rival by [TIEBREAK_MARGIN]. Groups with more than [MAX_SIMILARITY_PAIRS] options are left
+         * unpaired.
+         */
+        fun pairs(
+            olds: List<Declaration>,
+            news: List<Declaration>,
+            threshold: Double,
+            similarity: (Declaration, Declaration) -> Double,
+            tiebreak: ((Declaration, Declaration) -> Double)? = null,
+        ): List<Pair<Declaration, Declaration>> {
+            if (olds.isEmpty() || news.isEmpty() || olds.size.toLong() * news.size > MAX_SIMILARITY_PAIRS) return emptyList()
+            val scores = Array(olds.size) { i ->
+                DoubleArray(news.size) { j ->
+                    cancellation.checkCanceled()
+                    similarity(olds[i], news[j])
+                }
+            }
+            class Option(val o: Int, val n: Int, val score: Double)
+            val options = buildList {
+                for (i in olds.indices) for (j in news.indices) if (scores[i][j] >= threshold) add(Option(i, j, scores[i][j]))
+            }.sortedWith(compareByDescending<Option> { it.score }.thenBy { it.o }.thenBy { it.n })
+            val partner = IntArray(olds.size) { -1 }
+            val newTaken = BooleanArray(news.size)
+            for (option in options) {
+                if (partner[option.o] >= 0 || newTaken[option.n]) continue
+                val close = option.score - MARGIN
+                val rivals = olds.indices.filter { it != option.o && partner[it] < 0 && scores[it][option.n] > close }
+                    .map { olds[it] to news[option.n] } +
+                    news.indices.filter { it != option.n && !newTaken[it] && scores[option.o][it] > close }
+                        .map { olds[option.o] to news[it] }
+                if (rivals.isNotEmpty()) {
+                    if (tiebreak == null) continue
+                    val own = tiebreak(olds[option.o], news[option.n])
+                    if (own < TIEBREAK_MIN || rivals.any { (o, n) -> tiebreak(o, n) > own - TIEBREAK_MARGIN }) continue
+                }
+                partner[option.o] = option.n
+                newTaken[option.n] = true
+            }
+            return olds.indices.filter { partner[it] >= 0 }.map { olds[it] to news[partner[it]] }
+        }
+
+        /** Overloads: the parameter types (as a bag) and the content weigh the same. */
+        fun overload(o: Declaration, n: Declaration): Double =
+            (dice(parameters(o.signature), parameters(n.signature)) + content(o, n)) / 2
+
+        /** Renames: the content, with each side's own name taken out, so a rename alone leaves them identical. */
+        fun rename(o: Declaration, n: Declaration): Double = content(o, n)
+
+        /**
+         * How alike two names are: the Dice coefficient of their bags of adjacent character pairs, ignoring case, so
+         * `testShowOwner` and `showOwner` are close. Only breaks ties between declarations with similar content.
+         */
+        fun name(o: Declaration, n: Declaration): Double {
+            val a = characterPairs(o.name)
+            val b = characterPairs(n.name)
+            return if (a.isEmpty() || b.isEmpty()) 0.0 else dice(a, b)
+        }
+
+        private fun characterPairs(name: String): Map<String, Int> {
+            val lower = name.lowercase()
+            val bag = HashMap<String, Int>()
+            for (i in 1 until lower.length) bag.merge(lower.substring(i - 1, i + 1), 1, Int::plus)
+            return bag
+        }
+
+        /** 0 when either side is too small for its content to tell it apart, such as an empty method. */
+        private fun content(o: Declaration, n: Declaration): Double {
+            val a = bigrams(o)
+            val b = bigrams(n)
+            return if (a.size < MIN_CONTENT || b.size < MIN_CONTENT) 0.0 else dice(a.bag, b.bag)
+        }
+
+        private class Bigrams(val bag: Map<String, Int>, val size: Int)
+
+        /** Adjacent pairs of the tokens other than whitespace, children included, with the declaration's name masked. */
+        private fun bigrams(declaration: Declaration): Bigrams = bigrams.getOrPut(declaration) {
+            val texts = mutableListOf<String>()
+            fun visit(d: Declaration) {
+                cancellation.checkCanceled()
+                d.ownTokens.filter { it.kind != TokenKind.WHITESPACE }.mapTo(texts) { if (it.text == declaration.name) NAME else it.text }
+                d.children.forEach(::visit)
+            }
+            visit(declaration)
+            val bag = HashMap<String, Int>()
+            for (i in 1 until texts.size) bag.merge(texts[i - 1] + SEPARATOR + texts[i], 1, Int::plus)
+            Bigrams(bag, texts.count { it != NAME })
+        }
+
+        /** The parameter types of a signature, split at top-level commas, as a bag. */
+        private fun parameters(signature: String?): Map<String, Int> {
+            val bag = HashMap<String, Int>()
+            if (signature.isNullOrEmpty()) return bag
+            var depth = 0
+            var start = 0
+            for ((i, c) in signature.withIndex()) {
+                when (c) {
+                    '<', '(', '[' -> depth++
+                    '>', ')', ']' -> depth--
+                    ',' -> if (depth == 0) {
+                        bag.merge(signature.substring(start, i), 1, Int::plus)
+                        start = i + 1
+                    }
+                }
+            }
+            bag.merge(signature.substring(start), 1, Int::plus)
+            return bag
+        }
+
+        private fun dice(a: Map<String, Int>, b: Map<String, Int>): Double {
+            val total = a.values.sum() + b.values.sum()
+            if (total == 0) return 1.0
+            val (small, large) = if (a.size <= b.size) a to b else b to a
+            val shared = small.entries.sumOf { (key, count) -> minOf(count, large[key] ?: 0) }
+            return 2.0 * shared / total
+        }
+
+        private companion object {
+            const val NAME = "\u0000name"
+            const val SEPARATOR = "\u0001"
+
+            /** Declarations with fewer tokens than this, not counting their name, are not compared by content. */
+            const val MIN_CONTENT = 6
+
+            /** How much better than every rival a pair must be. */
+            const val MARGIN = 0.1
+
+            /** How alike the names of a pair with close rivals must be, and by how much more than the rivals' names. */
+            const val TIEBREAK_MIN = 0.5
+            const val TIEBREAK_MARGIN = 0.2
+        }
+    }
+
     /** The tokens of [declaration] and its children other than whitespace, for telling same-key declarations apart. */
     private fun content(declaration: Declaration): List<Any> =
         declaration.ownTokens.filter { it.kind != TokenKind.WHITESPACE }.map { it.type to it.text } + declaration.children.map(::content)
@@ -242,4 +442,13 @@ object DeclarationMatcher {
     }
 
     private fun identitySet(): MutableSet<Declaration> = java.util.Collections.newSetFromMap(IdentityHashMap())
+
+    /** Overloads pair from this similarity of parameter types and content up. */
+    private const val OVERLOAD_THRESHOLD = 0.5
+
+    /** Removed and added declarations pair as rename candidates from this content similarity up. */
+    private const val RENAME_THRESHOLD = 0.7
+
+    /** Groups with more possible pairs than this are not compared, to keep matching fast. */
+    private const val MAX_SIMILARITY_PAIRS = 10_000L
 }

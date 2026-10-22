@@ -11,4 +11,4 @@ class Cart  added  new 5-28
 class Item  added  new 30
 class Receipt  added  new 32-34
   function header()  added  new 33
-function isFull(Cart.)  added  new 36
+function Cart.isFull()  added  new 36

@@ -4,7 +4,8 @@
 
 ### Added
 
-- Structural outline beside the native side-by-side diff for Java and Kotlin files: a summary line, then the changed declarations, each labelled added, removed, changed, moved, signature changed, formatting-only, uncertain or unanalyzed.
+- Structural outline beside the native side-by-side diff for Java and Kotlin files: a summary line, then the changed declarations, each labelled added, removed, changed, moved, signature changed, formatting-only, rename candidate, uncertain or unanalyzed.
+- Renamed declarations with similar content are shown once, as `method total → sum()` rename candidates that the filter never hides, and overloads whose signatures all changed are paired.
 - Selecting a declaration frames it on both sides of the diff; Enter jumps to it.
 - Formatting-only changes are kept apart from changes in content, in a collapsed group by default.
 - A filter that hides chosen change types from the outline, and a SMART Diff side-by-side viewer that fades the changes the filter hides.

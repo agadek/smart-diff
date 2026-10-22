@@ -13,6 +13,7 @@ enum class Tag(val text: String) {
     ADDED("added"),
     REMOVED("removed"),
     UNCERTAIN("uncertain"),
+    RENAME_CANDIDATE("rename candidate"),
     MOVED("moved"),
     CHANGED("changed"),
     FORMATTING_ONLY("formatting-only"),
@@ -21,8 +22,8 @@ enum class Tag(val text: String) {
 }
 
 /**
- * A type of change the user can hide from the outline (technical specification §10). Uncertain and unanalyzed changes
- * have no type here: they are never hidden (ADR 0003).
+ * A type of change the user can hide from the outline (technical specification §10). Uncertain, rename candidate and
+ * unanalyzed changes have no type here: they are never hidden (ADR 0003).
  */
 enum class ChangeType(val text: String, val tags: Set<Tag>) {
     CHANGED("Changed", setOf(Tag.CHANGED, Tag.SIGNATURE_CHANGED)),
@@ -109,7 +110,8 @@ object OutlineModel {
      */
     fun summary(result: ComparisonResult, hidden: Set<ChangeType> = emptySet()): String {
         val counts = LinkedHashMap<Tag, Int>()
-        listOf(Tag.CHANGED, Tag.ADDED, Tag.REMOVED, Tag.MOVED, Tag.FORMATTING_ONLY, Tag.UNCERTAIN, Tag.UNANALYZED).forEach { counts[it] = 0 }
+        listOf(Tag.CHANGED, Tag.ADDED, Tag.REMOVED, Tag.MOVED, Tag.FORMATTING_ONLY, Tag.RENAME_CANDIDATE, Tag.UNCERTAIN, Tag.UNANALYZED)
+            .forEach { counts[it] = 0 }
         fun count(node: ChangeNode) {
             if (node.isChangedItself) {
                 tags(node).filter { it in counts }.forEach { counts[it] = counts.getValue(it) + 1 }
@@ -132,20 +134,35 @@ object OutlineModel {
         return (result.fileRegion?.let(::count) ?: 0) + result.changes.sumOf(::count)
     }
 
-    /** A change itself whose every label is of a [hidden] type; an uncertain or unanalyzed change never is. */
+    /** A change itself whose every label is of a [hidden] type; an uncertain, rename candidate or unanalyzed change never is. */
     fun isHidden(node: ChangeNode, hidden: Set<ChangeType>): Boolean {
         if (!node.isChangedItself || hidden.isEmpty()) return false
         val hiddenTags = hidden.flatMapTo(HashSet()) { it.tags }
         return tags(node).all { it in hiddenTags }
     }
 
-    /** A subject's title: kind, name and signature for a declaration (`method parse(String,int)`), or a region's description. */
+    /**
+     * A subject's title: kind, receiver, name and signature for a declaration (`method parse(String,int)`,
+     * `function Date.formatIsoDate()`), or a region's description.
+     */
     fun title(subject: Subject): String = when (subject) {
-        is Subject.Declaration -> subject.kind.name.lowercase().replace('_', ' ') +
-            (if (subject.name.isEmpty()) "" else " ${subject.name}") +
-            (subject.signature?.let { "($it)" } ?: "")
+        is Subject.Declaration -> {
+            val kind = subject.kind.name.lowercase().replace('_', ' ')
+            val name = name(subject)
+            (if (name.isEmpty()) kind else "$kind $name") + (subject.signature?.let { "($it)" } ?: "")
+        }
         is Subject.Region -> subject.description
     }
+
+    /** A node's title; a rename candidate shows the old name too: `method total → sum(int)`. */
+    fun title(node: ChangeNode): String {
+        val from = node.renamedFrom as? Subject.Declaration
+        val subject = node.subject as? Subject.Declaration
+        if (from == null || subject == null) return title(node.subject)
+        return title(subject.copy(name = "${name(from)} → ${name(subject)}", receiver = null))
+    }
+
+    private fun name(subject: Subject.Declaration): String = (subject.receiver?.let { "$it." } ?: "") + subject.name
 
     /** The change labels of a node that is a change itself; none for a node shown only as a container. */
     fun tags(node: ChangeNode): List<Tag> {
@@ -157,6 +174,7 @@ object OutlineModel {
                 Presence.UNCERTAIN -> add(Tag.UNCERTAIN)
                 Presence.MATCHED -> {}
             }
+            if (node.renamedFrom != null) add(Tag.RENAME_CANDIDATE)
             if (node.moved) add(Tag.MOVED)
             when (node.content) {
                 Content.CHANGED -> add(Tag.CHANGED)
@@ -199,10 +217,10 @@ object OutlineModel {
             val children = children(node.children)
             if (isHidden(node, hidden)) {
                 if (children.isEmpty()) return null
-                return OutlineItem(ItemKind.CHANGE, title(node.subject), emptyList(), node.oldRange, node.newRange, children = children)
+                return OutlineItem(ItemKind.CHANGE, title(node), emptyList(), node.oldRange, node.newRange, children = children)
             }
             if (!node.isChangedItself && children.isEmpty()) return null
-            return OutlineItem(ItemKind.CHANGE, title(node.subject), tags(node), node.oldRange, node.newRange, node.details, children)
+            return OutlineItem(ItemKind.CHANGE, title(node), tags(node), node.oldRange, node.newRange, node.details, children)
         }
 
         private fun uncertainItem(node: ChangeNode): OutlineItem {
@@ -216,7 +234,7 @@ object OutlineModel {
                     newRange = candidate.range.takeUnless { onOldSide },
                 )
             }
-            return OutlineItem(ItemKind.CHANGE, title(node.subject), tags(node), node.oldRange, node.newRange, node.details, candidates + children(node.children))
+            return OutlineItem(ItemKind.CHANGE, title(node), tags(node), node.oldRange, node.newRange, node.details, candidates + children(node.children))
         }
 
         /** A matched node whose only change is formatting, with nothing reported inside it. */

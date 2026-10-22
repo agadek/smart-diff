@@ -10,6 +10,51 @@ Results of running the declaration engine on real commits before a release, and 
 Each line of the list is a local Git repository followed by `git rev-list` arguments, for example
 `/src/okhttp --no-merges --max-count=40 HEAD`. The report is written to `build/reports/smartdiff-validation/`.
 
+## 2026-10-22: 0.1.1 noise pass
+
+**Corpus:** the same 234 commits and 1279 files as before 0.1.0, from the same clones.
+
+**Overall:** every file was `ANALYZED`. The median analysis time was 4 ms and the slowest file took 158 ms (okhttp
+`CallTest.kt`). The nothing-hidden check is now exact and about linear for local changes, so it ran on all 1279 files
+(865 before): none broke the rule and none had a difference with nothing reported.
+
+84 files were flagged for review, against 100 before 0.1.0:
+
+| Flag | Before 0.1.0 | 0.1.1 |
+| --- | --- | --- |
+| `rename` (removed + added that look like a rename) | 70 | 21 |
+| `uncertain` | 7 overload sets, plus the M4 cases fixed for 0.1.0 | 1 |
+| `rename-candidate` (new) | | 55 |
+| `noisy` | 16 | 12 |
+| `same-name` | 1 | 1 |
+
+### Rename candidates
+
+55 files have rename candidates. Of the 15 checked against `git show` across all six repositories, 14 were right and
+one was a judgement call: moshi `AdapterGenerator` split `generateToJsonFun` into `generateToJson` and
+`generateToJsonRegular`, and the candidate follows the bulk of the body to `generateToJsonRegular`. The guava
+`entryIterator` → `internalEntryIterator` commit and the spring-petclinic `testFoo()` → `foo()` commit now read as
+renames. Sibling tests with the same body are told apart by their names; one petclinic test,
+`testProcessCreationFormWithBlankName`, still is not, because its siblings' names are about as close.
+
+The 21 files still flagged `rename` are mostly real rewrites (okhttp `EchTest.kt`, commons-lang
+`LockingVisitorsTest`), declarations too small to compare by content (guava `abstract int distinctElements();`, the
+empty `reset()` → `clear()` of the fixtures), renames with heavily changed bodies (guava `TempFileCreator`
+`createTempFile` overrides) and one-to-two splits the margin leaves alone (Exposed
+`minimumPluginConfigurationsForDatabaseApplied` → `…Applied01` and `…Applied02`).
+
+### Overloads
+
+The commons-lang `TypeUtils`, moshi `JsonAdapter` and Exposed `Queries.kt` overload sets now pair as signature
+changes. The one file still uncertain is moshi `JvmDescriptors.kt`, where one extension property,
+`Executable.jvmMethodSignature`, became two, `Constructor<*>.jvmMethodSignature` and `Method.jvmMethodSignature`: a
+real ambiguity.
+
+### Labels
+
+Labels keep a space between words (`Class<out Annotation>`, `vararg Class<out Annotation>`) and show a Kotlin receiver
+before the name (`Cart.isFull()`).
+
 ## 2026-10-22: before 0.1.0
 
 **Corpus:** the last 40 non-merge commits touching Java or Kotlin in square/okhttp, google/guava, apache/commons-lang,

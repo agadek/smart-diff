@@ -24,6 +24,18 @@ class OutlineModelTest {
         assertEquals("enum constant RED", OutlineModel.title(Subject.Declaration(DeclarationKind.ENUM_CONSTANT, "RED", null)))
         assertEquals("constructor(Int)", OutlineModel.title(Subject.Declaration(DeclarationKind.CONSTRUCTOR, "", "Int")))
         assertEquals("lines 3-4 changed", OutlineModel.title(Subject.Region("lines 3-4 changed")))
+        assertEquals("function Date.formatIsoDate()", OutlineModel.title(Subject.Declaration(DeclarationKind.FUNCTION, "formatIsoDate", "", "Date")))
+        assertEquals("property List<T>.second", OutlineModel.title(Subject.Declaration(DeclarationKind.PROPERTY, "second", null, "List<T>")))
+    }
+
+    @Test
+    fun `a rename candidate shows both names, is never hidden and is counted`() {
+        val renamed = node("sum", renamedFrom = Subject.Declaration(DeclarationKind.METHOD, "total", ""))
+        val result = result(renamed, node("other", content = Content.CHANGED))
+        val everything = ChangeType.entries.toSet()
+
+        assertEquals("method total → sum()  rename candidate", render(OutlineModel.build(result, "", "", formattingInline = false, hidden = everything)))
+        assertEquals("1 changed · 1 rename candidate · 1 hidden", OutlineModel.summary(result, everything))
     }
 
     @Test
@@ -264,10 +276,11 @@ class OutlineModelTest {
         content: Content = Content.UNCHANGED,
         candidates: List<Candidate> = emptyList(),
         children: List<ChangeNode> = emptyList(),
+        renamedFrom: Subject? = null,
     ): ChangeNode {
         val kind = if (name.first().isUpperCase()) DeclarationKind.CLASS else DeclarationKind.METHOD
         val signature = if (kind == DeclarationKind.METHOD) "" else null
-        return ChangeNode(Subject.Declaration(kind, name, signature), old, new, presence, moved, signatureChanged, content, candidates, children = children)
+        return ChangeNode(Subject.Declaration(kind, name, signature), old, new, presence, moved, signatureChanged, content, candidates, children = children, renamedFrom = renamedFrom)
     }
 
     private fun render(rows: List<OutlineItem>): String = buildString {

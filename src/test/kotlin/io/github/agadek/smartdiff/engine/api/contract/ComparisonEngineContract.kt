@@ -158,7 +158,11 @@ class ComparisonEngineContract(private val newEngine: () -> ComparisonEngine) {
                 node.candidates.forEach { checkRange(case, it.range, otherSide, "candidate of $node") }
             }
         }
-        if (node.presence != Presence.MATCHED) check(case, !node.moved && !node.signatureChanged) { "moved or signature changed on a ${node.presence} node: $node" }
+        if (node.presence != Presence.MATCHED) {
+            check(case, !node.moved && !node.signatureChanged && node.renamedFrom == null) {
+                "moved, signature changed or renamed on a ${node.presence} node: $node"
+            }
+        }
         if (node.presence != Presence.UNCERTAIN) check(case, node.candidates.isEmpty()) { "candidates on a ${node.presence} node: $node" }
     }
 

@@ -14,6 +14,7 @@ import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.declarations.model.Declaration
 import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
 import io.github.agadek.smartdiff.engine.declarations.model.FileRegion
+import io.github.agadek.smartdiff.engine.declarations.model.Token
 import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
 import java.util.IdentityHashMap
 
@@ -155,7 +156,7 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
         }
 
         private fun matched(match: Match, children: List<ChangeNode>): ChangeNode {
-            val signatureChanged = match.rule == MatchRule.SIGNATURE_CHANGED
+            val signatureChanged = match.old.signature != match.new.signature
             return node(
                 declaration = match.new,
                 oldRange = match.old.range,
@@ -166,8 +167,9 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
                 children = children,
                 moved = match.moved,
                 signatureChanged = signatureChanged,
+                renamedFrom = if (match.rule == MatchRule.RENAME_CANDIDATE) subject(match.old) else null,
                 content = ContentClassifier.classify(
-                    match.old.ownTokens,
+                    renamed(match.old.ownTokens, match.old.name, match.new.name),
                     match.new.ownTokens,
                     new.whitespacePolicy,
                     parseError = match.old.hasParseError || match.new.hasParseError,
@@ -175,6 +177,14 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
                 ),
             )
         }
+
+        /**
+         * The old side's [tokens] with the old [from] name written as the new [to] name, so a rename (or a constructor
+         * that follows its class's rename) is not a content change by itself; the rename has its own label.
+         */
+        private fun renamed(tokens: List<Token>, from: String, to: String): List<Token> =
+            if (from == to || from.isEmpty()) tokens
+            else tokens.map { if (it.kind == TokenKind.OTHER && it.text == from) it.copy(text = to) else it }
 
         private fun uncertain(uncertain: Uncertain, onOldSide: Boolean, children: List<ChangeNode>): ChangeNode {
             val range = uncertain.declaration.range
@@ -196,6 +206,7 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
             children: List<ChangeNode>,
             moved: Boolean = false,
             signatureChanged: Boolean = false,
+            renamedFrom: Subject? = null,
             content: Content = Content.UNCHANGED,
             candidates: List<Candidate> = emptyList(),
             oldDeclaration: Declaration? = declaration.takeIf { oldRange != null },
@@ -211,6 +222,7 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
                 content = content,
                 candidates = candidates,
                 children = children,
+                renamedFrom = renamedFrom,
             )
             // A change covers the declaration's leading whitespace too, which is part of its own tokens (§8).
             val oldLeading = oldDeclaration?.leadingWhitespace
@@ -222,7 +234,8 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
             }
         }
 
-        private fun subject(declaration: Declaration) = Subject.Declaration(declaration.kind, declaration.name, declaration.signature)
+        private fun subject(declaration: Declaration) =
+            Subject.Declaration(declaration.kind, declaration.name, declaration.displaySignature, declaration.receiver)
     }
 
     companion object {
