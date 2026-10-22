@@ -5,6 +5,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.components.service
+import com.intellij.util.messages.Topic
 import io.github.agadek.smartdiff.engine.api.Limits
 
 /**
@@ -18,6 +19,9 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
     class SettingsState {
         /** Whether the outline toggle starts on in a new diff window. */
         var showOutline: Boolean = true
+
+        /** Whether the Local Changes and Commit tree shows each file's structural summary. */
+        var showChangesSummary: Boolean = true
 
         /** Show formatting-only changes inline instead of in a collapsed group per container. */
         var formattingOnlyInline: Boolean = false
@@ -41,6 +45,10 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
     var showOutline: Boolean
         get() = current.showOutline
         set(value) = update { showOutline = value }
+
+    var showChangesSummary: Boolean
+        get() = current.showChangesSummary
+        set(value) = update { showChangesSummary = value }
 
     var formattingOnlyInline: Boolean
         get() = current.formattingOnlyInline
@@ -69,6 +77,7 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         val old = current
         current = SettingsState().also {
             it.showOutline = old.showOutline
+            it.showChangesSummary = old.showChangesSummary
             it.formattingOnlyInline = old.formattingOnlyInline
             it.hiddenChangeTypes = old.hiddenChangeTypes
             it.maxChars = old.maxChars
@@ -78,7 +87,15 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         }
     }
 
+    /** Told after the settings page is applied, so views that show results outside a diff can update. */
+    fun interface Listener {
+        fun settingsChanged()
+    }
+
     companion object {
+        @Topic.AppLevel
+        val CHANGED: Topic<Listener> = Topic(Listener::class.java, Topic.BroadcastDirection.NONE)
+
         fun getInstance(): SmartDiffSettings = service()
     }
 }

@@ -11,4 +11,5 @@
 - A filter that hides chosen change types from the outline, and a SMART Diff side-by-side viewer that fades the changes the filter hides.
 - A Structural Outline toolbar button in every diff to switch back to the plain native diff.
 - Settings under Settings | Tools | SMART Diff: whether the outline opens automatically, how formatting-only changes are shown, the default engine per language and the analysis limits.
+- Each changed Java or Kotlin file in Local Changes and the Commit tool window shows its structural summary, such as `2 changed · 1 added`, with a setting to turn it off.
 - Unsupported, malformed or oversized files fall back to the native diff with the reason shown.

@@ -31,6 +31,7 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
         settings.loadState(SmartDiffSettings.SettingsState())
 
         assertTrue("the outline opens by default", settings.showOutline)
+        assertTrue("the Changes tree shows summaries by default", settings.showChangesSummary)
         assertFalse("formatting-only changes are grouped by default", settings.formattingOnlyInline)
         assertEquals(Limits.DEFAULT, settings.limits)
         assertEquals("nothing is hidden by default", emptySet<ChangeType>(), settings.hiddenChangeTypes)

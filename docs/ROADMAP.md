@@ -36,9 +36,9 @@ A nothing-hidden check cheap enough for large files, so the corpus validation co
 
 The first item after the 0.1.1 noise pass. Show changed declarations for each file inside the IDE's existing Changes/Commit tree, rather than in a new panel (technical spec Q3).
 
-- **Level 1:** a summary next to each file, for example `Parser.kt  2 changed · 1 added`.
-- **Level 2:** expandable declarations under each file. Every file is parsed as the tree loads, so performance on large commits needs care.
-- **Spike first:** which Changes tree extension points can add text or child nodes to file entries.
+- **Level 1 (implemented):** a summary next to each file, for example `Parser.kt  2 changed · 1 added`, in the Local Changes view and the Commit tool window ([technical spec §9.4](TECHNICAL-SPECIFICATION.md#94-changes-tree-summary)).
+- **Level 2:** expandable declarations under each file. The level 1 node can take child nodes; summaries are already computed in the background, so the remaining questions are what a child row opens and how the rows stay in sync with edits.
+- **Spike (done 2026-10-22, S5):** the Local Changes and Commit tree takes the summary through the public `changesViewModifier` extension point ([ADR 0006](adr/0006-changes-tree-summary-through-changes-view-modifier.md)). The modal commit dialog and the Git log's commit details have no such hook, so they show no summary.
 
 ### Scala
 

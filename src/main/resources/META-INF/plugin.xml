@@ -13,6 +13,7 @@
             <li>Select a declaration to frame it on both sides of the diff; press Enter to jump to it.</li>
             <li>Formatting-only changes are kept apart from changes in content.</li>
             <li>Hide chosen change types from the outline, and fade them in the SMART Diff side-by-side viewer.</li>
+            <li>The Local Changes and Commit tree shows each file's summary, such as <i>2 changed · 1 added</i>.</li>
             <li>Unsupported, malformed or oversized files stay in the plain native diff, with the reason shown.</li>
             <li>A toolbar button in every diff switches back to the plain native diff.</li>
         </ul>
@@ -30,6 +31,8 @@
     <depends optional="true" config-file="smartdiff-java.xml">com.intellij.java</depends>
     <depends optional="true" config-file="smartdiff-kotlin.xml">org.jetbrains.kotlin</depends>
     <depends optional="true" config-file="smartdiff-scala.xml">org.intellij.scala</depends>
+    <!-- The Changes tree summary needs the platform's VCS support. -->
+    <depends optional="true" config-file="smartdiff-vcs.xml">com.intellij.modules.vcs</depends>
 
     <extensionPoints>
         <!-- Internal: only SMART Diff and its own optional descriptors register engines (technical specification Q5). -->
