@@ -75,7 +75,7 @@ A second comparison engine that highlights changed expressions inside declaratio
 
 ### Extraction detection
 
-Link an added method or function to the code it was extracted from. When most of its body repeats one run of code that a changed declaration on the old side no longer has, label it "extracted from <declaration>" and frame that code on the old side when it is selected; the source declaration shows the extracted code in its details. Extracting into a new class is covered through the class's added methods. The first release reports such code as a changed declaration plus an added one, with no link between them (see the `noisy-change` Java fixture).
+Link an added method or function to the code it was extracted from. When most of its body repeats one run of code that a changed declaration on the old side no longer has, label it "extracted from <declaration>" and frame that code on the old side when it is selected; the source declaration shows the extracted code in its details. Extracting into a new class is covered through the class's added methods. The first release reports such code as a changed declaration plus an added one, with no link between them (see the `noisy-change` Java fixture). Specified in [EXTRACTION-DETECTION.md](EXTRACTION-DETECTION.md); it comes after the Changes tree summary and Scala.
 
 ### Third-party engines
 
