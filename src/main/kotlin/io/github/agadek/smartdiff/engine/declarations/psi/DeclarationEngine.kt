@@ -69,6 +69,6 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
         val ID = EngineId("smartdiff.declarations")
 
         /** Raise when a change to a provider, matching or classification can change results. */
-        const val VERSION = "2"
+        const val VERSION = "3"
     }
 }

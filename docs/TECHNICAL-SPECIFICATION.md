@@ -233,6 +233,7 @@ enum class TokenKind { WHITESPACE, COMMENT, OTHER }
 enum class WhitespacePolicy {
     INSIGNIFICANT,           // Java: drop whitespace tokens
     LINE_BREAKS_SIGNIFICANT, // Kotlin: keep "has line break" vs "no line break"
+    INDENTATION_SIGNIFICANT, // Scala 3: keep line breaks and the indentation after them
     SIGNIFICANT,             // Python, YAML: never claim formatting-only
 }
 ```
@@ -241,7 +242,7 @@ enum class WhitespacePolicy {
 
 - PSI: inside a cancellable read action, `PsiFileFactory.getInstance(project).createFileFromText(name, language, text, false, false)`; `project` is the one passed to the factory, or the default project when there is none **(confirmed by S2)**.
 - Java files are parsed at the highest language level the platform knows, set with `PsiUtil.FILE_LANGUAGE_LEVEL_KEY` before the tree is built. Without it the level comes from the default project's settings, which the user can change. S2 saw `JDK_24` on 2025.1 either way, with records, sealed types, record patterns and text blocks parsed without errors.
-- Scala files are parsed as `Scala3Language` or `ScalaLanguage` **(S4)**. The Scala plugin hard-wires the parser and lexer to the file's language, and a file from text has no module whose settings could change it; the language id of a request is always `Scala`, since the file type does not depend on the module. The provider parses both texts as Scala 3 and keeps Scala 3 when neither has a parse error; otherwise it also parses both as Scala 2 and takes Scala 2 only when its error count over both sides is lower. The Scala 3 parser accepts most Scala 2 code, procedure syntax included, so ties go to Scala 3; Scala 2 wins on code Scala 3 dropped, such as `enum` as a name. When neither parses cleanly, the usual parse-error rules apply (§6.7). Until the indentation-significant policy exists, a Scala 3 tree uses `SIGNIFICANT`, so nothing in it is formatting-only; a Scala 2 tree uses `LINE_BREAKS_SIGNIFICANT`.
+- Scala files are parsed as `Scala3Language` or `ScalaLanguage` **(S4)**. The Scala plugin hard-wires the parser and lexer to the file's language, and a file from text has no module whose settings could change it; the language id of a request is always `Scala`, since the file type does not depend on the module. The provider parses both texts as Scala 3 and keeps Scala 3 when neither has a parse error; otherwise it also parses both as Scala 2 and takes Scala 2 only when its error count over both sides is lower. The Scala 3 parser accepts most Scala 2 code, procedure syntax included, so ties go to Scala 3; Scala 2 wins on code Scala 3 dropped, such as `enum` as a name. When neither parses cleanly, the usual parse-error rules apply (§6.7). A Scala 3 tree uses `INDENTATION_SIGNIFICANT`, since optional braces make indentation significant; a Scala 2 tree uses `LINE_BREAKS_SIGNIFICANT`.
 - Offsets from the PSI equal offsets into the request text **(confirmed by S2)**: for every declaration, the PSI element's text equals the request text sliced by its range. A declaration's range includes its doc comment and annotations in both languages.
 - The request texts are document snapshots, which are always LF-separated: a VCS revision with CRLF line ends arrives as an LF document, and the content only records the original separator. Ranges therefore match the diff editors.
 - Providers must not resolve references or types (no classpath; see ADR 0002).
@@ -316,7 +317,7 @@ Planned for the [Scala](ROADMAP.md#scala) release; it resolves Q7. The provider 
 - **Anonymous givens** are named by their type, normalized like a signature (`given Ordering[List[Int]]` → `Ordering[List[Int]]`), not by the compiler's synthesized name, which is harder to read and has changed between compiler versions. Two anonymous givens of one type in one container repeat a key and follow the matcher's rules for repeated keys.
 - **Signatures:** each parameter clause is normalized as in §6.6 (types only, without whitespace, comments, annotations, modifiers and names), the types joined with `,` and the clauses with `;`. A `using` or `implicit` clause keeps its keyword and one space before its types. So `def f[A](x: A, y: Int)(using Ordering[A])` → `A,Int;using Ordering[A]`. Type parameters and context bounds are left out, as for Java and Kotlin; repeated (`T*`) and by-name (`=> T`, normalized `=>T`) types stay as written. `def f` has no clause and no signature, `def f()` has the empty signature, so changing one into the other is a signature change (rule M3). The display signature follows §6.6, with `=> T` keeping its space.
 - **Kinds and matching:** a class and its companion object share a name but differ in kind, so they never collide. Changing a `class` into a `trait` or a `case class` into an `enum` changes the kind, so it is reported as removed and added; rename candidates (M5) need the same kind and do not pair them.
-- **Whitespace:** Scala 2 trees use `LINE_BREAKS_SIGNIFICANT`, like Kotlin, since Scala also infers semicolons from line breaks. Scala 3 trees use `SIGNIFICANT` until an indentation-significant policy exists (§6.2).
+- **Whitespace:** Scala 2 trees use `LINE_BREAKS_SIGNIFICANT`, like Kotlin, since Scala also infers semicolons from line breaks. Scala 3 trees use `INDENTATION_SIGNIFICANT` (§8), since optional braces make indentation part of the meaning.
 
 ## 7. Declaration engine: matching
 
@@ -360,10 +361,11 @@ The steps are applied in order, and the first that applies decides the content:
 4. Normalize both sequences with the tree's whitespace policy, then compare `(type, text)` pairs:
    - `INSIGNIFICANT`: drop `WHITESPACE` tokens.
    - `LINE_BREAKS_SIGNIFICANT`: replace each `WHITESPACE` token with `⏎` if it contains a line break, otherwise drop it.
+   - `INDENTATION_SIGNIFICANT`: replace each `WHITESPACE` token that contains a line break with `⏎` followed by the indentation after its last line break, as written; drop the others. Indentation is compared as written, not relative to the container, so re-indenting a whole block, or a tab for spaces, is `CHANGED`; that is strict but never hides a change of structure. Blank lines and spaces within a line still count as formatting.
    - `SIGNIFICANT`: no normalization (step 4 can never produce formatting-only).
    Equal → `FORMATTING_ONLY`; otherwise → `CHANGED`.
 
-In step 4 a run of adjacent `WHITESPACE` tokens counts as one: own tokens skip the children's extents, so the whitespace before and after a child can become adjacent, and adding or removing a child must not change the count of line breaks. Because each child owns its leading whitespace (§6.1), adding, removing, moving or reordering members leaves their container `UNCHANGED`. Removing the first member is the exception: the next member's leading whitespace changes (the blank line after `{` goes), so that member is `FORMATTING_ONLY`.
+In step 4 a run of adjacent `WHITESPACE` tokens counts as one: own tokens skip the children's extents, so the whitespace before and after a child can become adjacent, and adding or removing a child must not change the count of line breaks; under `INDENTATION_SIGNIFICANT` the run's indentation is the text after its last line break. Because each child owns its leading whitespace (§6.1), adding, removing, moving or reordering members leaves their container `UNCHANGED`. Removing the first member is the exception: the next member's leading whitespace changes (the blank line after `{` goes), so that member is `FORMATTING_ONLY`.
 
 `COMMENT` tokens are compared by exact text, including whitespace inside them. The declaration engine puts only leading whitespace in `details` (§6.1); the native diff shows the detail.
 
