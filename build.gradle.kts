@@ -1,4 +1,5 @@
 import org.jetbrains.changelog.Changelog
+import org.jetbrains.changelog.ChangelogSectionUrlBuilder
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.models.ProductRelease
@@ -83,6 +84,16 @@ intellijPlatform {
 changelog {
     groups.empty()
     repositoryUrl = "https://github.com/agadek/smart-diff"
+    // Release tags are v<version> (docs/RELEASING.md), so the version links point at those tags.
+    sectionUrlBuilder = object : ChangelogSectionUrlBuilder {
+        override fun build(repositoryUrl: String, currentVersion: String?, previousVersion: String?, isUnreleased: Boolean) =
+            repositoryUrl + when {
+                isUnreleased && previousVersion == null -> "/commits"
+                isUnreleased -> "/compare/v$previousVersion...HEAD"
+                previousVersion == null -> "/commits/v$currentVersion"
+                else -> "/compare/v$previousVersion...v$currentVersion"
+            }
+    }
 }
 
 kotlin {
