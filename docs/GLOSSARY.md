@@ -70,6 +70,10 @@ _Avoid_: whitespace change, cosmetic change, equivalent, semantically equal
 A matched declaration whose container or order among its siblings differs. It may also be changed or formatting-only.
 _Avoid_: relocated, refactored
 
+**Extracted**:
+An added method or function whose body is mostly code that a changed declaration on the old side had and no longer has. It stays added and is linked to that declaration, its source. Specified in [EXTRACTION-DETECTION.md](EXTRACTION-DETECTION.md).
+_Avoid_: refactored, moved code, split
+
 **Unanalyzed**:
 Source that could not be parsed reliably, shown without any classification.
 _Avoid_: broken, error region, unknown
