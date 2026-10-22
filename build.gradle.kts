@@ -26,6 +26,8 @@ dependencies {
         intellijIdeaCommunity(providers.gradleProperty("platformVersion"))
         bundledPlugin("com.intellij.java")
         bundledPlugin("org.jetbrains.kotlin")
+        // Not bundled with the IDE: a Marketplace release, pinned in gradle.properties.
+        plugin("org.intellij.scala", providers.gradleProperty("scalaPluginVersion").get())
         testFramework(TestFrameworkType.Platform)
         testFramework(TestFrameworkType.Plugin.Java)
     }

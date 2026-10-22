@@ -58,7 +58,7 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
 
         val languages = SmartDiffConfigurable.languagesWithEngines(engines).map { (language, _) -> language.id }
 
-        assertEquals(listOf("JAVA", "kotlin"), languages)
+        assertEquals(listOf("JAVA", "kotlin", "Scala", "Scala 3"), languages)
     }
 
     fun `test the settings page opens and saves without changes`() {

@@ -1,0 +1,6 @@
+<!-- Loaded when the Scala plugin is present. The Scala declaration provider registers here. -->
+<idea-plugin>
+    <extensions defaultExtensionNs="io.github.agadek.smartdiff">
+        <declarationProvider implementation="io.github.agadek.smartdiff.engine.declarations.psi.scala.ScalaDeclarationProvider"/>
+    </extensions>
+</idea-plugin>
