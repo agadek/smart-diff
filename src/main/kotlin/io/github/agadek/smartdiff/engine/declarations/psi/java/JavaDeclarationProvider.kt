@@ -1,5 +1,6 @@
 package io.github.agadek.smartdiff.engine.declarations.psi.java
 
+import com.intellij.lang.Language
 import com.intellij.lang.java.JavaLanguage
 import com.intellij.openapi.project.Project
 import com.intellij.pom.java.LanguageLevel
@@ -35,7 +36,7 @@ class JavaDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.INSIGNIF
 
     override fun supports(languageId: String): Boolean = languageId == JavaLanguage.INSTANCE.id
 
-    override fun parse(project: Project, text: CharSequence, fileName: String?): PsiFile {
+    override fun parse(project: Project, text: CharSequence, fileName: String?, dialect: Language?): PsiFile {
         val file = PsiFileFactory.getInstance(project).createFileFromText(FILE_NAME, JavaLanguage.INSTANCE, text, false, false)
         // Parse at the highest level the platform knows, not at the default project's level, which the user can change (§6.2).
         file.putUserData(PsiUtil.FILE_LANGUAGE_LEVEL_KEY, LanguageLevel.HIGHEST)

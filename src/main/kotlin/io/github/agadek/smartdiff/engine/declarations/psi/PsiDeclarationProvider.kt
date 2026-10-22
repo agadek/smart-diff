@@ -45,6 +45,9 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
      */
     protected abstract fun describe(element: PsiElement): DeclarationInfo?
 
+    /** How the whitespace of [file] counts (§8 step 4); the same for every file unless a dialect changes it. */
+    protected open fun whitespacePolicy(file: PsiFile): WhitespacePolicy = whitespacePolicy
+
     /** The lexer for the tokens: the one of the file language's parser definition. */
     private fun createLexer(file: PsiFile): Lexer = parserDefinition(file).createLexer(file.project)
 
@@ -103,7 +106,7 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
             tokens = tokens.own(whole, topLevel.map { it.extent }),
             hasParseError = fileRegionError,
         )
-        return DeclarationTree(topLevel.map(::declaration), fileRegion, whitespacePolicy)
+        return DeclarationTree(topLevel.map(::declaration), fileRegion, whitespacePolicy(file))
     }
 
     private class Node(val info: DeclarationInfo, val range: TextRange, val children: List<Node>) {
