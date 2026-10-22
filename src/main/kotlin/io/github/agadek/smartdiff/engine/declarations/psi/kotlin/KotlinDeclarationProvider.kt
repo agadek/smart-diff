@@ -73,12 +73,15 @@ class KotlinDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_B
         else -> DeclarationKind.CLASS
     }
 
-    /** The receiver type followed by `.`, if there is one, then the parameter types: `List<T>.Int,String`. */
+    /** The receiver type followed by `.`, if there is one, then the parameter types: `List<T>.Int,String...`. */
     private fun functionSignature(function: KtNamedFunction): String =
         (function.receiverTypeReference?.let { type(it) + "." } ?: "") + parameters(function)
 
+    /** A `vararg` parameter's type ends in `...`, as in Java, so `f(x: T)` and `f(vararg x: T)` stay apart. */
     private fun parameters(declaration: KtCallableDeclaration): String =
-        Signatures.of(declaration.valueParameters.map { parameter -> parameter.typeReference?.let(::type) ?: "" })
+        Signatures.of(declaration.valueParameters.map { parameter ->
+            (parameter.typeReference?.let(::type) ?: "") + if (parameter.isVarArg) "..." else ""
+        })
 
     /** The type as written, without annotations; modifiers that are part of the type, such as `suspend`, stay. */
     private fun type(reference: KtTypeReference): String =
