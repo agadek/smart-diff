@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-22
+
 ### Added
 
 - Structural outline beside the native side-by-side diff for Java, Kotlin and Scala files: a summary line, then the changed declarations, each labelled added, removed, changed, moved, signature changed, formatting-only, rename candidate, uncertain or unanalyzed.
@@ -14,3 +16,6 @@
 - Each changed Java, Kotlin or Scala file in Local Changes and the Commit tool window shows its structural summary, such as `2 changed · 1 added`, with a setting to turn it off.
 - Scala 2 and Scala 3 support, when the Scala plugin is installed: classes, traits, objects, enums, methods, values, type aliases, givens and extension methods, with Scala 3 indentation changes never shown as formatting-only.
 - Unsupported, malformed or oversized files fall back to the native diff with the reason shown.
+
+[Unreleased]: https://github.com/agadek/smart-diff/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/agadek/smart-diff/commits/v0.1.0
