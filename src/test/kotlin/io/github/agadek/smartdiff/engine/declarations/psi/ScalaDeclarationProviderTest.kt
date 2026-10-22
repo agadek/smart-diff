@@ -17,6 +17,48 @@ import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy
  */
 class ScalaDeclarationProviderTest : ProviderTestCase() {
 
+    fun `test bodies of Scala 2 block and expression defs`() {
+        val text = """
+            class A(x: Int) {
+              def this(s: String) = this(s.length)
+              def twice: Int = {
+                2 * x
+              }
+              def thrice() = 3 * x
+              def none: Int
+              val p = x
+            }
+        """.trimIndent() + "\n"
+
+        assertBodies(
+            """
+            constructor (String): this(s.length)
+            function twice: 2 * x
+            function thrice(): 3 * x
+            """,
+            build("Scala", text), text,
+        )
+    }
+
+    fun `test a braceless Scala 3 body is the indented region`() {
+        val text = """
+            class A(x: Int):
+              def twice: Int =
+                val y = 2
+                y * x
+              def thrice() = 3 * x
+        """.trimIndent() + "\n"
+
+        assertBodies(
+            """
+            function twice: val y = 2
+                y * x
+            function thrice(): 3 * x
+            """,
+            build("Scala", text), text,
+        )
+    }
+
     fun `test Scala 2 declarations of every kind, in source order`() {
         val text = """
             package demo

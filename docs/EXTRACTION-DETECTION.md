@@ -1,6 +1,6 @@
 # Extraction Detection Specification
 
-Status: proposal, 2026-10-22. Third item after the first release, following the [Changes tree summary](ROADMAP.md#multi-file-summary-in-the-changes-tree) and [Scala](ROADMAP.md#scala). It expands the roadmap's [extraction detection](ROADMAP.md#extraction-detection) entry. Section numbers (§) refer to the [technical specification](TECHNICAL-SPECIFICATION.md), and terms follow the [glossary](GLOSSARY.md).
+Status: implemented, 2026-10-22; the validation results are in [VALIDATION.md](VALIDATION.md). Third item after the first release, following the [Changes tree summary](ROADMAP.md#multi-file-summary-in-the-changes-tree) and [Scala](ROADMAP.md#scala). It expands the roadmap's [extraction detection](ROADMAP.md#extraction-detection) entry. Section numbers (§) refer to the [technical specification](TECHNICAL-SPECIFICATION.md), and terms follow the [glossary](GLOSSARY.md).
 
 ## 1. Problem
 

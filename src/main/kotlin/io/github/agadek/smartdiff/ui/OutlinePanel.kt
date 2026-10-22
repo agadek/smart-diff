@@ -223,17 +223,21 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
     }
 
-    /** Draws an item's title, then its change labels in the IDE's diff colors; the text alone carries the meaning (§10). */
+    /**
+     * Draws an item's title, then its change labels in the IDE's diff colors and its note in grey; the text alone carries
+     * the meaning (§10).
+     */
     private class Renderer : ColoredTreeCellRenderer() {
         override fun customizeCellRenderer(tree: JTree, value: Any?, selected: Boolean, expanded: Boolean, leaf: Boolean, row: Int, hasFocus: Boolean) {
             val item = (value as? DefaultMutableTreeNode)?.userObject as? OutlineItem ?: return
             append(item.title, if (item.isGroup) SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES else SimpleTextAttributes.REGULAR_ATTRIBUTES)
-            if (item.tags.isEmpty()) return
+            if (item.tags.isEmpty() && item.note == null) return
             append("  ")
             item.tags.forEachIndexed { i, tag ->
                 if (i > 0) append(", ", SimpleTextAttributes.GRAYED_ATTRIBUTES)
                 append(tag.text, attributes(tag))
             }
+            item.note?.let { append((if (item.tags.isEmpty()) "" else ", ") + it, SimpleTextAttributes.GRAYED_ATTRIBUTES) }
         }
 
         private fun attributes(tag: Tag): SimpleTextAttributes {

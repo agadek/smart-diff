@@ -38,6 +38,8 @@ object Rendering {
             if (node.moved) add("moved")
             if (node.content != Content.UNCHANGED) add(node.content.name.lowercase().replace('_', '-'))
             if (node.signatureChanged) add("signature changed")
+            node.extractedFrom.forEach { add("extracted from ${name(it.subject)} old ${lines(it.range, oldText)}") }
+            if (node.extractedTo.isNotEmpty()) add("code extracted to ${node.extractedTo.joinToString(", ") { name(it) }}")
         }
         val sides = listOfNotNull(node.oldRange?.let { "old ${lines(it, oldText)}" }, node.newRange?.let { "new ${lines(it, newText)}" })
         return (listOf(subject(node.subject)) + labels + sides).joinToString("  ")
@@ -45,6 +47,12 @@ object Rendering {
 
     fun subject(subject: Subject): String = when (subject) {
         is Subject.Declaration -> label(subject.kind, (subject.receiver?.let { "$it." } ?: "") + subject.name, subject.signature)
+        is Subject.Region -> subject.description
+    }
+
+    /** A subject without its kind, as an extraction link names it: `summary(Order)`. */
+    private fun name(subject: Subject): String = when (subject) {
+        is Subject.Declaration -> (subject.receiver?.let { "$it." } ?: "") + subject.name + (subject.signature?.let { "($it)" } ?: "")
         is Subject.Region -> subject.description
     }
 

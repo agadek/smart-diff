@@ -51,12 +51,30 @@ abstract class ProviderTestCase : BasePlatformTestCase() {
             }
             val leading = declaration.leadingWhitespace?.let { text.substring(it.start, it.end) }.orEmpty()
             assertEquals("own tokens of $declaration", leading + outside(declaration.range, declaration.children.map(::extent)), declaration.ownTokens.joinToString("") { it.text })
+            assertEquals("a start offset for each own token of $declaration", declaration.ownTokens.size, declaration.ownTokenStarts.size)
+            declaration.ownTokens.zip(declaration.ownTokenStarts).forEach { (token, start) ->
+                assertTrue("own token $token of $declaration starts at $start", text.startsWith(token.text, start))
+            }
+            declaration.body?.let { body ->
+                assertTrue("body $body of $declaration is inside it", body.start >= declaration.range.start && body.end <= declaration.range.end)
+            }
             declaration.children.forEach(::check)
         }
         tree.topLevel.forEach(::check)
         val whole = io.github.agadek.smartdiff.engine.api.TextRange(0, text.length)
         assertEquals("file region tokens", outside(whole, tree.topLevel.map(::extent)), tree.fileRegion.tokens.joinToString("") { it.text })
         assertEquals("file region ranges", outside(whole, tree.topLevel.map(::extent)), tree.fileRegion.ranges.joinToString("") { text.substring(it.start, it.end) })
+    }
+
+    /** Each declaration with a body and its body's text, trimmed, one per line: `method f(): return 1;`. */
+    protected fun assertBodies(expected: String, tree: DeclarationTree, text: String) {
+        val actual = tree.all.mapNotNull { declaration ->
+            declaration.body?.let { body ->
+                val signature = declaration.signature?.let { "($it)" } ?: ""
+                "${declaration.kind.name.lowercase()} ${declaration.name}$signature: ${text.substring(body.start, body.end).trim()}"
+            }
+        }
+        assertEquals(expected.trimIndent(), actual.joinToString("\n"))
     }
 
     protected fun assertTree(expected: String, tree: DeclarationTree, text: String) {

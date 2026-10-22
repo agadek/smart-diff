@@ -141,6 +141,27 @@ class ComparisonEngineContract(private val newEngine: () -> ComparisonEngine) {
         }
         result.unanalyzed.forEach { checkRange(case, it.old, case.oldText, "unanalyzed old"); checkRange(case, it.new, case.newText, "unanalyzed new") }
         allNodes(result).forEach { checkNode(case, it) }
+        checkOrigins(case, result)
+    }
+
+    /**
+     * Extraction links (extraction detection specification §5.3): an origin lies on the old side, its code inside its
+     * declaration, and its declaration is the old range of a reported matched node.
+     */
+    private fun checkOrigins(case: ContractCase, result: ComparisonResult) {
+        val sources = allNodes(result).filter { it.presence == Presence.MATCHED && it.isReported }.mapNotNullTo(HashSet()) { it.oldRange }
+        for (node in allNodes(result)) {
+            if (node.presence != Presence.ADDED) check(case, node.extractedFrom.isEmpty()) { "extractedFrom on a ${node.presence} node: $node" }
+            if (node.presence != Presence.MATCHED) check(case, node.extractedTo.isEmpty()) { "extractedTo on a ${node.presence} node: $node" }
+            for (origin in node.extractedFrom) {
+                checkRange(case, origin.declarationRange, case.oldText, "origin declaration of $node")
+                checkRange(case, origin.range, case.oldText, "origin of $node")
+                check(case, origin.range.start >= origin.declarationRange.start && origin.range.end <= origin.declarationRange.end) {
+                    "origin ${origin.range} of $node is outside its declaration ${origin.declarationRange}"
+                }
+                check(case, origin.declarationRange in sources) { "origin declaration ${origin.declarationRange} of $node is no reported matched node" }
+            }
+        }
     }
 
     private fun checkNode(case: ContractCase, node: ChangeNode) {

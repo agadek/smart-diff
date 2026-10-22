@@ -34,11 +34,7 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
         val provider = provider(request.languageId)
             ?: return ComparisonResult.unsupported(this, "no declaration provider for language ${request.languageId}")
         return try {
-            val dialect = cancellableReadAction(cancellation) {
-                provider.dialect(project(), request.oldText, request.newText, request.fileName)
-            }
-            val old = build(provider, request.oldText, request.fileName, dialect, cancellation)
-            val new = build(provider, request.newText, request.fileName, dialect, cancellation)
+            val (old, new) = trees(provider, request, cancellation)
             DeclarationAnalysis(id, version).compare(old, new, request.limits.maxDeclarations, cancellation)
         } catch (e: CancellationException) {
             throw e
@@ -47,6 +43,18 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
         } catch (e: Exception) {
             ComparisonResult.failed(this, "declaration engine failed: ${e.message ?: e.javaClass.simpleName}")
         }
+    }
+
+    /** The declaration trees of both sides of [request], for the corpus validation's diagnostics. */
+    internal fun trees(request: ComparisonRequest, cancellation: Cancellation): Pair<DeclarationTree, DeclarationTree>? =
+        provider(request.languageId)?.let { trees(it, request, cancellation) }
+
+    private fun trees(provider: DeclarationProvider, request: ComparisonRequest, cancellation: Cancellation): Pair<DeclarationTree, DeclarationTree> {
+        val dialect = cancellableReadAction(cancellation) {
+            provider.dialect(project(), request.oldText, request.newText, request.fileName)
+        }
+        return build(provider, request.oldText, request.fileName, dialect, cancellation) to
+            build(provider, request.newText, request.fileName, dialect, cancellation)
     }
 
     private fun build(
@@ -69,6 +77,6 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
         val ID = EngineId("smartdiff.declarations")
 
         /** Raise when a change to a provider, matching or classification can change results. */
-        const val VERSION = "4"
+        const val VERSION = "5"
     }
 }

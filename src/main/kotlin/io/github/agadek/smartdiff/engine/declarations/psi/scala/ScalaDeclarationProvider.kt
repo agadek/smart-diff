@@ -26,6 +26,7 @@ import org.jetbrains.plugins.scala.lang.psi.api.statements.ScEnumCase
 import org.jetbrains.plugins.scala.lang.psi.api.statements.ScEnumCases
 import org.jetbrains.plugins.scala.lang.psi.api.statements.ScExtension
 import org.jetbrains.plugins.scala.lang.psi.api.statements.ScFunction
+import org.jetbrains.plugins.scala.lang.psi.api.statements.ScFunctionDefinition
 import org.jetbrains.plugins.scala.lang.psi.api.statements.ScTypeAlias
 import org.jetbrains.plugins.scala.lang.psi.api.statements.ScValueOrVariable
 import org.jetbrains.plugins.scala.lang.psi.api.statements.ScValueOrVariableDeclaration
@@ -149,8 +150,10 @@ class ScalaDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_BR
         val clauses = clauses(function)
         val signature = signature(clauses, Signatures::text)
         val label = signature(clauses, Signatures::scalaLabel)
-        if (function.isConstructor) return DeclarationInfo(DeclarationKind.CONSTRUCTOR, "", signature, displaySignature = label)
-        return name(function)?.let { DeclarationInfo(DeclarationKind.FUNCTION, it, signature, displaySignature = label) }
+        // A braceless Scala 3 body is a block without braces, so all of it is the body.
+        val body = (function as? ScFunctionDefinition)?.let { ScalaInterop.orNull(it.body()) }
+        if (function.isConstructor) return DeclarationInfo(DeclarationKind.CONSTRUCTOR, "", signature, displaySignature = label, body = body)
+        return name(function)?.let { DeclarationInfo(DeclarationKind.FUNCTION, it, signature, displaySignature = label, body = body) }
     }
 
     /**

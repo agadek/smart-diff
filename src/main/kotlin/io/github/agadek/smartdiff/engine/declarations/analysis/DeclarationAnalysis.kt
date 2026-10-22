@@ -6,6 +6,7 @@ import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.Origin
 import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.RangePair
 import io.github.agadek.smartdiff.engine.api.Status
@@ -37,7 +38,7 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
         unparsable(new, "new")?.let { return result(Status.FAILED, reason = it) }
 
         val matching = DeclarationMatcher.match(old, new, cancellation)
-        val changes = Tree(old, new, matching, cancellation).build()
+        val changes = Tree(old, new, matching, cancellation).apply { detectExtractions() }.build()
         val fileRegion = fileRegion(old, new)
         val partial = fileRegion?.content == Content.UNANALYZED || changes.any { it.hasUnanalyzed() }
         return result(
@@ -107,6 +108,16 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
         private val ofNew = IdentityHashMap<Declaration, Builder>()
         private val ofOldOnly = IdentityHashMap<Declaration, Builder>()
 
+        /** The content of each match, classified once (§8). */
+        private val contents = IdentityHashMap<Match, Content>()
+
+        private var extractions = Extractions.NONE
+
+        /** Links added declarations to the code they were extracted from, after matching and classification. */
+        fun detectExtractions() {
+            extractions = ExtractionDetector.detect(matching, { content(it) == Content.CHANGED }, cancellation)
+        }
+
         fun build(): List<ChangeNode> {
             val topLevel = new.topLevel.mapTo(mutableListOf()) { newSide(it) }
             placeOldOnly(old.topLevel, topLevel)
@@ -120,7 +131,10 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
             val builder = when {
                 match != null -> Builder { children -> matched(match, children) }
                 uncertain != null -> Builder { children -> uncertain(uncertain, onOldSide = false, children) }
-                else -> Builder { children -> node(declaration, null, declaration.range, Presence.ADDED, children) }
+                else -> Builder { children ->
+                    val origins = extractions.ofTarget[declaration].orEmpty().map { Origin(subject(it.source.new), it.source.old.range, it.origin) }
+                    node(declaration, null, declaration.range, Presence.ADDED, children).copy(extractedFrom = origins)
+                }
             }
             ofNew[declaration] = builder
             declaration.children.mapTo(builder.children) { newSide(it) }
@@ -156,8 +170,8 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
         }
 
         private fun matched(match: Match, children: List<ChangeNode>): ChangeNode {
-            val signatureChanged = match.old.signature != match.new.signature
-            return node(
+            val extracted = extractions.ofSource[match.old].orEmpty()
+            val node = node(
                 declaration = match.new,
                 oldRange = match.old.range,
                 newRange = match.new.range,
@@ -166,15 +180,25 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
                 presence = Presence.MATCHED,
                 children = children,
                 moved = match.moved,
-                signatureChanged = signatureChanged,
+                signatureChanged = match.old.signature != match.new.signature,
                 renamedFrom = if (match.rule == MatchRule.RENAME_CANDIDATE) subject(match.old) else null,
-                content = ContentClassifier.classify(
-                    renamed(match.old.ownTokens, match.old.name, match.new.name),
-                    match.new.ownTokens,
-                    new.whitespacePolicy,
-                    parseError = match.old.hasParseError || match.new.hasParseError,
-                    signatureChanged = signatureChanged,
-                ),
+                content = content(match),
+            )
+            if (extracted.isEmpty()) return node
+            // The extracted code is highlighted on the old side, apart from the lines that really changed.
+            return node.copy(
+                extractedTo = extracted.map { subject(it.target) },
+                details = node.details + extracted.map { RangePair(it.origin, null) }.distinct(),
+            )
+        }
+
+        private fun content(match: Match): Content = contents.getOrPut(match) {
+            ContentClassifier.classify(
+                renamed(match.old.ownTokens, match.old.name, match.new.name),
+                match.new.ownTokens,
+                new.whitespacePolicy,
+                parseError = match.old.hasParseError || match.new.hasParseError,
+                signatureChanged = match.old.signature != match.new.signature,
             )
         }
 

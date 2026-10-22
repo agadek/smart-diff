@@ -8,13 +8,13 @@ class OrderService  formatting-only  old 6-65  new 7-77
   method cancelOrder(String)  changed  old 23-27  new 33-39
   method refund(String)  added  new 41-45
   method total(Order)  formatting-only  old 29-35  new 47-55
-  method summary(Order)  changed  old 37-44  new 57-63
-  method describeItems(Order,StringBuilder)  added  new 65-71
-  method shippingCost(Order)  changed  old 46-52  new 73-76
+  method summary(Order)  changed  code extracted to describeItems(Order,StringBuilder)  old 37-44  new 57-63
+  method describeItems(Order,StringBuilder)  added  extracted from summary(Order) old 39-41  new 65-71
+  method shippingCost(Order)  changed  code extracted to costFor(Order)  old 46-52  new 73-76
 class OrderRepository  formatting-only  old 67-80  new 79-101
   method find(String)  formatting-only  old 70-75  new 83-90
   method save(Order)  formatting-only  old 77-79  new 92-95
   method validate(List<Item>)  moved  changed  old 62-64  new 97-100
 class ShippingRates  added  new 103-118
   constructor ShippingRates()  added  new 105-107
-  method costFor(Order)  added  new 109-117
+  method costFor(Order)  added  extracted from shippingCost(Order) old 47-51  new 109-117

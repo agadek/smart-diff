@@ -7,6 +7,7 @@ import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.Origin
 import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.RangePair
 import io.github.agadek.smartdiff.engine.api.Status
@@ -100,6 +101,12 @@ class ContractSuiteSelfTest {
         assertEquals(IllegalStateException::class.java, error.cause?.javaClass)
     }
 
+    @Test
+    fun `the suite rejects an origin that names no reported matched node`() {
+        val contract = ComparisonEngineContract { DanglingOrigin() }
+        assertThrows(AssertionError::class.java) { contract.`results are well-formed and hide nothing`() }
+    }
+
     private fun result(vararg changes: ChangeNode) = ComparisonResult(EngineId("t"), "1", Status.ANALYZED, changes = changes.toList())
 
     private open class Delegating(private val delegate: ComparisonEngine = LineEngine()) : ComparisonEngine by delegate
@@ -121,6 +128,17 @@ class ContractSuiteSelfTest {
         private var calls = 0
         override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult =
             super.compare(request, cancellation).copy(fallbackReason = "call ${calls++}")
+    }
+
+    /** Adds an extraction link whose source declaration is not in the result. */
+    private class DanglingOrigin : Delegating() {
+        override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult {
+            val result = super.compare(request, cancellation)
+            if (request.oldText.isEmpty() || request.newText.isEmpty()) return result
+            val origin = Origin(Subject.Region("nowhere"), TextRange(0, 1), TextRange(0, 1))
+            val added = ChangeNode(Subject.Region("added"), null, TextRange(0, request.newText.length), Presence.ADDED, extractedFrom = listOf(origin))
+            return result.copy(changes = result.changes + added)
+        }
     }
 
     private class Throwing : Delegating() {
