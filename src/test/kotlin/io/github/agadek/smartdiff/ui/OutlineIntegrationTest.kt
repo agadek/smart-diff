@@ -39,7 +39,6 @@ import io.github.agadek.smartdiff.engine.lines.LineEngine
 import io.github.agadek.smartdiff.engine.lines.LineEngineFactory
 import io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory
 import io.github.agadek.smartdiff.engine.registry.EngineDefaults
-import io.github.agadek.smartdiff.spike.SpikeContents
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.TreePath
 
@@ -154,6 +153,32 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertEquals(listOf("class Greeter", "  function hello()  changed", "  function bye()  added"), rows(outline))
     }
 
+    fun `test the outline attaches to local-change and compare-with diffs`() {
+        for ((fileName, old, new) in listOf(Triple("Greeter.java", JAVA_OLD, JAVA_NEW), Triple("Greeter.kt", KOTLIN_OLD, KOTLIN_NEW))) {
+            val local = DiffContents.localFile(project, myFixture.addFileToProject("local/$fileName", new).virtualFile)
+            val localChange = SimpleDiffRequest("local change", DiffContents.vcsRevision(project, old, "/repo/$fileName"), local, "HEAD", "Current")
+            assertEquals(fileName, "1 changed · 1 added", open(localChange).awaitResult().panel.summary.text)
+
+            val compareWith = SimpleDiffRequest(
+                "compare",
+                DiffContents.localFile(project, myFixture.addFileToProject("a/$fileName", old).virtualFile),
+                DiffContents.localFile(project, myFixture.addFileToProject("b/$fileName", new).virtualFile),
+                "a",
+                "b",
+            )
+            assertEquals(fileName, "1 changed · 1 added", open(compareWith).awaitResult().panel.summary.text)
+        }
+    }
+
+    fun `test a revision with CRLF line ends is compared as LF text`() {
+        val shown = open(history(JAVA_OLD.replace("\n", "\r\n"), JAVA_NEW, "Greeter.java"))
+        val outline = shown.awaitResult()
+
+        assertEquals(listOf("class Greeter", "  method hello()  changed", "  method bye()  added"), rows(outline))
+        select(outline, "method hello()  changed")
+        assertHighlightedAt(shown.viewer.editor1, JAVA_OLD.indexOf("String hello()"))
+    }
+
     fun `test the toggle hides the outline and shows the native diff`() {
         val action = ActionManager.getInstance().getAction("SmartDiff.ToggleOutline") as ToggleOutlineAction
         val toolbar = ActionManager.getInstance().getAction(IdeActions.DIFF_VIEWER_TOOLBAR) as DefaultActionGroup
@@ -220,7 +245,7 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
 
     fun `test editing a side compares again`() {
         val local = myFixture.addFileToProject("local/Greeter.java", JAVA_NEW).virtualFile
-        val shown = open(SimpleDiffRequest("local", SpikeContents.vcsRevision(project, JAVA_OLD, "/repo/Greeter.java"), SpikeContents.localFile(project, local), "HEAD", "Current"))
+        val shown = open(SimpleDiffRequest("local", DiffContents.vcsRevision(project, JAVA_OLD, "/repo/Greeter.java"), DiffContents.localFile(project, local), "HEAD", "Current"))
         val outline = shown.awaitResult()
         assertEquals("1 changed · 1 added", outline.panel.summary.text)
 
@@ -330,8 +355,8 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
 
     private fun history(old: String, new: String, fileName: String) = SimpleDiffRequest(
         fileName,
-        SpikeContents.vcsRevision(project, old, "/repo/$fileName"),
-        SpikeContents.vcsRevision(project, new, "/repo/$fileName"),
+        DiffContents.vcsRevision(project, old, "/repo/$fileName"),
+        DiffContents.vcsRevision(project, new, "/repo/$fileName"),
         "abc123",
         "def456",
     )

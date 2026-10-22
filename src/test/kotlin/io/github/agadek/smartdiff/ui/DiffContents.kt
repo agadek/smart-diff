@@ -1,4 +1,4 @@
-package io.github.agadek.smartdiff.spike
+package io.github.agadek.smartdiff.ui
 
 import com.intellij.diff.DiffContentFactory
 import com.intellij.diff.DiffContentFactoryEx
@@ -14,7 +14,7 @@ import com.intellij.vcsUtil.VcsUtil
  * and the current version of a local file into `DiffContentFactory.create(project, virtualFile)`. "Compare with…" between files
  * uses the second form on both sides.
  */
-internal object SpikeContents {
+internal object DiffContents {
 
     fun vcsRevision(project: Project, text: String, path: String): DocumentContent =
         DiffContentFactoryEx.getInstanceEx().createFromBytes(project, text.toByteArray(), VcsUtil.getFilePath(path, false))
