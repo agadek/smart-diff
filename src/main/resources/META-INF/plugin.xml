@@ -26,9 +26,11 @@
     ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
-    <!-- Language providers live in optional descriptors, so the plugin also loads in IDEs without Java or Kotlin. -->
+    <!-- Language providers live in optional descriptors, so the plugin also loads in IDEs without Java, Kotlin or
+         Scala. -->
     <depends optional="true" config-file="smartdiff-java.xml">com.intellij.java</depends>
     <depends optional="true" config-file="smartdiff-kotlin.xml">org.jetbrains.kotlin</depends>
+    <depends optional="true" config-file="smartdiff-scala.xml">org.intellij.scala</depends>
     <!-- The Changes tree summary needs the platform's VCS support. -->
     <depends optional="true" config-file="smartdiff-vcs.xml">com.intellij.modules.vcs</depends>
 

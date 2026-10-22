@@ -46,7 +46,7 @@ class ArchitectureRules(private val root: String) {
             "$root.engine.declarations.model..",
             "$root.engine.declarations.analysis..",
         )
-            .should().dependOnClassesThat().resideInAnyPackage("com.intellij..", "org.jetbrains.kotlin..")
+            .should().dependOnClassesThat().resideInAnyPackage("com.intellij..", "org.jetbrains.kotlin..", "org.jetbrains.plugins.scala..", "scala..")
             .allowEmptyShould(true)
             .because("the engine API, declaration model and analysis must run without the IntelliJ Platform")
 
