@@ -1,0 +1,4 @@
+status: ANALYZED
+class Registry  old 6-27  new 6-28
+  initializer static  changed  old 15-18  new 15-19
+  method code(String)  changed  old 24-26  new 25-27

@@ -59,6 +59,8 @@ class Scope(private val offsets: Offsets) {
         declaration(DeclarationKind.METHOD, name, signature, body, parseError)
 
     fun field(name: String, body: String = "int;") = declaration(DeclarationKind.FIELD, name, body = body)
+
+    fun initializer(body: String = "{}") = declaration(DeclarationKind.INITIALIZER, "static", body = body)
 }
 
 private val TOKEN = Regex("""\s+|//[^\n]*|/\*.*?\*/|"[^"]*"|\w+|.""", RegexOption.DOT_MATCHES_ALL)

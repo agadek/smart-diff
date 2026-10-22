@@ -66,7 +66,7 @@ class KotlinDeclarationProviderTest : ProviderTestCase() {
             class Shapes  "/** Shapes. */"
               initializer  "init { println(a) }"
               constructor(Int)  "constructor(a: Int) : this(a, "")"
-              function second(List<T>.Int,String)  "fun <T> List<T>.second(x: Int, vararg ys: String): T = this[1]"
+              function second(List<T>.Int,String...)  "fun <T> List<T>.second(x: Int, vararg ys: String): T = this[1]"
               function run(suspend()->Unit,(Int)->Unit)  "suspend fun run(block: suspend () -> Unit, handler: @Suppress("x") (Int) -> Unit) = block()"
               property size2(String)  "val String.size2: Int get() = length"
               property local  "private val local = run { val inner = 1; inner }"

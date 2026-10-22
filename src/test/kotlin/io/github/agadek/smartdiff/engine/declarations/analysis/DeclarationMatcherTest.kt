@@ -113,6 +113,43 @@ class DeclarationMatcherTest {
     }
 
     @Test
+    fun `M1 pairs declarations of a repeated key by content`() {
+        val old = tree { cls("A") { initializer("{a();}"); initializer("{b();}"); initializer("{c();}") } }
+        val new = tree { cls("A") { initializer("{a();}"); initializer("{b();}"); initializer("{c();}") } }
+
+        val matching = match(old, new)
+
+        old.all.drop(1).zip(new.all.drop(1)).forEach { (o, n) ->
+            assertSame(n, matching.ofOld(o)!!.new)
+            assertEquals(MatchRule.IDENTITY, matching.ofOld(o)!!.rule)
+        }
+        assertNothingLeft(matching)
+    }
+
+    @Test
+    fun `M1 pairs the rest of a repeated key once the identical ones are paired`() {
+        val old = tree { cls("A") { initializer("{a();}"); initializer("{b();}") } }
+        val new = tree { cls("A") { initializer("{a();}"); initializer("{b(); c();}") } }
+
+        val matching = match(old, new)
+
+        assertSame(new.all[2], matching.ofOld(old.all[2])!!.new)
+        assertNothingLeft(matching)
+    }
+
+    @Test
+    fun `a repeated key that still does not pair up once each stays uncertain`() {
+        val old = tree { cls("A") { method("of", "E", "{x();}"); method("of", "E", "{y();}"); method("of", "E", "{z();}") } }
+        val new = tree { cls("A") { method("of", "E", "{x();}"); method("of", "E", "{y2();}"); method("of", "E", "{z2();}") } }
+
+        val matching = match(old, new)
+
+        assertSame(new.all[1], matching.ofOld(old.all[1])!!.new)
+        assertEquals(old.all.drop(2), matching.uncertainOld.map { it.declaration })
+        assertEquals(new.all.drop(2), matching.uncertainNew.map { it.declaration })
+    }
+
+    @Test
     fun `a name only one side still has is removed or added, not uncertain`() {
         val old = tree { cls("A") { method("foo", "int"); method("foo", "String") } }
         val new = tree { cls("A") }
