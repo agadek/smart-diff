@@ -147,7 +147,7 @@ class DeclarationAnalysisTest {
     }
 
     @Test
-    fun `a renamed class is removed and added, with its members moved into the new class`() {
+    fun `a renamed class too small to compare by content is removed and added, with its members moved into the new class`() {
         val old = tree { cls("Parser") { method("parse", "String"); method("dropped") } }
         val new = tree { cls("Reader") { method("parse", "String") } }
 
@@ -311,6 +311,59 @@ class DeclarationAnalysisTest {
         assertEquals(listOf(RangePair(null, TextRange(32, 38))), added.details)
     }
 
+    @Test
+    fun `a rename candidate is one matched node, unchanged when only the name differs`() {
+        val body = "{ int x = compute(a, b); return x * 2; }"
+        val old = tree { cls("A") { method("total", "int", "int total(int a) $body"); method("other", "", "void other() { a(); b(); c(); }") } }
+        val new = tree { cls("A") { method("sum", "int", "int sum(int a) $body"); method("other", "", "void other() { a(); b(); c(); }") } }
+
+        val sum = compare(old, new).changes.single().children.first()
+
+        assertEquals(Presence.MATCHED, sum.presence)
+        assertEquals(Subject.Declaration(DeclarationKind.METHOD, "total", "int"), sum.renamedFrom)
+        assertEquals(Content.UNCHANGED, sum.content)
+        assertTrue(sum.isReported)
+        assertEquals("CLASS A\n  METHOD sum(int) renamed from total\n  METHOD other()\n", outline(compare(old, new)))
+    }
+
+    @Test
+    fun `a rename candidate with a changed body is changed too`() {
+        val old = tree { method("total", "int", "int total(int a) { int x = compute(a, b); return x * 2; }") }
+        val new = tree { method("sum", "int", "int sum(int a) { int x = compute(a, b); return x * 3; }") }
+
+        assertEquals("METHOD sum(int) renamed from total CHANGED\n", outline(compare(old, new)))
+    }
+
+    @Test
+    fun `a renamed class keeps its members and its constructor follows it`() {
+        val old = tree {
+            cls("Parser", "class Parser { private final String text; }") {
+                declaration(DeclarationKind.CONSTRUCTOR, "Parser", "String", "Parser(String text) { this.text = text; }")
+                method("parse", "", "{ return text.trim(); }")
+            }
+        }
+        val new = tree {
+            cls("Reader", "class Reader { private final String text; }") {
+                declaration(DeclarationKind.CONSTRUCTOR, "Reader", "String", "Reader(String text) { this.text = text; }")
+                method("parse", "", "{ return text.trim(); }")
+            }
+        }
+
+        assertEquals("CLASS Reader renamed from Parser\n  CONSTRUCTOR Reader(String)\n  METHOD parse()\n", outline(compare(old, new)))
+        assertFalse(compare(old, new).changes.single().children.any { it.isReported })
+    }
+
+    @Test
+    fun `labels use the display signature and receiver`() {
+        val old = tree()
+        val new = DeclarationTree(
+            listOf(Declaration(DeclarationKind.FUNCTION, "formatIsoDate", "Date.", TextRange(0, 10), displaySignature = "", receiver = "Date")),
+            FileRegion(emptyList(), emptyList()), WhitespacePolicy.LINE_BREAKS_SIGNIFICANT,
+        )
+
+        assertEquals(Subject.Declaration(DeclarationKind.FUNCTION, "formatIsoDate", "", "Date"), compare(old, new).changes.single().subject)
+    }
+
     private fun compare(old: DeclarationTree, new: DeclarationTree): ComparisonResult =
         DeclarationAnalysis(ENGINE, "1").compare(old, new, maxDeclarations = 5_000, cancellation = Cancellation.NONE)
 
@@ -323,6 +376,7 @@ class DeclarationAnalysisTest {
             append("  ".repeat(depth)).append(subject.kind).append(' ').append(subject.name)
             if (subject.signature != null) append('(').append(subject.signature).append(')')
             if (node.presence != Presence.MATCHED) append(' ').append(node.presence)
+            (node.renamedFrom as Subject.Declaration?)?.let { append(" renamed from ").append(it.name) }
             if (node.moved) append(" moved")
             if (node.content != Content.UNCHANGED) append(' ').append(node.content)
             append('\n')

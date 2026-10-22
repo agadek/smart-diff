@@ -39,24 +39,97 @@ object NothingHidden {
 
     /**
      * Whether an alignment exists in which every uncovered character is matched with an equal character on the other
-     * side. Covered characters may be matched or left unmatched. Dynamic programming over suffixes, one row at a time.
+     * side. Covered characters may be matched or left unmatched.
+     *
+     * A path through the grid of (old offset, new offset) from the start to the end of both texts, which may skip a
+     * covered character on either side or match two equal characters. Row by row over the old text, it keeps the new
+     * offsets reachable so far as sorted intervals: skipping covered new characters fills runs, so a row is a few
+     * intervals and points rather than a full row of the table, and large files with local changes check in about
+     * linear time. Matches the full dynamic programming exactly (`NothingHiddenTest`).
      */
-    private fun alignable(old: CharSequence, oldCovered: BooleanArray, new: CharSequence, newCovered: BooleanArray): Boolean {
+    internal fun alignable(old: CharSequence, oldCovered: BooleanArray, new: CharSequence, newCovered: BooleanArray): Boolean {
         val m = new.length
-        var below = BooleanArray(m + 1) // row i + 1
-        below[m] = true
-        for (j in m - 1 downTo 0) below[j] = newCovered[j] && below[j + 1]
-        for (i in old.length - 1 downTo 0) {
-            val row = BooleanArray(m + 1)
-            row[m] = oldCovered[i] && below[m]
-            for (j in m - 1 downTo 0) {
-                row[j] = (oldCovered[i] && below[j]) ||
-                    (newCovered[j] && row[j + 1]) ||
-                    (old[i] == new[j] && below[j + 1])
+        // runEnd[j]: the furthest offset reachable from j by skipping covered new characters.
+        val runEnd = IntArray(m + 1)
+        runEnd[m] = m
+        for (j in m - 1 downTo 0) runEnd[j] = if (newCovered[j]) runEnd[j + 1] else j
+        // Where each character occurs in the new text, in increasing order.
+        val occurrences = HashMap<Char, IntArray>().apply {
+            val counts = HashMap<Char, Int>()
+            for (c in new) counts.merge(c, 1, Int::plus)
+            for ((c, n) in counts) put(c, IntArray(n))
+            val filled = HashMap<Char, Int>()
+            for ((j, c) in new.withIndex()) {
+                val k = filled.merge(c, 1, Int::plus)!! - 1
+                getValue(c)[k] = j
             }
-            below = row
         }
-        return below[0]
+
+        var reach = Intervals().apply { add(0, runEnd[0]) }
+        for (i in old.indices) {
+            val c = old[i]
+            val next = Intervals()
+            val at = occurrences[c]
+            for (r in 0 until reach.size) {
+                val a = reach.start(r)
+                val b = reach.end(r)
+                if (oldCovered[i]) {
+                    // Skip old[i]: the interval stays; matching it can only add b + 1.
+                    next.add(a, b)
+                    if (b < m && new[b] == c) next.add(b + 1, runEnd[b + 1])
+                } else if (at != null) {
+                    // old[i] must match: every j in [a, b] with new[j] == c leads to j + 1. Occurrences inside the run
+                    // just reached add nothing new, so jump past it.
+                    var k = lowerBound(at, a, 0)
+                    while (k < at.size && at[k] <= b && at[k] < m) {
+                        val p = at[k] + 1
+                        val e = runEnd[p]
+                        next.add(p, e)
+                        k = lowerBound(at, e, k + 1)
+                    }
+                }
+            }
+            if (next.size == 0) return false
+            reach = next
+        }
+        return reach.end(reach.size - 1) == m
+    }
+
+    /** The first index from [from] whose value is at least [value]; [values] is increasing. */
+    private fun lowerBound(values: IntArray, value: Int, from: Int): Int {
+        var low = from
+        var high = values.size
+        while (low < high) {
+            val mid = (low + high) ushr 1
+            if (values[mid] < value) low = mid + 1 else high = mid
+        }
+        return low
+    }
+
+    /** Disjoint closed intervals of offsets, added in increasing order of start; overlapping or adjacent ones merge. */
+    private class Intervals {
+        private var starts = IntArray(4)
+        private var ends = IntArray(4)
+        var size = 0
+            private set
+
+        fun start(i: Int) = starts[i]
+
+        fun end(i: Int) = ends[i]
+
+        fun add(start: Int, end: Int) {
+            if (size > 0 && start <= ends[size - 1] + 1) {
+                if (end > ends[size - 1]) ends[size - 1] = end
+                return
+            }
+            if (size == starts.size) {
+                starts = starts.copyOf(size * 2)
+                ends = ends.copyOf(size * 2)
+            }
+            starts[size] = start
+            ends[size] = end
+            size++
+        }
     }
 
     /** Points at the first position where the uncovered parts of the two sides disagree; a hint for the failure message. */

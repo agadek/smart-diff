@@ -1,0 +1,5 @@
+status: ANALYZED
+class Adapter  old 3-18  new 3-18
+  function toJson(Writer,T)  changed  signature changed  old 5  new 5
+  function toJson(T)  changed  signature changed  old 7-11  new 7-11
+  function toJsonValue(T)  changed  signature changed  old 13-17  new 13-17

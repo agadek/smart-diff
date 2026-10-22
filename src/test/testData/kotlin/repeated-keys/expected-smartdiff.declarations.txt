@@ -1,3 +1,3 @@
 status: ANALYZED
 class Registry  old 5-11  new 5-11
-  function lookup(Type,Set<Class<outAnnotation>>)  changed  old 10  new 10
+  function lookup(Type,Set<Class<out Annotation>>)  changed  old 10  new 10

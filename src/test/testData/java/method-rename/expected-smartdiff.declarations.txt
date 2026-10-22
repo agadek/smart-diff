@@ -1,0 +1,7 @@
+status: ANALYZED
+class Cart  old 6-37  new 6-37
+  method total()  rename candidate from method computeTotal()  old 18-24  new 18-24
+  method size()  rename candidate from method countItems()  changed  old 26-28  new 26-28
+  method sizeFrom(int)  rename candidate from method countFrom(int)  old 30-32  new 30-32
+  method reset()  removed  old 34
+  method clear()  added  new 34

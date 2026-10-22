@@ -53,11 +53,17 @@ class KotlinDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_B
             else -> element.name?.let { DeclarationInfo(DeclarationKind.OBJECT, it, signature = null, element.declarations) }
         }
         is KtNamedFunction -> element.name?.takeUnless { element.isLocal }?.let {
-            DeclarationInfo(DeclarationKind.FUNCTION, it, functionSignature(element))
+            DeclarationInfo(
+                DeclarationKind.FUNCTION, it, functionSignature(element),
+                displaySignature = parameterLabels(element), receiver = element.receiverTypeReference?.let(::typeLabel),
+            )
         }
-        is KtSecondaryConstructor -> DeclarationInfo(DeclarationKind.CONSTRUCTOR, "", parameters(element))
+        is KtSecondaryConstructor -> DeclarationInfo(DeclarationKind.CONSTRUCTOR, "", parameters(element), displaySignature = parameterLabels(element))
         is KtProperty -> element.name?.takeUnless { element.isLocal }?.let {
-            DeclarationInfo(DeclarationKind.PROPERTY, it, element.receiverTypeReference?.let(::type))
+            DeclarationInfo(
+                DeclarationKind.PROPERTY, it, element.receiverTypeReference?.let(::type),
+                displaySignature = null, receiver = element.receiverTypeReference?.let(::typeLabel),
+            )
         }
         is KtTypeAlias -> element.name?.let { DeclarationInfo(DeclarationKind.TYPE_ALIAS, it, signature = null) }
         // A script's statements are wrapped in initializers; they are part of the file region.
@@ -83,7 +89,16 @@ class KotlinDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_B
             (parameter.typeReference?.let(::type) ?: "") + if (parameter.isVarArg) "..." else ""
         })
 
+    /** The parameter types for labels, as Kotlin writes them: `vararg Class<out Annotation>`. */
+    private fun parameterLabels(declaration: KtCallableDeclaration): String =
+        Signatures.of(declaration.valueParameters.map { parameter ->
+            (if (parameter.isVarArg) "vararg " else "") + (parameter.typeReference?.let(::typeLabel) ?: "")
+        })
+
     /** The type as written, without annotations; modifiers that are part of the type, such as `suspend`, stay. */
     private fun type(reference: KtTypeReference): String =
         Signatures.text(reference) { it is KtAnnotationEntry || it is KtAnnotation }
+
+    private fun typeLabel(reference: KtTypeReference): String =
+        Signatures.label(reference) { it is KtAnnotationEntry || it is KtAnnotation }
 }

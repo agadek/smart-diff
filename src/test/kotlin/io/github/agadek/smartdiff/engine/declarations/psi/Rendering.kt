@@ -34,6 +34,7 @@ object Rendering {
     private fun node(node: ChangeNode, oldText: CharSequence, newText: CharSequence): String {
         val labels = buildList {
             if (node.presence != Presence.MATCHED) add(node.presence.name.lowercase())
+            node.renamedFrom?.let { add("rename candidate from ${subject(it)}") }
             if (node.moved) add("moved")
             if (node.content != Content.UNCHANGED) add(node.content.name.lowercase().replace('_', '-'))
             if (node.signatureChanged) add("signature changed")
@@ -43,7 +44,7 @@ object Rendering {
     }
 
     fun subject(subject: Subject): String = when (subject) {
-        is Subject.Declaration -> label(subject.kind, subject.name, subject.signature)
+        is Subject.Declaration -> label(subject.kind, (subject.receiver?.let { "$it." } ?: "") + subject.name, subject.signature)
         is Subject.Region -> subject.description
     }
 

@@ -12,7 +12,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.CancellationException
 
-/** Matching rules M1 to M4 and the order within a container (technical specification §7), on hand-built trees. */
+/** Matching rules M1 to M5 and the order within a container (technical specification §7), on hand-built trees. */
 class DeclarationMatcherTest {
 
     @Test
@@ -184,19 +184,126 @@ class DeclarationMatcherTest {
     }
 
     @Test
-    fun `a renamed class is removed and added and its members move into the new class`() {
-        val old = tree { cls("Parser") { method("parse", "String"); field("cache") } }
-        val new = tree { cls("Reader") { method("parse", "String"); field("cache") } }
+    fun `a renamed class with similar content is a rename candidate and its members stay in it`() {
+        val old = tree { cls("Parser") { method("parse", "String", BODY); field("cache") } }
+        val new = tree { cls("Reader") { method("parse", "String", BODY); field("cache") } }
 
         val matching = match(old, new)
 
-        assertEquals(listOf(old.named("Parser")), matching.removed)
-        assertEquals(listOf(new.named("Reader")), matching.added)
+        val renamed = matching.ofOld(old.named("Parser"))!!
+        assertEquals(MatchRule.RENAME_CANDIDATE, renamed.rule)
+        assertSame(new.named("Reader"), renamed.new)
         listOf("parse", "cache").forEach { name ->
             val member = matching.ofOld(old.named(name))!!
             assertEquals(MatchRule.PATH_CHANGED, member.rule)
-            assertTrue(member.containerChanged)
+            assertFalse(member.moved)
         }
+        assertNothingLeft(matching)
+    }
+
+    @Test
+    fun `M5 pairs a removed and an added declaration with similar content as a rename candidate`() {
+        val old = tree { cls("A") { method("total", "int", BODY); method("other", "", "{ unrelated(); work(); }") } }
+        val new = tree { cls("A") { method("sum", "int", BODY.replace("x", "y")); method("other", "", "{ unrelated(); work(); }") } }
+
+        val sum = match(old, new).ofOld(old.named("total"))!!
+
+        assertEquals(MatchRule.RENAME_CANDIDATE, sum.rule)
+        assertSame(new.named("sum"), sum.new)
+    }
+
+    @Test
+    fun `M5 masks the declaration's own name, so a recursive method still pairs`() {
+        val old = tree { cls("A") { method("count", "Node", "{ return n == null ? 0 : 1 + count(n.next); }") } }
+        val new = tree { cls("A") { method("size", "Node", "{ return n == null ? 0 : 1 + size(n.next); }") } }
+
+        assertEquals(MatchRule.RENAME_CANDIDATE, match(old, new).ofOld(old.named("count"))!!.rule)
+    }
+
+    @Test
+    fun `M5 leaves dissimilar, small, differently kinded and differently placed declarations alone`() {
+        val old = tree {
+            cls("A") { method("gone", "", "{ alpha(); beta(); gamma(); }"); method("empty"); field("count", "private int count = 0;") }
+            cls("B") { method("elsewhere", "", BODY) }
+        }
+        val new = tree {
+            cls("A") { method("fresh", "", "{ return delta + epsilon * zeta; }"); method("blank"); method("total", "", "private int total = 0;") }
+            cls("B")
+            cls("C") { method("moved", "", BODY) }
+        }
+
+        val matching = match(old, new)
+
+        assertEquals(listOf("gone", "empty", "count", "elsewhere"), matching.removed.map { it.name })
+        assertEquals(listOf("fresh", "blank", "total", "C", "moved"), matching.added.map { it.name })
+    }
+
+    @Test
+    fun `M5 leaves a rename unpaired when another declaration is about as similar`() {
+        val old = tree { cls("A") { method("first", "", BODY); method("second", "", BODY) } }
+        val new = tree { cls("A") { method("one", "", BODY) } }
+
+        val matching = match(old, new)
+
+        assertEquals(listOf("first", "second"), matching.removed.map { it.name })
+        assertEquals(listOf("one"), matching.added.map { it.name })
+    }
+
+    @Test
+    fun `M5 tells renames with the same content apart by their names`() {
+        val old = tree { cls("A") { method("testShowOwner", "", BODY); method("testInitFindForm", "", BODY); method("testFirst", "", BODY) } }
+        val new = tree { cls("A") { method("showOwner", "", BODY); method("initFindForm", "", BODY); method("one", "", BODY); method("two", "", BODY) } }
+
+        val matching = match(old, new)
+
+        assertSame(new.named("showOwner"), matching.ofOld(old.named("testShowOwner"))!!.new)
+        assertSame(new.named("initFindForm"), matching.ofOld(old.named("testInitFindForm"))!!.new)
+        assertEquals(listOf("testFirst"), matching.removed.map { it.name })
+        assertEquals(listOf("one", "two"), matching.added.map { it.name })
+    }
+
+    @Test
+    fun `the constructors of a renamed Java class follow it`() {
+        val old = tree {
+            cls("Parser", "{ private final String text; }") {
+                declaration(DeclarationKind.CONSTRUCTOR, "Parser", "String", "Parser(String text) { this.text = text; }")
+            }
+        }
+        val new = tree {
+            cls("Reader", "{ private final String text; }") {
+                declaration(DeclarationKind.CONSTRUCTOR, "Reader", "String", "Reader(String text) { this.text = text; }")
+            }
+        }
+
+        val matching = match(old, new)
+
+        assertEquals(MatchRule.RENAME_CANDIDATE, matching.ofOld(old.all[0])!!.rule)
+        assertEquals(MatchRule.CONTAINER_RENAMED, matching.ofOld(old.all[1])!!.rule)
+        assertNothingLeft(matching)
+    }
+
+    @Test
+    fun `M3 pairs overloads whose signatures all changed with the most similar one`() {
+        val old = tree {
+            cls("A") {
+                method("isAssignable", "Type,Map", "{ return isAssignable(type, toType, typeVarAssigns); }")
+                method("isAssignable", "Type,Type,Map", "{ if (type == null) return true; return check(type, toType); }")
+            }
+        }
+        val new = tree {
+            cls("A") {
+                method("isAssignable", "Type,Map,boolean", "{ return isAssignable(type, toType, typeVarAssigns, strict); }")
+                method("isAssignable", "Type,Type,Map,boolean", "{ if (type == null) return true; return check(type, toType, strict); }")
+            }
+        }
+
+        val matching = match(old, new)
+
+        old.all.drop(1).zip(new.all.drop(1)).forEach { (o, n) ->
+            assertSame(n, matching.ofOld(o)!!.new)
+            assertEquals(MatchRule.SIGNATURE_CHANGED, matching.ofOld(o)!!.rule)
+        }
+        assertNothingLeft(matching)
     }
 
     @Test
@@ -303,6 +410,35 @@ class DeclarationMatcherTest {
     }
 
     private fun match(old: DeclarationTree, new: DeclarationTree) = DeclarationMatcher.match(old, new, Cancellation.NONE)
+
+    @Test
+    fun `M3 pairs what remains of a repeated name once the rest of the group is paired`() {
+        val old = tree {
+            cls("Adapter") {
+                method("toJson", "Writer,T?", "abstract fun toJson(writer: Writer, value: T?)")
+                method("toJson", "T?", "{ val buffer = StringBuilder(); toJson(Writer(buffer), value); return buffer.toString() }")
+            }
+        }
+        val new = tree {
+            cls("Adapter") {
+                method("toJson", "Writer,T", "abstract fun toJson(writer: Writer, value: T)")
+                method("toJson", "T", "{ val buffer = StringBuilder(); toJson(Writer(buffer), value); return buffer.toString() }")
+            }
+        }
+
+        val matching = match(old, new)
+
+        old.all.drop(1).zip(new.all.drop(1)).forEach { (o, n) ->
+            assertSame(n, matching.ofOld(o)!!.new)
+            assertEquals(MatchRule.SIGNATURE_CHANGED, matching.ofOld(o)!!.rule)
+        }
+        assertNothingLeft(matching)
+    }
+
+    private companion object {
+        /** A body long enough to be compared by content. */
+        const val BODY = "{ int x = compute(a, b); return x * 2; }"
+    }
 
     private fun assertNothingLeft(matching: Matching) {
         assertTrue(matching.uncertainOld.isEmpty() && matching.uncertainNew.isEmpty())

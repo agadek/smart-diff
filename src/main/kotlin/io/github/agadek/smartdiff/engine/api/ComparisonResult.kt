@@ -64,10 +64,15 @@ data class ChangeNode(
     /** Optional fine-grained changed spans; empty if the engine has none. */
     val details: List<RangePair> = emptyList(),
     val children: List<ChangeNode> = emptyList(),
+    /**
+     * Only for [Presence.MATCHED]: the subject on the old side when the engine paired two subjects with different names
+     * because their content is similar. Such a rename candidate may be wrong, so the outline always shows it.
+     */
+    val renamedFrom: Subject? = null,
 ) {
     /** Whether this node is a change by itself, not only because of its children. */
     val isChangedItself: Boolean
-        get() = presence != Presence.MATCHED || moved || signatureChanged || content != Content.UNCHANGED
+        get() = presence != Presence.MATCHED || moved || signatureChanged || renamedFrom != null || content != Content.UNCHANGED
 
     /** Whether the outline shows this node: it is a change itself, or a child is reported. */
     val isReported: Boolean
@@ -80,7 +85,11 @@ enum class Content { UNCHANGED, FORMATTING_ONLY, CHANGED, UNANALYZED }
 
 /** What a change node is about. */
 sealed interface Subject {
-    data class Declaration(val kind: DeclarationKind, val name: String, val signature: String?) : Subject
+    /**
+     * [signature] is the parameter list as the user reads it, null for declarations without one; [receiver] is the
+     * receiver type of an extension, shown before the name.
+     */
+    data class Declaration(val kind: DeclarationKind, val name: String, val signature: String?, val receiver: String? = null) : Subject
 
     /** For engines without declarations, such as a line or token engine. */
     data class Region(val description: String) : Subject

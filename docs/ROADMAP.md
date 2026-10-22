@@ -12,7 +12,7 @@ Status: 2026-10-22. Items after the first release are candidates, not commitment
 
 ## 0.1.1: noise pass
 
-Decided 2026-10-22, from the validation on real commits before 0.1.0 ([VALIDATION.md](VALIDATION.md)). It comes before everything under [Later](#later).
+Decided 2026-10-22, from the validation on real commits before 0.1.0 ([VALIDATION.md](VALIDATION.md)). It comes before everything under [Later](#later). Implemented; the rerun is in [VALIDATION.md](VALIDATION.md#2026-10-22-011-noise-pass).
 
 ### Rename candidates
 

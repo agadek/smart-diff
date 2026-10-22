@@ -23,6 +23,10 @@ class DeclarationInfo(
     val signature: String?,
     /** Elements that may be nested declarations, in source order. */
     val members: List<PsiElement> = emptyList(),
+    /** The parameter types for labels ([Signatures.label]); for a Kotlin extension, without the receiver. */
+    val displaySignature: String? = signature,
+    /** The receiver type of a Kotlin extension, for labels. */
+    val receiver: String? = null,
 )
 
 /**
@@ -89,6 +93,8 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
                 ownTokens = leading + tokens.own(node.range, node.children.map { it.extent }),
                 hasParseError = node.parseError,
                 leadingWhitespace = node.leading,
+                displaySignature = node.info.displaySignature,
+                receiver = node.info.receiver,
             )
         }
         val whole = TextRange(0, text.length)

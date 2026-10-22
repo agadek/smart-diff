@@ -1,0 +1,5 @@
+status: ANALYZED
+class Types  old 6-22  new 6-22
+  method isAssignable(Type,Type,boolean)  changed  signature changed  old 8-10  new 8-10
+  method isAssignable(Type,Type,Map<String,Type>,boolean)  changed  signature changed  old 12-17  new 12-17
+  method isInstance(Object,Type)  changed  old 19-21  new 19-21

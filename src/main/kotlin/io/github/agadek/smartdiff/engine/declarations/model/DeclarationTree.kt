@@ -49,6 +49,10 @@ class Declaration(
      * container does not change.
      */
     val leadingWhitespace: TextRange? = null,
+    /** The parameter types for labels, with a space kept where the source separates words (§6.6). */
+    val displaySignature: String? = signature,
+    /** For labels: the receiver type of a Kotlin extension, which [signature] starts with; null when there is none. */
+    val receiver: String? = null,
 ) {
     override fun toString(): String = "$kind $name" + (signature?.let { "($it)" } ?: "") + " $range"
 }

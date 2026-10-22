@@ -53,8 +53,11 @@ class JavaDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.INSIGNIF
         is PsiMethod -> element.name.takeIf { it.isNotEmpty() }?.let { name ->
             val kind = if (element.isConstructor) DeclarationKind.CONSTRUCTOR else DeclarationKind.METHOD
             // A compact record constructor writes no parameter list; the PSI gives it the record components.
-            val parameters = if (JavaPsiRecordUtil.isCompactConstructor(element)) emptyList() else element.parameterList.parameters.map(::parameterType)
-            DeclarationInfo(kind, name, Signatures.of(parameters))
+            val parameters = if (JavaPsiRecordUtil.isCompactConstructor(element)) emptyList() else element.parameterList.parameters.toList()
+            DeclarationInfo(
+                kind, name, Signatures.of(parameters.map { parameterType(it, Signatures::text) }),
+                displaySignature = Signatures.of(parameters.map { parameterType(it, Signatures::label) }),
+            )
         }
         is PsiEnumConstant -> DeclarationInfo(DeclarationKind.ENUM_CONSTANT, element.name, signature = null)
         is PsiField -> DeclarationInfo(DeclarationKind.FIELD, element.name, signature = null)
@@ -77,9 +80,9 @@ class JavaDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.INSIGNIF
     private fun members(psiClass: PsiClass): List<PsiElement> = psiClass.children.filter { it is PsiMember }
 
     /** The type as written, with C-style array brackets after the name, without modifiers, annotations or the name. */
-    private fun parameterType(parameter: PsiParameter): String {
+    private fun parameterType(parameter: PsiParameter, text: (PsiElement, (PsiElement) -> Boolean) -> String): String {
         val name = parameter.nameIdentifier
-        return Signatures.text(parameter) { it is PsiModifierList || it is PsiAnnotation || it == name }
+        return text(parameter) { it is PsiModifierList || it is PsiAnnotation || it == name }
     }
 
     private companion object {

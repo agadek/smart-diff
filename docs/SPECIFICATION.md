@@ -73,7 +73,7 @@ The first-release analysis is declaration-level:
 
 - Initial classes: added, removed, changed, moved, formatting-only, uncertain, and unanalyzed.
 - “Moved” means a declaration matched by identity whose container or order among its siblings changed. It is not presented as a refactoring.
-- Renames are not detected in the first release, including renamed classes (decided 2026-10-21). A rename appears as one removed and one added declaration; a later stage may pair them as a “rename candidate” using body similarity, labeled uncertain.
+- Renames are not detected in the first release, including renamed classes (decided 2026-10-21). A rename appears as one removed and one added declaration. From 0.1.1 they are paired as a “rename candidate” using body similarity (decided 2026-10-22): one entry with both names, labeled as a candidate and never hidden by the change type filter.
 - Mark unmatched or ambiguous structure as uncertain. Do not silently suppress it.
 - Formatting-only means the two token sequences are equal after ignoring whitespace tokens, except where the language makes whitespace significant (for example indentation in Python or YAML, and inside literals). Comments and string contents count as changes. It does not mean runtime behavior is unchanged.
 - Preserve comments, string contents, whitespace-sensitive syntax, and unknown tokens unless language-specific parsing proves they are irrelevant.

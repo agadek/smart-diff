@@ -29,12 +29,11 @@ import java.util.concurrent.TimeUnit
  * `report.md` with the outline and the native hunk headers of each flagged file. Flags:
  * - `status`: the outline falls back to the native diff (anything but ANALYZED).
  * - `hidden`: a difference lies outside every reported change (technical specification §3.1 rule 6).
- * - `hidden-unchecked`: the file is too large for that check (the product of the two lengths is over 4 × 10^8); not a
- *   finding by itself.
  * - `empty`: the texts differ but nothing is reported.
  * - `same-name`: a declaration is reported as removed and added under the same kind and name, so a signature change
  *   was not paired.
  * - `rename`: a removed and an added declaration of the same kind share a parent, a likely literal rename.
+ * - `rename-candidate`: a rename candidate, to check that it is right.
  * - `uncertain`: an uncertain match.
  * - `noisy`: more reported changes than twice the native hunks plus two.
  * - `slow`: the comparison took more than a second.
@@ -79,16 +78,14 @@ class CorpusValidationTest : BasePlatformTestCase() {
         val repository: String, val commit: String, val path: String, val old: String, val new: String,
         val hunks: List<String>, val result: ComparisonResult, val millis: Long, val flags: List<String>,
     ) {
-        /** Whether the report lists this file: `hidden-unchecked` alone is not a finding. */
-        val flagged: Boolean get() = flags.any { it != "hidden-unchecked" }
+        /** Whether the report lists this file. */
+        val flagged: Boolean get() = flags.isNotEmpty()
     }
 
     private fun flags(old: String, new: String, hunks: Int, result: ComparisonResult, millis: Long): List<String> = buildList {
         if (result.status != Status.ANALYZED) add("status")
         if (result.status == Status.ANALYZED || result.status == Status.PARTIAL) {
-            // The check aligns the texts character by character, in time proportional to the product of their lengths.
-            if (old.length.toLong() * new.length > MAX_ALIGNMENT_CELLS) add("hidden-unchecked")
-            else if (NothingHidden.violation(old, new, result) != null) add("hidden")
+            if (NothingHidden.violation(old, new, result) != null) add("hidden")
             if (old != new && !result.hasReportedChanges) add("empty")
         }
         val nodes = flatten(result.changes)
@@ -96,6 +93,7 @@ class CorpusValidationTest : BasePlatformTestCase() {
         val added = nodes.filter { it.node.presence == Presence.ADDED }
         if (removed.any { r -> added.any { a -> sameKindAndName(r.node, a.node) } }) add("same-name")
         if (removed.any { r -> added.any { a -> r.parent == a.parent && sameKind(r.node, a.node) && !sameKindAndName(r.node, a.node) } }) add("rename")
+        if (nodes.any { it.node.renamedFrom != null }) add("rename-candidate")
         if (nodes.any { it.node.presence == Presence.UNCERTAIN }) add("uncertain")
         if (reported(result) > 2 * hunks + 2) add("noisy")
         if (millis > 1000) add("slow")
@@ -163,9 +161,4 @@ class CorpusValidationTest : BasePlatformTestCase() {
 
     private fun <T> onPooledThread(task: () -> T): T =
         ApplicationManager.getApplication().executeOnPooledThread(Callable { task() }).get(10, TimeUnit.MINUTES)
-
-    private companion object {
-        /** About two 20 000-character sides. */
-        const val MAX_ALIGNMENT_CELLS = 400_000_000L
-    }
 }
