@@ -45,8 +45,11 @@ CI runs both on every pull request (`.github/workflows/build.yml`).
 - [Product specification](docs/SPECIFICATION.md)
 - [Technical specification](docs/TECHNICAL-SPECIFICATION.md)
 - [Roadmap](docs/ROADMAP.md)
+- [Changelog](CHANGELOG.md)
+- [Releasing](docs/RELEASING.md)
 - [Decision records](docs/adr/)
 - [Glossary](docs/GLOSSARY.md)
+- [Validation on real commits](docs/VALIDATION.md)
 
 ## Support
 
