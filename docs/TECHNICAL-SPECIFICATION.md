@@ -174,7 +174,7 @@ data class RangePair(val old: TextRange?, val new: TextRange?)      // at least 
 data class TextRange(val start: Int, val end: Int)           // [start, end)
 ```
 
-`DeclarationKind` is part of the API so engines share labels: `CLASS, INTERFACE, ENUM, RECORD, ANNOTATION_TYPE, OBJECT, CONSTRUCTOR, METHOD, FUNCTION, FIELD, PROPERTY, ENUM_CONSTANT, TYPE_ALIAS, INITIALIZER`.
+`DeclarationKind` is part of the API so engines share labels: `CLASS, INTERFACE, ENUM, RECORD, ANNOTATION_TYPE, OBJECT, CONSTRUCTOR, METHOD, FUNCTION, FIELD, PROPERTY, ENUM_CONSTANT, TYPE_ALIAS, INITIALIZER`, and with the Scala provider (§6.8) `TRAIT, GIVEN, EXTENSION`.
 
 A `ChangeNode` is *reported* if it is not `MATCHED`, or is moved, renamed or signature changed, or its content is not `UNCHANGED`, or any child is reported. A *rename candidate* is a `MATCHED` node with `renamedFrom` set: the engine paired two subjects with different names because their content is similar, which may be wrong, so the outline always shows it (§10). Engines may include unreported nodes for navigation; the outline hides them.
 
@@ -291,6 +291,32 @@ The signature is a matching key. Labels use a second form of it, the *display si
 - An error in the file region sets the file region to `UNANALYZED`.
 - If either side has errors and no declarations were found while the file is non-blank, the result is `FAILED` with the native diff shown.
 - A result with any `UNANALYZED` content has status `PARTIAL`.
+
+### 6.8 Scala provider
+
+Planned for the [Scala](ROADMAP.md#scala) release; it resolves Q7. The provider uses the Scala plugin's PSI only, never its type inference, in the dialect chosen by §6.2. Names are the names as written (`ScNamedElement.name()`; `getName()` gives an object's JVM name, `Shapes$`).
+
+| PSI element | Kind | Name | Signature |
+| --- | --- | --- | --- |
+| `ScClass` (also case and abstract classes) | CLASS | `name()` | — |
+| `ScTrait` | TRAIT | `name()` | — |
+| `ScObject` (also companions and package objects) | OBJECT | `name()`; a package object takes its package's name | — |
+| `ScEnum` (Scala 3) | ENUM | `name()` | — |
+| enum case | ENUM_CONSTANT | `name()` | — |
+| `def` (definition or abstract declaration, not local) | FUNCTION | `name()` | parameter clauses |
+| `def this(…)` | CONSTRUCTOR | `""` | parameter clauses |
+| `val`, `var`, `lazy val` (definition or abstract declaration, not local) | PROPERTY | the bound name; `(a, b)` for a pattern that binds several | — |
+| `type` (alias or abstract type member) | TYPE_ALIAS | `name()` | — |
+| `given` (Scala 3) | GIVEN | `name()`; for an anonymous given, its type as written (`Ordering[Int]`) | `using` clauses, if any |
+| `extension` block (Scala 3) | EXTENSION | the receiver's type as written (`String`, `List[T]`) | `using` clauses, if any |
+
+- **Containers:** classes, traits, objects, enums, givens with a body and extension blocks; an extension block's methods are its `FUNCTION` children, so a change to the receiver shows on one node. Definitions in `package` clauses, braced or not, are top-level declarations; so are Scala 3 top-level definitions.
+- **Not declarations:** local definitions inside blocks, anonymous classes (`new T { … }`), statements in a class body, the primary constructor and its `val`/`var` parameters, `derives` clauses and `import`s. Their source belongs to the declaration that contains them, or to the file region.
+- **Several on one line:** `case A, B` gives two enum constants and `val a, b = 0` two properties; the shared tokens belong to the first, as for Java fields (§6.4). A pattern definition `val (a, b) = …` binds through one pattern, so it is one property named `(a, b)`.
+- **Anonymous givens** are named by their type, normalized like a signature (`given Ordering[List[Int]]` → `Ordering[List[Int]]`), not by the compiler's synthesized name, which is harder to read and has changed between compiler versions. Two anonymous givens of one type in one container repeat a key and follow the matcher's rules for repeated keys.
+- **Signatures:** each parameter clause is normalized as in §6.6 (types only, without whitespace, comments, annotations, modifiers and names), the types joined with `,` and the clauses with `;`. A `using` or `implicit` clause keeps its keyword and one space before its types. So `def f[A](x: A, y: Int)(using Ordering[A])` → `A,Int;using Ordering[A]`. Type parameters and context bounds are left out, as for Java and Kotlin; repeated (`T*`) and by-name (`=> T`, normalized `=>T`) types stay as written. `def f` has no clause and no signature, `def f()` has the empty signature, so changing one into the other is a signature change (rule M3). The display signature follows §6.6, with `=> T` keeping its space.
+- **Kinds and matching:** a class and its companion object share a name but differ in kind, so they never collide. Changing a `class` into a `trait` or a `case class` into an `enum` changes the kind, so it is reported as removed and added; rename candidates (M5) need the same kind and do not pair them.
+- **Whitespace:** Scala 2 trees use `LINE_BREAKS_SIGNIFICANT`, like Kotlin, since Scala also infers semicolons from line breaks. Scala 3 trees use `SIGNIFICANT` until an indentation-significant policy exists (§6.2).
 
 ## 7. Declaration engine: matching
 
@@ -451,4 +477,4 @@ Spikes S1 to S3 ran as platform tests and were retired once the tests of §12 co
 - **Q4 Plugin ID (resolved 2026-10-21).** The plugin ID, Gradle group and root package are `io.github.agadek.smartdiff`, which also names the extension point namespace (§3.2).
 - **Q5 Third-party engines (resolved 2026-10-21).** The `comparisonEngine` extension point stays internal: only SMART Diff and its own optional descriptors register engines, and the engine interface and result model may change freely. Revisit after a second production engine has used the result model without breaking changes.
 - **Q6 Engine choice scope (resolved 2026-10-21).** The default engine is chosen per language (§4, §11).
-- **Q7 Scala declaration model (open, after the first release).** For the [Scala provider](ROADMAP.md#scala): add `TRAIT`, `GIVEN` and `EXTENSION` to `DeclarationKind`, or map traits to `INTERFACE`; how to name anonymous givens (the compiler-synthesized name or the type as written); whether an extension block is a container or its methods are flattened with the receiver type in their signatures; how pattern definitions such as `val (a, b) = …` produce declarations; and how signatures render several parameter lists and `using`/`implicit` clauses.
+- **Q7 Scala declaration model (resolved 2026-10-22).** For the [Scala provider](ROADMAP.md#scala) (§6.8): `TRAIT`, `GIVEN` and `EXTENSION` are added to `DeclarationKind`, rather than mapping traits to `INTERFACE`, since traits can hold state and code; anonymous givens are named by their type as written; an extension block is an `EXTENSION` container named by its receiver type, with its methods as children; a pattern definition such as `val (a, b) = …` is one property named `(a, b)`; parameter clauses are joined with `;`, and a `using` or `implicit` clause keeps its keyword.
