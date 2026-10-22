@@ -1,0 +1,5 @@
+status: ANALYZED
+class Cart  old 6-21  new 6-21
+  function total(Int)  changed  signature changed  old 15-19  new 15-19
+extension Cart  old 31-32  new 31-32
+  function isFull  changed  old 32  new 32

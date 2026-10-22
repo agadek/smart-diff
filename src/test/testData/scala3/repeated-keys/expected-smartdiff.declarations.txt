@@ -1,0 +1,3 @@
+status: ANALYZED
+class Registry  old 6-11  new 6-11
+  function lookup(Type,Set[Class[? <: Annotation]])  changed  old 11  new 11

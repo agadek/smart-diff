@@ -20,6 +20,10 @@ class GoldenFixturesTest : BasePlatformTestCase() {
 
     fun `test Kotlin fixtures`() = checkFixtures("kotlin", "kotlin", "kt")
 
+    fun `test Scala 2 fixtures`() = checkFixtures("scala2", "Scala", "scala")
+
+    fun `test Scala 3 fixtures`() = checkFixtures("scala3", "Scala", "scala")
+
     private fun checkFixtures(directory: String, languageId: String, extension: String) {
         val cases = File(TEST_DATA, directory).listFiles { file -> file.isDirectory }.orEmpty().sortedBy { it.name }
         assertTrue("no fixtures in ${File(TEST_DATA, directory).absolutePath}", cases.isNotEmpty())

@@ -1,5 +1,6 @@
 package io.github.agadek.smartdiff.engine.declarations.psi.scala
 
+import scala.Option
 import scala.collection.immutable.Seq
 import scala.jdk.javaapi.CollectionConverters
 
@@ -7,4 +8,6 @@ import scala.jdk.javaapi.CollectionConverters
 internal object ScalaInterop {
 
     fun <T> list(seq: Seq<T>): List<T> = CollectionConverters.asJava(seq)
+
+    fun <T> orNull(option: Option<T>): T? = if (option.isDefined) option.get() else null
 }

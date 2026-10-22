@@ -98,7 +98,7 @@ sealed interface Subject {
 /** Shared declaration labels, so every engine names declarations the same way. */
 enum class DeclarationKind {
     CLASS, INTERFACE, ENUM, RECORD, ANNOTATION_TYPE, OBJECT, CONSTRUCTOR, METHOD, FUNCTION, FIELD, PROPERTY,
-    ENUM_CONSTANT, TYPE_ALIAS, INITIALIZER,
+    ENUM_CONSTANT, TYPE_ALIAS, INITIALIZER, TRAIT, GIVEN, EXTENSION,
 }
 
 /** A possible counterpart of an uncertain node; [range] is on the side where the node is absent. */

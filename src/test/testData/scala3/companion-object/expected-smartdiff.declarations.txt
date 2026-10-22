@@ -1,0 +1,4 @@
+status: ANALYZED
+object Cart  old 23-24  new 23-26
+  property Limit  changed  old 24  new 24
+  function empty(String)  added  new 26

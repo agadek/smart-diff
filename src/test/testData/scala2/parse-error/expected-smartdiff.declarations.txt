@@ -1,0 +1,4 @@
+status: PARTIAL
+reason: some source could not be parsed and was not analyzed
+class Cart  old 6-25  new 6-25
+  function total()  unanalyzed  old 16-22  new 16-22

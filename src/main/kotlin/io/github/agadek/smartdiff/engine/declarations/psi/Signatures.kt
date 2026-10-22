@@ -11,15 +11,25 @@ internal object Signatures {
      * The text of [element] without whitespace, comments and the subtrees [skip] matches, such as annotations,
      * modifiers and the parameter name.
      */
-    fun text(element: PsiElement, skip: (PsiElement) -> Boolean): String = text(element, skip, readable = false)
+    fun text(element: PsiElement, skip: (PsiElement) -> Boolean): String = text(element, skip, spacing = null)
 
     /**
      * [text] for labels: where the source separates two words, as in `Class<out Annotation>` or `? extends E`, one space
      * stays. Next to brackets, commas and dots there is none, so labels read like signatures (`Map<String,List<T>>`).
      */
-    fun label(element: PsiElement, skip: (PsiElement) -> Boolean): String = text(element, skip, readable = true)
+    fun label(element: PsiElement, skip: (PsiElement) -> Boolean): String = text(element, skip, Spacing(TIGHT, TIGHT))
 
-    private fun text(element: PsiElement, skip: (PsiElement) -> Boolean, readable: Boolean): String = buildString {
+    /**
+     * [label] for Scala, where `<`, `>` and `=` make operators and arrows rather than brackets, so they keep their spaces
+     * (`=> Int`, `A <:< B`, `(Int) => Int`): there is no space only inside brackets and next to commas and dots.
+     */
+    fun scalaLabel(element: PsiElement, skip: (PsiElement) -> Boolean): String =
+        text(element, skip, Spacing(noSpaceAfter = "([{,.", noSpaceBefore = ")]},."))
+
+    /** Where a label never puts a space: after the characters of [noSpaceAfter] and before those of [noSpaceBefore]. */
+    private class Spacing(val noSpaceAfter: String, val noSpaceBefore: String)
+
+    private fun text(element: PsiElement, skip: (PsiElement) -> Boolean, spacing: Spacing?): String = buildString {
         // Whether whitespace, a comment or a skipped subtree came after the last text appended.
         var separated = false
         fun visit(e: PsiElement) {
@@ -31,7 +41,7 @@ internal object Signatures {
             if (first == null) {
                 val text = e.text
                 if (text.isEmpty()) return
-                if (readable && separated && isNotEmpty() && last() !in TIGHT && text.first() !in TIGHT) append(' ')
+                if (spacing != null && separated && isNotEmpty() && last() !in spacing.noSpaceAfter && text.first() !in spacing.noSpaceBefore) append(' ')
                 separated = false
                 append(text)
                 return

@@ -1,0 +1,5 @@
+status: ANALYZED
+object CartSyntax  old 38-42  new 38-44
+  class CartOps  old 39-41  new 39-43
+    function isFull  changed  old 40  new 40
+    function isEmpty  added  new 42

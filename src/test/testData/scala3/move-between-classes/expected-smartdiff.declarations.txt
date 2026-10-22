@@ -1,0 +1,3 @@
+status: ANALYZED
+class Receipt  old 28-29  new 26-29
+  function describe()  moved  old 21  new 29

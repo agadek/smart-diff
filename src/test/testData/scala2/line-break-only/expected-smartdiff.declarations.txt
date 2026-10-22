@@ -1,0 +1,3 @@
+status: ANALYZED
+class Cart  old 6-25  new 6-26
+  function describe()  changed  old 24  new 24-25
