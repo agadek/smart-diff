@@ -1,0 +1,10 @@
+<!-- Loaded when the IDE has VCS support. Adds each file's structural summary to the Local Changes and Commit tree. -->
+<idea-plugin>
+    <extensions defaultExtensionNs="com.intellij">
+        <vcs.changes.changesViewModifier implementation="io.github.agadek.smartdiff.ui.changes.ChangesSummaryModifier"/>
+    </extensions>
+    <applicationListeners>
+        <listener class="io.github.agadek.smartdiff.ui.changes.ChangesSummarySettingsListener"
+                  topic="io.github.agadek.smartdiff.ui.SmartDiffSettings$Listener"/>
+    </applicationListeners>
+</idea-plugin>

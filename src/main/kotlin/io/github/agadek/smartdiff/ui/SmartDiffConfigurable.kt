@@ -1,6 +1,7 @@
 package io.github.agadek.smartdiff.ui
 
 import com.intellij.lang.Language
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.BoundConfigurable
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.ui.DialogPanel
@@ -28,6 +29,11 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                 checkBox("Show structural outline automatically")
                     .bindSelected(settings::showOutline)
                     .comment("When off, the outline starts hidden; the toolbar button in each diff still shows it.")
+            }
+            row {
+                checkBox("Show structural summary in the Changes tree")
+                    .bindSelected(settings::showChangesSummary)
+                    .comment("Each changed file in Local Changes and the Commit tool window shows a summary such as \"2 changed · 1 added\".")
             }
             buttonsGroup("Formatting-only changes:") {
                 row { radioButton("Collapsed in a group", false) }
@@ -80,6 +86,11 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                 }
             }
         }
+    }
+
+    override fun apply() {
+        super.apply()
+        ApplicationManager.getApplication().messageBus.syncPublisher(SmartDiffSettings.CHANGED).settingsChanged()
     }
 
     private fun engineRenderer(candidates: List<ComparisonEngine>) = object : SimpleListCellRenderer<String?>() {
