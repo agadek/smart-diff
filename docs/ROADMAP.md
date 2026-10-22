@@ -32,6 +32,8 @@ A nothing-hidden check cheap enough for large files, so the corpus validation co
 
 ## Later
 
+Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.md#semanticdiff) on 2026-10-22: features it has that SMART Diff lacks. Their order among the other items is still open.
+
 ### Multi-file summary in the Changes tree
 
 The first item after the 0.1.1 noise pass. Show changed declarations for each file inside the IDE's existing Changes/Commit tree, rather than in a new panel (technical spec Q3).
@@ -65,6 +67,8 @@ Show which declarations changed on each side of a merge, to help the user unders
 
 Add declaration-engine providers for further languages the host IDE parses, after [Scala](#scala) (for example JavaScript/TypeScript in Ultimate/WebStorm, Python in PyCharm), each with the fixtures the product spec requires.
 
+*(gap review)* SemanticDiff supports 14+ languages and formats. Structured data files (JSON, XML, YAML) are a cheap addition on top of the IDE's own parsers: keys and elements are the declarations, and reordered keys in formats where order carries no meaning can be reported as moved.
+
 ### Tree-sitter support
 
 A Tree-sitter provider or engine for languages the host IDE cannot parse, after native packaging and grammar licence review ([research](RESEARCH.md#difftastic-and-alternatives)).
@@ -73,9 +77,47 @@ A Tree-sitter provider or engine for languages the host IDE cannot parse, after 
 
 A second comparison engine that highlights changed expressions inside declarations, using the result model's `details`. Compare a project-owned matcher with Difftastic and GumTree as baselines.
 
+*(gap review)* This is SemanticDiff's central feature and the largest gap: inside the diff itself, formatting noise is hidden and only the changed tokens are highlighted, so a reviewer does not have to read every changed line of a declaration that is only partly reformatted. The outline currently judges formatting per declaration while the native diff still shows every line.
+
 ### Extraction detection
 
 Link an added method or function to the code it was extracted from. When most of its body repeats one run of code that a changed declaration on the old side no longer has, label it "extracted from <declaration>" and frame that code on the old side when it is selected; the source declaration shows the extracted code in its details. Extracting into a new class is covered through the class's added methods. The first release reports such code as a changed declaration plus an added one, with no link between them (see the `noisy-change` Java fixture). Specified in [EXTRACTION-DETECTION.md](EXTRACTION-DETECTION.md); it comes after the Changes tree summary and Scala.
+
+### Rename grouping across usages
+
+*(gap review)* Group a rename with every usage it changed, so the reviewer reads "renamed `foo` → `bar`, 12 usages" once instead of each changed call site. The 0.1.1 rename candidates pair the declaration only; edits that only follow a rename stay as ordinary changes. Applies to declarations and local variables, and needs the same conservative confirmation as rename candidates. Like SemanticDiff, give each rename its own highlight color so its occurrences can be followed through the diff.
+
+### Moves inside declarations
+
+*(gap review)* Detect moved statements and blocks within and between declarations, and show the edits made inside the moved code. The first release reports moves for whole declarations only. [Extraction detection](#extraction-detection) covers code moved into a new method; this covers the rest.
+
+### Hide comment-only changes
+
+*(gap review)* An opt-in toggle in the diff that hides declarations whose only change is in comments, or marks them as comment-only. Comments count as changes by default (product spec), and the first release has no global ignore rule, so this stays off unless the user turns it on.
+
+### Opt-in equivalence rules
+
+*(gap review)* Language-specific rules that treat some syntax rewrites as unchanged, for example redundant parentheses, the base of an integer literal, or string escapes. [ADR 0003](adr/0003-conservative-classification.md) left these out on purpose because each rule is a behavioural claim; reconsider them as opt-in rules, one language at a time, each with fixtures that prove it.
+
+### Summary in pull request reviews and the Git log
+
+*(gap review)* SemanticDiff has a full pull request review UI. The IDE equivalent is showing the changed-declarations summary in the GitHub and GitLab pull request changes trees and in the Git log's commit details. `changesViewModifier` does not reach these ([ADR 0006](adr/0006-changes-tree-summary-through-changes-view-modifier.md)), so this starts with a spike for another hook.
+
+### Reviewed marks in the outline
+
+*(gap review)* Let the reviewer mark a declaration in the outline as reviewed and show progress in the summary line, for example `5 of 8 reviewed`. A mark resets when that declaration changes again. SemanticDiff's pull request viewer tracks reviewed files the same way.
+
+### Expand context to the enclosing declaration
+
+*(gap review)* When the native diff collapses unchanged fragments, offer to expand a fragment to the whole surrounding declaration instead of a fixed number of lines. SemanticDiff expands context by complete blocks.
+
+### Visual links for moved code
+
+*(gap review)* Show where moved code came from without selecting it first: mark moved declarations in both editors and link the old and new positions, for example in the gutter or the scrollbar. SemanticDiff boxes moved blocks and shows them on a minimap. Today the outline frames a moved declaration on both sides only when it is selected.
+
+### Moved lines in unsupported files
+
+*(gap review)* For files no engine can analyze, a fallback that treats each line as one token and still reports moved lines, as SemanticDiff's fallback diff does. These files currently get only the plain native diff.
 
 ### Third-party engines
 
