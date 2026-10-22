@@ -4,6 +4,7 @@ import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.declarations.model.Declaration
 import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
+import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
 import java.util.IdentityHashMap
 
 /** The rule that matched a declaration to its counterpart (technical specification §7). */
@@ -60,8 +61,8 @@ class Matching(
 /**
  * Matches declarations globally over the file (technical specification §7), so a declaration can be matched across
  * containers. Rules M1 to M4 run in order, each over the declarations the earlier rules left unmatched, and pair only
- * declarations whose key occurs exactly once on each side. Declarations are processed in old-side source order, which
- * makes the result deterministic.
+ * declarations whose key occurs exactly once on each side, except that M1 first pairs same-key declarations with the
+ * same content. Declarations are processed in old-side source order, which makes the result deterministic.
  */
 object DeclarationMatcher {
 
@@ -83,8 +84,29 @@ object DeclarationMatcher {
                 }
             }
         }
+        val identity = { side: Side, d: Declaration -> Key(d.kind, side.path(d), d.name, d.signature) }
         val pathAndName = { side: Side, d: Declaration -> Key(d.kind, side.path(d), d.name, null) }
-        pairUnique(MatchRule.IDENTITY) { side, d -> Key(d.kind, side.path(d), d.name, d.signature) }
+
+        // M1, repeated keys: a key that occurs more than once on a side (several static initializers, overloads whose
+        // signatures normalize alike) pairs declarations with the same content in source order. What remains of the
+        // group may then be unique and pair below.
+        val oldRepeated = oldSide.groupUnmatched(pairs.keys, identity, cancellation)
+        val newRepeated = newSide.groupUnmatched(newMatched, identity, cancellation)
+        for ((k, olds) in oldRepeated) {
+            val news = newRepeated[k] ?: continue
+            if (olds.size == 1 && news.size == 1) continue
+            val unpaired = news.mapTo(mutableListOf()) { it to content(it) }
+            for (o in olds) {
+                cancellation.checkCanceled()
+                val content = content(o)
+                val i = unpaired.indexOfFirst { it.second == content }
+                if (i < 0) continue
+                val n = unpaired.removeAt(i).first
+                pairs[o] = n to MatchRule.IDENTITY
+                newMatched += n
+            }
+        }
+        pairUnique(MatchRule.IDENTITY, identity)
         pairUnique(MatchRule.PATH_CHANGED) { _, d -> Key(d.kind, null, d.name, d.signature) }
         pairUnique(MatchRule.SIGNATURE_CHANGED, pathAndName)
 
@@ -177,6 +199,10 @@ object DeclarationMatcher {
         }
         return kept
     }
+
+    /** The tokens of [declaration] and its children other than whitespace, for telling same-key declarations apart. */
+    private fun content(declaration: Declaration): List<Any> =
+        declaration.ownTokens.filter { it.kind != TokenKind.WHITESPACE }.map { it.type to it.text } + declaration.children.map(::content)
 
     /** One element of a path: a container's kind and name. */
     private data class Container(val kind: DeclarationKind, val name: String)
