@@ -61,11 +61,11 @@ kotlin {
 tasks.test {
     // K2 is the Kotlin plugin's default mode from 2025.1; set it explicitly so the Kotlin tests always run in it.
     systemProperty("idea.kotlin.plugin.use.k2", "true")
-    // -Psmartdiff.updateGolden=true rewrites the golden fixtures' expected files; -Psmartdiff.s3.corpus=<list> runs spike S3.
+    // -Psmartdiff.updateGolden=true rewrites the golden fixtures' expected files; -Psmartdiff.limits.corpus=<list> runs the limits benchmark.
     systemProperty("smartdiff.updateGolden", providers.gradleProperty("smartdiff.updateGolden").getOrElse("false"))
-    systemProperty("smartdiff.s3.corpus", providers.gradleProperty("smartdiff.s3.corpus").getOrElse(""))
-    // Spike tests print their findings as "SPIKE ..." lines; copy them into the build log.
+    systemProperty("smartdiff.limits.corpus", providers.gradleProperty("smartdiff.limits.corpus").getOrElse(""))
+    // The golden fixtures and the limits benchmark print "GOLDEN ..." and "BENCHMARK ..." lines; copy them into the build log.
     addTestOutputListener(TestOutputListener { _, event ->
-        if (event.message.startsWith("SPIKE ") || event.message.startsWith("GOLDEN ")) logger.lifecycle(event.message.trimEnd())
+        if (event.message.startsWith("BENCHMARK ") || event.message.startsWith("GOLDEN ")) logger.lifecycle(event.message.trimEnd())
     })
 }

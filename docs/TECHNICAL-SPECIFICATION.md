@@ -359,7 +359,7 @@ An alternate viewer registered as a `DiffTool` (Option B) was rejected: other `D
 
 Limits are configurable in settings and passed to engines in `ComparisonRequest.limits`.
 
-Spike S3 measured them on the 20 largest Java and Kotlin files in IntelliJ Community outside test data (16 Java, 4 Kotlin; 238 KB to 1.6 MB), on an Apple M1 Pro, each compared with itself, with an empty line inserted after every 10th line and with a comment line inserted after every 10th line. The median of five runs was at most 333 ms for any file, including the 1.6 MB one (32 000 lines, about 280 ms with changes everywhere), 142 ms for the largest Kotlin file (1 MB), and under 100 ms for files under 350 KB. The 5 s timeout leaves more than ten times that headroom for slower machines, and the 1 MB size limit, not time, is what stops the largest generated files. The limits stay as they are. Rerun with `-Psmartdiff.s3.corpus=<file listing paths>`.
+Spike S3 measured them on the 20 largest Java and Kotlin files in IntelliJ Community outside test data (16 Java, 4 Kotlin; 238 KB to 1.6 MB), on an Apple M1 Pro, each compared with itself, with an empty line inserted after every 10th line and with a comment line inserted after every 10th line. The median of five runs was at most 333 ms for any file, including the 1.6 MB one (32 000 lines, about 280 ms with changes everywhere), 142 ms for the largest Kotlin file (1 MB), and under 100 ms for files under 350 KB. The 5 s timeout leaves more than ten times that headroom for slower machines, and the 1 MB size limit, not time, is what stops the largest generated files. The limits stay as they are. Rerun with `-Psmartdiff.limits.corpus=<file listing paths>`, which runs `LimitsBenchmarkTest`.
 
 ## 10. Structural outline
 
@@ -407,13 +407,13 @@ Application-level, under *Settings → Tools → SMART Diff*:
 
 This table is the single list of spikes; the product specification and roadmap refer to it.
 
-Spikes run as platform tests in `src/test/kotlin/io/github/agadek/smartdiff/spike`, so CI repeats them on every build; they print their findings as `SPIKE` lines in the build log. They stay until the provider and integration tests of §12 cover the same ground.
+Spikes S1 to S3 ran as platform tests and were retired once the tests of §12 covered the same ground: the provider tests cover S2, `OutlineIntegrationTest` covers S1 (local-change, VCS-history and "Compare with" diffs in Java and Kotlin, and CRLF revisions), and S3 remains as the opt-in `LimitsBenchmarkTest` (§9.3). Later spikes follow the same pattern.
 
 | Spike | Question | Done when | Result |
 | --- | --- | --- | --- |
-| S1 | Option A or B (§9.1)? | Both attach to local-change and VCS-history diffs in Java and Kotlin, or one is shown not to | Done 2026-10-21: Option A, [ADR 0005](adr/0005-outline-attaches-to-the-native-diff-viewer.md); `S1DiffIntegrationSpikeTest` |
-| S2 | Do PSI files from text (default project, K2 Kotlin) give correct declarations and offsets? | Provider tests pass for both languages on VCS-revision content | Done 2026-10-21: yes, with the Java language level forced (§6.2); `S2TransientPsiSpikeTest` |
-| S3 | Are the limits in §9.3 realistic? | Analysis time measured on the 20 largest Java/Kotlin files in the IntelliJ Community repository | Done 2026-10-21: yes, kept as they are (§9.3); `S3LimitsSpikeTest` |
+| S1 | Option A or B (§9.1)? | Both attach to local-change and VCS-history diffs in Java and Kotlin, or one is shown not to | Done 2026-10-21: Option A, [ADR 0005](adr/0005-outline-attaches-to-the-native-diff-viewer.md); now covered by `OutlineIntegrationTest` |
+| S2 | Do PSI files from text (default project, K2 Kotlin) give correct declarations and offsets? | Provider tests pass for both languages on VCS-revision content | Done 2026-10-21: yes, with the Java language level forced (§6.2); now covered by the provider tests |
+| S3 | Are the limits in §9.3 realistic? | Analysis time measured on the 20 largest Java/Kotlin files in the IntelliJ Community repository | Done 2026-10-21: yes, kept as they are (§9.3); rerun with `LimitsBenchmarkTest` |
 | S4 | After the first release, for [Scala](ROADMAP.md#scala): can the provider choose the Scala 2 or Scala 3 dialect for text-built PSI (from the file's module, `scalaVersion`, or syntax), and does the Scala plugin's PSI give correct declarations and offsets for both? | Provider tests pass for both dialects on VCS-revision content, with a documented fallback when the dialect is unknown | After the first release |
 
 ## 14. Open questions
