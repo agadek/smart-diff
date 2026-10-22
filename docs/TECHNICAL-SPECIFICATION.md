@@ -419,7 +419,7 @@ Spikes S1 to S3 ran as platform tests and were retired once the tests of §12 co
 ## 14. Open questions
 
 - **Q1 Default visibility (resolved 2026-10-21).** The outline opens by default, with a setting to turn it off and a toolbar button in every diff to switch between the outline and the plain native diff (§10, §11).
-- **Q2 Renamed containers (resolved 2026-10-21).** The first release keeps the literal result: the old class removed, the new class added, and its members moved into it. Rename candidates are revisited after validation ([roadmap](ROADMAP.md#rename-candidates)).
+- **Q2 Renamed containers (resolved 2026-10-21).** The first release keeps the literal result: the old class removed, the new class added, and its members moved into it. The validation before 0.1.0 showed this as the largest remaining noise, so rename candidates come in 0.1.1 ([roadmap](ROADMAP.md#rename-candidates)).
 - **Q3 Multi-file overview (resolved 2026-10-21).** Not in the first release, which is per-file only. The next step is a per-file summary inside the IDE's existing Changes/Commit tree ([roadmap](ROADMAP.md#multi-file-summary-in-the-changes-tree)).
 - **Q4 Plugin ID (resolved 2026-10-21).** The plugin ID, Gradle group and root package are `io.github.agadek.smartdiff`, which also names the extension point namespace (§3.2).
 - **Q5 Third-party engines (resolved 2026-10-21).** The `comparisonEngine` extension point stays internal: only SMART Diff and its own optional descriptors register engines, and the engine interface and result model may change freely. Revisit after a second production engine has used the result model without breaking changes.

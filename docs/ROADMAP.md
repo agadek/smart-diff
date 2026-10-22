@@ -1,6 +1,6 @@
 # SMART Diff Roadmap
 
-Status: 2026-10-21. Items after the first release are candidates, not commitments; their order is a proposal. Scope details live in the [product specification](SPECIFICATION.md) and [technical specification](TECHNICAL-SPECIFICATION.md).
+Status: 2026-10-22. Items after the first release are candidates, not commitments; their order is a proposal. Scope details live in the [product specification](SPECIFICATION.md) and [technical specification](TECHNICAL-SPECIFICATION.md).
 
 ## First release
 
@@ -10,11 +10,31 @@ Status: 2026-10-21. Items after the first release are candidates, not commitment
 - Conservative classification: added, removed, changed, moved, formatting-only, uncertain, unanalyzed ([ADR 0003](adr/0003-conservative-classification.md)). Renamed declarations, including classes, stay literal (removed + added).
 - IntelliJ Platform 2025.1 and newer, checked by Plugin Verifier on 2025.1 and the latest release.
 
+## 0.1.1: noise pass
+
+Decided 2026-10-22, from the validation on real commits before 0.1.0 ([VALIDATION.md](VALIDATION.md)). It comes before everything under [Later](#later).
+
+### Rename candidates
+
+Pair a removed and an added declaration of the same kind in the same container, with the same or a similar body, as an uncertain rename candidate; includes renamed classes. Renames reported as removed + added were the largest remaining noise in the validation (70 of 1279 files), most at the same lines with the same body (technical spec Q2).
+
+### Overload pairing by similarity
+
+When every overload of a name changes signature at once (an added parameter, `T?` → `T`), pair each with the most similar one by parameter list and body instead of leaving all of them uncertain (7 files in the validation).
+
+### Readable labels
+
+Keep a single space where the source separates words in a type (`Class<out Annotation>`, not `Class<outAnnotation>`), and show a Kotlin receiver before the name (`Date.formatIsoDate()`). Matching keys may stay as they are.
+
+### Full nothing-hidden coverage in the validation
+
+A nothing-hidden check cheap enough for large files, so the corpus validation covers every file (414 of 1279 were too large for the current one).
+
 ## Later
 
 ### Multi-file summary in the Changes tree
 
-The first item after the first release. Show changed declarations for each file inside the IDE's existing Changes/Commit tree, rather than in a new panel (technical spec Q3).
+The first item after the 0.1.1 noise pass. Show changed declarations for each file inside the IDE's existing Changes/Commit tree, rather than in a new panel (technical spec Q3).
 
 - **Level 1:** a summary next to each file, for example `Parser.kt  2 changed · 1 added`.
 - **Level 2:** expandable declarations under each file. Every file is parsed as the tree loads, so performance on large commits needs care.
@@ -22,7 +42,7 @@ The first item after the first release. Show changed declarations for each file 
 
 ### Scala
 
-Planned for the release after the first one (decided 2026-10-21). A Scala provider for the declaration engine, using the JetBrains Scala plugin's PSI. It needs no change to the engine interface, the matcher or the UI.
+Planned for the release after the first one (decided 2026-10-21), after the 0.1.1 noise pass. A Scala provider for the declaration engine, using the JetBrains Scala plugin's PSI. It needs no change to the engine interface, the matcher or the UI.
 
 - **Packaging:** the provider registers in its own optional descriptor, `META-INF/smartdiff-scala.xml`, which depends on `org.intellij.scala`. The plugin keeps loading without Scala.
 - **Dialects:** Scala 2 and Scala 3. Text-built PSI has no module, so the provider must choose the dialect itself (spike S4). Scala 3 optional braces make indentation significant, so the formatting-only rule needs an indentation-significant mode next to the Kotlin line-break mode.
@@ -52,10 +72,6 @@ A Tree-sitter provider or engine for languages the host IDE cannot parse, after 
 ### Fine-grained differencing
 
 A second comparison engine that highlights changed expressions inside declarations, using the result model's `details`. Compare a project-owned matcher with Difftastic and GumTree as baselines.
-
-### Rename candidates
-
-Pair a removed and an added declaration with similar bodies as an uncertain rename candidate; includes renamed classes. The first release keeps renames literal; revisit after validation shows how noisy that is (technical spec Q2).
 
 ### Extraction detection
 
