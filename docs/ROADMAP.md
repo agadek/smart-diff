@@ -85,7 +85,7 @@ Link an added method or function to the code it was extracted from. When most of
 
 ### Rename grouping across usages
 
-*(gap review)* Group a rename with every usage it changed, so the reviewer reads "renamed `foo` → `bar`, 12 usages" once instead of each changed call site. The 0.1.1 rename candidates pair the declaration only; edits that only follow a rename stay as ordinary changes. Applies to declarations and local variables, and needs the same conservative confirmation as rename candidates.
+*(gap review)* Group a rename with every usage it changed, so the reviewer reads "renamed `foo` → `bar`, 12 usages" once instead of each changed call site. The 0.1.1 rename candidates pair the declaration only; edits that only follow a rename stay as ordinary changes. Applies to declarations and local variables, and needs the same conservative confirmation as rename candidates. Like SemanticDiff, give each rename its own highlight color so its occurrences can be followed through the diff.
 
 ### Moves inside declarations
 
@@ -102,6 +102,22 @@ Link an added method or function to the code it was extracted from. When most of
 ### Summary in pull request reviews and the Git log
 
 *(gap review)* SemanticDiff has a full pull request review UI. The IDE equivalent is showing the changed-declarations summary in the GitHub and GitLab pull request changes trees and in the Git log's commit details. `changesViewModifier` does not reach these ([ADR 0006](adr/0006-changes-tree-summary-through-changes-view-modifier.md)), so this starts with a spike for another hook.
+
+### Reviewed marks in the outline
+
+*(gap review)* Let the reviewer mark a declaration in the outline as reviewed and show progress in the summary line, for example `5 of 8 reviewed`. A mark resets when that declaration changes again. SemanticDiff's pull request viewer tracks reviewed files the same way.
+
+### Expand context to the enclosing declaration
+
+*(gap review)* When the native diff collapses unchanged fragments, offer to expand a fragment to the whole surrounding declaration instead of a fixed number of lines. SemanticDiff expands context by complete blocks.
+
+### Visual links for moved code
+
+*(gap review)* Show where moved code came from without selecting it first: mark moved declarations in both editors and link the old and new positions, for example in the gutter or the scrollbar. SemanticDiff boxes moved blocks and shows them on a minimap. Today the outline frames a moved declaration on both sides only when it is selected.
+
+### Moved lines in unsupported files
+
+*(gap review)* For files no engine can analyze, a fallback that treats each line as one token and still reports moved lines, as SemanticDiff's fallback diff does. These files currently get only the plain native diff.
 
 ### Third-party engines
 
