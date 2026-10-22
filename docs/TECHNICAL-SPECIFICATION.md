@@ -16,7 +16,7 @@ Out of scope for the first release:
 
 - Three-way merge (planned, see [roadmap](ROADMAP.md#structural-outline-for-three-way-merges)), directory diffs, binary content, and patch previews without full file content.
 - Comparisons where the old side and new side are different languages.
-- A change-list-level overview across files (Q3, decided: per-file only; the Changes tree summary comes next on the [roadmap](ROADMAP.md#multi-file-summary-in-the-changes-tree)).
+- A change-list-level overview across files (Q3, decided: per-file only). The first step after it, a per-file summary in the Changes tree, is in §9.4.
 - Engines other than the declaration engine (except a test-only engine used to verify the abstraction).
 
 ## 2. Architecture
@@ -372,6 +372,16 @@ Limits are configurable in settings and passed to engines in `ComparisonRequest.
 
 Spike S3 measured them on the 20 largest Java and Kotlin files in IntelliJ Community outside test data (16 Java, 4 Kotlin; 238 KB to 1.6 MB), on an Apple M1 Pro, each compared with itself, with an empty line inserted after every 10th line and with a comment line inserted after every 10th line. The median of five runs was at most 333 ms for any file, including the 1.6 MB one (32 000 lines, about 280 ms with changes everywhere), 142 ms for the largest Kotlin file (1 MB), and under 100 ms for files under 350 KB. The 5 s timeout leaves more than ten times that headroom for slower machines, and the 1 MB size limit, not time, is what stops the largest generated files. The limits stay as they are. Rerun with `-Psmartdiff.limits.corpus=<file listing paths>`, which runs `LimitsBenchmarkTest`.
 
+### 9.4 Changes tree summary
+
+After the first release ([roadmap](ROADMAP.md#multi-file-summary-in-the-changes-tree), level 1; decided by spike S5, [ADR 0006](adr/0006-changes-tree-summary-through-changes-view-modifier.md)). Each changed file in the Local Changes view and the Commit tool window shows its summary line (§10) after its name, in grey and starting in lower case: `Parser.kt  2 changed · 1 added`.
+
+- `ChangesSummaryModifier`, a `vcs.changes.changesViewModifier` extension in the optional descriptor `smartdiff-vcs.xml` (loaded with `com.intellij.modules.vcs`), runs while the platform builds the tree. For each file node of a modified or moved file whose language has an engine (§4), it looks up the summary and, if one is known, replaces the node with a `SummaryChangeNode` for the same change, which renders as the platform's node followed by the summary.
+- Added and deleted files, files without an engine and files whose result is not `ANALYZED` or `PARTIAL` get no summary. At most 500 files of a tree are summarized.
+- `ChangesSummaryService` computes summaries one file at a time on a background thread, with the limits of §9.3, and caches them by both paths, a version of each side (the revision number, or the local file's document or file modification stamp) and the engine id, so an edit or an engine change gives a new summary. Files that leave the tree are forgotten. When summaries arrive, it publishes `ChangesViewModifier.TOPIC` at most once per 300 ms to rebuild the tree.
+- The summary counts every change, as the outline's does, but without the hidden count: the change type filter (§10) applies to outlines only.
+- Turning the setting off (§11) or changing any SMART Diff setting clears the cache and rebuilds the tree.
+
 ## 10. Structural outline
 
 - **Outline toggle:** a toolbar button on every in-scope diff switches between the outline and the plain native diff by showing or hiding the outline panel; the editors stay as they are. Its initial state comes from the setting in §11, and it affects only the current diff window: the window keeps the choice (in its `DiffContext`) for the next files it shows, and other windows are unaffected. While the outline is off, no comparison runs.
@@ -395,6 +405,7 @@ Application-level, under *Settings → Tools → SMART Diff*:
 | --- | --- |
 | Show structural outline automatically | On (decided 2026-10-21). When off, the outline toggle (§10) starts off and the panel is hidden |
 | Default comparison engine, per language | One row per language that has at least one engine, each with a choice of the engines that support it; unset means the first registered engine (`smartdiff.declarations` in the first release); also set from the dropdown |
+| Show structural summary in the Changes tree | On. Each changed file in Local Changes and the Commit tool window shows its summary (§9.4) |
 | Formatting-only changes | Collapsed group / inline |
 | Hide from the outline | None. One checkbox per change type of the filter (§10); also set from the outline toolbar |
 | Size, declaration and time limits | §9.3 |
@@ -409,7 +420,7 @@ Application-level, under *Settings → Tools → SMART Diff*:
 - **Declaration engine, provider tests:** `BasePlatformTestCase` (Java via the light Java fixture); parse fixture text and compare the produced tree with an expected outline.
 - **Golden fixtures:** `src/test/testData/<language>/<case>/{old,new}.<ext>` plus `expected-<engine id>.txt`, a text rendering of the outline per engine: the status, then one line per reported node and per container of reported nodes, with its labels and the lines it spans on each side. Every fixture is also checked for nothing hidden. `-Psmartdiff.updateGolden=true` rewrites the expected files from the current results, for review before committing. Each language must cover: added/removed/changed method, overloads, signature change, overloads that all changed signature, reorder, move between classes, class rename, method rename, formatting-only, comment-only change, string literal change, parse error on one side, empty and identical files, declarations that share a key (several static initializers in Java, a parameter and a `vararg` overload in Kotlin), and (Kotlin) a line-break-only change. Java also has `noisy-change`, a realistic edit that mixes most of these with reformatting, plus code extracted into a new method and into a new class, as a demo of what the outline is for.
 - **Corpus validation (opt-in):** `CorpusValidationTest` compares every modified Java and Kotlin file of a list of real commits (`-Psmartdiff.validation.corpus=<list>`) and flags results that look wrong or noisy: a fallback status, a nothing-hidden violation, a difference with nothing reported, uncertain matches, removed + added pairs that may be renames or unpaired signature changes, more reported changes than native hunks suggest, and slow files. CI skips it; it runs before each release, and the results are kept in [VALIDATION.md](VALIDATION.md).
-- **Integration test:** `OutlineIntegrationTest` opens `SimpleDiffRequest`s through `DiffManager.createRequestPanel`: the outline appears for Java and Kotlin, selecting a node highlights its range on both sides, the outline toggle hides it and shows the native diff, edits rerun the comparison, and the size limit, time limit and viewer disposal behave as in §9.2. The test-only engine appears in the dropdown there and can be selected. `OutlineModelTest` checks the outline rows and summary (§10) without the IDE.
+- **Integration test:** `OutlineIntegrationTest` opens `SimpleDiffRequest`s through `DiffManager.createRequestPanel`: the outline appears for Java and Kotlin, selecting a node highlights its range on both sides, the outline toggle hides it and shows the native diff, edits rerun the comparison, and the size limit, time limit and viewer disposal behave as in §9.2. The test-only engine appears in the dropdown there and can be selected. `OutlineModelTest` checks the outline rows and summary (§10) without the IDE. `ChangesSummaryTest` builds trees with the platform's `TreeModelBuilder` as the Local Changes view does and checks that a modified Java file gets its summary on its own row once it is computed, that added, deleted and unsupported files get none, and that the setting turns it off.
 
 ### 12.1 Build and CI
 
@@ -428,12 +439,13 @@ Spikes S1 to S3 ran as platform tests and were retired once the tests of §12 co
 | S2 | Do PSI files from text (default project, K2 Kotlin) give correct declarations and offsets? | Provider tests pass for both languages on VCS-revision content | Done 2026-10-21: yes, with the Java language level forced (§6.2); now covered by the provider tests |
 | S3 | Are the limits in §9.3 realistic? | Analysis time measured on the 20 largest Java/Kotlin files in the IntelliJ Community repository | Done 2026-10-21: yes, kept as they are (§9.3); rerun with `LimitsBenchmarkTest` |
 | S4 | After the first release, for [Scala](ROADMAP.md#scala): can the provider choose the Scala 2 or Scala 3 dialect for text-built PSI (from the file's module, `scalaVersion`, or syntax), and does the Scala plugin's PSI give correct declarations and offsets for both? | Provider tests pass for both dialects on VCS-revision content, with a documented fallback when the dialect is unknown | After the first release |
+| S5 | After the first release, for the [Changes tree summary](ROADMAP.md#multi-file-summary-in-the-changes-tree): which extension points can add text or child nodes to file entries of the Changes tree? | The hooks of the Local Changes and Commit tree are known, with a choice for level 1 | Done 2026-10-22: `changesViewModifier`, replacing file nodes ([ADR 0006](adr/0006-changes-tree-summary-through-changes-view-modifier.md)); now covered by `ChangesSummaryTest` |
 
 ## 14. Open questions
 
 - **Q1 Default visibility (resolved 2026-10-21).** The outline opens by default, with a setting to turn it off and a toolbar button in every diff to switch between the outline and the plain native diff (§10, §11).
 - **Q2 Renamed containers (resolved 2026-10-21, revised 2026-10-22).** The first release keeps the literal result: the old class removed, the new class added, and its members moved into it. The validation before 0.1.0 showed this as the largest remaining noise, so 0.1.1 pairs a removed and an added declaration with similar content as a rename candidate (rule M5), classes included ([roadmap](ROADMAP.md#rename-candidates)).
-- **Q3 Multi-file overview (resolved 2026-10-21).** Not in the first release, which is per-file only. The next step is a per-file summary inside the IDE's existing Changes/Commit tree ([roadmap](ROADMAP.md#multi-file-summary-in-the-changes-tree)).
+- **Q3 Multi-file overview (resolved 2026-10-21).** Not in the first release, which is per-file only. The next step is a per-file summary inside the IDE's existing Changes/Commit tree ([roadmap](ROADMAP.md#multi-file-summary-in-the-changes-tree)); level 1 is in §9.4.
 - **Q4 Plugin ID (resolved 2026-10-21).** The plugin ID, Gradle group and root package are `io.github.agadek.smartdiff`, which also names the extension point namespace (§3.2).
 - **Q5 Third-party engines (resolved 2026-10-21).** The `comparisonEngine` extension point stays internal: only SMART Diff and its own optional descriptors register engines, and the engine interface and result model may change freely. Revisit after a second production engine has used the result model without breaking changes.
 - **Q6 Engine choice scope (resolved 2026-10-21).** The default engine is chosen per language (§4, §11).
