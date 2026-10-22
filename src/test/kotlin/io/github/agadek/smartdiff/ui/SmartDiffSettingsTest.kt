@@ -33,6 +33,18 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
         assertTrue("the outline opens by default", settings.showOutline)
         assertFalse("formatting-only changes are grouped by default", settings.formattingOnlyInline)
         assertEquals(Limits.DEFAULT, settings.limits)
+        assertEquals("nothing is hidden by default", emptySet<ChangeType>(), settings.hiddenChangeTypes)
+    }
+
+    fun `test hidden change types are stored by name and unknown names are ignored`() {
+        settings.loadState(SmartDiffSettings.SettingsState())
+        settings.hiddenChangeTypes = setOf(ChangeType.MOVED, ChangeType.FORMATTING_ONLY)
+
+        assertEquals("MOVED,FORMATTING_ONLY", settings.state.hiddenChangeTypes)
+        assertEquals(setOf(ChangeType.MOVED, ChangeType.FORMATTING_ONLY), settings.hiddenChangeTypes)
+
+        settings.loadState(SmartDiffSettings.SettingsState().apply { hiddenChangeTypes = "RENAMED, ADDED" })
+        assertEquals(setOf(ChangeType.ADDED), settings.hiddenChangeTypes)
     }
 
     fun `test out-of-range limits fall back to their defaults`() {

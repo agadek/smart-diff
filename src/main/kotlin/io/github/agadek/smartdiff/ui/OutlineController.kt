@@ -34,7 +34,8 @@ sealed interface OutlineState {
     /** No engine supports the language any more, for example after its plugin was removed. */
     data class NoEngine(val languageId: String) : OutlineState
 
-    data class Shown(val result: ComparisonResult, val summary: String, val items: List<OutlineItem>) : OutlineState
+    /** [hiddenCount] changes of the result are left out of [items] by the change type filter. */
+    data class Shown(val result: ComparisonResult, val summary: String, val items: List<OutlineItem>, val hiddenCount: Int = 0) : OutlineState
 }
 
 /**
@@ -65,6 +66,9 @@ class OutlineController internal constructor(
         private set
 
     private var running: Job? = null
+
+    /** The comparison behind the shown result, kept to rebuild the rows when the filter changes; null when none is shown. */
+    private var shownRequest: ComparisonRequest? = null
     private var disposed = false
     private val debounce = Timer(DEBOUNCE_MILLIS) { refresh() }.apply { isRepeats = false }
 
@@ -93,6 +97,7 @@ class OutlineController internal constructor(
         } else {
             cancel()
             navigator.clear()
+            (viewer as? FilteringDiffViewer)?.hide(HiddenLines.NONE)
             splitter.secondComponent = null
             show(OutlineState.Hidden)
         }
@@ -156,14 +161,31 @@ class OutlineController internal constructor(
             return
         }
         if (selection().selected?.id != job.engine.id) return refresh()
-        val formattingInline = SmartDiffSettings.getInstance().formattingOnlyInline
-        val items = OutlineModel.build(result, request.oldText, request.newText, formattingInline)
-        show(OutlineState.Shown(result, OutlineModel.summary(result), items))
+        showResult(request, result)
+    }
+
+    /** Hides or shows changes of [type] in every outline from now on, and rebuilds this one's rows without comparing again. */
+    fun setHidden(type: ChangeType, hide: Boolean) {
+        val settings = SmartDiffSettings.getInstance()
+        settings.hiddenChangeTypes = if (hide) settings.hiddenChangeTypes + type else settings.hiddenChangeTypes - type
+        val shown = state as? OutlineState.Shown ?: return
+        val request = shownRequest ?: return
+        showResult(request, shown.result)
+    }
+
+    private fun showResult(request: ComparisonRequest, result: ComparisonResult) {
+        val settings = SmartDiffSettings.getInstance()
+        val hidden = settings.hiddenChangeTypes
+        val items = OutlineModel.build(result, request.oldText, request.newText, settings.formattingOnlyInline, hidden)
+        shownRequest = request
+        show(OutlineState.Shown(result, OutlineModel.summary(result, hidden), items, OutlineModel.hiddenCount(result, hidden)))
+        (viewer as? FilteringDiffViewer)?.hide(HiddenLines.of(result, hidden, request.oldText, request.newText))
     }
 
     private fun documentChanged() {
         if (disposed || !isOutlineVisible) return
         cancel()
+        (viewer as? FilteringDiffViewer)?.forgetHidden()
         debounce.restart()
     }
 
@@ -174,6 +196,7 @@ class OutlineController internal constructor(
     }
 
     private fun show(state: OutlineState) {
+        if (state !is OutlineState.Shown) shownRequest = null
         this.state = state
         panel.show(state)
     }

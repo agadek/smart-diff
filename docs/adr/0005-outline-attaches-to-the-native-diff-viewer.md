@@ -24,3 +24,7 @@ The structural outline is added beside the editors of IntelliJ's own side-by-sid
 - The unified (one-sided) viewer and three-sided viewers get no outline in the first release. Their components are also `DiffPanelBase`s, so the same attachment can serve them later.
 - In the combined diff the outline appears inside each file block. Whether that is usable is checked during validation (milestone 7); the extension can skip combined-diff blocks if it is not.
 - The local side of a local-change diff is editable (the spike saw `FileDocumentContent` with a writable document), so the lifecycle in §9.2 must rerun the comparison on document changes, as specified.
+
+## Addendum (2026-10-21): the SMART Diff viewer
+
+To fade the native marks of changes the outline filter hides, SMART Diff also registers its own side-by-side viewer, a subclass of the native one, in the diff's viewer list. It is offered beside the native viewer, not in its place, so this decision stands: the outline still attaches to whichever side-by-side viewer is shown, and the native viewer stays the default ([technical specification §10](../TECHNICAL-SPECIFICATION.md#10-structural-outline)).

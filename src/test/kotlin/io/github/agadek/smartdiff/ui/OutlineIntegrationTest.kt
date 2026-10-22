@@ -3,13 +3,17 @@ package io.github.agadek.smartdiff.ui
 import com.intellij.diff.DiffContext
 import com.intellij.diff.DiffExtension
 import com.intellij.diff.DiffManager
+import com.intellij.diff.DiffManagerEx
 import com.intellij.diff.DiffRequestPanel
 import com.intellij.diff.FrameDiffTool
 import com.intellij.diff.contents.DocumentContent
+import com.intellij.diff.impl.DiffSettingsHolder.DiffSettings
 import com.intellij.diff.requests.DiffRequest
 import com.intellij.diff.requests.SimpleDiffRequest
+import com.intellij.diff.tools.simple.SimpleDiffChange
 import com.intellij.diff.tools.util.DiffDataKeys
 import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
+import com.intellij.diff.util.Side
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.DefaultActionGroup
@@ -95,6 +99,53 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
 
         outline.navigator.navigate(outline.panel.selectedItem()!!)
         assertEquals(JAVA_NEW.indexOf("void bye()"), shown.viewer.editor2.caretModel.offset)
+    }
+
+    fun `test hiding a change type rebuilds the outline and is remembered`() {
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+
+        outline.setHidden(ChangeType.ADDED, true)
+
+        assertEquals(setOf(ChangeType.ADDED), settings.hiddenChangeTypes)
+        assertEquals(listOf("class Greeter", "  method hello()  changed"), rows(outline))
+        assertEquals("1 changed · 1 added · 1 hidden", outline.panel.summary.text)
+
+        outline.setHidden(ChangeType.CHANGED, true)
+        assertEquals(emptyList<String>(), rows(outline))
+        assertEquals("All changes are hidden by the filter", outline.panel.tree.emptyText.text)
+
+        // Another diff starts with the same filter.
+        assertEquals(emptyList<String>(), rows(open(history(KOTLIN_OLD, KOTLIN_NEW, "Greeter.kt")).awaitResult()))
+
+        outline.setHidden(ChangeType.ADDED, false)
+        outline.setHidden(ChangeType.CHANGED, false)
+        assertEquals(listOf("class Greeter", "  method hello()  changed", "  method bye()  added"), rows(outline))
+    }
+
+    fun `test the SMART Diff viewer fades the changes the filter hides`() {
+        val diffSettings = DiffSettings.getSettings()
+        val savedOrder = diffSettings.diffToolsOrder
+        try {
+            assertContainsElements(DiffManagerEx.getInstance().diffTools.map { it.name }, FilteringDiffTool.NAME)
+            diffSettings.diffToolsOrder = listOf(FilteringDiffTool::class.java.canonicalName) + savedOrder
+            val shown = open(history(FORMATTED_OLD, FORMATTED_NEW, "Counter.java"))
+            val viewer = shown.viewer as FilteringDiffViewer
+            val outline = shown.awaitResult()
+            awaitChanges(viewer) { it.size == 2 }
+            assertTrue("nothing is faded while nothing is hidden", viewer.diffChanges.none { it.isSkipped })
+
+            outline.setHidden(ChangeType.FORMATTING_ONLY, true)
+
+            awaitChanges(viewer) { changes -> changes.any { it.isSkipped } }
+            val (faded, kept) = viewer.diffChanges.partition { it.isSkipped }
+            assertEquals("the reformatted method", listOf(3), faded.map { it.getStartLine(Side.RIGHT) })
+            assertEquals("the changed method", 1, kept.size)
+
+            outline.setOutlineVisible(false)
+            awaitChanges(viewer) { changes -> changes.size == 2 && changes.none { it.isSkipped } }
+        } finally {
+            diffSettings.diffToolsOrder = savedOrder
+        }
     }
 
     fun `test a Kotlin diff shows the outline`() {
@@ -269,6 +320,14 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         return outline.state as OutlineState.Shown
     }
 
+    private fun awaitChanges(viewer: FilteringDiffViewer, condition: (List<SimpleDiffChange>) -> Boolean) {
+        PlatformTestUtil.waitWithEventsDispatching(
+            { "no matching changes; they are ${viewer.diffChanges.map { "${it.getStartLine(Side.RIGHT)} skipped=${it.isSkipped}" }}" },
+            { condition(viewer.diffChanges) },
+            10,
+        )
+    }
+
     private fun history(old: String, new: String, fileName: String) = SimpleDiffRequest(
         fileName,
         SpikeContents.vcsRevision(project, old, "/repo/$fileName"),
@@ -339,6 +398,8 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
     private companion object {
         const val JAVA_OLD = "class Greeter {\n    String hello() { return \"hi\"; }\n}\n"
         const val JAVA_NEW = "class Greeter {\n    String hello() { return \"hello\"; }\n\n    void bye() {}\n}\n"
+        const val FORMATTED_OLD = "class Counter {\n    int a() { return 1; }\n\n    int b() { return 2; }\n}\n"
+        const val FORMATTED_NEW = "class Counter {\n    int a() { return 3; }\n\n    int b() {\n        return 2;\n    }\n}\n"
         const val KOTLIN_OLD = "class Greeter {\n    fun hello() = \"hi\"\n}\n"
         const val KOTLIN_NEW = "class Greeter {\n    fun hello() = \"hello\"\n\n    fun bye() {}\n}\n"
     }

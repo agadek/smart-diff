@@ -21,6 +21,9 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
 
         /** Show formatting-only changes inline instead of in a collapsed group per container. */
         var formattingOnlyInline: Boolean = false
+
+        /** The [ChangeType] names hidden from the outline, comma-separated. */
+        var hiddenChangeTypes: String = ""
         var maxChars: Int = Limits.DEFAULT.maxChars
         var maxDeclarations: Int = Limits.DEFAULT.maxDeclarations
         var timeoutMillis: Long = Limits.DEFAULT.timeoutMillis
@@ -43,6 +46,11 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         get() = current.formattingOnlyInline
         set(value) = update { formattingOnlyInline = value }
 
+    /** The change types hidden from every outline; a stored name that is no longer a type is ignored. */
+    var hiddenChangeTypes: Set<ChangeType>
+        get() = current.hiddenChangeTypes.split(',').mapNotNullTo(LinkedHashSet()) { name -> ChangeType.entries.firstOrNull { it.name == name.trim() } }
+        set(value) = update { hiddenChangeTypes = ChangeType.entries.filter { it in value }.joinToString(",") { it.name } }
+
     /** The limits passed to engines; a stored value that is out of range falls back to its default. */
     var limits: Limits
         get() = Limits(
@@ -62,6 +70,7 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         current = SettingsState().also {
             it.showOutline = old.showOutline
             it.formattingOnlyInline = old.formattingOnlyInline
+            it.hiddenChangeTypes = old.hiddenChangeTypes
             it.maxChars = old.maxChars
             it.maxDeclarations = old.maxDeclarations
             it.timeoutMillis = old.timeoutMillis
