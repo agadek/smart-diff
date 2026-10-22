@@ -1,8 +1,10 @@
 # Releasing SMART Diff
 
-Releases go to the [JetBrains Marketplace](https://plugins.jetbrains.com) as plugin `io.github.agadek.smartdiff`. The
-release workflow (`.github/workflows/release.yml`) builds, tests, verifies, signs and publishes the plugin when a GitHub
-release is published, and attaches the signed zip to the release.
+Releases are GitHub releases with the signed plugin zip attached, which users install from disk. The release workflow
+(`.github/workflows/release.yml`) builds, tests, verifies and signs the plugin when a GitHub release is published, and
+attaches the signed zip to the release. Publishing to the [JetBrains Marketplace](https://plugins.jetbrains.com), as
+plugin `io.github.agadek.smartdiff`, is off until the repository variable `PUBLISH_TO_MARKETPLACE` is `true`
+(see [Marketplace publishing](#marketplace-publishing)).
 
 ## One-time setup
 
@@ -24,21 +26,8 @@ These steps need the maintainer's own accounts and keys; nothing in the reposito
    | `CERTIFICATE_CHAIN` | the contents of `chain.crt` |
    | `PRIVATE_KEY` | the contents of `private_encrypted.pem` |
    | `PRIVATE_KEY_PASSWORD` | the key's password |
-   | `PUBLISH_TOKEN` | a Marketplace token from [your profile's tokens page](https://plugins.jetbrains.com/author/me/tokens) |
 
-3. **First upload by hand.** The Marketplace accepts uploads through its API only for a plugin that already exists, so
-   the first version goes through the website:
-
-   ```shell
-   export CERTIFICATE_CHAIN="$(cat chain.crt)" PRIVATE_KEY="$(cat private_encrypted.pem)" PRIVATE_KEY_PASSWORD=...
-   ./gradlew buildPlugin check verifyPlugin signPlugin
-   ```
-
-   Upload `build/distributions/smart-diff-<version>-signed.zip` at
-   [Upload plugin](https://plugins.jetbrains.com/plugin/add), choose the license (PolyForm Noncommercial 1.0.0, linked
-   from the plugin description) and the tags, and wait for JetBrains' approval. Then publish the `v0.1.0` GitHub release
-   and attach the signed zip to it by hand: its workflow run stops at the publish step because the Marketplace already
-   has that version. Every later release publishes through the workflow alone.
+   The key signs every release, so keep the same one: the Marketplace rejects updates signed with a different key.
 
 ## Every release
 
@@ -46,10 +35,24 @@ These steps need the maintainer's own accounts and keys; nothing in the reposito
 2. On a branch, set `pluginVersion` in `gradle.properties` (for example `0.2.0`, or `0.2.0-beta.1` for the beta channel)
    and run `./gradlew patchChangelog`, which moves the unreleased notes under the new version. Merge it through a pull
    request once CI passes.
-3. Publish a GitHub release from `main` with the tag `v<pluginVersion>` (for example `v0.2.0`). The workflow checks that
-   the tag matches `pluginVersion`, runs the same build, tests and Plugin Verifier as CI, and then publishes.
-4. The Marketplace reviews each update before it appears; the notes shown there come from the version's section of
-   `CHANGELOG.md`.
+3. Publish a GitHub release with the tag `v<pluginVersion>` (for example `v0.2.0`), with the version's section of
+   `CHANGELOG.md` as its notes. The workflow checks that the tag matches `pluginVersion`, runs the same build, tests and
+   Plugin Verifier as CI, signs the plugin and attaches `smart-diff-<version>-signed.zip` to the release.
+4. With Marketplace publishing on, the workflow then publishes the same zip. The Marketplace reviews each update before
+   it appears; the notes shown there come from the version's section of `CHANGELOG.md`.
 
 A pre-release suffix picks the Marketplace channel: `0.2.0-beta.1` is published to the `beta` channel, which users add
 as a custom plugin repository; a version without a suffix goes to the default channel.
+
+## Marketplace publishing
+
+Off for now. To turn it on:
+
+1. Add the repository secret `PUBLISH_TOKEN`, a Marketplace token from
+   [your profile's tokens page](https://plugins.jetbrains.com/author/me/tokens).
+2. **First upload by hand.** The Marketplace accepts uploads through its API only for a plugin that already exists, so
+   the first version goes through the website. Download the signed zip of the latest GitHub release and upload it at
+   [Upload plugin](https://plugins.jetbrains.com/plugin/add), choose the license (PolyForm Noncommercial 1.0.0, linked
+   from the plugin description) and the tags, and wait for JetBrains' approval.
+3. Add the repository variable `PUBLISH_TO_MARKETPLACE` with the value `true` (GitHub: Settings | Secrets and variables
+   | Actions | Variables). Every later release then publishes through the workflow.

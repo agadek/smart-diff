@@ -9,6 +9,12 @@ Source code: [github.com/agadek/smart-diff](https://github.com/agadek/smart-diff
 
 Plugin ID: `io.github.agadek.smartdiff`
 
+## Install
+
+Download `smart-diff-<version>-signed.zip` from the [latest release](https://github.com/agadek/smart-diff/releases/latest),
+then in the IDE open *Settings | Plugins*, click the gear icon, choose **Install Plugin from Disk…** and select the zip.
+Don't unpack it first.
+
 ## Use
 
 Open any two-sided diff of a Java, Kotlin or Scala file (local changes, VCS history or "Compare with…"). The structural
