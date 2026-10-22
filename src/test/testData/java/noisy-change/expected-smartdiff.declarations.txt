@@ -1,14 +1,20 @@
 status: ANALYZED
-File region  changed  old 1-63  new 1-80
-class OrderService  formatting-only  old 6-48  new 7-56
+File region  changed  old 1-80  new 1-118
+class OrderService  formatting-only  old 6-65  new 7-77
   constructor OrderService(OrderRepository)  formatting-only  old 10-12  new 12-15
   method placeOrder(String,List<Item>)  changed  old 14-21  new 17-25
-  method applyDiscount(Order,BigDecimal)  moved  changed  signature changed  old 37-39  new 27-31
-  method formatReceipt(Order)  removed  old 41-43
+  method applyDiscount(Order,BigDecimal)  moved  changed  signature changed  old 54-56  new 27-31
+  method formatReceipt(Order)  removed  old 58-60
   method cancelOrder(String)  changed  old 23-27  new 33-39
   method refund(String)  added  new 41-45
   method total(Order)  formatting-only  old 29-35  new 47-55
-class OrderRepository  formatting-only  old 50-63  new 58-80
-  method find(String)  formatting-only  old 53-58  new 62-69
-  method save(Order)  formatting-only  old 60-62  new 71-74
-  method validate(List<Item>)  moved  changed  old 45-47  new 76-79
+  method summary(Order)  changed  old 37-44  new 57-63
+  method describeItems(Order,StringBuilder)  added  new 65-71
+  method shippingCost(Order)  changed  old 46-52  new 73-76
+class OrderRepository  formatting-only  old 67-80  new 79-101
+  method find(String)  formatting-only  old 70-75  new 83-90
+  method save(Order)  formatting-only  old 77-79  new 92-95
+  method validate(List<Item>)  moved  changed  old 62-64  new 97-100
+class ShippingRates  added  new 103-118
+  constructor ShippingRates()  added  new 105-107
+  method costFor(Order)  added  new 109-117

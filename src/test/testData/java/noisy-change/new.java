@@ -53,6 +53,27 @@ public class OrderService
         }
         return sum;
     }
+
+    public String summary(Order order)
+    {
+        StringBuilder text = new StringBuilder(order.customer());
+        describeItems(order, text);
+        text.append("\nTotal: ").append(total(order));
+        return text.toString();
+    }
+
+    private void describeItems(Order order, StringBuilder text)
+    {
+        for (Item item : order.items())
+        {
+            text.append("\n  ").append(item.name()).append(" x").append(item.quantity());
+        }
+    }
+
+    public int shippingCost(Order order)
+    {
+        return ShippingRates.costFor(order);
+    }
 }
 
 class OrderRepository
@@ -76,5 +97,22 @@ class OrderRepository
     void validate(List<Item> items)
     {
         if (items.isEmpty()) throw new IllegalArgumentException("no items");
+    }
+}
+
+final class ShippingRates
+{
+    private ShippingRates()
+    {
+    }
+
+    static int costFor(Order order)
+    {
+        int weight = 0;
+        for (Item item : order.items())
+        {
+            weight += item.weight() * item.quantity();
+        }
+        return weight > 10 ? 0 : 5 + weight / 2;
     }
 }
