@@ -11,7 +11,7 @@ Plugin ID: `io.github.agadek.smartdiff`
 
 ## Use
 
-Open any two-sided diff of a Java or Kotlin file (local changes, VCS history or "Compare with…"). The structural
+Open any two-sided diff of a Java, Kotlin or Scala file (local changes, VCS history or "Compare with…"). The structural
 outline appears beside the editors: a summary line, then the changed declarations. Select one to see it on both sides,
 or press Enter to jump to it. The **Structural Outline** toolbar button switches the diff back to the plain native view,
 and *Settings | Tools | SMART Diff* sets whether the outline opens automatically, how formatting-only changes are shown,

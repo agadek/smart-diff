@@ -1,0 +1,4 @@
+status: ANALYZED
+extension Cart(using Int)  changed  signature changed  old 31-32  new 31-34
+  function isFull  changed  old 32  new 32
+  function isEmpty  added  new 34

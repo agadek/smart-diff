@@ -1,0 +1,8 @@
+status: ANALYZED
+class Cart  old 5-25  new 5-25
+  function total()  rename candidate from function computeTotal()  old 14-20  new 14-20
+  function summary()  rename candidate from function describe()  changed  old 22  new 22
+  function clear()  rename candidate from function reset()  old 24  new 24
+object CartSyntax  old 30-34  new 30-34
+  class CartOps  old 31-33  new 31-33
+    function hasNothing  rename candidate from function isEmptyCart  changed  old 32  new 32

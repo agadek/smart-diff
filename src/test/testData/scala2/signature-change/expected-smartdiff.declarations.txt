@@ -1,0 +1,6 @@
+status: ANALYZED
+class Cart  old 6-25  new 6-25
+  function total(Int)  changed  signature changed  old 16-22  new 16-22
+object CartSyntax  old 38-42  new 38-42
+  class CartOps  old 39-41  new 39-41
+    function isFull  changed  old 40  new 40

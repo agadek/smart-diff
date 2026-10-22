@@ -1,0 +1,5 @@
+status: ANALYZED
+class Basket  rename candidate from class Cart  old 6-21  new 6-21
+object Basket  rename candidate from object Cart  old 23-24  new 23-24
+extension Basket  rename candidate from extension Cart  old 31-32  new 31-32
+  function isFull  changed  old 32  new 32

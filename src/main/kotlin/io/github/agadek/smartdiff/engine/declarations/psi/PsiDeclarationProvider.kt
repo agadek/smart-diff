@@ -15,7 +15,7 @@ import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
 import io.github.agadek.smartdiff.engine.declarations.model.FileRegion
 import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy
 
-/** What a provider says about a PSI element that is a declaration (technical specification §6.4, §6.5). */
+/** What a provider says about a PSI element that is a declaration (technical specification §6.4, §6.5, §6.8). */
 class DeclarationInfo(
     val kind: DeclarationKind,
     val name: String,
@@ -27,6 +27,13 @@ class DeclarationInfo(
     val displaySignature: String? = signature,
     /** The receiver type of a Kotlin extension, for labels. */
     val receiver: String? = null,
+    /**
+     * For one of several declarations written together, such as `val a, b = 0`, the element they share; null when the
+     * element is the declaration's own.
+     */
+    val group: PsiElement? = null,
+    /** The declaration's part of [group]; null for the element's own range. */
+    val range: TextRange? = null,
 )
 
 /**
@@ -54,20 +61,28 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
     override fun build(file: PsiFile, cancellation: Cancellation): DeclarationTree {
         val text = file.viewProvider.contents
         val nodes = HashMap<PsiElement, Node>()
+        val groups = HashMap<PsiElement, MutableList<Node>>()
 
         fun node(element: PsiElement): Node? {
             cancellation.checkCanceled()
             val info = describe(element) ?: return null
-            val range = element.textRange
-            if (range.isEmpty) return null
-            return Node(info, TextRange(range.startOffset, range.endOffset), info.members.mapNotNull(::node)).also { nodes[element] = it }
+            val range = info.range ?: element.textRange.let { TextRange(it.startOffset, it.endOffset) }
+            if (range.length == 0) return null
+            return Node(info, range, info.members.mapNotNull(::node)).also { node ->
+                nodes[element] = node
+                info.group?.let { groups.getOrPut(it, ::mutableListOf) += node }
+            }
         }
         val topLevel = topLevel(file).mapNotNull(::node)
 
         var fileRegionError = false
         for (error in PsiTreeUtil.collectElementsOfType(file, PsiErrorElement::class.java)) {
             cancellation.checkCanceled()
-            val owner = generateSequence(error.parent) { it.parent }.takeWhile { it !is PsiFile }.firstNotNullOfOrNull { nodes[it] }
+            // In an element shared by several declarations, the one whose part holds the error; between parts, the container.
+            val offset = error.textRange.startOffset
+            val owner = generateSequence(error.parent) { it.parent }.takeWhile { it !is PsiFile }.firstNotNullOfOrNull { element ->
+                nodes[element] ?: groups[element]?.firstOrNull { offset >= it.range.start && offset <= it.range.end }
+            }
             if (owner == null) fileRegionError = true else owner.parseError = true
         }
 

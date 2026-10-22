@@ -1,0 +1,16 @@
+status: ANALYZED
+File region  changed  old 1  new 1-42
+class Cart  added  new 6-25
+  property items  added  new 8
+  function add(Item)  added  new 10-12
+  function add(String,Int)  added  new 14
+  function total()  added  new 16-22
+  function describe()  added  new 24
+object Cart  added  new 27-29
+  property Limit  added  new 28
+class Item  added  new 31-32
+class Receipt  added  new 34-36
+  function header()  added  new 35
+object CartSyntax  added  new 38-42
+  class CartOps  added  new 39-41
+    function isFull  added  new 40

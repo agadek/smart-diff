@@ -1,0 +1,2 @@
+status: ANALYZED
+class Receipt  changed  old 28-30  new 28-29
