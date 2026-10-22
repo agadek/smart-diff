@@ -6,6 +6,18 @@
     <description><![CDATA[
         Review code changes by structure in IntelliJ-based IDEs, with the native text diff always available.
         <br/><br/>
+        SMART Diff adds a structural outline beside the side-by-side diff of Java and Kotlin files. It lists the
+        declarations that changed, marked added, removed, changed, moved, signature changed or formatting-only, so a
+        reviewer sees which methods and classes a change touches before reading the lines.
+        <ul>
+            <li>Select a declaration to frame it on both sides of the diff; press Enter to jump to it.</li>
+            <li>Formatting-only changes are kept apart from changes in content.</li>
+            <li>Hide chosen change types from the outline, and fade them in the SMART Diff side-by-side viewer.</li>
+            <li>Unsupported, malformed or oversized files stay in the plain native diff, with the reason shown.</li>
+            <li>A toolbar button in every diff switches back to the plain native diff.</li>
+        </ul>
+        Settings are under <i>Settings | Tools | SMART Diff</i>.
+        <br/><br/>
         Free for noncommercial use under the
         <a href="https://polyformproject.org/licenses/noncommercial/1.0.0">PolyForm Noncommercial License 1.0.0</a>.
         Commercial use requires a separate license from the author.
