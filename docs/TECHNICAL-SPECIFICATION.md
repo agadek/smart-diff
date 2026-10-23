@@ -288,8 +288,8 @@ The signature is a matching key. Labels use a second form of it, the *display si
 
 ### 6.7 Parse errors
 
-- An error element inside a declaration's own range sets `hasParseError`; the declaration is still matched by identity if its name was parsed, but its content is `UNANALYZED`.
-- An error in the file region sets the file region to `UNANALYZED`.
+- An error element inside a declaration's own range sets `hasParseError`; the declaration is still matched by identity if its name was parsed, but its content is `UNANALYZED`, unless its own tokens have the same text on both sides and its signature did not change: then it is `UNCHANGED`, since the same source parses the same way on both sides. So a parse error, for example on code the parser does not know, marks only code that changed. The same holds for the file region.
+- An error in the file region sets the file region to `UNANALYZED`, unless its tokens are the same on both sides.
 - Only errors in code count. Errors the Scaladoc parser reports inside a doc comment, such as a wiki link that closes before it opens (`[[F[A]]]` in prose), are markup, not code; they neither set `hasParseError` nor count when choosing the Scala dialect (§6.2). The comment's tokens are still compared, so a change inside it is still a change.
 - If either side has errors and no declarations were found while the file is non-blank, the result is `FAILED` with the native diff shown.
 - A result with any `UNANALYZED` content has status `PARTIAL`.

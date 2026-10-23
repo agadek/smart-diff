@@ -295,13 +295,25 @@ class ScalaDeclarationProviderTest : ProviderTestCase() {
         assertEquals("other", (otherChanged.changes.single().children.single { it.isReported }.subject as Subject.Declaration).name)
     }
 
-    fun `test a parse error in code still makes the declaration unanalyzed`() {
+    fun `test a parse error in code still makes a changed declaration unanalyzed`() {
         val old = "object A {\n  /** Turns F[G[A]] into G[F[A]]. */\n  def sequence = (1\n  def other = 2\n}\n"
+        val new = old.replace("(1", "(2")
 
-        val result = compare(old, old.replace("other = 2", "other = 3"))
+        val result = compare(old, new)
 
         assertEquals(Status.PARTIAL, result.status)
-        assertTrue(Rendering.result(result, old, old), result.changes.single().children.any { it.content == Content.UNANALYZED })
+        assertEquals(Content.UNANALYZED, result.changes.single().children.single { it.isReported }.content)
+    }
+
+    fun `test a declaration with a parse error is unchanged when its source is the same on both sides`() {
+        val old = "object A {\n  def broken = (1\n  def other = 2\n}\n"
+        val new = old.replace("other = 2", "other = 3")
+        assertTrue("broken has a parse error", build("Scala", old).all.single { it.name == "broken" }.hasParseError)
+
+        val result = compare(old, new)
+
+        assertEquals(Rendering.result(result, old, new), Status.ANALYZED, result.status)
+        assertEquals("other", (result.changes.single().children.single { it.isReported }.subject as Subject.Declaration).name)
     }
 
     fun `test local definitions, anonymous classes and statements are part of their container`() {
