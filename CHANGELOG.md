@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Each changed Java, Kotlin or Scala file in Local Changes and the Commit tool window can be expanded to show its changed declarations, labelled as in the outline. Double-click or Enter on one opens the file's diff with that declaration selected in the outline.
+
 ## [0.1.1] - 2026-10-23
 
 ### Added

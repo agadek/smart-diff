@@ -39,7 +39,7 @@ Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.
 The first item after the 0.1.1 noise pass. Show changed declarations for each file inside the IDE's existing Changes/Commit tree, rather than in a new panel (technical spec Q3).
 
 - **Level 1 (implemented):** a summary next to each file, for example `Parser.kt  2 changed · 1 added`, in the Local Changes view and the Commit tool window ([technical spec §9.4](TECHNICAL-SPECIFICATION.md#94-changes-tree-summary)).
-- **Level 2:** expandable declarations under each file. The level 1 node can take child nodes; summaries are already computed in the background, so the remaining questions are what a child row opens and how the rows stay in sync with edits.
+- **Level 2 (implemented):** expandable declarations under each file, the same rows as the file's outline. Double-click or Enter on one opens the file's diff with that declaration selected in the outline; the rows are computed with the summary, so they follow edits the same way ([technical spec §9.4](TECHNICAL-SPECIFICATION.md#94-changes-tree-summary)).
 - **Spike (done 2026-10-22, S5):** the Local Changes and Commit tree takes the summary through the public `changesViewModifier` extension point ([ADR 0006](adr/0006-changes-tree-summary-through-changes-view-modifier.md)). The modal commit dialog and the Git log's commit details have no such hook, so they show no summary.
 
 ### Scala

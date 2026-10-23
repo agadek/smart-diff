@@ -23,6 +23,9 @@ or press Enter to jump to it. The **Structural Outline** toolbar button switches
 and *Settings | Tools | SMART Diff* sets whether the outline opens automatically, how formatting-only changes are shown,
 the default engine per language and the analysis limits.
 
+In Local Changes and the Commit tool window, each changed file shows its summary, such as `2 changed · 1 added`. Expand
+the file to see its changed declarations, and double-click one to open the file's diff with that declaration selected.
+
 ## Requirements
 
 - IntelliJ IDEA 2025.1 or newer

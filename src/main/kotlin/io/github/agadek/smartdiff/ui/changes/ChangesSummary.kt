@@ -13,13 +13,18 @@ import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.vcs.VcsException
 import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vcs.changes.ChangesViewModifier
+import com.intellij.openapi.vcs.changes.ChangesViewNodeAction
 import com.intellij.openapi.vcs.changes.ContentRevision
 import com.intellij.openapi.vcs.changes.CurrentContentRevision
+import com.intellij.openapi.vcs.changes.actions.diff.ShowDiffAction
+import com.intellij.openapi.vcs.changes.actions.diff.ShowDiffContext
 import com.intellij.openapi.vcs.changes.ui.ChangesBrowserChangeNode
 import com.intellij.openapi.vcs.changes.ui.ChangesBrowserNode
 import com.intellij.openapi.vcs.changes.ui.ChangesBrowserNodeRenderer
 import com.intellij.openapi.vcs.changes.ui.ChangesViewModelBuilder
+import com.intellij.openapi.vcs.changes.ui.HoverIcon
 import com.intellij.openapi.vcs.changes.ui.TreeModelBuilder
+import com.intellij.openapi.vcs.changes.ui.VcsTreeModelData
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.util.FontUtil
 import com.intellij.util.concurrency.AppExecutorUtil
@@ -30,22 +35,26 @@ import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.compareSafely
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
+import io.github.agadek.smartdiff.ui.OutlineItem
 import io.github.agadek.smartdiff.ui.OutlineModel
+import io.github.agadek.smartdiff.ui.OutlinePath
 import io.github.agadek.smartdiff.ui.SmartDiffSettings
+import io.github.agadek.smartdiff.ui.appendItem
 import org.jetbrains.annotations.TestOnly
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import javax.swing.tree.TreeNode
 
 /**
  * Adds each file's structural summary, such as `2 changed · 1 added`, after the file in the Local Changes and Commit
- * tree (roadmap: multi-file summary, level 1).
+ * tree, and its outline rows under it (technical specification §9.4; roadmap: multi-file summary, levels 1 and 2).
  *
  * The platform calls this while it builds the tree, off the event dispatch thread. A file whose summary is not known
  * yet is left as it is and analyzed in the background; the tree is rebuilt once summaries arrive. Each file node with a
  * summary is replaced by a [SummaryChangeNode] for the same change, so selection, inclusion and actions stay the
- * platform's.
+ * platform's, with a [DeclarationNode] child for each top-level outline row.
  */
 class ChangesSummaryModifier(private val project: Project) : ChangesViewModifier {
 
@@ -59,7 +68,7 @@ class ChangesSummaryModifier(private val project: Project) : ChangesViewModifier
             val parent = node.parent as? ChangesBrowserNode<*> ?: continue
             val index = parent.getIndex(node)
             parent.remove(index)
-            parent.insert(SummaryChangeNode(project, node, summary), index)
+            parent.insert(SummaryChangeNode(project, node, summary.text).apply { summary.items.forEach { add(DeclarationNode(it)) } }, index)
         }
     }
 
@@ -82,7 +91,8 @@ class ChangesSummaryModifier(private val project: Project) : ChangesViewModifier
 
 /**
  * A file row with its structural summary. It renders as the platform's own node for the change, which keeps that node's
- * decorations such as partial-commit marks, followed by the summary in grey.
+ * decorations such as partial-commit marks, followed by the summary in grey. It starts collapsed, so the tree shows
+ * files until the user opens one.
  */
 class SummaryChangeNode internal constructor(
     project: Project,
@@ -94,10 +104,59 @@ class SummaryChangeNode internal constructor(
         original.render(renderer, selected, expanded, hasFocus)
         renderer.append(FontUtil.spaceAndThinSpace() + summary, SimpleTextAttributes.GRAYED_ATTRIBUTES)
     }
+
+    override fun shouldExpandByDefault(): Boolean = false
 }
 
 /**
- * The structural summaries of a project's changed files, computed one file at a time on a background thread and cached
+ * A row of a file's outline under the file in the Changes tree, with its own rows as children, drawn as the outline
+ * draws it.
+ *
+ * It is a helper node: the platform leaves it out of the selected and included changes, so selecting it selects no
+ * change and the file's checkbox counts only the file. Opening it shows the file's diff with this row selected in the
+ * outline ([DeclarationNodeAction]).
+ */
+class DeclarationNode internal constructor(val item: OutlineItem) : ChangesBrowserNode<OutlineItem>(item) {
+
+    init {
+        markAsHelperNode()
+        item.children.forEach { add(DeclarationNode(it)) }
+    }
+
+    /** The file row this row is under, or null once it is out of the tree. */
+    val fileNode: SummaryChangeNode? get() = generateSequence<TreeNode>(parent) { it.parent }.firstNotNullOfOrNull { it as? SummaryChangeNode }
+
+    /** This row's place in the outline, to find it in the outline of the file's diff. */
+    val path: OutlinePath get() = OutlinePath.of(generateSequence(this) { it.parent as? DeclarationNode }.map { it.item }.toList().asReversed())
+
+    override fun render(renderer: ChangesBrowserNodeRenderer, selected: Boolean, expanded: Boolean, hasFocus: Boolean) =
+        appendItem(renderer, item)
+
+    override fun getTextPresentation(): String = item.label
+}
+
+/**
+ * Opens a [DeclarationNode] on double-click or Enter: the file's diff, with the other changes of the tree next to it as
+ * the platform's own diff action does, and the declaration selected in the outline once it is shown.
+ */
+class DeclarationNodeAction(private val project: Project) : ChangesViewNodeAction {
+
+    override fun createNodeHoverIcon(node: ChangesBrowserNode<*>): HoverIcon? = null
+
+    override fun handleDoubleClick(node: ChangesBrowserNode<*>): Boolean {
+        val declaration = node as? DeclarationNode ?: return false
+        val change = declaration.fileNode?.userObject ?: return false
+        val root = declaration.root as? ChangesBrowserNode<*> ?: return false
+        val changes = VcsTreeModelData.allUnder(root).userObjects(Change::class.java).distinct()
+        val context = ShowDiffContext()
+        context.putChangeContext(change, OutlinePath.KEY, declaration.path)
+        ShowDiffAction.showDiffForChange(project, changes, changes.indexOf(change).coerceAtLeast(0), context)
+        return true
+    }
+}
+
+/**
+ * The structural summaries and outline rows of a project's changed files, computed one file at a time on a background thread and cached
  * by file, revisions and engine. A file edited since its summary gets a new one.
  */
 @Service(Service.Level.PROJECT)
@@ -106,7 +165,7 @@ class ChangesSummaryService(private val project: Project) {
     private sealed interface Entry {
         data object Pending : Entry
 
-        data class Done(val summary: String?) : Entry
+        data class Done(val summary: FileSummary?) : Entry
     }
 
     /** What a summary was computed from: the file's paths, a version of each side and the engine. */
@@ -121,7 +180,7 @@ class ChangesSummaryService(private val project: Project) {
      * language without an engine, or a file the engine could not analyze. Unknown summaries are computed in the
      * background, and the tree is refreshed when they are ready. Files that are no longer in [changes] are forgotten.
      */
-    fun summaries(changes: List<Change>): List<String?> {
+    fun summaries(changes: List<Change>): List<FileSummary?> {
         val requests = changes.map(::request)
         cache.keys.retainAll(requests.mapNotNullTo(HashSet()) { it?.key })
         return requests.map { request ->
@@ -184,13 +243,15 @@ class ChangesSummaryService(private val project: Project) {
         if (cache.replace(request.key, Entry.Pending, Entry.Done(summary))) scheduleRefresh()
     }
 
-    private fun summarize(request: Request): String? {
+    private fun summarize(request: Request): FileSummary? {
         val engine = EngineRegistry.getInstance(project).findEngine(EngineId(request.key.engineId)) ?: return null
         val oldText = content(request.change.beforeRevision) ?: return null
         val newText = content(request.change.afterRevision) ?: return null
         val limits = SmartDiffSettings.getInstance().limits
         val comparison = ComparisonRequest(oldText, newText, request.languageId, request.fileName, limits)
-        return summary(compareSafely(engine, comparison, Deadline(limits.timeoutMillis)))
+        val result = compareSafely(engine, comparison, Deadline(limits.timeoutMillis))
+        val text = summary(result) ?: return null
+        return FileSummary(text, OutlineModel.build(result, oldText, newText, SmartDiffSettings.getInstance().formattingOnlyInline))
     }
 
     private fun content(revision: ContentRevision?): String? = try {
@@ -232,6 +293,13 @@ class ChangesSummaryService(private val project: Project) {
         }
     }
 }
+
+/**
+ * What the Changes tree shows for a file: its summary line, such as `2 changed · 1 added`, and its outline's top-level
+ * rows. The rows are the outline's own (§10) without the change type filter, which applies to outlines only, as the
+ * summary counts every change.
+ */
+class FileSummary(val text: String, val items: List<OutlineItem>)
 
 /** Rebuilds the Local Changes and Commit tree, which asks [ChangesSummaryModifier] again. */
 internal fun refreshChangesView(project: Project) {

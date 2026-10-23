@@ -21,7 +21,8 @@ import javax.swing.JComponent
  * §9.1, ADR 0005).
  *
  * The viewer's component is a [DiffPanelBase] whose `BorderLayout` centre holds the editors. That centre moves into a
- * splitter with the outline as the second component. Anything else, such as another viewer, contents that are not two
+ * splitter with the outline as the second component. A request opened from a declaration in the Changes tree (§9.4)
+ * carries an [OutlinePath], and the outline selects that row once it is shown. Anything else, such as another viewer, contents that are not two
  * documents of one language, or a language no engine supports, is left alone and shows the native diff only.
  */
 class OutlineDiffExtension : DiffExtension() {
@@ -47,7 +48,9 @@ class OutlineDiffExtension : DiffExtension() {
         panel.add(splitter, BorderLayout.CENTER)
 
         val fileName = (new.highlightFile ?: old.highlightFile)?.name
-        val controller = OutlineController(project, viewer, context, splitter, languageId, fileName, old.document, new.document)
+        // Taken off the request, so showing it again later does not select the row again.
+        val reveal = request.getUserData(OutlinePath.KEY)?.also { request.putUserData(OutlinePath.KEY, null) }
+        val controller = OutlineController(project, viewer, context, splitter, languageId, fileName, old.document, new.document, reveal)
         Disposer.register(viewer, controller)
         controller.start()
     }

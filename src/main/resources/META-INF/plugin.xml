@@ -13,7 +13,7 @@
             <li>Select a declaration to frame it on both sides of the diff; press Enter to jump to it.</li>
             <li>Formatting-only changes are kept apart from changes in content.</li>
             <li>Hide chosen change types from the outline, and fade them in the SMART Diff side-by-side viewer.</li>
-            <li>The Local Changes and Commit tree shows each file's summary, such as <i>2 changed · 1 added</i>.</li>
+            <li>The Local Changes and Commit tree shows each file's summary, such as <i>2 changed · 1 added</i>, and its changed declarations under it.</li>
             <li>Unsupported, malformed or oversized files stay in the plain native diff, with the reason shown.</li>
             <li>A toolbar button in every diff switches back to the plain native diff.</li>
         </ul>
