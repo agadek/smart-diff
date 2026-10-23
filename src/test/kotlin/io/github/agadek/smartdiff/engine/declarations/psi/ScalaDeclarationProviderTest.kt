@@ -7,6 +7,7 @@ import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.Status
+import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
 import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy
 
@@ -270,6 +271,37 @@ class ScalaDeclarationProviderTest : ProviderTestCase() {
         val broken = tree.topLevel.single()
         assertFalse("ok() has no parse error: ${Rendering.tree(tree, text)}", broken.children.first { it.name == "ok" }.hasParseError)
         assertTrue("bad has the parse error: ${Rendering.tree(tree, text)}", broken.children.first { it.name == "bad" }.hasParseError)
+    }
+
+    fun `test Scaladoc markup errors are not parse errors`() {
+        val text = "object A {\n  /** Turns F[G[A]] into G[F[A]]. */\n  def sequence = 1\n  def other = 2\n}\n"
+
+        val tree = build("Scala", text)
+
+        assertFalse(tree.fileRegion.hasParseError || tree.all.any { it.hasParseError })
+    }
+
+    fun `test a declaration with Scaladoc markup errors is analyzed, changed or not`() {
+        val old = "object A {\n  /** Turns F[G[A]] into G[F[A]]. */\n  def sequence = 1\n  def other = 2\n}\n"
+
+        val bodyChanged = compare(old, old.replace("sequence = 1", "sequence = 3"))
+        val docChanged = compare(old, old.replace("Turns", "Swaps"))
+        val otherChanged = compare(old, old.replace("other = 2", "other = 3"))
+
+        for (result in listOf(bodyChanged, docChanged, otherChanged)) assertEquals(Status.ANALYZED, result.status)
+        assertEquals(Content.CHANGED, bodyChanged.changes.single().children.single { it.isReported }.content)
+        assertEquals("sequence", (docChanged.changes.single().children.single { it.isReported }.subject as Subject.Declaration).name)
+        assertEquals(Content.CHANGED, docChanged.changes.single().children.single { it.isReported }.content)
+        assertEquals("other", (otherChanged.changes.single().children.single { it.isReported }.subject as Subject.Declaration).name)
+    }
+
+    fun `test a parse error in code still makes the declaration unanalyzed`() {
+        val old = "object A {\n  /** Turns F[G[A]] into G[F[A]]. */\n  def sequence = (1\n  def other = 2\n}\n"
+
+        val result = compare(old, old.replace("other = 2", "other = 3"))
+
+        assertEquals(Status.PARTIAL, result.status)
+        assertTrue(Rendering.result(result, old, old), result.changes.single().children.any { it.content == Content.UNANALYZED })
     }
 
     fun `test local definitions, anonymous classes and statements are part of their container`() {

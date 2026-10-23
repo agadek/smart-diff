@@ -41,6 +41,7 @@ import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.ScGivenDefiniti
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.ScObject
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.ScTemplateDefinition
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.ScTrait
+import org.jetbrains.plugins.scala.lang.scaladoc.psi.api.ScDocComment
 
 /**
  * Scala declarations (technical specification §6.8), in the Scala 2 or Scala 3 dialect (§6.2). Uses PSI only, never
@@ -73,6 +74,10 @@ class ScalaDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_BR
      * Scala 3 optional braces make indentation significant, so a change in indentation is never formatting-only. Scala 2,
      * like Kotlin, infers semicolons from line breaks.
      */
+    /** Scaladoc markup, such as a wiki link that closes before it opens, is not code; the comment's text still counts. */
+    override fun isParseError(error: PsiErrorElement): Boolean =
+        PsiTreeUtil.getParentOfType(error, ScDocComment::class.java) == null
+
     override fun whitespacePolicy(file: PsiFile): WhitespacePolicy =
         if (file.language == Scala3Language.INSTANCE) WhitespacePolicy.INDENTATION_SIGNIFICANT else WhitespacePolicy.LINE_BREAKS_SIGNIFICANT
 
@@ -229,6 +234,6 @@ class ScalaDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_BR
 
     private fun errors(project: Project, text: CharSequence, language: Language): Int {
         val file = PsiFileFactory.getInstance(project).createFileFromText("SmartDiff.scala", language, text, false, false)
-        return PsiTreeUtil.collectElementsOfType(file, PsiErrorElement::class.java).size
+        return PsiTreeUtil.collectElementsOfType(file, PsiErrorElement::class.java).count(::isParseError)
     }
 }
