@@ -1,0 +1,11 @@
+status: ANALYZED
+class InvoiceService  old 5-42  new 5-47
+  method render(Invoice)  changed  code extracted to renderLines(List<Line>,StringBuilder)  old 12-20  new 12-18
+  method renderLines(List<Line>,StringBuilder)  added  extracted from render(Invoice) old 15-17  new 20-24
+  method total(Invoice)  changed  code extracted to totalWithTax(Invoice,TaxTable)  old 22-29  new 26-28
+  method overdue(Invoice,long)  changed  code extracted to isOverdue(Invoice,long)  old 31-37  new 30-32
+  class Reminders  added  new 38-46
+    method isOverdue(Invoice,long)  added  extracted from overdue(Invoice,long) old 32-36  new 39-45
+class Taxes  added  new 49-61
+  constructor Taxes()  added  new 50-51
+  method totalWithTax(Invoice,TaxTable)  added  extracted from total(Invoice) old 23-28  new 53-60

@@ -1,0 +1,4 @@
+status: ANALYZED
+class Report  old 3-11  new 3-13
+  function render(String)  changed  code extracted to paidLines  old 5-9  new 5-7
+  function paidLines  added  extracted from render(String) old 7-8  new 9-11

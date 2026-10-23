@@ -49,7 +49,7 @@ object ExtractionDetector {
     const val MIN_TILE = 5
 
     /** The share of the target's body that must be tiled. */
-    const val MIN_SHARE = 0.75
+    const val MIN_SHARE = 0.65
 
     /** The share of the tiled source tokens that must have been removed from the source. */
     const val MIN_REMOVED = 0.75
@@ -97,7 +97,6 @@ object ExtractionDetector {
                 Source(match, old, removed(old.keys, new.keys, budget))
             }
             val pairs = targets.flatMap { target -> sources.filter { overlaps(target, it) }.map { target to it } }
-            budget.check(pairs.sumOf { (target, source) -> target.tokens.size.toLong() * source.old.size })
             pairs.mapNotNull { (target, source) -> link(target, source, budget, thresholds) }
         } catch (e: OverBudget) {
             return Extractions.NONE
@@ -146,46 +145,74 @@ object ExtractionDetector {
 
     private class Tile(val target: Int, val source: Int, val length: Int)
 
+    /** Tiles taken first: longer, then earlier in the target, then earlier in the source. */
+    private val TILE_ORDER = compareByDescending<Tile> { it.length }.thenBy { it.target }.thenBy { it.source }
+
     /**
-     * Greedy string tiling: repeatedly takes the longest common runs of tokens not yet tiled on either side, down to
-     * [MIN_TILE] tokens. Runs of the same length are taken in target order, skipping those that overlap a taken one.
+     * Greedy string tiling: takes the longest common runs of tokens not yet tiled on either side, down to [MIN_TILE]
+     * tokens. The maximal common runs are found through an index of the source's runs of [MIN_TILE] tokens, so the
+     * work grows with the tokens and the runs they share rather than with the product of the token counts. A run that
+     * overlaps a taken tile goes back to the queue as its parts that are still free.
      */
     private fun tile(target: IntArray, source: IntArray, budget: Budget): List<Tile> {
+        if (target.size < MIN_TILE || source.size < MIN_TILE) return emptyList()
+        budget.spend(source.size.toLong())
+        val index = HashMap<Long, MutableList<Int>>()
+        for (j in 0..source.size - MIN_TILE) {
+            val starts = index.getOrPut(gram(source, j), ::mutableListOf)
+            if (starts.size < MAX_STARTS) starts += j
+        }
+        val queue = java.util.PriorityQueue(TILE_ORDER)
+        for (i in 0..target.size - MIN_TILE) {
+            val starts = index[gram(target, i)] ?: continue
+            budget.spend(starts.size.toLong())
+            for (j in starts) {
+                // A run that extends to the left was found from its first token already.
+                if (i > 0 && j > 0 && target[i - 1] == source[j - 1]) continue
+                var length = 0
+                while (i + length < target.size && j + length < source.size && target[i + length] == source[j + length]) length++
+                budget.spend(length.toLong())
+                if (length >= MIN_TILE) queue += Tile(i, j, length)
+            }
+        }
         val tiles = mutableListOf<Tile>()
         val inTarget = BooleanArray(target.size)
         val inSource = BooleanArray(source.size)
-        while (true) {
-            budget.spend(target.size.toLong() * source.size)
-            var longest = MIN_TILE - 1
-            val runs = mutableListOf<Tile>()
-            var previous = IntArray(source.size + 1)
-            var current = IntArray(source.size + 1)
-            for (i in 1..target.size) {
-                for (j in 1..source.size) {
-                    val length = if (!inTarget[i - 1] && !inSource[j - 1] && target[i - 1] == source[j - 1]) previous[j - 1] + 1 else 0
-                    current[j] = length
-                    if (length > longest) {
-                        longest = length
-                        runs.clear()
+        while (queue.isNotEmpty()) {
+            val run = queue.poll()
+            budget.spend(run.length.toLong())
+            var k = 0
+            var free = 0
+            while (k <= run.length) {
+                val taken = k == run.length || inTarget[run.target + k] || inSource[run.source + k]
+                if (!taken) {
+                    free++
+                } else {
+                    if (free == run.length) {
+                        for (t in 0 until run.length) {
+                            inTarget[run.target + t] = true
+                            inSource[run.source + t] = true
+                        }
+                        tiles += run
+                    } else if (free >= MIN_TILE) {
+                        queue += Tile(run.target + k - free, run.source + k - free, free)
                     }
-                    if (length == longest) runs += Tile(i - length, j - length, length)
+                    free = 0
                 }
-                val swap = previous
-                previous = current
-                current = swap
-            }
-            if (runs.isEmpty()) return tiles
-            for (run in runs) {
-                val free = (run.target until run.target + run.length).none { inTarget[it] } &&
-                    (run.source until run.source + run.length).none { inSource[it] }
-                if (!free) continue
-                for (k in 0 until run.length) {
-                    inTarget[run.target + k] = true
-                    inSource[run.source + k] = true
-                }
-                tiles += run
+                k++
             }
         }
+        return tiles
+    }
+
+    /** At most this many places in the source are kept for one run of [MIN_TILE] tokens, against repetitive code. */
+    private const val MAX_STARTS = 64
+
+    /** A hash of the [MIN_TILE] tokens of [keys] from [start]; runs with the same hash are compared token by token. */
+    private fun gram(keys: IntArray, start: Int): Long {
+        var hash = 0L
+        for (k in start until start + MIN_TILE) hash = hash * 1_000_003 + keys[k]
+        return hash
     }
 
     /**

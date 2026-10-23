@@ -216,6 +216,20 @@ class ExtractionDetectionTest {
     }
 
     @Test
+    fun `a long extraction from a long method stays within the work limit`() {
+        val long = (1..400).joinToString(" ") { "value$it = compute(input, $it).orElse(fallback$it);" }
+        val old = tree { cls("A") { method("generate", "Builder", "{ start(); $long finish(); }") } }
+        val new = tree {
+            cls("A") {
+                method("generate", "", "{ start(); generateRegular(builder); finish(); }")
+                method("generateRegular", "Builder", "{ $long }")
+            }
+        }
+
+        assertEquals("generateRegular(Builder) <- generate()\n", links(compare(old, new)))
+    }
+
+    @Test
     fun `detection is skipped above the work limit`() {
         val old = tree { cls("A") { method("summary", body = "{ start(); $LOOP }") } }
         val new = tree {
