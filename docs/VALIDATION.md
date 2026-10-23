@@ -10,6 +10,114 @@ Results of running the declaration engine on real commits before a release, and 
 Each line of the list is a local Git repository followed by `git rev-list` arguments, for example
 `/src/okhttp --no-merges --max-count=40 HEAD`. The report is written to `build/reports/smartdiff-validation/`.
 
+## 2026-10-22: Scala
+
+**Corpus:** the last non-merge commits touching Scala in three projects, with the Scala plugin 2025.1.32:
+typelevel/cats (Scala 2 syntax, 40 commits), zio/zio (cross-built for Scala 2 and 3, 80 commits) and scala/scala3
+(the compiler, written in Scala 3 with indentation syntax, and its tests, 40 commits). 145 of the 160 commits modified
+a Scala file: 596 files (cats 307, zio 118, scala3 171). The summary now records the dialect each file was parsed in.
+
+**Overall:** 536 files were `ANALYZED` and 60 `PARTIAL`; none fell back to the native diff. The median analysis time
+was 19 ms, against 4 ms for Java and Kotlin, since the dialect is chosen by parsing both sides first; the slowest file
+took 542 ms (zio `ZStream.scala`, 6300 lines). No file broke the nothing-hidden rule and none had a difference with
+nothing reported. Every file, cats and zio included, took the Scala 3 dialect: the Scala 3 parser accepts their Scala 2
+syntax, and no file used a construct Scala 3 dropped.
+
+79 files were flagged for review:
+
+| Flag | Files |
+| --- | --- |
+| `status` (`PARTIAL`) | 60 |
+| `noisy` | 15, 8 of them `PARTIAL` |
+| `rename` | 10 |
+| `rename-candidate` | 4 |
+| `same-name` | 1 |
+
+### Wrong: Scaladoc markup counted as a parse error
+
+50 of the 60 `PARTIAL` files (cats 18, zio 2, scala3 30) parse without a single error in code. Their errors are the
+Scaladoc parser's: wiki links that close before they open (`[[F[A]]]` in prose, `` `[[Ior.Left Left]][A]` ``), links
+that cross tags, and an unbalanced `{{{ … }}}` code block. The provider counts every `PsiErrorElement`, so each declaration whose doc
+comment has one is `UNANALYZED`, changed or not: cats `Alternative.scala` shows the untouched `separateFoldable` as
+unanalyzed, and the 177-line `package object cats` is unanalyzed for a two-line change to one of its properties. The
+same errors are counted for both dialects, so they never changed the dialect.
+
+### Wrong: valid Scala 3 the Scala plugin cannot parse
+
+The other 10 `PARTIAL` files are scala3 compiler sources that compile, but where the Scala plugin's parser reports
+errors: `this.match` used as a selector, a leading infix operator (`|| sym.owner == …`) continuing a condition on the
+next line, `for (orig, forwarded) <- …` with a tuple pattern, `then""` without a space, `.tpe: @unchecked match`, a
+trailing comma after a definition, and an interpolated string ending in `}$debugInfo"`. The provider cannot do better
+than the PSI, but each such error makes its whole declaration unanalyzed: `Scanners.scala` shows the 1445-line class
+`Scanner` as unanalyzed for a one-line change elsewhere.
+
+Across all 60 files, 163 declaration rows are unanalyzed, many of them unchanged on both sides.
+
+### Noisy: a trait turned into a class
+
+cats "Reduce jar size by using abstract classes" changes `private trait RepresentableMonad` into `abstract private
+class RepresentableMonad`, and the same in `Func.scala` and `IndexedReaderWriterStateT.scala`. A kind change is a
+removed and an added declaration (§6.8), so each one-line change shows the container removed, the new one added and
+every member as moved; in `IndexedReaderWriterStateT.scala` the unchanged `implicit def F` even shows as removed and
+added, since other containers in the file have members named `F` too.
+
+### Checked against `git show`
+
+22 flagged files across all three repositories:
+
+| File | Outline | Verdict |
+| --- | --- | --- |
+| cats `Alternative.scala` | unchanged `separateFoldable` unanalyzed | wrong: Scaladoc |
+| cats `package.scala` | `package object cats` unanalyzed | wrong: Scaladoc |
+| zio `ZStream.scala` | unchanged declarations unanalyzed | wrong: Scaladoc |
+| scala3 `Parsers.scala` | `object trim` and its members unanalyzed | wrong: Scaladoc |
+| scala3 `SymDenotations.scala` | class `ClassDenotation` unanalyzed | wrong: parser (leading `\|\|`) |
+| scala3 `Namer.scala` | declarations unanalyzed | wrong: parser (`for (a, b) <-`) |
+| cats `Representable.scala` | traits removed, classes added, members moved | noisy: kind change |
+| cats `Func.scala` | `AppFuncApplicative` removed and added | noisy: kind change |
+| cats `IndexedReaderWriterStateT.scala` | `IRWSTFunctor` removed and added, `F` removed and added | noisy: kind change |
+| cats `FlatMap.scala` | `AbstractFoldableFlatMap` rename candidate from `FoldableFlatMap` | right (besides one Scaladoc row) |
+| cats `NonEmptyReducible.scala` | members moved into the new `NonEmptyReducibleTrait` | right |
+| cats `NonEmptyList.scala` | a doc example's spacing shows as changed | right: comment text |
+| zio `FiberRefs.scala` | `needsTransformWhenForked` removed, `needTransformWhenForked` added | judgement call: renamed and rewritten |
+| zio `CyclicBarrier.scala` | most members removed and added | right: rewritten |
+| zio `showcase.scala` | declarations removed and added | right: rewritten |
+| scala3 `AggregateClassPath.scala` | `searchLocations` rename candidate from `asURLs` | judgement call: one method replaced another |
+| scala3 `ClassPath.scala` and four siblings | `asURLs` removed, `searchLocations` added | right |
+| scala3 `FileWriters.scala` | `openOptions` rename candidate from `fastOpenOptions` | right |
+| scala3 `ScaladocConfigs0.scala` | `def dottyExternalMapping` removed, `val dottyExternalMapping` added | judgement call: kind change |
+| scala3 `ScaladocGeneration.scala` | 219 lines of declarations removed | right |
+| scala3 `api.scala` | new enum, class and object added | right |
+| scala3 `CustomReflectSelectableTestScala3.scala` | tests added | right |
+
+### Whitespace
+
+34 files had whitespace-only changes. 31 came out formatting-only, all in one cats reformatting commit; the other 3
+changed whitespace inside comments, which is a comment change, as for Java and Kotlin. Since every file took Scala 3,
+Scala 2 code also runs under `INDENTATION_SIGNIFICANT`, so re-indenting it would be a content change; no commit in the
+corpus did that.
+
+### What to fix
+
+1. Ignore parse errors inside Scaladoc comments, both for `hasParseError` and in the dialect choice; Scaladoc markup
+   is not code. This removes 50 of the 60 `PARTIAL` results.
+2. Treat a declaration whose own tokens are identical on both sides as `UNCHANGED` even when it has a parse error,
+   so a parser gap only marks code that changed (§6.7). This removes the unanalyzed rows for unchanged declarations.
+3. Pair a trait and a class (and a `def` and a `val`) with the same name in the same container as a kind change of
+   one declaration, rather than a removed and an added one, so their members match in place.
+4. Consider choosing Scala 2 for code that parses in both dialects but has no Scala 3 syntax, so re-indenting Scala 2
+   code stays formatting-only.
+5. Recheck the 10 parser-gap files with newer Scala plugin releases; report the constructs to the Scala plugin if
+   they still fail.
+
+**After fixes 1, 2 and 4** (Scaladoc errors ignored, identical declarations unchanged despite parse errors, Scala 2 for
+code without Scala 3 syntax), on the same corpus: 595 files `ANALYZED` and 1 `PARTIAL` (scala3 `Implicits.scala`,
+where the changed declaration itself has a parser gap), against 536 and 60; 1 unanalyzed row, against 163. All 307
+cats files now take Scala 2, zio 109 of 118 (the other 9 are in `scala-3/` source directories or use top-level
+definitions) and scala3 17 of 171, 433 in all. 21 files are flagged, against 79: `rename` 10, `noisy` 7,
+`rename-candidate` 4, `same-name` 1, `status` 1; the trait-to-class files remain. The median time was 23 ms and the
+slowest file took 619 ms (zio `ZStream.scala`), since files without Scala 3 syntax are now parsed in both dialects.
+
 ## 2026-10-22: 0.1.1 noise pass
 
 **Corpus:** the same 234 commits and 1279 files as before 0.1.0, from the same clones.

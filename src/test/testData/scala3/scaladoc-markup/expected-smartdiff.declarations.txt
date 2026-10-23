@@ -1,0 +1,3 @@
+status: ANALYZED
+class Cart  old 6-23  new 6-23
+  function total()  changed  old 15-20  new 15-20

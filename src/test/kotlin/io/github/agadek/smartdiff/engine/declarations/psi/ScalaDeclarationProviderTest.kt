@@ -7,6 +7,7 @@ import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.Status
+import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
 import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy
 
@@ -272,6 +273,49 @@ class ScalaDeclarationProviderTest : ProviderTestCase() {
         assertTrue("bad has the parse error: ${Rendering.tree(tree, text)}", broken.children.first { it.name == "bad" }.hasParseError)
     }
 
+    fun `test Scaladoc markup errors are not parse errors`() {
+        val text = "object A {\n  /** Turns F[G[A]] into G[F[A]]. */\n  def sequence = 1\n  def other = 2\n}\n"
+
+        val tree = build("Scala", text)
+
+        assertFalse(tree.fileRegion.hasParseError || tree.all.any { it.hasParseError })
+    }
+
+    fun `test a declaration with Scaladoc markup errors is analyzed, changed or not`() {
+        val old = "object A {\n  /** Turns F[G[A]] into G[F[A]]. */\n  def sequence = 1\n  def other = 2\n}\n"
+
+        val bodyChanged = compare(old, old.replace("sequence = 1", "sequence = 3"))
+        val docChanged = compare(old, old.replace("Turns", "Swaps"))
+        val otherChanged = compare(old, old.replace("other = 2", "other = 3"))
+
+        for (result in listOf(bodyChanged, docChanged, otherChanged)) assertEquals(Status.ANALYZED, result.status)
+        assertEquals(Content.CHANGED, bodyChanged.changes.single().children.single { it.isReported }.content)
+        assertEquals("sequence", (docChanged.changes.single().children.single { it.isReported }.subject as Subject.Declaration).name)
+        assertEquals(Content.CHANGED, docChanged.changes.single().children.single { it.isReported }.content)
+        assertEquals("other", (otherChanged.changes.single().children.single { it.isReported }.subject as Subject.Declaration).name)
+    }
+
+    fun `test a parse error in code still makes a changed declaration unanalyzed`() {
+        val old = "object A {\n  /** Turns F[G[A]] into G[F[A]]. */\n  def sequence = (1\n  def other = 2\n}\n"
+        val new = old.replace("(1", "(2")
+
+        val result = compare(old, new)
+
+        assertEquals(Status.PARTIAL, result.status)
+        assertEquals(Content.UNANALYZED, result.changes.single().children.single { it.isReported }.content)
+    }
+
+    fun `test a declaration with a parse error is unchanged when its source is the same on both sides`() {
+        val old = "object A {\n  def broken = (1\n  def other = 2\n}\n"
+        val new = old.replace("other = 2", "other = 3")
+        assertTrue("broken has a parse error", build("Scala", old).all.single { it.name == "broken" }.hasParseError)
+
+        val result = compare(old, new)
+
+        assertEquals(Rendering.result(result, old, new), Status.ANALYZED, result.status)
+        assertEquals("other", (result.changes.single().children.single { it.isReported }.subject as Subject.Declaration).name)
+    }
+
     fun `test local definitions, anonymous classes and statements are part of their container`() {
         val text = "class A {\n  def f = {\n    def g = 1\n    val h = 2\n    g + h\n  }\n  val r = new Runnable { def run(): Unit = () }\n  println(1)\n  import scala.util.Try\n}\n"
 
@@ -314,10 +358,73 @@ class ScalaDeclarationProviderTest : ProviderTestCase() {
         assertEquals(WhitespacePolicy.INDENTATION_SIGNIFICANT, tree.whitespacePolicy)
     }
 
-    fun `test Scala 2 code that Scala 3 also parses goes to Scala 3`() {
+    fun `test Scala 2 code that Scala 3 also parses goes to Scala 2`() {
         val procedureSyntax = "object B { def f() { println(1) } }\n"
 
-        assertEquals("Scala 3", dialect(procedureSyntax, procedureSyntax))
+        assertEquals("Scala", dialect(procedureSyntax, procedureSyntax))
+    }
+
+    fun `test cats-style Scala 2 code takes Scala 2, so re-indenting it is formatting-only`() {
+        val old = """
+            package cats
+
+            import cats.syntax.all._
+
+            /** A type class, as in cats. */
+            trait Show[A] extends Serializable { self =>
+              def show(a: A): String
+
+              def contramap[B](f: B => A): Show[B] = new Show[B] {
+                def show(b: B): String = self.show(f(b))
+              }
+            }
+
+            object Show {
+              def apply[A](implicit instance: Show[A]): Show[A] = instance
+
+              implicit val catsShowForInt: Show[Int] = new Show[Int] {
+                def show(a: Int): String = a.toString
+              }
+
+              implicit def catsShowForList[A: Show]: Show[List[A]] = (xs: List[A]) => xs.map(Show[A].show).mkString("[", ", ", "]")
+            }
+        """.trimIndent() + "\n"
+        val new = old.replace("  def apply[A]", "    def apply[A]")
+
+        assertEquals("Scala", dialect(old, new))
+        val result = compare(old, new)
+        assertEquals(Status.ANALYZED, result.status)
+        assertEquals(Content.FORMATTING_ONLY, result.changes.single { it.isReported }.children.single { it.isReported }.content)
+    }
+
+    fun `test any Scala 3 syntax takes Scala 3`() {
+        val samples = listOf(
+            "object A { def f(a: Boolean) = if a then 1 else 2 }\n",
+            "object A { given Int = 1 }\n",
+            "object A { def f(using x: Int) = x }\n",
+            "object A:\n  def f = 1\n",
+            "package a:\n  object A\n",
+            "def top = 1\n",
+            "object A { enum E { case X } }\n",
+            "object A { extension (s: String) def shout = s }\n",
+            "object A { export B.f }\n",
+            "object A {\n  def f = 1\n}\nend A\n",
+            "object A { inline def f = 1 }\n",
+            "object A { opaque type Id = Int }\n",
+            "object A { type F = [X] =>> List[X] }\n",
+            "object A { val f: Int ?=> Int = 1 }\n",
+            "object A { case class P(x: Int) derives CanEqual }\n",
+        )
+        for (sample in samples) assertEquals(sample, "Scala 3", dialect(sample, sample))
+    }
+
+    fun `test syntax Scala 2 accepts under -Xsource 3 does not take Scala 3`() {
+        val samples = listOf(
+            "object A { def f(x: Int)(implicit o: Ordering[Int]) = g(x)(using o) }\n",
+            "object A { def f(c: Class[?]) = c }\n",
+            "object A { @inline def f = 1 }\n",
+        )
+        for (sample in samples) assertEquals(sample, "Scala", dialect(sample, sample))
     }
 
     fun `test code Scala 3 dropped is parsed as Scala 2`() {

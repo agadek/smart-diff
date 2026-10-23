@@ -242,6 +242,17 @@ class DeclarationAnalysisTest {
     }
 
     @Test
+    fun `an unchanged file region with a parse error is unchanged`() {
+        val old = tree(fileRegion = "import a", fileRegionParseError = true) { cls("A") }
+        val new = tree(fileRegion = "import a", fileRegionParseError = true) { cls("A") }
+
+        val result = compare(old, new)
+
+        assertNull(result.fileRegion)
+        assertEquals(Status.ANALYZED, result.status)
+    }
+
+    @Test
     fun `a side with a parse error and no declarations fails`() {
         val broken = tree(fileRegion = "class {", fileRegionParseError = true)
 

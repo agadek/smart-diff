@@ -52,6 +52,9 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
      */
     protected abstract fun describe(element: PsiElement): DeclarationInfo?
 
+    /** Whether [error] is a parse error in code (§6.7); a language can leave out errors that are not, such as doc markup. */
+    protected open fun isParseError(error: PsiErrorElement): Boolean = true
+
     /** How the whitespace of [file] counts (§8 step 4); the same for every file unless a dialect changes it. */
     protected open fun whitespacePolicy(file: PsiFile): WhitespacePolicy = whitespacePolicy
 
@@ -78,6 +81,7 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
         var fileRegionError = false
         for (error in PsiTreeUtil.collectElementsOfType(file, PsiErrorElement::class.java)) {
             cancellation.checkCanceled()
+            if (!isParseError(error)) continue
             // In an element shared by several declarations, the one whose part holds the error; between parts, the container.
             val offset = error.textRange.startOffset
             val owner = generateSequence(error.parent) { it.parent }.takeWhile { it !is PsiFile }.firstNotNullOfOrNull { element ->

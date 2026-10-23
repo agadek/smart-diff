@@ -1,6 +1,9 @@
 package io.github.agadek.smartdiff.engine.declarations.psi
 
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.util.ThrowableComputable
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ChangeNode
@@ -18,14 +21,15 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Runs the declaration engine over real commits and writes what it reports, to find wrong and noisy results before a
- * release: every modified Java or Kotlin file of every listed commit is compared, parent revision against commit, with
+ * release: every modified Java, Kotlin or Scala file of every listed commit is compared, parent revision against commit, with
  * the default limits, and results that look wrong or noisy are flagged for review.
  *
  * The commits come from the file named by `-Psmartdiff.validation.corpus=<list>`; without it the test only says it was
  * skipped, so CI does not need the corpus. Each line of the list is a local Git repository followed by `git rev-list`
  * arguments, for example `/src/okhttp --no-merges --max-count=40 HEAD`; lines starting with `#` are comments.
  *
- * The report goes to `build/reports/smartdiff-validation/`: `summary.tsv` with one row per file and its flags, and
+ * The report goes to `build/reports/smartdiff-validation/`: `summary.tsv` with one row per file, its flags and, for Scala,
+ * the dialect both sides were parsed in, and
  * `report.md` with the outline and the native hunk headers of each flagged file. Flags:
  * - `status`: the outline falls back to the native diff (anything but ANALYZED).
  * - `hidden`: a difference lies outside every reported change (technical specification §3.1 rule 6).
@@ -51,23 +55,28 @@ class CorpusValidationTest : BasePlatformTestCase() {
         for (line in File(list).readLines().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("#") }) {
             val words = line.split(Regex("\\s+"))
             val repository = File(words.first())
-            val commits = git(repository, listOf("rev-list") + words.drop(1) + listOf("--", "*.java", "*.kt")).lines().filter { it.isNotBlank() }
+            val commits = git(repository, listOf("rev-list") + words.drop(1) + listOf("--", "*.java", "*.kt", "*.scala")).lines().filter { it.isNotBlank() }
             for ((index, commit) in commits.withIndex()) {
                 println("VALIDATION ${repository.name} commit ${index + 1} of ${commits.size}: ${commit.take(10)}")
                 val parent = git(repository, listOf("rev-parse", "--verify", "--quiet", "$commit^"), allowFailure = true).trim()
                 if (parent.isEmpty()) continue
-                val paths = git(repository, listOf("diff", "--name-only", "--diff-filter=M", parent, commit, "--", "*.java", "*.kt"))
+                val paths = git(repository, listOf("diff", "--name-only", "--diff-filter=M", parent, commit, "--", "*.java", "*.kt", "*.scala"))
                     .lines().filter { it.isNotBlank() }
                 for (path in paths) {
                     val old = git(repository, listOf("show", "$parent:$path")).replace("\r\n", "\n")
                     val new = git(repository, listOf("show", "$commit:$path")).replace("\r\n", "\n")
                     val hunks = git(repository, listOf("diff", "-U0", parent, commit, "--", path)).lines().filter { it.startsWith("@@") }
-                    val languageId = if (path.endsWith(".kt")) "kotlin" else "JAVA"
+                    val languageId = when {
+                        path.endsWith(".kt") -> "kotlin"
+                        path.endsWith(".scala") -> "Scala"
+                        else -> "JAVA"
+                    }
                     val request = ComparisonRequest(old, new, languageId, File(path).name)
                     val start = System.nanoTime()
                     val result = onPooledThread { compareSafely(engine, request, Cancellation.NONE) }
                     val millis = (System.nanoTime() - start) / 1_000_000
-                    rows += Row(repository.name, commit.take(10), path, old, new, hunks, result, millis, flags(old, new, hunks.size, result, millis))
+                    val dialect = dialect(languageId, old, new)
+                    rows += Row(repository.name, commit.take(10), path, old, new, hunks, result, millis, flags(old, new, hunks.size, result, millis), dialect)
                 }
             }
         }
@@ -76,10 +85,18 @@ class CorpusValidationTest : BasePlatformTestCase() {
 
     private class Row(
         val repository: String, val commit: String, val path: String, val old: String, val new: String,
-        val hunks: List<String>, val result: ComparisonResult, val millis: Long, val flags: List<String>,
+        val hunks: List<String>, val result: ComparisonResult, val millis: Long, val flags: List<String>, val dialect: String?,
     ) {
         /** Whether the report lists this file. */
         val flagged: Boolean get() = flags.isNotEmpty()
+    }
+
+    /** The dialect a language with several, such as Scala, parses both sides in; null for the others. */
+    private fun dialect(languageId: String, old: String, new: String): String? {
+        val provider = DeclarationProvider.EP_NAME.extensionList.firstOrNull { it.supports(languageId) } ?: return null
+        return ReadAction.compute(ThrowableComputable<String?, RuntimeException> {
+            provider.dialect(ProjectManager.getInstance().defaultProject, old, new, null)?.id
+        })
     }
 
     private fun flags(old: String, new: String, hunks: Int, result: ComparisonResult, millis: Long): List<String> = buildList {
@@ -123,10 +140,10 @@ class CorpusValidationTest : BasePlatformTestCase() {
     private fun write(rows: List<Row>) {
         val directory = File("build/reports/smartdiff-validation").apply { mkdirs() }
         File(directory, "summary.tsv").writeText(buildString {
-            appendLine("repository\tcommit\tpath\tstatus\thunks\treported\tformatting-only\tms\tflags")
+            appendLine("repository\tcommit\tpath\tstatus\thunks\treported\tformatting-only\tms\tflags\tdialect")
             for (row in rows) {
                 appendLine(listOf(row.repository, row.commit, row.path, row.result.status, row.hunks.size, reported(row.result),
-                    formattingOnly(row.result), row.millis, row.flags.joinToString(",")).joinToString("\t"))
+                    formattingOnly(row.result), row.millis, row.flags.joinToString(","), row.dialect.orEmpty()).joinToString("\t"))
             }
         })
         File(directory, "report.md").writeText(buildString {
@@ -139,7 +156,7 @@ class CorpusValidationTest : BasePlatformTestCase() {
                 appendLine()
                 appendLine("## ${row.repository} ${row.commit} ${row.path}")
                 appendLine()
-                appendLine("Flags: ${row.flags.joinToString(", ")}; ${row.millis} ms")
+                appendLine("Flags: ${row.flags.joinToString(", ")}; ${row.millis} ms" + (row.dialect?.let { "; $it" } ?: ""))
                 appendLine()
                 appendLine("```")
                 append(Rendering.result(row.result, row.old, row.new))
