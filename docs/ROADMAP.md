@@ -59,8 +59,8 @@ It comes right after the [Changes tree level 2](#multi-file-summary-in-the-chang
 
 - **Approach:** run the selected comparison engine twice, base → left and base → right, and join both results on base-side ranges. No change to the engine interface; the request gains an optional hint so the Scala dialect is chosen from all three texts.
 - **Groups:** changed on both sides (likely conflicts), changed only on one side, uncertain; the same change on both sides is marked as such.
-- **Integration:** a `DiffExtension` for three-sided diffs, and for the merge window either the same extension or a `MergeTool` that delegates to the platform's, decided by spike S6 (technical spec §13). Base ranges are tracked into the editable result pane.
-- **Phases:** spike S6 first, then the join, three-sided diffs, the merge window, Scala fixtures and a validation on replayed merge commits.
+- **Integration:** a `DiffExtension` for three-sided diffs, and for the merge window a `MergeTool` registered first that decorates the platform's own merge viewer, decided by spike S6 ([ADR 0007](adr/0007-merge-outline-attaches-through-a-delegating-merge-tool.md)). Base ranges are tracked into the editable result pane.
+- **Phases:** spike S6 first (done 2026-10-23, [THREE-WAY-MERGE.md §12](THREE-WAY-MERGE.md#12-spike-s6-results)), then the join, three-sided diffs, the merge window, Scala fixtures and a validation on replayed merge commits.
 - **Decided 2026-10-23** ([THREE-WAY-MERGE.md §10](THREE-WAY-MERGE.md#10-decisions)): grouped by side with a toggle to the container tree; sides named by the merge window's titles, shortened; rows changed on both sides that merged without a conflict marked as such; the outline follows the existing setting; the item comes right after the Changes tree level 2.
 
 ### More languages
