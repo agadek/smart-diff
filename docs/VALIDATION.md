@@ -110,6 +110,14 @@ corpus did that.
 5. Recheck the 10 parser-gap files with newer Scala plugin releases; report the constructs to the Scala plugin if
    they still fail.
 
+**After fixes 1, 2 and 4** (Scaladoc errors ignored, identical declarations unchanged despite parse errors, Scala 2 for
+code without Scala 3 syntax), on the same corpus: 595 files `ANALYZED` and 1 `PARTIAL` (scala3 `Implicits.scala`,
+where the changed declaration itself has a parser gap), against 536 and 60; 1 unanalyzed row, against 163. All 307
+cats files now take Scala 2, zio 109 of 118 (the other 9 are in `scala-3/` source directories or use top-level
+definitions) and scala3 17 of 171, 433 in all. 21 files are flagged, against 79: `rename` 10, `noisy` 7,
+`rename-candidate` 4, `same-name` 1, `status` 1; the trait-to-class files remain. The median time was 23 ms and the
+slowest file took 619 ms (zio `ZStream.scala`), since files without Scala 3 syntax are now parsed in both dialects.
+
 ## 2026-10-22: 0.1.1 noise pass
 
 **Corpus:** the same 234 commits and 1279 files as before 0.1.0, from the same clones.
