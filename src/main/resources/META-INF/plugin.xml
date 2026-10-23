@@ -56,6 +56,12 @@
         <diff.DiffExtension implementation="io.github.agadek.smartdiff.ui.OutlineDiffExtension"/>
         <!-- Offered beside the native viewer, which stays the default: fades the changes the outline filter hides. -->
         <diff.DiffTool implementation="io.github.agadek.smartdiff.ui.FilteringDiffTool"/>
+        <!-- The merge window runs no DiffExtension: this tool lets the platform's text merge tool create the viewer and
+             attaches beside it (ADR 0007). It accepts nothing while the preview registry key below is off. -->
+        <diff.merge.MergeTool order="first" implementation="io.github.agadek.smartdiff.ui.merge.MergeOutlineTool"/>
+        <!-- Spike S6: a placeholder for the three-way merge outline in three-sided diffs and the merge window. -->
+        <registryKey key="smartdiff.merge.outline.preview" defaultValue="false"
+                     description="Show the SMART Diff three-way merge outline placeholder (preview, spike S6)"/>
         <applicationConfigurable parentId="tools"
                                  id="io.github.agadek.smartdiff.settings"
                                  displayName="SMART Diff"
