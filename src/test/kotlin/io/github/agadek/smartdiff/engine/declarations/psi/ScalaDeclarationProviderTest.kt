@@ -6,10 +6,12 @@ import com.intellij.openapi.util.ThrowableComputable
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.Content
+import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
 import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy
+import io.github.agadek.smartdiff.ui.OutlineModel
 
 /**
  * The Scala provider's declarations, names, signatures and ranges (technical specification §6.8, §6.6, §6.7), in the
@@ -373,10 +375,14 @@ class ScalaDeclarationProviderTest : ProviderTestCase() {
         assertEquals("class P", Rendering.subject(result.changes.single { it.content != Content.UNCHANGED }.subject))
     }
 
-    fun `test changing a class into a trait removes one and adds the other`() {
+    fun `test changing a class into a trait is one declaration that changed kind`() {
         val result = compare("class Shape\n", "trait Shape\n")
 
-        assertEquals(listOf("class Shape" to "removed", "trait Shape" to "added"), result.changes.map { Rendering.subject(it.subject) to it.presence.name.lowercase() })
+        val shape = result.changes.single()
+        assertEquals("trait Shape", Rendering.subject(shape.subject))
+        assertEquals(DeclarationKind.CLASS, shape.kindChangedFrom)
+        assertTrue(shape.signatureChanged)
+        assertEquals("class → trait Shape", OutlineModel.title(shape))
     }
 
     fun `test tokens come from the Scala lexer`() {

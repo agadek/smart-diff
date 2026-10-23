@@ -10,6 +10,7 @@
 
 - Scala: Scaladoc markup the Scala plugin flags, such as `[[F[A]]]` in prose, no longer marks declarations unanalyzed.
 - A declaration with a parse error is shown as unchanged when its source is the same on both sides, so a parse error marks only code that changed.
+- A class turned into a trait or interface, or a Scala `def` turned into a `val`, is shown as one declaration that changed kind, such as `trait → class Shape`, instead of being removed and added with all its members moved.
 - Scala 2 code that the Scala 3 parser also accepts is now read as Scala 2, so re-indenting it is shown as formatting-only.
 
 ## [0.1.0] - 2026-10-22

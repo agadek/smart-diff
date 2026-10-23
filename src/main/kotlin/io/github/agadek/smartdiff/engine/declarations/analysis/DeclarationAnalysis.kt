@@ -5,6 +5,7 @@ import io.github.agadek.smartdiff.engine.api.Candidate
 import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.Content
+import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.api.Origin
 import io.github.agadek.smartdiff.engine.api.Presence
@@ -180,8 +181,9 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
                 presence = Presence.MATCHED,
                 children = children,
                 moved = match.moved,
-                signatureChanged = match.old.signature != match.new.signature,
+                signatureChanged = signatureChanged(match),
                 renamedFrom = if (match.rule == MatchRule.RENAME_CANDIDATE) subject(match.old) else null,
+                kindChangedFrom = match.old.kind.takeIf { it != match.new.kind },
                 content = content(match),
             )
             if (extracted.isEmpty()) return node
@@ -198,9 +200,13 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
                 match.new.ownTokens,
                 new.whitespacePolicy,
                 parseError = match.old.hasParseError || match.new.hasParseError,
-                signatureChanged = match.old.signature != match.new.signature,
+                signatureChanged = signatureChanged(match),
             )
         }
+
+        /** A different signature, or a different kind (rule M4b), which changes how the declaration is used. */
+        private fun signatureChanged(match: Match): Boolean =
+            match.old.signature != match.new.signature || match.old.kind != match.new.kind
 
         /**
          * The old side's [tokens] with the old [from] name written as the new [to] name, so a rename (or a constructor
@@ -231,6 +237,7 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
             moved: Boolean = false,
             signatureChanged: Boolean = false,
             renamedFrom: Subject? = null,
+            kindChangedFrom: DeclarationKind? = null,
             content: Content = Content.UNCHANGED,
             candidates: List<Candidate> = emptyList(),
             oldDeclaration: Declaration? = declaration.takeIf { oldRange != null },
@@ -247,6 +254,7 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
                 candidates = candidates,
                 children = children,
                 renamedFrom = renamedFrom,
+                kindChangedFrom = kindChangedFrom,
             )
             // A change covers the declaration's leading whitespace too, which is part of its own tokens (§8).
             val oldLeading = oldDeclaration?.leadingWhitespace
