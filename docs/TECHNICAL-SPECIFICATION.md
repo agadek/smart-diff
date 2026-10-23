@@ -14,7 +14,7 @@ In scope:
 
 Out of scope for the first release:
 
-- Three-way merge (planned, see [roadmap](ROADMAP.md#structural-outline-for-three-way-merges)), directory diffs, binary content, and patch previews without full file content.
+- Three-way merge (planned in [THREE-WAY-MERGE.md](THREE-WAY-MERGE.md)), directory diffs, binary content, and patch previews without full file content.
 - Comparisons where the old side and new side are different languages.
 - A change-list-level overview across files (Q3, decided: per-file only). The first step after it, a per-file summary in the Changes tree, is in §9.4.
 - Engines other than the declaration engine (except a test-only engine used to verify the abstraction).
@@ -479,6 +479,7 @@ Spikes S1 to S3 ran as platform tests and were retired once the tests of §12 co
 | S3 | Are the limits in §9.3 realistic? | Analysis time measured on the 20 largest Java/Kotlin files in the IntelliJ Community repository | Done 2026-10-21: yes, kept as they are (§9.3); rerun with `LimitsBenchmarkTest` |
 | S4 | After the first release, for [Scala](ROADMAP.md#scala): can the provider choose the Scala 2 or Scala 3 dialect for text-built PSI (from the file's module, `scalaVersion`, or syntax), and does the Scala plugin's PSI give correct declarations and offsets for both? | Provider tests pass for both dialects on VCS-revision content, with a documented fallback when the dialect is unknown | Done 2026-10-22: the file's language alone decides the dialect, and both texts choose it together by parse errors and Scala 3 syntax (§6.2); offsets equal the request text in both dialects; covered by `ScalaDeclarationProviderTest` |
 | S5 | After the first release, for the [Changes tree summary](ROADMAP.md#multi-file-summary-in-the-changes-tree): which extension points can add text or child nodes to file entries of the Changes tree? | The hooks of the Local Changes and Commit tree are known, with a choice for level 1 | Done 2026-10-22: `changesViewModifier`, replacing file nodes ([ADR 0006](adr/0006-changes-tree-summary-through-changes-view-modifier.md)); now covered by `ChangesSummaryTest` |
+| S6 | After the first release, for the [three-way merge outline](THREE-WAY-MERGE.md): does the merge window run `DiffExtension`s, or must a delegating `MergeTool` wrap the platform's text merge viewer? Which titles name the sides in a merge, rebase, cherry-pick and unstash, and does the result pane start as the base? | A placeholder attaches to a Java merge window and a three-sided diff in a platform test, with the choice in ADR 0007 | Planned |
 
 ## 14. Open questions
 
