@@ -1,6 +1,6 @@
 # Three-Way Merge Outline Plan
 
-Status: proposal, 2026-10-23; nothing is implemented. It expands the roadmap's [structural outline for three-way merges](ROADMAP.md#structural-outline-for-three-way-merges) entry. Section numbers (§) refer to the [technical specification](TECHNICAL-SPECIFICATION.md), and terms follow the [glossary](GLOSSARY.md). Supported languages are those of the declaration engine today: Java, Kotlin, Scala 2 and Scala 3.
+Status: proposal, 2026-10-23, with its open questions T1 to T5 decided the same day (§10); nothing is implemented. It expands the roadmap's [structural outline for three-way merges](ROADMAP.md#structural-outline-for-three-way-merges) entry. Section numbers (§) refer to the [technical specification](TECHNICAL-SPECIFICATION.md), and terms follow the [glossary](GLOSSARY.md). Supported languages are those of the declaration engine today: Java, Kotlin, Scala 2 and Scala 3.
 
 ## 1. Problem
 
@@ -38,12 +38,12 @@ Non-goals:
 The plan is phased so that the riskiest assumptions are tested before anything is built on them (§9). Each risk names the phase that settles it.
 
 - **R1 Attaching to the merge window (Phase 0).** The outline attaches to two-sided diffs through `DiffExtension.onViewerCreated` ([ADR 0005](adr/0005-outline-attaches-to-the-native-diff-viewer.md)). That callback is run by `DiffRequestProcessor`; the merge window is run by a different processor (`MergeRequestProcessor`, with `TextMergeTool` creating a `TextMergeViewer`), which may not call diff extensions at all. If it does not, the fallback is a `MergeTool` registered first that delegates to the platform's text merge tool and wraps its component (§6.2). Either way, the attachment depends on layout details that no API promises.
-- **R2 Which side is which (Phase 0).** The left pane is not always "my" code: in a rebase the left side is the branch being rebased onto and the right side the commit being replayed, the reverse of a merge. Labelling sides "ours" and "theirs" would be wrong half the time. The plan uses the window's own content titles (`MergeRequest`/`ContentDiffRequest.getContentTitles()`), which the VCS integration sets correctly for each operation (open question T2).
+- **R2 Which side is which (Phase 0).** The left pane is not always "my" code: in a rebase the left side is the branch being rebased onto and the right side the commit being replayed, the reverse of a merge. Labelling sides "ours" and "theirs" would be wrong half the time. The plan names sides from the window's own content titles (`MergeRequest`/`ContentDiffRequest.getContentTitles()`), which the VCS integration sets correctly for each operation, shortened to the branch or revision they name (decision T2, §4).
 - **R3 The base must be the same tree twice (Phase 1).** The join (§5) runs the engine base → left and base → right and matches results by base-side ranges. That only works if both runs see the same base declarations. Java and Kotlin parse the same text the same way (§3.1 rule 2), but the Scala provider chooses the dialect from both texts of a comparison (§6.2): base + left could choose Scala 2 while base + right chooses Scala 3, giving two base trees with different whitespace policies and possibly different declarations. §5.3 adds a hint so the dialect is chosen from all three texts, and the join checks the two base trees agree.
 - **R4 The result pane moves (Phase 3).** The result pane is editable and the reviewer changes it while the outline is open; "Apply non-conflicting changes" and automatic import resolution can change it before the reviewer does anything. The outline's own input (base, left, right) never changes, so the outline itself is never stale, but its base-side ranges must be mapped into the current result to frame a declaration there (§6.3).
 - **R5 Internal API (Phase 0).** The merge viewer classes live in the platform's `diff-impl` module, and some may be internal. Plugin Verifier reports internal-API use; the spike lists what the attachment needs, and anything internal must be reviewed each release, as for the Scala PSI.
-- **R6 "Changed on both sides" is not "conflict" (Phase 5).** A declaration both sides changed may merge without a textual conflict (the `validate()` row in §1), and a textual conflict may lie in a declaration only one side changed in content (the other only reformatted it, or the conflict is in the blank lines between two declarations). The outline must not look like a second, disagreeing list of conflicts (open question T3).
-- **R7 Space (Phase 3).** The merge window already has three editors. A fourth column beside them may be too narrow on a laptop screen; the outline may need to sit below the editors or start collapsed in this window.
+- **R6 "Changed on both sides" is not "conflict" (Phase 5).** A declaration both sides changed may merge without a textual conflict (the `validate()` row in §1), and a textual conflict may lie in a declaration only one side changed in content (the other only reformatted it, or the conflict is in the blank lines between two declarations). The outline must not look like a second, disagreeing list of conflicts, so rows that merged without a conflict say so (decision T3, §4).
+- **R7 Space (Phase 3).** The merge window already has three editors. A fourth column beside them may be too narrow on a laptop screen. The outline follows the existing setting and toggle (decision T4); if the validation shows the column too tight, it may sit below the editors or start collapsed in this window.
 - **R8 Cost (Phase 1).** Two comparisons parse the base twice, and an optional third (§5.2) parses both sides again. Spike S3's timings (§9.3) leave room for this, but the 5 s limit has to cover all runs together.
 
 ## 4. Behaviour
@@ -63,13 +63,16 @@ Changed in feature only
 File region                 main: formatting-only                  feature: changed
 ```
 
-- **Groups,** in this order: *changed on both sides*, then each side alone, then *uncertain*. A declaration is in *changed on both sides* when each side reports it (§5, the reported rule), whatever the kinds of change; that includes removed on one side and changed on the other, a rename on one side and a change on the other, and added on both sides with the same key. Whether this grouping is primary is open question T1.
+- **Two layouts, with a toggle** (decision T1). The outline opens **grouped by side**, as above: *changed on both sides*, then each side alone, then *uncertain*. A toolbar toggle switches to the **container tree** of the two-sided outline, where each row carries both sides' labels (`method validate()  main: changed · feature: changed`) and the change type filter gains *changed on both sides*. The choice is remembered as a setting. Both layouts are built from the same join result (§5); only the rows differ, and each golden fixture renders both.
+- **Groups:** a declaration is in *changed on both sides* when each side reports it (§5, the reported rule), whatever the kinds of change; that includes removed on one side and changed on the other, a rename on one side and a change on the other, and added on both sides with the same key.
+- **Merged without a conflict** (decision T3): a row in *changed on both sides* with no conflict of the merge window inside its result-pane range gets the grey note `merged without conflict` and sorts after the rows with conflicts, so real conflicts come first and silent combinations right after them. It needs the merge window's conflict ranges, which spike S6 checks; if they are not reachable through an API SMART Diff may use, the note is left out and the rows stay ordinary rows of the group. Three-sided diffs have no conflicts and never show the note.
 - **Same change on both sides:** when both sides made the identical change (the declaration's text on the left equals its text on the right), the row says `same change on both sides` and sorts last in its group. A cherry-picked fix that is already on the target branch is the common case.
+- **Side names** (decision T2): each side is named from the window's content title for its pane, shortened to the branch or revision the title names (`Changes from origin/feature/rates` → `feature/rates`, a commit → its short hash). A title in a form the parser does not know is shown as written, cut at 20 characters. The full title is the row label's tooltip and part of its accessible name. The parser covers the titles of Git merge, rebase, cherry-pick and unstash that S6 records, with a unit test per form.
 - **Labels per side:** a row in *changed on both sides* shows each side's labels after the side's name, as in the two-sided outline (§10). A row in a one-side group shows only that side's labels.
 - **Uncertain:** a declaration uncertain on either side goes to the *uncertain* group with that side's candidates, as in the two-sided outline. The join never resolves an uncertain match with information from the other side.
 - **Selection** frames the declaration in all three panes: the left side's range on the left, the right side's range on the right, and the base range mapped into the result pane (§6.3). A side where it is absent shows "not present" for that pane; a result pane where the mapping is lost shows "not tracked". Enter moves the caret into the result pane.
 - **Summary line:** counts by group, `2 changed on both sides · 2 in main only · 1 in feature only`, with uncertain and unanalyzed counts as in §10. The change type filter (§10) applies to each side's labels; a row is hidden only when every label on both sides is of a hidden type.
-- **Engine dropdown, refresh and the outline toggle** behave as in two-sided diffs; one engine runs on both sides.
+- **Engine dropdown, refresh and the outline toggle** behave as in two-sided diffs; one engine runs on both sides. The outline opens in the merge window whenever "Show structural outline automatically" (§11) is on, as in every diff, with no separate setting (decision T4).
 - **Three-sided diffs** that are not merges get the same outline. Their middle pane is the base itself, so no mapping is needed (§6.1).
 
 ## 5. The join
@@ -160,22 +163,24 @@ Done when there are no join mismatches, every reviewed `both-sides-clean` and `c
 
 | Phase | Work | Settles | Done when |
 | --- | --- | --- | --- |
-| 0 | Spike S6 (§13): Option A or B for the merge window; side titles in merge, rebase, cherry-pick and unstash; whether the result starts as the base; whether conflicted files open a three-sided diff from the Changes view; a toolbar group in the merge window; Plugin Verifier output for the needed classes | R1, R2, R5 | A placeholder attaches to a Java merge window and a three-sided diff in a platform test, and ADR 0007 records the choice |
+| 0 | Spike S6 (§13): Option A or B for the merge window; side titles in merge, rebase, cherry-pick and unstash (T2); whether the result starts as the base; whether the merge window's conflict ranges are reachable (T3); whether conflicted files open a three-sided diff from the Changes view; a toolbar group in the merge window; Plugin Verifier output for the needed classes | R1, R2, R5 | A placeholder attaches to a Java merge window and a three-sided diff in a platform test, and ADR 0007 records the choice |
 | 1 | Join (§5) in the new `merge` package with its unit tests; `relatedTexts` and the three-text Scala dialect | R3, R8 | Join unit tests and the dialect provider test pass |
-| 2 | Three-sided diffs (§6.1): outline rows, groups, three-pane navigation, summary line | — | Golden merge fixtures pass for Java and Kotlin through the three-sided outline |
-| 3 | The merge window (§6.2, §6.3): attachment per ADR 0007, result-pane mapping, toggle, layout | R4, R7 | `MergeOutlineIntegrationTest` passes on both Plugin Verifier IDEs |
+| 2 | Three-sided diffs (§6.1): outline rows in both layouts and the toggle (T1), short side names (T2), three-pane navigation, summary line, glossary terms | — | Golden merge fixtures pass for Java and Kotlin through the three-sided outline |
+| 3 | The merge window (§6.2, §6.3): attachment per ADR 0007, result-pane mapping, the `merged without conflict` note (T3), toggle, layout | R4, R7 | `MergeOutlineIntegrationTest` passes on both Plugin Verifier IDEs |
 | 4 | Scala 2 and Scala 3 merge fixtures | R3 | Golden fixtures pass in both dialects |
 | 5 | Merge validation (§8), results in VALIDATION.md | R6 | The criteria in §8 are met |
 
 Each phase is one pull request, and each runs the full CI steps (build, tests, Plugin Verifier) before it is pushed.
 
-## 10. Open questions
+## 10. Decisions
 
-- **T1 Primary grouping.** Group by "changed on both sides / left only / right only" (proposed), or keep the two-sided outline's tree by container with per-side labels and a filter for "changed on both sides"? Grouping makes likely conflicts stand out; the tree keeps a class's members together.
-- **T2 Side names.** Use the window's content titles as written (proposed; they can be long, such as "Changes from feature/rates"), shorten them to the branch or revision when the title names one, or use fixed "left" and "right"? Glossary terms follow the answer: *base* and the two *sides* are new terms, since the glossary's *old side* and *new side* do not fit three versions.
-- **T3 Changed on both sides without a conflict.** Show these rows as ordinary members of *changed on both sides* (proposed), mark them "merged without a conflict", or leave them out of the group? They are the merge's silent risk, but also its most frequent false alarm (R6).
-- **T4 Opening by default in the merge window.** Follow the existing "Show structural outline automatically" setting (proposed), or add a separate setting for merges, since the merge window is more crowded (R7)?
-- **T5 Order in the roadmap.** Before or after the Changes tree level 2 and the other items under Later? The roadmap leaves the order open.
+Decided 2026-10-23:
+
+- **T1 Layout.** Both layouts, grouped by side by default with a toolbar toggle to the container tree with per-side labels (§4). Grouping makes likely conflicts stand out; the tree keeps a class's members together.
+- **T2 Side names.** The window's content titles, shortened to the branch or revision they name, with the full title in a tooltip (§4). Glossary terms: *base* and the two *sides* are new terms, since the glossary's *old side* and *new side* do not fit three versions; they are added to the glossary with phase 2.
+- **T3 Changed on both sides without a conflict.** Same group, marked `merged without conflict` and sorted after rows with conflicts, falling back to plain rows if the conflict ranges are not reachable (§4).
+- **T4 Opening by default in the merge window.** Follows the existing "Show structural outline automatically" setting; no separate setting (§4).
+- **T5 Order in the roadmap.** Right after the [Changes tree level 2](ROADMAP.md#multi-file-summary-in-the-changes-tree), and before the other items under Later; spike S6 starts once level 2 is done.
 
 ## 11. Later
 

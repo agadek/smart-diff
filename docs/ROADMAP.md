@@ -55,13 +55,13 @@ Planned for the release after the first one (decided 2026-10-21), after the 0.1.
 
 ### Structural outline for three-way merges
 
-Show which declarations changed on each side of a merge, to help the user understand conflicts before resolving them, in the merge window and in three-sided diffs, for Java, Kotlin, Scala 2 and Scala 3. SMART Diff still never resolves or edits anything (merge conflict resolution stays a non-goal). Planned in [THREE-WAY-MERGE.md](THREE-WAY-MERGE.md) (proposal, 2026-10-23).
+It comes right after the [Changes tree level 2](#multi-file-summary-in-the-changes-tree) (decided 2026-10-23). Show which declarations changed on each side of a merge, to help the user understand conflicts before resolving them, in the merge window and in three-sided diffs, for Java, Kotlin, Scala 2 and Scala 3. SMART Diff still never resolves or edits anything (merge conflict resolution stays a non-goal). Planned in [THREE-WAY-MERGE.md](THREE-WAY-MERGE.md) (proposal, 2026-10-23).
 
 - **Approach:** run the selected comparison engine twice, base → left and base → right, and join both results on base-side ranges. No change to the engine interface; the request gains an optional hint so the Scala dialect is chosen from all three texts.
 - **Groups:** changed on both sides (likely conflicts), changed only on one side, uncertain; the same change on both sides is marked as such.
 - **Integration:** a `DiffExtension` for three-sided diffs, and for the merge window either the same extension or a `MergeTool` that delegates to the platform's, decided by spike S6 (technical spec §13). Base ranges are tracked into the editable result pane.
 - **Phases:** spike S6 first, then the join, three-sided diffs, the merge window, Scala fixtures and a validation on replayed merge commits.
-- **Open questions:** the primary grouping, side names, rows changed on both sides that merged without a conflict, the default visibility in the merge window, and the item's place in this roadmap ([THREE-WAY-MERGE.md §10](THREE-WAY-MERGE.md#10-open-questions)).
+- **Decided 2026-10-23** ([THREE-WAY-MERGE.md §10](THREE-WAY-MERGE.md#10-decisions)): grouped by side with a toggle to the container tree; sides named by the merge window's titles, shortened; rows changed on both sides that merged without a conflict marked as such; the outline follows the existing setting; the item comes right after the Changes tree level 2.
 
 ### More languages
 
