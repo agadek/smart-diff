@@ -358,10 +358,73 @@ class ScalaDeclarationProviderTest : ProviderTestCase() {
         assertEquals(WhitespacePolicy.INDENTATION_SIGNIFICANT, tree.whitespacePolicy)
     }
 
-    fun `test Scala 2 code that Scala 3 also parses goes to Scala 3`() {
+    fun `test Scala 2 code that Scala 3 also parses goes to Scala 2`() {
         val procedureSyntax = "object B { def f() { println(1) } }\n"
 
-        assertEquals("Scala 3", dialect(procedureSyntax, procedureSyntax))
+        assertEquals("Scala", dialect(procedureSyntax, procedureSyntax))
+    }
+
+    fun `test cats-style Scala 2 code takes Scala 2, so re-indenting it is formatting-only`() {
+        val old = """
+            package cats
+
+            import cats.syntax.all._
+
+            /** A type class, as in cats. */
+            trait Show[A] extends Serializable { self =>
+              def show(a: A): String
+
+              def contramap[B](f: B => A): Show[B] = new Show[B] {
+                def show(b: B): String = self.show(f(b))
+              }
+            }
+
+            object Show {
+              def apply[A](implicit instance: Show[A]): Show[A] = instance
+
+              implicit val catsShowForInt: Show[Int] = new Show[Int] {
+                def show(a: Int): String = a.toString
+              }
+
+              implicit def catsShowForList[A: Show]: Show[List[A]] = (xs: List[A]) => xs.map(Show[A].show).mkString("[", ", ", "]")
+            }
+        """.trimIndent() + "\n"
+        val new = old.replace("  def apply[A]", "    def apply[A]")
+
+        assertEquals("Scala", dialect(old, new))
+        val result = compare(old, new)
+        assertEquals(Status.ANALYZED, result.status)
+        assertEquals(Content.FORMATTING_ONLY, result.changes.single { it.isReported }.children.single { it.isReported }.content)
+    }
+
+    fun `test any Scala 3 syntax takes Scala 3`() {
+        val samples = listOf(
+            "object A { def f(a: Boolean) = if a then 1 else 2 }\n",
+            "object A { given Int = 1 }\n",
+            "object A { def f(using x: Int) = x }\n",
+            "object A:\n  def f = 1\n",
+            "package a:\n  object A\n",
+            "def top = 1\n",
+            "object A { enum E { case X } }\n",
+            "object A { extension (s: String) def shout = s }\n",
+            "object A { export B.f }\n",
+            "object A {\n  def f = 1\n}\nend A\n",
+            "object A { inline def f = 1 }\n",
+            "object A { opaque type Id = Int }\n",
+            "object A { type F = [X] =>> List[X] }\n",
+            "object A { val f: Int ?=> Int = 1 }\n",
+            "object A { case class P(x: Int) derives CanEqual }\n",
+        )
+        for (sample in samples) assertEquals(sample, "Scala 3", dialect(sample, sample))
+    }
+
+    fun `test syntax Scala 2 accepts under -Xsource 3 does not take Scala 3`() {
+        val samples = listOf(
+            "object A { def f(x: Int)(implicit o: Ordering[Int]) = g(x)(using o) }\n",
+            "object A { def f(c: Class[?]) = c }\n",
+            "object A { @inline def f = 1 }\n",
+        )
+        for (sample in samples) assertEquals(sample, "Scala", dialect(sample, sample))
     }
 
     fun `test code Scala 3 dropped is parsed as Scala 2`() {

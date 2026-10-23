@@ -6,6 +6,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiErrorElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
+import com.intellij.psi.SyntaxTraverser
 import com.intellij.psi.util.PsiTreeUtil
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.TextRange
@@ -15,6 +16,9 @@ import io.github.agadek.smartdiff.engine.declarations.psi.PsiDeclarationProvider
 import io.github.agadek.smartdiff.engine.declarations.psi.Signatures
 import org.jetbrains.plugins.scala.Scala3Language
 import org.jetbrains.plugins.scala.ScalaLanguage
+import org.jetbrains.plugins.scala.lang.lexer.ScalaTokenType
+import org.jetbrains.plugins.scala.lang.lexer.ScalaTokenTypes
+import org.jetbrains.plugins.scala.lang.psi.api.ScalaFile
 import org.jetbrains.plugins.scala.lang.psi.api.base.ScAnnotation
 import org.jetbrains.plugins.scala.lang.psi.api.base.ScFieldId
 import org.jetbrains.plugins.scala.lang.psi.api.base.patterns.ScPattern
@@ -32,6 +36,7 @@ import org.jetbrains.plugins.scala.lang.psi.api.statements.params.ScParameterTyp
 import org.jetbrains.plugins.scala.lang.psi.api.statements.params.ScParameters
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.ScNamedElement
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.ScPackaging
+import org.jetbrains.plugins.scala.lang.psi.api.toplevel.templates.ScTemplateBody
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.templates.ScTemplateParents
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.ScClass
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.ScEnum
@@ -57,14 +62,19 @@ class ScalaDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_BR
     override fun supports(languageId: String): Boolean = languageId == ScalaLanguage.INSTANCE.id
 
     /**
-     * Scala 3, unless Scala 2 parses both sides with fewer errors. The Scala 3 parser also accepts most Scala 2 code,
-     * procedure syntax included, so a tie goes to Scala 3; Scala 2 wins on code Scala 3 dropped, such as `enum` as a name.
+     * Scala 2 when it parses both sides with fewer errors, such as on `enum` as a name, or with as many when neither side
+     * uses Scala 3 syntax; otherwise Scala 3. The Scala 3 parser also accepts most Scala 2 code, so without the second
+     * rule Scala 2 code would take Scala 3 and its stricter whitespace policy.
      */
     override fun dialect(project: Project, oldText: CharSequence, newText: CharSequence, fileName: String?): Language {
-        val scala3 = errors(project, oldText, Scala3Language.INSTANCE) + errors(project, newText, Scala3Language.INSTANCE)
-        if (scala3 == 0) return Scala3Language.INSTANCE
-        val scala2 = errors(project, oldText, ScalaLanguage.INSTANCE) + errors(project, newText, ScalaLanguage.INSTANCE)
-        return if (scala2 < scala3) ScalaLanguage.INSTANCE else Scala3Language.INSTANCE
+        val old3 = parse(project, oldText, fileName, Scala3Language.INSTANCE)
+        val new3 = parse(project, newText, fileName, Scala3Language.INSTANCE)
+        val scala3 = errors(old3) + errors(new3)
+        val scala3Syntax = hasScala3Syntax(old3) || hasScala3Syntax(new3)
+        if (scala3 == 0 && scala3Syntax) return Scala3Language.INSTANCE
+        val scala2 = errors(parse(project, oldText, fileName, ScalaLanguage.INSTANCE)) +
+            errors(parse(project, newText, fileName, ScalaLanguage.INSTANCE))
+        return if (scala2 < scala3 || scala2 == scala3 && !scala3Syntax) ScalaLanguage.INSTANCE else Scala3Language.INSTANCE
     }
 
     override fun parse(project: Project, text: CharSequence, fileName: String?, dialect: Language?): PsiFile =
@@ -232,8 +242,36 @@ class ScalaDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_BR
 
     private fun isAnnotation(element: PsiElement): Boolean = element is ScAnnotation
 
-    private fun errors(project: Project, text: CharSequence, language: Language): Int {
-        val file = PsiFileFactory.getInstance(project).createFileFromText("SmartDiff.scala", language, text, false, false)
-        return PsiTreeUtil.collectElementsOfType(file, PsiErrorElement::class.java).count(::isParseError)
+    private fun errors(file: PsiFile): Int = PsiTreeUtil.collectElementsOfType(file, PsiErrorElement::class.java).count(::isParseError)
+
+    /**
+     * Whether [file], parsed as Scala 3, uses syntax Scala 2 does not have (§6.2): a Scala 3 keyword or arrow, `using`
+     * in a parameter clause, a body or package clause opened with a colon, or a definition outside any object. Syntax
+     * that Scala 2.12 and 2.13 also accept under `-Xsource:3`, such as `f(using x)` or the `?` wildcard, does not count.
+     */
+    private fun hasScala3Syntax(file: PsiFile): Boolean = SyntaxTraverser.psiTraverser(file).any { element ->
+        when (element) {
+            is ScTemplateBody, is ScPackaging ->
+                element.node.getChildren(null).firstOrNull { it.elementType == ScalaTokenTypes.tCOLON || it.elementType == ScalaTokenTypes.tLBRACE }
+                    ?.elementType == ScalaTokenTypes.tCOLON
+            is ScFunction, is ScValueOrVariable, is ScTypeAlias -> element.parent is ScalaFile || element.parent is ScPackaging
+            else -> element.firstChild == null && when (element.node?.elementType) {
+                ScalaTokenType.UsingKeyword() -> element.parent is ScParameterClause
+                in SCALA_3_TOKENS -> true
+                else -> false
+            }
+        }
+    }
+
+    private companion object {
+        /** Keywords, soft keywords and arrows that only Scala 3 has. */
+        val SCALA_3_TOKENS = setOf(
+            ScalaTokenType.ThenKeyword(), ScalaTokenType.GivenKeyword(),
+            ScalaTokenType.ExtensionKeyword(), ScalaTokenType.EnumKeyword(), ScalaTokenType.ExportKeyword(),
+            ScalaTokenType.EndKeyword(), ScalaTokenType.DerivesKeyword(), ScalaTokenType.OpaqueKeyword(),
+            ScalaTokenType.TransparentKeyword(), ScalaTokenType.InlineKeyword(), ScalaTokenType.InfixKeyword(),
+            ScalaTokenType.OpenKeyword(), ScalaTokenType.ImplicitFunctionArrow(), ScalaTokenType.TypeLambdaArrow(),
+            ScalaTokenType.QuoteStart(), ScalaTokenType.SpliceStart(),
+        )
     }
 }
