@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-23
+
 ### Added
 
 - Extraction detection: a method or function added with code taken out of a changed declaration in the same file is labelled `extracted from <declaration>`, and the source `code extracted to <declaration>`. Selecting the extraction frames the extracted code on the old side; selecting the source highlights it. The summary line counts extractions as `extracted`.
@@ -10,6 +12,7 @@
 
 - Scala: Scaladoc markup the Scala plugin flags, such as `[[F[A]]]` in prose, no longer marks declarations unanalyzed.
 - A declaration with a parse error is shown as unchanged when its source is the same on both sides, so a parse error marks only code that changed.
+- A class turned into a trait or interface, or a Scala `def` turned into a `val`, is shown as one declaration that changed kind, such as `trait → class Shape`, instead of being removed and added with all its members moved.
 - Scala 2 code that the Scala 3 parser also accepts is now read as Scala 2, so re-indenting it is shown as formatting-only.
 
 ## [0.1.0] - 2026-10-22
@@ -27,5 +30,6 @@
 - Scala 2 and Scala 3 support, when the Scala plugin is installed: classes, traits, objects, enums, methods, values, type aliases, givens and extension methods, with Scala 3 indentation changes never shown as formatting-only.
 - Unsupported, malformed or oversized files fall back to the native diff with the reason shown.
 
-[Unreleased]: https://github.com/agadek/smart-diff/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/agadek/smart-diff/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/agadek/smart-diff/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/agadek/smart-diff/commits/v0.1.0

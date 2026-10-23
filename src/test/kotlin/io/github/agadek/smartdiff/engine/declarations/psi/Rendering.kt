@@ -42,7 +42,8 @@ object Rendering {
             if (node.extractedTo.isNotEmpty()) add("code extracted to ${node.extractedTo.joinToString(", ") { name(it) }}")
         }
         val sides = listOfNotNull(node.oldRange?.let { "old ${lines(it, oldText)}" }, node.newRange?.let { "new ${lines(it, newText)}" })
-        return (listOf(subject(node.subject)) + labels + sides).joinToString("  ")
+        val kindFrom = node.kindChangedFrom?.let { it.name.lowercase().replace('_', ' ') + " → " }.orEmpty()
+        return (listOf(kindFrom + subject(node.subject)) + labels + sides).joinToString("  ")
     }
 
     fun subject(subject: Subject): String = when (subject) {

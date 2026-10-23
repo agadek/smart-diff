@@ -70,6 +70,11 @@ data class ChangeNode(
      */
     val renamedFrom: Subject? = null,
     /**
+     * Only for [Presence.MATCHED]: the kind on the old side when the declaration changed kind, such as a trait turned
+     * into a class. Such a node always has [signatureChanged] set.
+     */
+    val kindChangedFrom: DeclarationKind? = null,
+    /**
      * Only for [Presence.ADDED]: the old-side code this subject was extracted from, most of its body first. A link adds
      * information and is never a match (ADR 0003).
      */

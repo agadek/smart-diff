@@ -172,15 +172,97 @@ class DeclarationMatcherTest {
     }
 
     @Test
-    fun `a changed kind is removed and added`() {
-        val old = tree { declaration(DeclarationKind.CLASS, "Shape") }
-        val new = tree { declaration(DeclarationKind.INTERFACE, "Shape") }
+    fun `M4b matches a Java class turned into an interface`() {
+        val old = tree { declaration(DeclarationKind.CLASS, "Shape") { declaration(DeclarationKind.METHOD, "area", "") } }
+        val new = tree { declaration(DeclarationKind.INTERFACE, "Shape") { declaration(DeclarationKind.METHOD, "area", "") } }
 
         val matching = match(old, new)
 
-        assertTrue(matching.matches.isEmpty())
-        assertEquals(old.all, matching.removed)
-        assertEquals(new.all, matching.added)
+        assertEquals(MatchRule.KIND_CHANGED, matching.ofOld(old.topLevel.single())!!.rule)
+        val area = matching.ofOld(old.topLevel.single().children.single())!!
+        assertEquals(MatchRule.IDENTITY, area.rule)
+        assertFalse(area.moved)
+        assertNothingLeft(matching)
+    }
+
+    @Test
+    fun `M4b matches a trait turned into a class, and its members stay in place even when their names repeat`() {
+        // As in cats IndexedReaderWriterStateT: every type class instance has an `implicit def F`, so F's key is not
+        // unique in the file and only its path tells the copies apart.
+        fun members(scope: Scope) = with(scope) {
+            declaration(DeclarationKind.FUNCTION, "F", body = "implicit def F: Functor[F]")
+            declaration(DeclarationKind.FUNCTION, "map", "F[A];A => B", body = "{ fa.map(f) }")
+        }
+        val old = tree {
+            declaration(DeclarationKind.TRAIT, "IRWSTFunctor") { members(this) }
+            declaration(DeclarationKind.CLASS, "IRWSTMonad") { members(this) }
+        }
+        val new = tree {
+            declaration(DeclarationKind.CLASS, "IRWSTFunctor") { members(this) }
+            declaration(DeclarationKind.CLASS, "IRWSTMonad") { members(this) }
+        }
+
+        val matching = match(old, new)
+
+        assertEquals(MatchRule.KIND_CHANGED, matching.ofOld(old.topLevel.first())!!.rule)
+        for (member in old.topLevel.first().children) {
+            val m = matching.ofOld(member)!!
+            assertSame(new.topLevel.first().children[old.topLevel.first().children.indexOf(member)], m.new)
+            assertFalse("$m", m.moved)
+        }
+        assertNothingLeft(matching)
+    }
+
+    @Test
+    fun `M4b matches a Scala def turned into a val`() {
+        val old = tree { declaration(DeclarationKind.OBJECT, "Configs") { declaration(DeclarationKind.FUNCTION, "mapping", body = "def mapping = x") } }
+        val new = tree { declaration(DeclarationKind.OBJECT, "Configs") { declaration(DeclarationKind.PROPERTY, "mapping", body = "val mapping = x") } }
+
+        val matching = match(old, new)
+
+        assertEquals(MatchRule.KIND_CHANGED, matching.ofOld(old.all.last())!!.rule)
+        assertNothingLeft(matching)
+    }
+
+    @Test
+    fun `M4b never pairs a class with an object, since a companion object shares the class's name`() {
+        val old = tree {
+            declaration(DeclarationKind.CLASS, "Point")
+            declaration(DeclarationKind.TRAIT, "Shape")
+        }
+        val new = tree {
+            declaration(DeclarationKind.OBJECT, "Point")
+            declaration(DeclarationKind.CLASS, "Shape")
+        }
+
+        val matching = match(old, new)
+
+        assertEquals(listOf("Shape"), matching.matches.map { it.old.name })
+        assertEquals(listOf(DeclarationKind.CLASS), matching.removed.map { it.kind })
+        assertEquals(listOf(DeclarationKind.OBJECT), matching.added.map { it.kind })
+    }
+
+    @Test
+    fun `M4b leaves a kind change with two candidates unpaired`() {
+        val old = tree {
+            declaration(DeclarationKind.CLASS, "A") {
+                declaration(DeclarationKind.FUNCTION, "size", body = "def size = n")
+                declaration(DeclarationKind.FUNCTION, "name", body = "def name = s")
+            }
+        }
+        val new = tree {
+            declaration(DeclarationKind.CLASS, "A") {
+                declaration(DeclarationKind.PROPERTY, "size", body = "val size = n")
+                declaration(DeclarationKind.FIELD, "size", body = "int size;")
+                declaration(DeclarationKind.PROPERTY, "name", body = "val name = s")
+            }
+        }
+
+        val matching = match(old, new)
+
+        assertEquals(listOf("A", "name"), matching.matches.map { it.old.name })
+        assertEquals(listOf("size"), matching.removed.map { it.name })
+        assertEquals(2, matching.added.size)
     }
 
     @Test

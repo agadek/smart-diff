@@ -174,6 +174,17 @@ definitions) and scala3 17 of 171, 433 in all. 21 files are flagged, against 79:
 `rename-candidate` 4, `same-name` 1, `status` 1; the trait-to-class files remain. The median time was 23 ms and the
 slowest file took 619 ms (zio `ZStream.scala`), since files without Scala 3 syntax are now parsed in both dialects.
 
+**After the kind-change fix** (fix 3, rule M4b), on the same corpus and with extraction detection in both runs: 29 files
+are flagged, against 33 with the rule turned off: `rename` 9 (10), `noisy` 5 (7), `same-name` 0 (1), the extraction
+flags unchanged (8 and 4), `rename-candidate` 4 and `status` 1. The three cats trait-to-class files are clean:
+`Representable.scala` shows `trait → class RepresentableMonad` and `RepresentableBimonad` and nothing else (11
+reported rows before, 2 now), `Func.scala` shows `trait → class AppFuncApplicative` with its members in place (9 to 4),
+and in `IndexedReaderWriterStateT.scala` `class → trait IRWSTFunctor` keeps its unchanged `implicit def F` unreported,
+while the `F` really added to `RWSTAlternative` stays added (9 to 5). scala3 `ScaladocConfigs0.scala` shows its two
+`def` → `val` changes as `function → property dottyExternalMapping` and `javaExternalMapping` (15 to 13 rows); the
+rest of that file is a real rewrite. Every file is still `ANALYZED` but scala3 `Implicits.scala`; the median time was
+22 ms.
+
 ## 2026-10-22: 0.1.1 noise pass
 
 **Corpus:** the same 234 commits and 1279 files as before 0.1.0, from the same clones.

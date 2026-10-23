@@ -3,6 +3,7 @@ package io.github.agadek.smartdiff.ui
 import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.Content
+import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.RangePair
 import io.github.agadek.smartdiff.engine.api.Subject
@@ -155,20 +156,26 @@ object OutlineModel {
      */
     fun title(subject: Subject): String = when (subject) {
         is Subject.Declaration -> {
-            val kind = subject.kind.name.lowercase().replace('_', ' ')
+            val kind = kind(subject.kind)
             val name = name(subject)
             (if (name.isEmpty()) kind else "$kind $name") + (subject.signature?.let { "($it)" } ?: "")
         }
         is Subject.Region -> subject.description
     }
 
-    /** A node's title; a rename candidate shows the old name too: `method total → sum(int)`. */
+    /**
+     * A node's title; a rename candidate shows the old name too (`method total → sum(int)`), and a declaration that
+     * changed kind the old kind (`trait → class Shape`).
+     */
     fun title(node: ChangeNode): String {
         val from = node.renamedFrom as? Subject.Declaration
         val subject = node.subject as? Subject.Declaration
-        if (from == null || subject == null) return title(node.subject)
-        return title(subject.copy(name = "${name(from)} → ${name(subject)}", receiver = null))
+        val kindFrom = node.kindChangedFrom?.let { kind(it) + " → " }.orEmpty()
+        if (from == null || subject == null) return kindFrom + title(node.subject)
+        return kindFrom + title(subject.copy(name = "${name(from)} → ${name(subject)}", receiver = null))
     }
+
+    private fun kind(kind: DeclarationKind): String = kind.name.lowercase().replace('_', ' ')
 
     private fun name(subject: Subject.Declaration): String = (subject.receiver?.let { "$it." } ?: "") + subject.name
 

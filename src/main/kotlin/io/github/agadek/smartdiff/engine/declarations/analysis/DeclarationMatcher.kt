@@ -22,6 +22,12 @@ enum class MatchRule {
     SIGNATURE_CHANGED,
 
     /**
+     * M4b: a removed and an added declaration of the same name and kind family in matched containers, the only such
+     * pair there, such as a trait turned into a class or a `def` into a `val`. Reported with the signature changed.
+     */
+    KIND_CHANGED,
+
+    /**
      * M5: a removed and an added declaration of the same kind, in matched containers, with a different name and
      * similar content. May be wrong, so it is reported as a candidate.
      */
@@ -77,8 +83,9 @@ class Matching(
  * Matches declarations globally over the file (technical specification §7), so a declaration can be matched across
  * containers. Rules M1 to M5 run in order, each over the declarations the earlier rules left unmatched. M1 to M3 pair
  * declarations whose key occurs exactly once on each side, except that M1 first pairs same-key declarations with the
- * same content and M3 pairs the rest of a repeated path and name by similarity. M4 marks what is still ambiguous, and
- * M5 pairs removed and added declarations with similar content as rename candidates. Declarations are processed in
+ * same content and M3 pairs the rest of a repeated path and name by similarity. M4 marks what is still ambiguous, M4b
+ * pairs a declaration that changed kind within its family, and M5 pairs removed and added declarations with similar
+ * content as rename candidates. Paths use kind families, so the members of a class turned into a trait keep their path. Declarations are processed in
  * old-side source order, and ties in similarity go to the closest position, which makes the result deterministic.
  */
 object DeclarationMatcher {
@@ -149,6 +156,30 @@ object DeclarationMatcher {
             val news = newAmbiguous[k] ?: continue
             olds.forEach { uncertainOld[it] = Uncertain(it, news) }
             news.forEach { uncertainNew[it] = Uncertain(it, olds) }
+        }
+
+        // M4b: in each pair of matched containers and at the top level, a removed and an added declaration with the same
+        // name and kinds of one family, when they are the only such pair. Containers come before their children, so a
+        // member that changed kind inside a container that changed kind is paired too.
+        val kindContainers = ArrayDeque<Pair<Declaration?, Declaration?>>()
+        kindContainers += null to null
+        for (o in old.all) pairs[o]?.first?.let { n -> if (o.children.isNotEmpty() && n.children.isNotEmpty()) kindContainers += o to n }
+        while (kindContainers.isNotEmpty()) {
+            val (oldContainer, newContainer) = kindContainers.removeFirst()
+            cancellation.checkCanceled()
+            fun kindKey(d: Declaration) = family(d.kind)?.let { it to d.name }
+            val removed = (oldContainer?.children ?: old.topLevel).filter { it !in pairs && it !in uncertainOld }
+                .filter { kindKey(it) != null }.groupBy(::kindKey)
+            val added = (newContainer?.children ?: new.topLevel).filter { it !in newMatched && it !in uncertainNew }
+                .filter { kindKey(it) != null }.groupBy(::kindKey)
+            for ((key, olds) in removed) {
+                val o = olds.singleOrNull() ?: continue
+                val n = added[key]?.singleOrNull() ?: continue
+                if (o.kind == n.kind) continue
+                pairs[o] = n to MatchRule.KIND_CHANGED
+                newMatched += n
+                if (o.children.isNotEmpty() && n.children.isNotEmpty()) kindContainers += o to n
+            }
         }
 
         // M5: in each pair of matched containers and at the top level, removed and added declarations of one kind with
@@ -404,8 +435,26 @@ object DeclarationMatcher {
     private fun content(declaration: Declaration): List<Any> =
         declaration.ownTokens.filter { it.kind != TokenKind.WHITESPACE }.map { it.type to it.text } + declaration.children.map(::content)
 
-    /** One element of a path: a container's kind and name. */
+    /**
+     * One element of a path: a container's kind and name. A type's kind stands for its whole family (rule M4b), so the
+     * members of a class turned into a trait keep their path; two types of one name cannot share a container anyway.
+     */
     private data class Container(val kind: DeclarationKind, val name: String)
+
+    /** The kinds a declaration can change between and stay one declaration (rule M4b); null for the others. */
+    private fun family(kind: DeclarationKind): Set<DeclarationKind>? = KIND_FAMILIES.firstOrNull { kind in it }
+
+    /**
+     * Types, and members that hold or compute a value (a Scala `def` turned into a `val`). An object is no type here:
+     * a class and its companion object share a name.
+     */
+    private val KIND_FAMILIES = listOf(
+        setOf(
+            DeclarationKind.CLASS, DeclarationKind.TRAIT, DeclarationKind.INTERFACE, DeclarationKind.ENUM,
+            DeclarationKind.RECORD, DeclarationKind.ANNOTATION_TYPE,
+        ),
+        setOf(DeclarationKind.METHOD, DeclarationKind.FUNCTION, DeclarationKind.FIELD, DeclarationKind.PROPERTY),
+    )
 
     /** A matching key; a null [path] or [signature] is left out of the key. */
     private data class Key(val kind: DeclarationKind, val path: List<Container>?, val name: String, val signature: String?)
@@ -417,7 +466,7 @@ object DeclarationMatcher {
         init {
             fun visit(declaration: Declaration, path: List<Container>) {
                 paths[declaration] = path
-                val childPath = path + Container(declaration.kind, declaration.name)
+                val childPath = path + Container(family(declaration.kind)?.first() ?: declaration.kind, declaration.name)
                 declaration.children.forEach {
                     parents[it] = declaration
                     visit(it, childPath)

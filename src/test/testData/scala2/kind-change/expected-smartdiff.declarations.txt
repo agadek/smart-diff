@@ -1,0 +1,4 @@
+status: ANALYZED
+object Cart  old 27-29  new 27-29
+  property → function Limit  changed  signature changed  old 28  new 28
+class → trait Receipt  changed  signature changed  old 34-36  new 34-36
