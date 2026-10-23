@@ -52,15 +52,17 @@ Packages (under the plugin's root package, `io.github.agadek.smartdiff`):
 | `engine.declarations.model` | No | Declaration tree and tokens (internal to the declaration engine) |
 | `engine.declarations.analysis` | No | Matching (§7) and classification (§8) |
 | `engine.declarations.psi` | Yes | Declaration engine factory and PSI providers (§6) |
+| `merge` | No | The join of a merge's base → left and base → right results ([THREE-WAY-MERGE.md §5](THREE-WAY-MERGE.md#5-the-join)) |
 | `ui` | Yes | Diff integration, outline, engine dropdown, navigation, settings |
 
 Dependency rules, enforced by an architecture test (§12):
 
 - `ui` may depend on `engine.api` and `engine.registry` only, never on any `engine.<name>` package.
 - `engine.api` depends on nothing in the plugin.
+- `merge` depends on `engine.api` only.
 - No engine package depends on another engine package.
 
-`engine.api`, `engine.declarations.model` and `engine.declarations.analysis` must compile and be unit-tested without the IntelliJ test framework.
+`engine.api`, `engine.declarations.model`, `engine.declarations.analysis` and `merge` must compile and be unit-tested without the IntelliJ test framework.
 
 ## 3. Engine interface
 
@@ -84,6 +86,7 @@ data class ComparisonRequest(
     val languageId: String,                // IntelliJ Language.getID(), e.g. "JAVA", "kotlin"
     val fileName: String?,                 // hint only
     val limits: Limits,
+    val relatedTexts: List<CharSequence>,  // hint only: other versions compared with the same old side (merge, §6.2)
 )
 
 data class Limits(val maxChars: Int, val maxDeclarations: Int, val timeoutMillis: Long)  // Limits.DEFAULT: §9.3
@@ -193,13 +196,13 @@ The declaration engine turns each side into a `DeclarationTree` through a per-la
 ```kotlin
 interface DeclarationProvider {
     fun supports(languageId: String): Boolean
-    fun dialect(project: Project, oldText: CharSequence, newText: CharSequence, fileName: String?): Language? = null   // §6.2
+    fun dialect(project: Project, texts: List<CharSequence>, fileName: String?): Language? = null   // §6.2
     fun parse(project: Project, text: CharSequence, fileName: String?, dialect: Language?): PsiFile   // §6.2
     fun build(file: PsiFile, cancellation: Cancellation): DeclarationTree
 }
 ```
 
-All are called inside the engine's read actions: `dialect` once with both texts, then `parse` and `build` once per side. A language with several dialects (Scala 2 and Scala 3) chooses one from both texts, so both trees use the same parser, lexer and whitespace policy; other providers return null and ignore it. The read action gives way to write actions: on a pooled thread it runs through `ProgressManager.runInReadActionWithWriteActionPriority` and starts over after a write, so typing in the new side never waits for a parse. Matching and classification run after it, on the model only, so no PSI outlives the read action. The engine version is the engine's own version followed by the platform build, since a parser change can change results.
+All are called inside the engine's read actions: `dialect` once with both texts and the request's `relatedTexts`, then `parse` and `build` once per side. A language with several dialects (Scala 2 and Scala 3) chooses one from all these texts, so both trees use the same parser, lexer and whitespace policy, and both comparisons of a merge read the base alike; other providers return null and ignore it. The read action gives way to write actions: on a pooled thread it runs through `ProgressManager.runInReadActionWithWriteActionPriority` and starts over after a write, so typing in the new side never waits for a parse. Matching and classification run after it, on the model only, so no PSI outlives the read action. The engine version is the engine's own version followed by the platform build, since a parser change can change results.
 
 The shared base `PsiDeclarationProvider` builds the tree: a language provider only says which PSI elements are declarations, with their kind, name, signature and member elements. An element it does not describe, such as a class whose name was not parsed, is not a declaration; its source and parse errors belong to its container.
 
@@ -248,7 +251,7 @@ enum class WhitespacePolicy {
 
 - PSI: inside a cancellable read action, `PsiFileFactory.getInstance(project).createFileFromText(name, language, text, false, false)`; `project` is the one passed to the factory, or the default project when there is none **(confirmed by S2)**.
 - Java files are parsed at the highest language level the platform knows, set with `PsiUtil.FILE_LANGUAGE_LEVEL_KEY` before the tree is built. Without it the level comes from the default project's settings, which the user can change. S2 saw `JDK_24` on 2025.1 either way, with records, sealed types, record patterns and text blocks parsed without errors.
-- Scala files are parsed as `Scala3Language` or `ScalaLanguage` **(S4)**. The Scala plugin hard-wires the parser and lexer to the file's language, and a file from text has no module whose settings could change it; the language id of a request is always `Scala`, since the file type does not depend on the module. The provider parses both texts as Scala 3 and keeps Scala 3 when neither has a parse error and either uses Scala 3 syntax; otherwise it also parses both as Scala 2. It takes Scala 2 when Scala 2's error count over both sides is lower, as on code Scala 3 dropped such as `enum` as a name, or equal while neither side uses Scala 3 syntax; otherwise Scala 3. Scala 3 syntax is a keyword, soft keyword or arrow only Scala 3 has (`then`, `given`, `extension`, `enum`, `export`, `end`, `derives`, `opaque`, `transparent`, `inline`, `infix`, `open`, `?=>`, `=>>`, quotes and splices), `using` in a parameter clause, a template body or package clause opened with a colon, or a definition outside any object. Syntax Scala 2.12 and 2.13 also accept under `-Xsource:3`, such as `f(using x)` in a call or the `?` wildcard, does not count: cross-built libraries such as cats use it. The Scala 3 parser accepts most Scala 2 code, procedure syntax included, so without the syntax check Scala 2 code such as cats would take Scala 3 and its stricter whitespace policy (corpus validation, [VALIDATION.md](VALIDATION.md)). When neither parses cleanly, the usual parse-error rules apply (§6.7). A Scala 3 tree uses `INDENTATION_SIGNIFICANT`, since optional braces make indentation significant; a Scala 2 tree uses `LINE_BREAKS_SIGNIFICANT`.
+- Scala files are parsed as `Scala3Language` or `ScalaLanguage` **(S4)**. The Scala plugin hard-wires the parser and lexer to the file's language, and a file from text has no module whose settings could change it; the language id of a request is always `Scala`, since the file type does not depend on the module. The provider parses every text (both sides and the related texts) as Scala 3 and keeps Scala 3 when none has a parse error and any uses Scala 3 syntax; otherwise it also parses them as Scala 2. It takes Scala 2 when Scala 2's error count over all texts is lower, as on code Scala 3 dropped such as `enum` as a name, or equal while no text uses Scala 3 syntax; otherwise Scala 3. Scala 3 syntax is a keyword, soft keyword or arrow only Scala 3 has (`then`, `given`, `extension`, `enum`, `export`, `end`, `derives`, `opaque`, `transparent`, `inline`, `infix`, `open`, `?=>`, `=>>`, quotes and splices), `using` in a parameter clause, a template body or package clause opened with a colon, or a definition outside any object. Syntax Scala 2.12 and 2.13 also accept under `-Xsource:3`, such as `f(using x)` in a call or the `?` wildcard, does not count: cross-built libraries such as cats use it. The Scala 3 parser accepts most Scala 2 code, procedure syntax included, so without the syntax check Scala 2 code such as cats would take Scala 3 and its stricter whitespace policy (corpus validation, [VALIDATION.md](VALIDATION.md)). When neither parses cleanly, the usual parse-error rules apply (§6.7). A Scala 3 tree uses `INDENTATION_SIGNIFICANT`, since optional braces make indentation significant; a Scala 2 tree uses `LINE_BREAKS_SIGNIFICANT`.
 - Offsets from the PSI equal offsets into the request text **(confirmed by S2)**: for every declaration, the PSI element's text equals the request text sliced by its range. A declaration's range includes its doc comment and annotations in both languages.
 - The request texts are document snapshots, which are always LF-separated: a VCS revision with CRLF line ends arrives as an LF document, and the content only records the original separator. Ranges therefore match the diff editors.
 - Providers must not resolve references or types (no classpath; see ADR 0002).

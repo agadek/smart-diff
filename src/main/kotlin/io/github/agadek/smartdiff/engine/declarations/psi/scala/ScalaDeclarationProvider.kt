@@ -63,18 +63,17 @@ class ScalaDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_BR
     override fun supports(languageId: String): Boolean = languageId == ScalaLanguage.INSTANCE.id
 
     /**
-     * Scala 2 when it parses both sides with fewer errors, such as on `enum` as a name, or with as many when neither side
+     * Scala 2 when it parses all [texts] with fewer errors, such as on `enum` as a name, or with as many when no text
      * uses Scala 3 syntax; otherwise Scala 3. The Scala 3 parser also accepts most Scala 2 code, so without the second
-     * rule Scala 2 code would take Scala 3 and its stricter whitespace policy.
+     * rule Scala 2 code would take Scala 3 and its stricter whitespace policy. All texts decide together, so both runs
+     * of a merge read the base in one dialect (three-way merge plan §5.3).
      */
-    override fun dialect(project: Project, oldText: CharSequence, newText: CharSequence, fileName: String?): Language {
-        val old3 = parse(project, oldText, fileName, Scala3Language.INSTANCE)
-        val new3 = parse(project, newText, fileName, Scala3Language.INSTANCE)
-        val scala3 = errors(old3) + errors(new3)
-        val scala3Syntax = hasScala3Syntax(old3) || hasScala3Syntax(new3)
+    override fun dialect(project: Project, texts: List<CharSequence>, fileName: String?): Language {
+        val files3 = texts.map { parse(project, it, fileName, Scala3Language.INSTANCE) }
+        val scala3 = files3.sumOf(::errors)
+        val scala3Syntax = files3.any(::hasScala3Syntax)
         if (scala3 == 0 && scala3Syntax) return Scala3Language.INSTANCE
-        val scala2 = errors(parse(project, oldText, fileName, ScalaLanguage.INSTANCE)) +
-            errors(parse(project, newText, fileName, ScalaLanguage.INSTANCE))
+        val scala2 = texts.sumOf { errors(parse(project, it, fileName, ScalaLanguage.INSTANCE)) }
         return if (scala2 < scala3 || scala2 == scala3 && !scala3Syntax) ScalaLanguage.INSTANCE else Scala3Language.INSTANCE
     }
 

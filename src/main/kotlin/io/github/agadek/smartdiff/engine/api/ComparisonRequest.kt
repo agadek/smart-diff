@@ -9,6 +9,12 @@ data class ComparisonRequest(
     /** A hint only; engines must not depend on it. */
     val fileName: String? = null,
     val limits: Limits = Limits.DEFAULT,
+    /**
+     * Other versions compared with the same old side, such as the other side of a merge (three-way merge plan §5.3). A
+     * hint only: an engine with several parsers for the language may choose one from all the texts, so every comparison
+     * reads the old side the same way.
+     */
+    val relatedTexts: List<CharSequence> = emptyList(),
 )
 
 /** Analysis limits (technical specification §9.3). */

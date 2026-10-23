@@ -20,7 +20,7 @@ abstract class ProviderTestCase : BasePlatformTestCase() {
         val provider = provider(languageId)
         val tree = ReadAction.compute(ThrowableComputable<DeclarationTree, RuntimeException> {
             val project = ProjectManager.getInstance().defaultProject
-            provider.build(provider.parse(project, text, fileName, provider.dialect(project, text, text, fileName)), Cancellation.NONE)
+            provider.build(provider.parse(project, text, fileName, provider.dialect(project, listOf(text, text), fileName)), Cancellation.NONE)
         })
         assertSlicedExactly(tree, text)
         return tree

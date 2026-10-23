@@ -18,6 +18,7 @@ class ArchitectureRules(private val root: String) {
 
     private val api = "$root.engine.api.."
     private val registry = "$root.engine.registry.."
+    private val merge = "$root.merge.."
 
     val uiDependsOnlyOnApiAndRegistry: ArchRule =
         noClasses().that().resideInAPackage("$root.ui..")
@@ -33,6 +34,12 @@ class ArchitectureRules(private val root: String) {
             .allowEmptyShould(true)
             .because("engine.api depends on nothing in the plugin")
 
+    val mergeDependsOnlyOnApi: ArchRule =
+        classes().that().resideInAPackage(merge)
+            .should().onlyDependOnClassesThat(resideInAnyPackage(merge, api).or(not(resideInAPackage("$root.."))))
+            .allowEmptyShould(true)
+            .because("the merge join reads engine results through engine.api only")
+
     val enginesAreIndependent: ArchRule =
         slices().matching("$root.engine.(*)..")
             .should().notDependOnEachOther()
@@ -45,14 +52,16 @@ class ArchitectureRules(private val root: String) {
             api,
             "$root.engine.declarations.model..",
             "$root.engine.declarations.analysis..",
+            merge,
         )
             .should().dependOnClassesThat().resideInAnyPackage("com.intellij..", "org.jetbrains.kotlin..", "org.jetbrains.plugins.scala..", "scala..")
             .allowEmptyShould(true)
-            .because("the engine API, declaration model and analysis must run without the IntelliJ Platform")
+            .because("the engine API, declaration model, analysis and merge join must run without the IntelliJ Platform")
 
     val all: List<ArchRule> = listOf(
         uiDependsOnlyOnApiAndRegistry,
         apiDependsOnNothingInThePlugin,
+        mergeDependsOnlyOnApi,
         enginesAreIndependent,
         coreIsIntelliJFree,
     )
