@@ -10,6 +10,62 @@ Results of running the declaration engine on real commits before a release, and 
 Each line of the list is a local Git repository followed by `git rev-list` arguments, for example
 `/src/okhttp --no-merges --max-count=40 HEAD`. The report is written to `build/reports/smartdiff-validation/`.
 
+## 2026-10-23: extraction detection
+
+**Corpus:** the same Java and Kotlin list as the [0.1.1 noise pass](#2026-10-22-011-noise-pass) (1279 files from 234
+commits) and the same [Scala](#2026-10-22-scala) list (596 files from 145 commits). The report gains two flags,
+`extraction` for a file with a link and `extraction-near-miss` for a link that a covered or removed share from 0.5 up to
+the threshold would make ([extraction detection](EXTRACTION-DETECTION.md) §8).
+
+**First run, with the specified values:** 8 Java and Kotlin files had links, all right, but moshi `AdapterGenerator`
+was missed. Its `generateFromJsonFun` body of about 375 lines moved whole into `generateFromJsonRegular`, and tiling
+that compared every token pair of the two needed more than `MAX_WORK` on its own, so detection was skipped for the
+file. Tiling now indexes the source's runs of `MIN_TILE` tokens (§4.6). A comparison of both on random token
+sequences found the old tiling also took runs of 4 tokens, one short of `MIN_TILE`, when no longer run was left;
+the indexed tiling takes the same tiles otherwise, so the covered shares below are slightly lower than in the first
+run. The near misses showed real extractions below `MIN_SHARE`: commons-lang `containsTypeVariables(Type)` into
+`containsTypeVariables(Type, Set<Type>)` and okhttp `EchOnFakeNetworkTest`, a third test sharing
+`handshakerWithUpdatedEchConfigList`. Of the near misses under 0.65 only the moshi pairs below are real, and reaching them at 0.55 would also link the wrong guava and Exposed pairs. `MIN_SHARE` is therefore
+0.65; the other values stay as specified.
+
+**Thresholds:** `MIN_TOKENS` 10, `MIN_TILE` 5, `MIN_SHARE` 0.65, `MIN_REMOVED` 0.75, `MAX_WORK` 2 × 10^7 token
+comparisons.
+
+**Result:** 10 Java and Kotlin files and 8 Scala files have links, 24 added declarations in all, moshi
+`generateFromJsonRegular` among them; the two extractions of the `noisy-change` fixture are linked too. Each link was checked against its
+outline: the target's name and body size, the source and the old range the code came from. None is wrong. Typical
+cases are test setup moved into helpers (okhttp `EchOnFakeNetworkTest`, `FakeNetworkOkHttpTest`, spring-petclinic
+`ValidatorTests`), one helper taken from several sources (okhttp `handshakerWithUpdatedEchConfigList` from three
+tests, commons-lang `getPackageName` from both `toFullyQualified` methods), an overload that takes over the body
+(commons-lang `isAssignable`, zio `Supervisor.fibersIn`), and small predicates pulled out of a large method (scala3
+`RefChecks.checkAllOverrides`, `TryCatchPatterns.isCatchCase`).
+
+8 near misses remain:
+
+| File | Near miss | Covered | Removed |
+| --- | --- | --- | --- |
+| guava `Maps.java` (both copies) | `lastEntry` ← `descendingEntryIterator` | 0.56 | 0.90 |
+| Exposed `EntityCache.kt` | `trimToFirst` ← `maxEntitiesToStore` | 0.54 | 0.89 |
+| moshi `-MoshiKotlinTypesExtensions.kt` | `subtypeOf` ← `subtypeOf`, `supertypeOf` ← `supertypeOf` | 0.55 | 0.94 |
+| zio `test/package.scala` | `make` ← `live` | 0.58 | 0.98 |
+| zio `ZTestLogger.scala` | `apply` ← `make` | 0.63 | 1.00 |
+| zio `Annotations.scala` | `make` ← `live` | 0.85 | 0.64 |
+| zio `TestRandom.scala` | `make` ← `make` | 0.82 | 0.67 |
+
+The moshi pairs are the one real extraction left out: the no-argument `subtypeOf()` and `supertypeOf()` now call new
+`KType` overloads, but most of each overload's body is new code. The crossed pairs in the first run, `subtypeOf` from
+`supertypeOf`, show why a lower threshold would link the wrong source. The zio `make` ← `live` cases in `Annotations`
+and `TestRandom` kept the code in place, so the removed share stops them as intended.
+
+**Time:** the median stays at 4 ms for Java and Kotlin, against 4 ms in the noise pass run. The slowest file takes
+145 ms (guava `Maps.java`, 155 ms before), and no file among the ten slowest is more than 20% slower in both of two
+runs. All 1279 files together take 10.1 s and 9.9 s in two runs, against 9.4 s before, about 5 to 7% more, with 2%
+between the two runs alone. The quadratic tiling of the first run had pushed the slowest file to 272 ms (guava
+`LocalCache.java`), which now takes 54 ms. For Scala, main without extraction detection, run twice on the same base, took a median
+of 24 and 23 ms, a slowest file of 578 and 605 ms (zio `ZIO.scala`) and 29.1 and 28.4 s in all; with it, 22.5 ms,
+545 ms and 27.8 s. The difference is within the noise between runs. The 19 ms of the Scala run below predates two
+Scala fixes on main.
+
 ## 2026-10-22: Scala
 
 **Corpus:** the last non-merge commits touching Scala in three projects, with the Scala plugin 2025.1.32:
@@ -211,7 +267,8 @@ files. This is the strongest case for [rename candidates](ROADMAP.md#rename-cand
 ### Noisy: extractions
 
 moshi `AdapterGenerator`: the body of `generateFromJsonFun` moved into a new `generateFromJsonRegular`, shown as a
-changed shell plus an added method, as [extraction detection](ROADMAP.md#extraction-detection) describes.
+changed shell plus an added method, as [extraction detection](ROADMAP.md#extraction-detection) describes. Linked since
+[extraction detection](#2026-10-23-extraction-detection).
 
 ### Labels hard to read
 

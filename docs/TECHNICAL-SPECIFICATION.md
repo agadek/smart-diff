@@ -161,6 +161,8 @@ data class ChangeNode(
     val details: List<RangePair>,          // optional fine-grained changed spans; empty if the engine has none
     val children: List<ChangeNode>,
     val renamedFrom: Subject?,             // only for MATCHED: the old subject of a rename candidate
+    val extractedFrom: List<Origin>,       // only for ADDED: old-side code it was extracted from
+    val extractedTo: List<Subject>,        // only for MATCHED: where code removed from it went
 )
 
 sealed interface Subject {
@@ -170,13 +172,14 @@ sealed interface Subject {
 }
 
 data class Candidate(val subject: Subject, val range: TextRange)    // range on the side where the node is absent
+data class Origin(val subject: Subject, val declarationRange: TextRange, val range: TextRange)   // old side; range inside declarationRange
 data class RangePair(val old: TextRange?, val new: TextRange?)      // at least one side
 data class TextRange(val start: Int, val end: Int)           // [start, end)
 ```
 
 `DeclarationKind` is part of the API so engines share labels: `CLASS, INTERFACE, ENUM, RECORD, ANNOTATION_TYPE, OBJECT, CONSTRUCTOR, METHOD, FUNCTION, FIELD, PROPERTY, ENUM_CONSTANT, TYPE_ALIAS, INITIALIZER`, and with the Scala provider (§6.8) `TRAIT, GIVEN, EXTENSION`.
 
-A `ChangeNode` is *reported* if it is not `MATCHED`, or is moved, renamed or signature changed, or its content is not `UNCHANGED`, or any child is reported. A *rename candidate* is a `MATCHED` node with `renamedFrom` set: the engine paired two subjects with different names because their content is similar, which may be wrong, so the outline always shows it (§10). Engines may include unreported nodes for navigation; the outline hides them.
+A `ChangeNode` is *reported* if it is not `MATCHED`, or is moved, renamed or signature changed, or its content is not `UNCHANGED`, or any child is reported. A *rename candidate* is a `MATCHED` node with `renamedFrom` set: the engine paired two subjects with different names because their content is similar, which may be wrong, so the outline always shows it (§10). An *extraction* is an `ADDED` node with `extractedFrom` set: its code came from the old side of a changed node, named by its old range in `declarationRange`, which lists the extracted code in its `details` ([extraction detection](EXTRACTION-DETECTION.md)). A link adds information and changes no classification. Engines may include unreported nodes for navigation; the outline hides them.
 
 The result types are data classes, so results compare by value (the contract suite's determinism check relies on it). Adding fields to the result is allowed; renaming or removing them requires updating every engine and the contract tests.
 
@@ -213,6 +216,8 @@ class Declaration(
     val ownTokens: List<Token>,          // leading whitespace, then tokens in range minus children's extents
     val hasParseError: Boolean,          // a parse error lies in range but outside children
     val leadingWhitespace: TextRange?,   // whitespace right before range that belongs to it
+    val ownTokenStarts: List<Int>,       // start offset of each own token; empty when the provider has none
+    val body: TextRange?,                // a method's, function's or constructor's body; null without one
 )
 
 class FileRegion(val ranges: List<TextRange>, val tokens: List<Token>, val hasParseError: Boolean)

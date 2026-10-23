@@ -1,6 +1,6 @@
 # Extraction Detection Specification
 
-Status: proposal, 2026-10-22. Third item after the first release, following the [Changes tree summary](ROADMAP.md#multi-file-summary-in-the-changes-tree) and [Scala](ROADMAP.md#scala). It expands the roadmap's [extraction detection](ROADMAP.md#extraction-detection) entry. Section numbers (§) refer to the [technical specification](TECHNICAL-SPECIFICATION.md), and terms follow the [glossary](GLOSSARY.md).
+Status: implemented, 2026-10-22; the validation results are in [VALIDATION.md](VALIDATION.md). Third item after the first release, following the [Changes tree summary](ROADMAP.md#multi-file-summary-in-the-changes-tree) and [Scala](ROADMAP.md#scala). It expands the roadmap's [extraction detection](ROADMAP.md#extraction-detection) entry. Section numbers (§) refer to the [technical specification](TECHNICAL-SPECIFICATION.md), and terms follow the [glossary](GLOSSARY.md).
 
 ## 1. Problem
 
@@ -74,7 +74,7 @@ For each source, align its old and new significant tokens (Myers' diff on the to
 
 For each target and each source:
 
-1. Tile the target's body tokens with the source's old tokens by greedy string tiling: repeatedly take the longest common run of tokens not yet tiled on either side, down to `MIN_TILE` tokens. Tiling, rather than one longest run as in the prototype, lets the match survive a few changed tokens, such as `order.items()` becoming a parameter `items`.
+1. Tile the target's body tokens with the source's old tokens by greedy string tiling: repeatedly take the longest common run of tokens not yet tiled on either side, down to `MIN_TILE` tokens. The common runs are found through an index of the source's runs of `MIN_TILE` tokens, not by comparing every pair of tokens (§4.6). Tiling, rather than one longest run as in the prototype, lets the match survive a few changed tokens, such as `order.items()` becoming a parameter `items`.
 2. The **covered share** is the share of the target's body tokens inside tiles. It must be at least `MIN_SHARE`.
 3. The **removed share** is the share of tiled source tokens that are removed tokens (§4.3). It must be at least `MIN_REMOVED`.
 4. The tiles on the source side must lie in one stretch of code: the span from the first to the last tile holds at most twice as many tokens as the tiles. The **origin** is the old-side range of that span.
@@ -83,19 +83,19 @@ A target links to every source that passes, ordered by covered share, then by ol
 
 ### 4.5 Thresholds
 
-| Constant | Initial value | Why |
+| Constant | Value | Why |
 | --- | --- | --- |
 | `MIN_TOKENS` | 10 | Shorter bodies, such as a single call or a getter, match by chance |
 | `MIN_TILE` | 5 | A run shorter than a simple statement matches common idioms by chance |
-| `MIN_SHARE` | 0.75 | The prototype's value; most of the helper must be the extracted code, a little may be new |
+| `MIN_SHARE` | 0.65 | Most of the helper must be the extracted code, a little may be new. The prototype's 0.75 missed real extractions whose helper adds a parameter or a return (tuned on the corpus, [VALIDATION.md](VALIDATION.md)) |
 | `MIN_REMOVED` | 0.75 | The source must have lost the code, not kept it |
-| `MAX_WORK` | 2 × 10^7 token pairs | Keeps detection within a small part of the 5 s limit (§9.3) |
+| `MAX_WORK` | 2 × 10^7 token comparisons | Keeps detection within a small part of the 5 s limit (§9.3) |
 
-The values are a starting point and are tuned on the validation corpus before release (§8). They are constants, not settings.
+The values were tuned on the validation corpus (§8). They are constants, not settings.
 
 ### 4.6 Cost
 
-Tiling a target against a source costs about the product of their token counts. Before tiling, a pair is skipped when the bags of adjacent token pairs of the target body and the source's removed tokens share less than half of the target's pairs (the Dice measure the matcher already uses, §7). If the remaining work for a file exceeds `MAX_WORK`, detection is skipped for the file and the result is as today; this is not a failure and is not reported. Detection checks cancellation between pairs.
+Comparing every token of a target with every token of a source costs the product of their token counts, which for a method of a few hundred lines moved whole into a helper is already more than `MAX_WORK`. Tiling therefore indexes the source's runs of `MIN_TILE` tokens and extends only the runs the target shares, keeping at most 64 places per run against repetitive code; its work grows with the token counts and the shared runs. Before tiling, a pair is skipped when the bags of adjacent token pairs of the target body and the source's removed tokens share less than half of the target's pairs (the Dice measure the matcher already uses, §7). If the work for a file, counted as token comparisons in the alignments and the tiling, exceeds `MAX_WORK`, detection is skipped for the file and the result is as today; this is not a failure and is not reported. Detection checks cancellation between pairs.
 
 ## 5. Model and result
 

@@ -7,6 +7,7 @@ import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.RangePair
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
+import java.util.IdentityHashMap
 
 /** A change label shown after a node's title (technical specification §10). */
 enum class Tag(val text: String) {
@@ -57,11 +58,16 @@ class OutlineItem(
     val newRange: TextRange? = null,
     val details: List<RangePair> = emptyList(),
     val children: List<OutlineItem> = emptyList(),
+    /** Shown after the change labels, such as where extracted code came from. */
+    val note: String? = null,
 ) {
     val isGroup: Boolean get() = kind == ItemKind.FORMATTING_GROUP || kind == ItemKind.UNCERTAIN_GROUP || kind == ItemKind.UNANALYZED_GROUP
 
-    /** The row's text, which is also its accessible name: the title, then the change labels. */
-    val label: String get() = if (tags.isEmpty()) title else "$title  ${tags.joinToString(", ") { it.text }}"
+    /** The row's text, which is also its accessible name: the title, then the change labels and the note. */
+    val label: String get() {
+        val labels = tags.map { it.text } + listOfNotNull(note)
+        return if (labels.isEmpty()) title else "$title  ${labels.joinToString(", ")}"
+    }
 
     override fun toString(): String = label
 }
@@ -87,7 +93,7 @@ object OutlineModel {
         hidden: Set<ChangeType> = emptySet(),
     ): List<OutlineItem> {
         val uncertain = mutableListOf<OutlineItem>()
-        val builder = Builder(formattingInline, hidden, uncertain)
+        val builder = Builder(formattingInline, hidden, uncertain, Links(result))
         val rows = mutableListOf<OutlineItem>()
         result.fileRegion?.takeIf { it.isReported && !isHidden(it, hidden) }?.let { region ->
             rows += OutlineItem(ItemKind.FILE_REGION, "File region", tags(region), region.oldRange, region.newRange, region.details)
@@ -105,23 +111,25 @@ object OutlineModel {
     }
 
     /**
-     * The file summary line, such as `3 changed · 1 added · 2 removed · 1 moved · 2 formatting-only`. It counts every
-     * change, hidden or not, and ends with how many are [hidden], such as `· 2 hidden`.
+     * The file summary line, such as `3 changed · 1 extracted · 1 added · 2 removed · 1 moved · 2 formatting-only`. An
+     * added declaration extracted from old code counts as extracted instead of added. It counts every change, hidden or
+     * not, and ends with how many are [hidden], such as `· 2 hidden`.
      */
     fun summary(result: ComparisonResult, hidden: Set<ChangeType> = emptySet()): String {
-        val counts = LinkedHashMap<Tag, Int>()
-        listOf(Tag.CHANGED, Tag.ADDED, Tag.REMOVED, Tag.MOVED, Tag.FORMATTING_ONLY, Tag.RENAME_CANDIDATE, Tag.UNCERTAIN, Tag.UNANALYZED)
-            .forEach { counts[it] = 0 }
+        val counts = LinkedHashMap<String, Int>()
+        listOf(Tag.CHANGED.text, EXTRACTED, Tag.ADDED.text, Tag.REMOVED.text, Tag.MOVED.text, Tag.FORMATTING_ONLY.text,
+            Tag.RENAME_CANDIDATE.text, Tag.UNCERTAIN.text, Tag.UNANALYZED.text).forEach { counts[it] = 0 }
         fun count(node: ChangeNode) {
             if (node.isChangedItself) {
-                tags(node).filter { it in counts }.forEach { counts[it] = counts.getValue(it) + 1 }
+                tags(node).map { if (it == Tag.ADDED && node.extractedFrom.isNotEmpty()) EXTRACTED else it.text }
+                    .filter { it in counts }.forEach { counts[it] = counts.getValue(it) + 1 }
             }
             node.children.forEach(::count)
         }
         result.fileRegion?.let(::count)
         result.changes.forEach(::count)
-        counts[Tag.UNANALYZED] = counts.getValue(Tag.UNANALYZED) + result.unanalyzed.size
-        val parts = counts.filterValues { it > 0 }.map { (tag, n) -> "$n ${tag.text}" } +
+        counts[Tag.UNANALYZED.text] = counts.getValue(Tag.UNANALYZED.text) + result.unanalyzed.size
+        val parts = counts.filterValues { it > 0 }.map { (label, n) -> "$n $label" } +
             listOfNotNull(hiddenCount(result, hidden).takeIf { it > 0 }?.let { "$it hidden" })
         return if (parts.isEmpty()) "No structural changes" else parts.joinToString(" · ")
     }
@@ -164,6 +172,62 @@ object OutlineModel {
 
     private fun name(subject: Subject.Declaration): String = (subject.receiver?.let { "$it." } ?: "") + subject.name
 
+    private const val EXTRACTED = "extracted"
+
+    /** Names after which a note says how many more there are. */
+    private const val MAX_NAMES = 3
+
+    /**
+     * The extraction links of a result from both ends (extraction detection specification §3), with each node's
+     * container, so a note can name the other end by its container when that differs.
+     */
+    private class Links(result: ComparisonResult) {
+        private val parents = IdentityHashMap<ChangeNode, ChangeNode?>()
+
+        /** Matched nodes by their old range, which an origin names its source by. */
+        private val sources = HashMap<TextRange, ChangeNode>()
+
+        /** The added nodes extracted from each source, by the source's old range. */
+        private val targets = HashMap<TextRange, MutableList<ChangeNode>>()
+
+        init {
+            fun visit(node: ChangeNode, parent: ChangeNode?) {
+                parents[node] = parent
+                if (node.presence == Presence.MATCHED && node.oldRange != null) sources.putIfAbsent(node.oldRange, node)
+                node.extractedFrom.forEach { targets.getOrPut(it.declarationRange, ::mutableListOf) += node }
+                node.children.forEach { visit(it, node) }
+            }
+            result.changes.forEach { visit(it, null) }
+        }
+
+        /** `extracted from …` for an added node, `code extracted to …` for a source; null for neither. */
+        fun note(node: ChangeNode): String? {
+            if (node.extractedFrom.isNotEmpty()) {
+                return "extracted from " + names(node.extractedFrom.map { origin ->
+                    val source = sources[origin.declarationRange]
+                    label(origin.subject, source?.let { parents[it] }, parents[node], qualify = source != null)
+                })
+            }
+            if (node.extractedTo.isEmpty()) return null
+            val extracted = node.oldRange?.let { targets[it] }.orEmpty()
+            return "code extracted to " + names(node.extractedTo.map { subject ->
+                val target = extracted.firstOrNull { it.subject == subject }
+                label(subject, target?.let { parents[it] }, parents[node], qualify = target != null)
+            })
+        }
+
+        /** The name and signature of [subject], after its container's name when that is not [other]'s container. */
+        private fun label(subject: Subject, container: ChangeNode?, other: ChangeNode?, qualify: Boolean): String {
+            val declaration = subject as? Subject.Declaration ?: return title(subject)
+            val own = if (declaration.name.isEmpty()) title(declaration) else name(declaration) + (declaration.signature?.let { "($it)" } ?: "")
+            val outer = (container?.subject as? Subject.Declaration)?.takeIf { qualify && container !== other }
+            return outer?.let { "${it.name}.$own" } ?: own
+        }
+
+        private fun names(names: List<String>): String =
+            names.take(MAX_NAMES).joinToString(", ") + if (names.size > MAX_NAMES) ", +${names.size - MAX_NAMES} more" else ""
+    }
+
     /** The change labels of a node that is a change itself; none for a node shown only as a container. */
     fun tags(node: ChangeNode): List<Tag> {
         if (!node.isChangedItself) return emptyList()
@@ -190,6 +254,7 @@ object OutlineModel {
         private val formattingInline: Boolean,
         private val hidden: Set<ChangeType>,
         private val uncertain: MutableList<OutlineItem>,
+        private val links: Links,
     ) {
 
         /** The rows for [nodes], the children of one container; uncertain nodes go to [uncertain] instead. */
@@ -220,7 +285,9 @@ object OutlineModel {
                 return OutlineItem(ItemKind.CHANGE, title(node), emptyList(), node.oldRange, node.newRange, children = children)
             }
             if (!node.isChangedItself && children.isEmpty()) return null
-            return OutlineItem(ItemKind.CHANGE, title(node), tags(node), node.oldRange, node.newRange, node.details, children)
+            // An extraction frames the code it came from on the old side, where it is otherwise absent.
+            val oldRange = node.oldRange ?: node.extractedFrom.firstOrNull()?.range
+            return OutlineItem(ItemKind.CHANGE, title(node), tags(node), oldRange, node.newRange, node.details, children, links.note(node))
         }
 
         private fun uncertainItem(node: ChangeNode): OutlineItem {

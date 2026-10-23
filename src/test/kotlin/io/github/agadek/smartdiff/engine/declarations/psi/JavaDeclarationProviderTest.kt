@@ -6,6 +6,29 @@ import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy
 /** The Java provider's declarations, names, signatures and ranges (technical specification §6.4, §6.6, §6.7). */
 class JavaDeclarationProviderTest : ProviderTestCase() {
 
+    fun `test bodies of methods and constructors are inside their braces`() {
+        val text = """
+            abstract class A {
+                A(int x) { this.x = x; }
+                int twice(int x) {
+                    return 2 * x;
+                }
+                abstract void none();
+                int field = 1;
+            }
+            interface I { void f(); default int g() { return 1; } }
+        """.trimIndent() + "\n"
+
+        assertBodies(
+            """
+            constructor A(int): this.x = x;
+            method twice(int): return 2 * x;
+            method g(): return 1;
+            """,
+            build("JAVA", text), text,
+        )
+    }
+
     fun `test declarations of every kind, in source order`() {
         val text = """
             package demo;

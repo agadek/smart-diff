@@ -1,0 +1,10 @@
+status: ANALYZED
+class Cart  old 3-29  new 3-24
+  function checkout(Customer)  changed  code extracted to totalFor(Customer)  old 5-15  new 5-10
+  function totalFor(Customer)  added  extracted from checkout(Customer) old 7-11  new 12-19
+  function describe()  changed  code extracted to List<Item>.describeLines()  old 17-20  new 21
+  function heaviest()  changed  code extracted to heaviest(List<Item>)  old 22-28  new 23
+function List<Item>.describeLines()  added  extracted from describe() old 18-19  new 26-28
+object Weights  added  new 30-38
+  function heaviest(List<Item>)  added  extracted from heaviest() old 23-27  new 31-37
+property Item.totalWeight  added  new 40

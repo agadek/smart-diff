@@ -57,9 +57,12 @@ class KotlinDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_B
             DeclarationInfo(
                 DeclarationKind.FUNCTION, it, functionSignature(element),
                 displaySignature = parameterLabels(element), receiver = element.receiverTypeReference?.let(::typeLabel),
+                body = element.bodyBlockExpression ?: element.bodyExpression,
             )
         }
-        is KtSecondaryConstructor -> DeclarationInfo(DeclarationKind.CONSTRUCTOR, "", parameters(element), displaySignature = parameterLabels(element))
+        is KtSecondaryConstructor -> DeclarationInfo(
+            DeclarationKind.CONSTRUCTOR, "", parameters(element), displaySignature = parameterLabels(element), body = element.bodyExpression,
+        )
         is KtProperty -> element.name?.takeUnless { element.isLocal }?.let {
             DeclarationInfo(
                 DeclarationKind.PROPERTY, it, element.receiverTypeReference?.let(::type),

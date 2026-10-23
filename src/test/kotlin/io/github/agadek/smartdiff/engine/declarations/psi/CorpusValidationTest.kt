@@ -15,6 +15,10 @@ import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.compareSafely
 import io.github.agadek.smartdiff.engine.api.contract.NothingHidden
+import io.github.agadek.smartdiff.engine.declarations.analysis.ContentClassifier
+import io.github.agadek.smartdiff.engine.declarations.analysis.DeclarationMatcher
+import io.github.agadek.smartdiff.engine.declarations.analysis.ExtractionDetector
+import io.github.agadek.smartdiff.engine.declarations.analysis.Match
 import java.io.File
 import java.util.concurrent.Callable
 import java.util.concurrent.TimeUnit
@@ -41,6 +45,9 @@ import java.util.concurrent.TimeUnit
  * - `uncertain`: an uncertain match.
  * - `noisy`: more reported changes than twice the native hunks plus two.
  * - `slow`: the comparison took more than a second.
+ * - `extraction`: an added declaration is linked to code it was extracted from, to check that the link is right.
+ * - `extraction-near-miss`: a link that lower thresholds would make (a covered or removed share from 0.5 up to the
+ *   real threshold), for tuning them (extraction detection specification §8). The report lists them.
  */
 class CorpusValidationTest : BasePlatformTestCase() {
 
@@ -76,7 +83,9 @@ class CorpusValidationTest : BasePlatformTestCase() {
                     val result = onPooledThread { compareSafely(engine, request, Cancellation.NONE) }
                     val millis = (System.nanoTime() - start) / 1_000_000
                     val dialect = dialect(languageId, old, new)
-                    rows += Row(repository.name, commit.take(10), path, old, new, hunks, result, millis, flags(old, new, hunks.size, result, millis), dialect)
+                    val nearMisses = onPooledThread { nearMisses(engine, request, result) }
+                    val flags = flags(old, new, hunks.size, result, millis) + listOfNotNull("extraction-near-miss".takeIf { nearMisses.isNotEmpty() })
+                    rows += Row(repository.name, commit.take(10), path, old, new, hunks, result, millis, flags, dialect, nearMisses)
                 }
             }
         }
@@ -86,6 +95,7 @@ class CorpusValidationTest : BasePlatformTestCase() {
     private class Row(
         val repository: String, val commit: String, val path: String, val old: String, val new: String,
         val hunks: List<String>, val result: ComparisonResult, val millis: Long, val flags: List<String>, val dialect: String?,
+        val nearMisses: List<String>,
     ) {
         /** Whether the report lists this file. */
         val flagged: Boolean get() = flags.isNotEmpty()
@@ -114,6 +124,29 @@ class CorpusValidationTest : BasePlatformTestCase() {
         if (nodes.any { it.node.presence == Presence.UNCERTAIN }) add("uncertain")
         if (reported(result) > 2 * hunks + 2) add("noisy")
         if (millis > 1000) add("slow")
+        if (nodes.any { it.node.extractedFrom.isNotEmpty() }) add("extraction")
+    }
+
+    /**
+     * The links detection with thresholds lowered to 0.5 makes and the real thresholds do not, as
+     * `target <- source covered 0.70 removed 0.90`.
+     */
+    private fun nearMisses(engine: DeclarationEngine, request: ComparisonRequest, result: ComparisonResult): List<String> {
+        if (result.status != Status.ANALYZED && result.status != Status.PARTIAL) return emptyList()
+        val (old, new) = engine.trees(request, Cancellation.NONE) ?: return emptyList()
+        val matching = DeclarationMatcher.match(old, new, Cancellation.NONE)
+        val changed = { match: Match ->
+            ContentClassifier.classify(match.old.ownTokens, match.new.ownTokens, new.whitespacePolicy, parseError = false,
+                signatureChanged = match.old.signature != match.new.signature) == Content.CHANGED
+        }
+        val loose = ExtractionDetector.detect(matching, changed, Cancellation.NONE, thresholds = ExtractionDetector.Thresholds(0.5, 0.5))
+        val strict = ExtractionDetector.detect(matching, changed, Cancellation.NONE)
+        return loose.ofTarget.flatMap { (target, links) ->
+            val linked = strict.ofTarget[target].orEmpty().map { it.source }
+            links.filter { link -> linked.none { it === link.source } }.map { link ->
+                "${target.name} <- ${link.source.old.name} covered %.2f removed %.2f".format(link.covered, link.removed)
+            }
+        }
     }
 
     private class Flat(val node: ChangeNode, val parent: ChangeNode?)
@@ -158,6 +191,8 @@ class CorpusValidationTest : BasePlatformTestCase() {
                 appendLine()
                 appendLine("Flags: ${row.flags.joinToString(", ")}; ${row.millis} ms" + (row.dialect?.let { "; $it" } ?: ""))
                 appendLine()
+                row.nearMisses.forEach { appendLine("- near miss: $it") }
+                if (row.nearMisses.isNotEmpty()) appendLine()
                 appendLine("```")
                 append(Rendering.result(row.result, row.old, row.new))
                 appendLine("--- native hunks")

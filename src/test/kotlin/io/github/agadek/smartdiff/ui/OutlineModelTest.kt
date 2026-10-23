@@ -6,6 +6,7 @@ import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.Origin
 import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.RangePair
 import io.github.agadek.smartdiff.engine.api.Status
@@ -13,6 +14,7 @@ import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** The outline rows and summary built from engine-neutral results (technical specification §10), without the IDE. */
@@ -265,6 +267,63 @@ class OutlineModelTest {
     }
 
     private fun result(vararg changes: ChangeNode) = ComparisonResult(EngineId("e"), "1", Status.ANALYZED, changes = changes.toList())
+
+    @Test
+    fun `extractions name both ends, qualified by container only when it differs`() {
+        val summaryOld = TextRange(10, 50)
+        val shippingOld = TextRange(60, 90)
+        val summary = node("summary", old = summaryOld, content = Content.CHANGED).copy(
+            extractedTo = listOf(method("describe")), details = listOf(RangePair(TextRange(20, 30), null)),
+        )
+        val describe = node("describe", presence = Presence.ADDED, old = null).copy(
+            extractedFrom = listOf(Origin(method("summary"), summaryOld, TextRange(20, 30))),
+        )
+        val shipping = node("shippingCost", old = shippingOld, content = Content.CHANGED).copy(extractedTo = listOf(method("costFor")))
+        val costFor = node("costFor", presence = Presence.ADDED, old = null).copy(
+            extractedFrom = listOf(Origin(method("shippingCost"), shippingOld, TextRange(62, 88))),
+        )
+        val result = result(
+            node("Service", children = listOf(summary, describe, shipping)),
+            node("Rates", presence = Presence.ADDED, old = null, children = listOf(costFor)),
+        )
+
+        val rows = OutlineModel.build(result, "", "", formattingInline = false)
+
+        assertEquals(
+            """
+            class Service
+              method summary()  changed, code extracted to describe()
+              method describe()  added, extracted from summary()
+              method shippingCost()  changed, code extracted to Rates.costFor()
+            class Rates  added
+              method costFor()  added, extracted from Service.shippingCost()
+            """.trimIndent(),
+            render(rows),
+        )
+        // The extraction frames the extracted code on the old side; the source highlights it in its details.
+        assertEquals(TextRange(20, 30), rows[0].children[1].oldRange)
+        assertEquals(TextRange(62, 88), rows[1].children[0].oldRange)
+        assertEquals(listOf(RangePair(TextRange(20, 30), null)), rows[0].children[0].details)
+        assertEquals("2 changed · 2 extracted · 1 added", OutlineModel.summary(result))
+    }
+
+    @Test
+    fun `an extraction is hidden with added changes and a note lists at most three names`() {
+        val sources = (1..5).map { i -> node("s$i", old = TextRange(i * 10, i * 10 + 5), content = Content.CHANGED) }
+        val helper = node("helper", presence = Presence.ADDED, old = null).copy(
+            extractedFrom = sources.map { Origin(it.subject, it.oldRange!!, it.oldRange!!) },
+        )
+        val result = result(node("A", children = sources + helper))
+
+        val shown = render(OutlineModel.build(result, "", "", formattingInline = false))
+        val hidden = render(OutlineModel.build(result, "", "", formattingInline = false, hidden = setOf(ChangeType.ADDED)))
+
+        assertTrue(shown, shown.contains("method helper()  added, extracted from s1(), s2(), s3(), +2 more"))
+        assertTrue(hidden, !hidden.contains("helper"))
+        assertEquals("5 changed · 1 extracted · 1 hidden", OutlineModel.summary(result, setOf(ChangeType.ADDED)))
+    }
+
+    private fun method(name: String) = Subject.Declaration(DeclarationKind.METHOD, name, "")
 
     private fun node(
         name: String,

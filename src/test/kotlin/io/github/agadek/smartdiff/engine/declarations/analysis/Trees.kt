@@ -13,7 +13,8 @@ import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy
  * Builds declaration trees by hand for the analysis tests, without a parser.
  *
  * Each declaration's own source is a short text split into tokens by [tokens]. Ranges are assigned in source order, so
- * they nest and never overlap, but they are not offsets into any real text.
+ * they nest and never overlap, but they are not offsets into any real text. Token offsets follow the same scheme, and a
+ * method's or function's body is the inside of its outermost braces.
  */
 fun tree(
     policy: WhitespacePolicy = WhitespacePolicy.INSIGNIFICANT,
@@ -47,7 +48,14 @@ class Scope(private val offsets: Offsets) {
     ): Declaration {
         val start = offsets.take(body.length + 1)
         val children = Scope(offsets).apply(block).declarations
-        val declaration = Declaration(kind, name, signature, TextRange(start, offsets.take(0)), children, tokens(body), parseError)
+        val tokens = tokens(body)
+        val starts = tokens.runningFold(start) { offset, token -> offset + token.text.length }.dropLast(1)
+        val braces = body.startsWith("{") && body.endsWith("}") && kind in BODIES
+        val declaration = Declaration(
+            kind, name, signature, TextRange(start, offsets.take(0)), children, tokens, parseError,
+            ownTokenStarts = starts,
+            body = if (braces) TextRange(start + 1, start + body.length - 1) else null,
+        )
         declarations += declaration
         return declaration
     }
@@ -58,10 +66,18 @@ class Scope(private val offsets: Offsets) {
     fun method(name: String, signature: String = "", body: String = "{}", parseError: Boolean = false) =
         declaration(DeclarationKind.METHOD, name, signature, body, parseError)
 
+    fun function(name: String, signature: String = "", body: String = "{}") =
+        declaration(DeclarationKind.FUNCTION, name, signature, body)
+
+    fun constructor(signature: String = "", body: String = "{}") =
+        declaration(DeclarationKind.CONSTRUCTOR, "", signature, body)
+
     fun field(name: String, body: String = "int;") = declaration(DeclarationKind.FIELD, name, body = body)
 
     fun initializer(body: String = "{}") = declaration(DeclarationKind.INITIALIZER, "static", body = body)
 }
+
+private val BODIES = setOf(DeclarationKind.METHOD, DeclarationKind.FUNCTION, DeclarationKind.CONSTRUCTOR)
 
 private val TOKEN = Regex("""\s+|//[^\n]*|/\*.*?\*/|"[^"]*"|\w+|.""", RegexOption.DOT_MATCHES_ALL)
 

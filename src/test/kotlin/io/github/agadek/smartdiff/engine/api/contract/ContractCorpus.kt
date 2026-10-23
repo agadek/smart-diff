@@ -78,6 +78,9 @@ object ContractCorpus {
 
     """.trimIndent()
 
+    private const val NAME_BODY =
+        "StringBuilder text = new StringBuilder(\"shapes\"); for (int i = 0; i < count; i++) { text.append(i).append(','); } return text.toString();"
+
     private val textBase = "first line\nsecond line\nthird line\n"
 
     val cases: List<ContractCase> = listOf(
@@ -103,6 +106,11 @@ object ContractCorpus {
             javaBase.replace("private int count;", "private int count"),
             javaBase.replace("return side * side;", "return side * ;"),
             malformed = true,
+        ),
+        ContractCase(
+            "method extracted", JAVA,
+            javaBase.replace("        return \"shapes\";\n", "        $NAME_BODY\n"),
+            javaBase.replace("        return \"shapes\";\n    }\n", "        return describe();\n    }\n\n    private String describe() {\n        $NAME_BODY\n    }\n"),
         ),
         java("unbalanced garbage", "}}} class { ( \"unterminated\n", malformed = true),
         kotlin("function added", kotlinBase.replace("    companion object", "    fun reset() = Unit\n\n    companion object")),

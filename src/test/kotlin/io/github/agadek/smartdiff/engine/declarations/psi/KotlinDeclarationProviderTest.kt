@@ -7,6 +7,32 @@ import org.jetbrains.kotlin.idea.base.plugin.KotlinPluginModeProvider
 /** The Kotlin provider's declarations, names, signatures and ranges (technical specification §6.5, §6.6, §6.7). */
 class KotlinDeclarationProviderTest : ProviderTestCase() {
 
+    fun `test bodies of block and expression functions and secondary constructors`() {
+        val text = """
+            class A(val x: Int) {
+                constructor(s: String) : this(s.length) { println(s) }
+                constructor() : this(0)
+                fun twice(): Int {
+                    return 2 * x
+                }
+                fun thrice() = 3 * x
+                val p: Int get() = x
+            }
+            interface I { fun f(): Int }
+            fun String.shout(): String = uppercase() + "!"
+        """.trimIndent() + "\n"
+
+        assertBodies(
+            """
+            constructor (String): println(s)
+            function twice(): return 2 * x
+            function thrice(): 3 * x
+            function shout(String.): uppercase() + "!"
+            """,
+            build("kotlin", text), text,
+        )
+    }
+
     fun `test Kotlin plugin runs in K2 mode`() {
         assertTrue("tests must run with the Kotlin plugin in K2 mode", KotlinPluginModeProvider.isK2Mode())
     }

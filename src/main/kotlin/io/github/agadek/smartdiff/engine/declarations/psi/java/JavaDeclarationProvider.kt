@@ -58,6 +58,7 @@ class JavaDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.INSIGNIF
             DeclarationInfo(
                 kind, name, Signatures.of(parameters.map { parameterType(it, Signatures::text) }),
                 displaySignature = Signatures.of(parameters.map { parameterType(it, Signatures::label) }),
+                body = element.body,
             )
         }
         is PsiEnumConstant -> DeclarationInfo(DeclarationKind.ENUM_CONSTANT, element.name, signature = null)

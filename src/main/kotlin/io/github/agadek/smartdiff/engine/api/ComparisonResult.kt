@@ -69,6 +69,13 @@ data class ChangeNode(
      * because their content is similar. Such a rename candidate may be wrong, so the outline always shows it.
      */
     val renamedFrom: Subject? = null,
+    /**
+     * Only for [Presence.ADDED]: the old-side code this subject was extracted from, most of its body first. A link adds
+     * information and is never a match (ADR 0003).
+     */
+    val extractedFrom: List<Origin> = emptyList(),
+    /** Only for [Presence.MATCHED]: the added subjects that code removed from this one was extracted to. */
+    val extractedTo: List<Subject> = emptyList(),
 ) {
     /** Whether this node is a change by itself, not only because of its children. */
     val isChangedItself: Boolean
@@ -103,6 +110,15 @@ enum class DeclarationKind {
 
 /** A possible counterpart of an uncertain node; [range] is on the side where the node is absent. */
 data class Candidate(val subject: Subject, val range: TextRange)
+
+/** Code on the old side that an added subject was extracted from. */
+data class Origin(
+    val subject: Subject,
+    /** The old-side range of the source declaration, which identifies its node; a subject is not unique in a file. */
+    val declarationRange: TextRange,
+    /** The old-side range of the extracted code, inside [declarationRange]. */
+    val range: TextRange,
+)
 
 /** A span on the old side, the new side, or both; null where it has no extent on that side. */
 data class RangePair(val old: TextRange?, val new: TextRange?) {

@@ -14,14 +14,19 @@ import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
 internal class LexedTokens private constructor(private val starts: IntArray, private val tokens: List<Token>) {
 
     /** The tokens that start in [range] but in none of [excluded], which are sorted, disjoint and inside [range]. */
-    fun own(range: TextRange, excluded: List<TextRange>): List<Token> {
-        val own = mutableListOf<Token>()
+    fun own(range: TextRange, excluded: List<TextRange>): List<Token> = ownIndices(range, excluded).map { tokens[it] }
+
+    /** The start offsets of the tokens [own] returns, in the same order. */
+    fun ownStarts(range: TextRange, excluded: List<TextRange>): List<Int> = ownIndices(range, excluded).map { starts[it] }
+
+    private fun ownIndices(range: TextRange, excluded: List<TextRange>): List<Int> {
+        val own = mutableListOf<Int>()
         var next = 0
         var i = firstAtOrAfter(range.start)
         while (i < starts.size && starts[i] < range.end) {
             while (next < excluded.size && excluded[next].end <= starts[i]) next++
             val skip = next < excluded.size && starts[i] >= excluded[next].start
-            if (skip) i = firstAtOrAfter(excluded[next].end) else own += tokens[i++]
+            if (skip) i = firstAtOrAfter(excluded[next].end) else own += i++
         }
         return own
     }

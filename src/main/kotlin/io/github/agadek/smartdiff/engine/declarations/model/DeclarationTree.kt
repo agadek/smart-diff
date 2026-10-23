@@ -53,6 +53,16 @@ class Declaration(
     val displaySignature: String? = signature,
     /** For labels: the receiver type of a Kotlin extension, which [signature] starts with; null when there is none. */
     val receiver: String? = null,
+    /**
+     * The start offset of each of [ownTokens], so a run of tokens maps back to the source; empty when the provider has
+     * no offsets, and then the declaration takes no part in extraction detection.
+     */
+    val ownTokenStarts: List<Int> = emptyList(),
+    /**
+     * For a method, function or constructor, the code of its body: inside the braces of a block body, or the whole
+     * expression of an expression body. Null without a body, such as an abstract method.
+     */
+    val body: TextRange? = null,
 ) {
     override fun toString(): String = "$kind $name" + (signature?.let { "($it)" } ?: "") + " $range"
 }
