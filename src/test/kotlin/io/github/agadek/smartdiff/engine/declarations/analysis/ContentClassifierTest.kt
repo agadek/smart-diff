@@ -18,9 +18,16 @@ class ContentClassifierTest {
     }
 
     @Test
-    fun `a parse error wins over everything, including a signature change`() {
-        assertEquals(Content.UNANALYZED, classify("{ a; }", "{ a; }", INSIGNIFICANT, parseError = true))
+    fun `a parse error wins over a change, including a signature change`() {
+        assertEquals(Content.UNANALYZED, classify("{ a; }", "{ b; }", INSIGNIFICANT, parseError = true))
         assertEquals(Content.UNANALYZED, classify("{ a; }", "{ b; }", INSIGNIFICANT, parseError = true, signatureChanged = true))
+        assertEquals(Content.UNANALYZED, classify("{ a; }", "{ a; }", INSIGNIFICANT, parseError = true, signatureChanged = true))
+        assertEquals(Content.UNANALYZED, classify("{ a; }", "{  a; }", INSIGNIFICANT, parseError = true))
+    }
+
+    @Test
+    fun `identical tokens are unchanged even with a parse error`() {
+        WhitespacePolicy.entries.forEach { assertEquals(Content.UNCHANGED, classify("{ a; ", "{ a; ", it, parseError = true)) }
     }
 
     @Test

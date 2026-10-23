@@ -8,9 +8,10 @@ import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy
 /**
  * Classifies the own source of a matched declaration, or of the file region (technical specification §8). The first
  * step that applies decides:
- * 1. a parse error on either side → [Content.UNANALYZED], even when the signature changed;
- * 2. the signature changed (rule M3) → [Content.CHANGED];
- * 3. identical token texts, whitespace included → [Content.UNCHANGED];
+ * 1. identical token texts, whitespace included, and the same signature → [Content.UNCHANGED], even with a parse
+ *    error: the same source parses the same way on both sides, so a parse error marks only code that changed;
+ * 2. a parse error on either side → [Content.UNANALYZED], even when the signature changed;
+ * 3. the signature changed (rule M3) → [Content.CHANGED];
  * 4. equal after the whitespace policy's normalization → [Content.FORMATTING_ONLY], otherwise [Content.CHANGED].
  *
  * Comments are compared by exact text, including the whitespace inside them.
@@ -30,9 +31,9 @@ object ContentClassifier {
         parseError: Boolean,
         signatureChanged: Boolean = false,
     ): Content = when {
+        !signatureChanged && old.map { it.text } == new.map { it.text } -> Content.UNCHANGED
         parseError -> Content.UNANALYZED
         signatureChanged -> Content.CHANGED
-        old.map { it.text } == new.map { it.text } -> Content.UNCHANGED
         normalize(old, policy) == normalize(new, policy) -> Content.FORMATTING_ONLY
         else -> Content.CHANGED
     }
