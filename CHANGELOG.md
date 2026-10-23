@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-23
+
 ### Added
 
 - Extraction detection: a method or function added with code taken out of a changed declaration in the same file is labelled `extracted from <declaration>`, and the source `code extracted to <declaration>`. Selecting the extraction frames the extracted code on the old side; selecting the source highlights it. The summary line counts extractions as `extracted`.
@@ -28,5 +30,6 @@
 - Scala 2 and Scala 3 support, when the Scala plugin is installed: classes, traits, objects, enums, methods, values, type aliases, givens and extension methods, with Scala 3 indentation changes never shown as formatting-only.
 - Unsupported, malformed or oversized files fall back to the native diff with the reason shown.
 
-[Unreleased]: https://github.com/agadek/smart-diff/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/agadek/smart-diff/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/agadek/smart-diff/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/agadek/smart-diff/commits/v0.1.0
