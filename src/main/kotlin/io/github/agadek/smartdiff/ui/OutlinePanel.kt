@@ -12,6 +12,7 @@ import com.intellij.openapi.ui.ComboBox
 import com.intellij.ui.ColoredTreeCellRenderer
 import com.intellij.ui.DoubleClickListener
 import com.intellij.ui.ScrollPaneFactory
+import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SimpleListCellRenderer
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBLabel
@@ -202,6 +203,20 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         }
     }
 
+    /** Selects the row of [path], or the nearest row above it that is shown, and scrolls it into view. */
+    internal fun reveal(path: OutlinePath) {
+        val root = tree.model.root as DefaultMutableTreeNode
+        val items = root.children().toList().map { (it as DefaultMutableTreeNode).userObject as OutlineItem }
+        var node = root
+        for (item in path.find(items)) {
+            node = node.children().toList().map { it as DefaultMutableTreeNode }.firstOrNull { it.userObject === item } ?: break
+        }
+        if (node === root) return
+        val treePath = TreePath(node.path)
+        tree.selectionPath = treePath
+        tree.scrollPathToVisible(treePath)
+    }
+
     internal fun selectedItem(): OutlineItem? =
         (tree.selectionPath?.lastPathComponent as? DefaultMutableTreeNode)?.userObject as? OutlineItem
 
@@ -223,31 +238,11 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
     }
 
-    /**
-     * Draws an item's title, then its change labels in the IDE's diff colors and its note in grey; the text alone carries
-     * the meaning (§10).
-     */
+    /** Draws an item as [appendItem] does. */
     private class Renderer : ColoredTreeCellRenderer() {
         override fun customizeCellRenderer(tree: JTree, value: Any?, selected: Boolean, expanded: Boolean, leaf: Boolean, row: Int, hasFocus: Boolean) {
             val item = (value as? DefaultMutableTreeNode)?.userObject as? OutlineItem ?: return
-            append(item.title, if (item.isGroup) SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES else SimpleTextAttributes.REGULAR_ATTRIBUTES)
-            if (item.tags.isEmpty() && item.note == null) return
-            append("  ")
-            item.tags.forEachIndexed { i, tag ->
-                if (i > 0) append(", ", SimpleTextAttributes.GRAYED_ATTRIBUTES)
-                append(tag.text, attributes(tag))
-            }
-            item.note?.let { append((if (item.tags.isEmpty()) "" else ", ") + it, SimpleTextAttributes.GRAYED_ATTRIBUTES) }
-        }
-
-        private fun attributes(tag: Tag): SimpleTextAttributes {
-            val type = when (tag) {
-                Tag.ADDED -> TextDiffType.INSERTED
-                Tag.REMOVED -> TextDiffType.DELETED
-                Tag.CHANGED, Tag.SIGNATURE_CHANGED -> TextDiffType.MODIFIED
-                else -> return SimpleTextAttributes.GRAYED_ATTRIBUTES
-            }
-            return SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, type.getMarkerColor(null))
+            appendItem(this, item)
         }
     }
 
@@ -257,4 +252,29 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
 
         fun escape(text: String) = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     }
+}
+
+/**
+ * Draws an outline item's title, then its change labels in the IDE's diff colors and its note in grey; the text alone
+ * carries the meaning (§10). The outline and the Changes tree (§9.4) draw their rows with it.
+ */
+internal fun appendItem(component: SimpleColoredComponent, item: OutlineItem) {
+    component.append(item.title, if (item.isGroup) SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES else SimpleTextAttributes.REGULAR_ATTRIBUTES)
+    if (item.tags.isEmpty() && item.note == null) return
+    component.append("  ")
+    item.tags.forEachIndexed { i, tag ->
+        if (i > 0) component.append(", ", SimpleTextAttributes.GRAYED_ATTRIBUTES)
+        component.append(tag.text, attributes(tag))
+    }
+    item.note?.let { component.append((if (item.tags.isEmpty()) "" else ", ") + it, SimpleTextAttributes.GRAYED_ATTRIBUTES) }
+}
+
+private fun attributes(tag: Tag): SimpleTextAttributes {
+    val type = when (tag) {
+        Tag.ADDED -> TextDiffType.INSERTED
+        Tag.REMOVED -> TextDiffType.DELETED
+        Tag.CHANGED, Tag.SIGNATURE_CHANGED -> TextDiffType.MODIFIED
+        else -> return SimpleTextAttributes.GRAYED_ATTRIBUTES
+    }
+    return SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, type.getMarkerColor(null))
 }

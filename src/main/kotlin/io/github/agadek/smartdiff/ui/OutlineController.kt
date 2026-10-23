@@ -53,6 +53,8 @@ class OutlineController internal constructor(
     private val fileName: String?,
     private val oldDocument: Document,
     private val newDocument: Document,
+    /** A row to select in the first result shown, when the diff was opened from the Changes tree (§9.4). */
+    private var reveal: OutlinePath? = null,
 ) : Disposable {
 
     val panel = OutlinePanel(this)
@@ -61,8 +63,11 @@ class OutlineController internal constructor(
     var state: OutlineState = OutlineState.Hidden
         private set
 
-    /** Whether the outline is shown; starts from the window's last choice, or from the setting in a new window. */
-    var isOutlineVisible: Boolean = context.getUserData(VISIBLE) ?: SmartDiffSettings.getInstance().showOutline
+    /**
+     * Whether the outline is shown; starts from the window's last choice, or from the setting in a new window, and is
+     * shown for a diff opened to show a row of it.
+     */
+    var isOutlineVisible: Boolean = reveal != null || (context.getUserData(VISIBLE) ?: SmartDiffSettings.getInstance().showOutline)
         private set
 
     private var running: Job? = null
@@ -179,6 +184,8 @@ class OutlineController internal constructor(
         val items = OutlineModel.build(result, request.oldText, request.newText, settings.formattingOnlyInline, hidden)
         shownRequest = request
         show(OutlineState.Shown(result, OutlineModel.summary(result, hidden), items, OutlineModel.hiddenCount(result, hidden)))
+        reveal?.let(panel::reveal)
+        reveal = null
         (viewer as? FilteringDiffViewer)?.hide(HiddenLines.of(result, hidden, request.oldText, request.newText))
     }
 
