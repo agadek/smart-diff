@@ -11,7 +11,6 @@ import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
 import com.intellij.openapi.fileTypes.LanguageFileType
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
-import io.github.agadek.smartdiff.engine.registry.EngineRegistry
 import io.github.agadek.smartdiff.ui.merge.MergeOutlinePreview
 
 /**
@@ -20,8 +19,9 @@ import io.github.agadek.smartdiff.ui.merge.MergeOutlinePreview
  *
  * The viewer's component is a `DiffPanelBase` whose `BorderLayout` centre holds the editors. That centre moves into a
  * splitter with the outline as the second component. A request opened from a declaration in the Changes tree (§9.4)
- * carries an [OutlinePath], and the outline selects that row once it is shown. Anything else, such as another viewer, contents that are not two
- * documents of one language, or a language no engine supports, is left alone and shows the native diff only.
+ * carries an [OutlinePath], and the outline selects that row once it is shown. Anything else, such as another viewer or
+ * contents that are not two documents of one language, is left alone and shows the native diff only. A language no engine
+ * supports still gets the outline, which says so in place of the tree (§10).
  *
  * A three-sided viewer gets the merge outline placeholder of spike S6 while its preview is switched on
  * ([MergeOutlinePreview], three-way merge plan §6.1).
@@ -43,7 +43,6 @@ class OutlineDiffExtension : DiffExtension() {
         val languageId = new.languageId() ?: return
         if (old.languageId() != languageId) return
         val project = context.project ?: ProjectManager.getInstance().defaultProject
-        if (EngineRegistry.getInstance(project).select(languageId).selected == null) return
 
         val splitter = insertOutlineSplitter(viewer.component, "smartdiff.outline.proportion") ?: return
 

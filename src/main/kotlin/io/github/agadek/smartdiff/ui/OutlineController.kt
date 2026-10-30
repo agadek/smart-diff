@@ -3,6 +3,7 @@ package io.github.agadek.smartdiff.ui
 import com.intellij.diff.DiffContext
 import com.intellij.diff.FrameDiffTool
 import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
+import com.intellij.lang.Language
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -31,8 +32,8 @@ sealed interface OutlineState {
 
     data object Loading : OutlineState
 
-    /** No engine supports the language any more, for example after its plugin was removed. */
-    data class NoEngine(val languageId: String) : OutlineState
+    /** No installed engine supports the language, for example plain text or one whose plugin was removed (§10). */
+    data class NoEngine(val languageName: String) : OutlineState
 
     /** [hiddenCount] changes of the result are left out of [items] by the change type filter. */
     data class Shown(val result: ComparisonResult, val summary: String, val items: List<OutlineItem>, val hiddenCount: Int = 0) : OutlineState
@@ -126,7 +127,7 @@ class OutlineController internal constructor(
         if (disposed || !isOutlineVisible) return
         val selection = selection()
         panel.showEngines(selection)
-        val engine = selection.selected ?: return show(OutlineState.NoEngine(languageId))
+        val engine = selection.selected ?: return show(OutlineState.NoEngine(Language.findLanguageByID(languageId)?.displayName ?: languageId))
 
         val request = ComparisonRequest(
             oldText = oldDocument.immutableCharSequence,

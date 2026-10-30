@@ -14,6 +14,7 @@ import com.intellij.diff.tools.simple.SimpleDiffChange
 import com.intellij.diff.tools.util.DiffDataKeys
 import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
 import com.intellij.diff.util.Side
+import com.intellij.lang.Language
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.DefaultActionGroup
@@ -296,14 +297,35 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertNull(OutlineController.of(shown.viewer))
     }
 
-    fun `test a language without an engine gets no outline`() {
-        val shown = openAny(history("one\n", "two\n", "notes.txt"))
+    fun `test a language without an engine shows the outline with an unsupported message`() {
+        val viewer = openAny(history("one\n", "two\n", "notes.txt")) as TwosideTextDiffViewer
+        val outline = OutlineController.of(viewer)
+        assertNotNull("the outline is attached", outline)
+        val controller = outline!!
 
-        assertNull(OutlineController.of(shown))
-        val action = ActionManager.getInstance().getAction("SmartDiff.ToggleOutline")
-        val event = TestActionEvent.createTestEvent(action, SimpleDataContext.getSimpleContext(DiffDataKeys.DIFF_VIEWER, shown))
+        val languageName = requireNotNull(Language.findLanguageByID("TEXT")?.displayName)
+        val state = controller.state as OutlineState.NoEngine
+        assertEquals(languageName, state.languageName)
+        assertTrue(controller.panel.message.text, controller.panel.message.text.contains(languageName))
+
+        assertTrue(UIUtil.isAncestor(viewer.component, viewer.editor1.component))
+        assertTrue(UIUtil.isAncestor(viewer.component, viewer.editor2.component))
+
+        val action = ActionManager.getInstance().getAction("SmartDiff.ToggleOutline") as ToggleOutlineAction
+        val event = TestActionEvent.createTestEvent(action, SimpleDataContext.getSimpleContext(DiffDataKeys.DIFF_VIEWER, viewer))
         action.update(event)
-        assertFalse(event.presentation.isEnabledAndVisible)
+        assertTrue(event.presentation.isEnabledAndVisible)
+        assertTrue(action.isSelected(event))
+
+        action.setSelected(event, false)
+        assertFalse(UIUtil.isAncestor(viewer.component, controller.panel))
+        assertEquals(OutlineState.Hidden, controller.state)
+        assertFalse(action.isSelected(event))
+
+        action.setSelected(event, true)
+        assertTrue(UIUtil.isAncestor(viewer.component, controller.panel))
+        assertEquals(languageName, (controller.state as OutlineState.NoEngine).languageName)
+        assertTrue(controller.panel.message.text, controller.panel.message.text.contains(languageName))
     }
 
     private inner class Shown(val panel: DiffRequestPanel, val disposable: Disposable, val request: SimpleDiffRequest, val viewer: TwosideTextDiffViewer) {
