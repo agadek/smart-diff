@@ -293,3 +293,13 @@ collapse whitespace to one space where it separates words, and show the receiver
 - `noisy` (16 files): every case was a large addition of new tests or classes, correctly reported as added.
 - `same-name` (1 file): okhttp `FakeSocket.kt`, where `close()` was removed from two classes and added to a new one;
   correct.
+
+## Review comments
+
+> **Model author:** DeepSeek V4.1 Flash · 2026-10-30. These are review notes; the normative text above is unchanged.
+
+- Relabel the “0.1.1 noise pass” heading to 0.1.0 or add a release-history note; the features described shipped in 0.1.0.
+- The “8 near misses remain” table has seven rows because the guava row covers two copies; state that explicitly.
+- Mark the “What to fix” list as resolved/historical where the fixes shipped.
+- Link RELATIONSHIP-BENCHMARK.md for the new quality metrics; keep VALIDATION as the release-corpus record.
+- Record the Scala plugin version used for each run so results stay reproducible.

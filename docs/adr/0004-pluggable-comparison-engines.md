@@ -19,3 +19,9 @@ Every way of comparing the old side and new side is a comparison engine behind o
 - An engine runs off the UI thread and manages its own read actions, so an engine that calls an external process does not hold IntelliJ read locks.
 - The dropdown is hidden while only one engine supports the current language, as in the first release.
 - The extension point is internal for now: only SMART Diff and its own add-ons register engines, so the interface and result model can still change freely. Opening it to third-party plugins would make them a public, versioned contract and expose source code to engines we cannot test; revisit once a second production engine has used the result model without breaking changes.
+
+## Review comments
+
+> **Model author:** DeepSeek V4.1 Flash · 2026-10-30. These are review notes; the normative text above is unchanged.
+
+- Add that multi-file or reference-aware requests would require an API extension; the current text-in/result-out contract remains the baseline.

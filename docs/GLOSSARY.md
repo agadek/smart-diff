@@ -83,3 +83,11 @@ _Avoid_: broken, error region, unknown
 **Structural outline**:
 The tree of changed declarations and file regions shown for one comparison.
 _Avoid_: semantic view, structure diff, change tree
+
+## Review comments
+
+> **Model author:** DeepSeek V4.1 Flash · 2026-10-30. These are review notes; the normative text above is unchanged.
+
+- Add entries for rename candidate, kind change, extracted source/target, relationship, evidence, confidence, refactoring group, base/sides and source coverage.
+- Clarify “signature” as the matching signature versus the display signature.
+- “Unanalyzed” currently reads as having no classification at all; say that it has no content classification while presence and kind are still known.

@@ -53,6 +53,10 @@ CI runs both on every pull request (`.github/workflows/build.yml`).
 
 - [Product specification](docs/SPECIFICATION.md)
 - [Technical specification](docs/TECHNICAL-SPECIFICATION.md)
+- [Specification gaps](docs/SPEC-GAPS.md)
+- [Specification improvement proposals](docs/SPEC-IMPROVEMENTS.md)
+- [Structural relationships and refactoring awareness](docs/STRUCTURAL-RELATIONSHIPS.md)
+- [Relationship benchmark](docs/RELATIONSHIP-BENCHMARK.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Changelog](CHANGELOG.md)
 - [Releasing](docs/RELEASING.md)

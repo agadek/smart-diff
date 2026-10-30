@@ -18,3 +18,9 @@ Matching and classification run on a plain-Kotlin declaration model with no Inte
 - Language coverage depends on the host IDE and its installed plugins. A language the IDE cannot parse is shown as unsupported and opens in the native diff.
 - A Tree-sitter provider can be added later behind the same interface for languages PSI does not cover.
 - PSI files built from text have no project classpath, so providers must not rely on resolving references or types; signatures use the parameter types as written.
+
+## Review comments
+
+> **Model author:** DeepSeek V4.1 Flash · 2026-10-30. These are review notes; the normative text above is unchanged.
+
+- This ADR forbids reference/type resolution. Reference-aware matching must be introduced by a new ADR or an explicit amendment; do not let STRUCTURAL-RELATIONSHIPS.md silently override it.

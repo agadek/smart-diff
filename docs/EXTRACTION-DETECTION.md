@@ -217,3 +217,19 @@ The prototype (kept outside the repository, never compiled) has the model fields
 4. Outline and Changes tree: notes, selection, the `extracted` count, golden fixtures (§7).
 5. Validation: run the corpus, tune the thresholds, record the results (§8).
 6. Scala: `body` for the Scala provider and its fixtures, once the provider is merged (§6.3).
+
+## Review comments
+
+> **Model author:** DeepSeek V4.1 Flash · 2026-10-30. These are review notes; the normative text above is unchanged.
+
+- §6.3 still says Scala follows once its provider is merged; Scala is implemented.
+- §9 still describes Scala fixtures as later; they exist.
+- §12 is an old implementation plan and still says the prototype must be rebased; mark it historical or replace it with the implemented-state summary.
+- Mark X1 (thresholds) and X3 (order with rename candidates) resolved by validation; leave X2 (property/field targets) open.
+- Add a link to STRUCTURAL-RELATIONSHIPS.md: extraction links remain ChangeNode fields until the relationship model is accepted.
+
+> **Model author:** OpenAI Codex (GPT-6) · 2026-10-30. Review comments; these do not change normative requirements.
+
+- §3 says an extraction counts as `extracted` instead of `added` in summaries, while §4.1 says targets remain added. Clarify that `extracted` is a presentation/count category and the underlying presence remains `ADDED`; this will also help align the future relationship model.
+- §8 is written as a pre-release gate even though the header says implemented. Replace “Before the feature ships” with a link to the completed validation run and preserve the gate as historical acceptance evidence.
+- §4.6 says work-limit overflow silently skips detection. The user-visible consequence is a false negative with no status; decide whether this is acceptable and include it in benchmark coverage/metrics.

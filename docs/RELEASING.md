@@ -56,3 +56,11 @@ Off for now. To turn it on:
    from the plugin description) and the tags, and wait for JetBrains' approval.
 3. Add the repository variable `PUBLISH_TO_MARKETPLACE` with the value `true` (GitHub: Settings | Secrets and variables
    | Actions | Variables). Every later release then publishes through the workflow.
+
+## Review comments
+
+> **Model author:** DeepSeek V4.1 Flash · 2026-10-30. These are review notes; the normative text above is unchanged.
+
+- Add the semantic benchmark and corpus validation to the release gate once accepted.
+- State that Plugin Verifier needs the Scala plugin available for both target IDEs.
+- Add a check that CHANGELOG.md and ROADMAP.md do not use conflicting release labels.

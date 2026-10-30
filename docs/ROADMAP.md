@@ -30,9 +30,21 @@ Keep a single space where the source separates words in a type (`Class<out Annot
 
 A nothing-hidden check cheap enough for large files, so the corpus validation covers every file (414 of 1279 were too large for the current one).
 
+## 0.2.0: three-way merge outline
+
+Decided 2026-10-30. It comes before everything else under [Later](#later).
+
+- **Three-way merge outline:** every phase of [THREE-WAY-MERGE.md §9](THREE-WAY-MERGE.md#9-phases): the join, three-sided diffs, the merge window, Scala 2 and Scala 3 merge fixtures, and the merge validation. Java, Kotlin and Scala ship together, so no supported language lacks merges. See [Structural outline for three-way merges](#structural-outline-for-three-way-merges).
+- **Unsupported-language state:** a diff or merge whose language no engine supports shows the outline with an "unsupported language" message and the native diff, as the [product specification](SPECIFICATION.md) asks, instead of attaching nothing.
+- **Not analyzed in the Changes tree:** a file in a supported language whose result is `FAILED` or `TOO_LARGE` shows the reason in grey in place of a summary (`not analyzed: too large`, `not analyzed: timed out`). Files in other languages stay as the platform draws them.
+- **Specification tidy-up:** one current-scope statement shared by the product specification, technical specification, roadmap and README; the fallback states and the Changes tree boundaries (no summary for added and deleted files, at most 500 files summarized) stated in the product specification as current behaviour; one user-facing classification table of the labels 0.2.0 shows, updated later if the relationship model changes them ([SPEC-GAPS.md](SPEC-GAPS.md), [SPEC-IMPROVEMENTS.md](SPEC-IMPROVEMENTS.md)).
+- **Matching program, design only:** the model ADR and the benchmark specification for [STRUCTURAL-RELATIONSHIPS.md](STRUCTURAL-RELATIONSHIPS.md) phase 0 and [RELATIONSHIP-BENCHMARK.md](RELATIONSHIP-BENCHMARK.md) are written during this release. Matcher and benchmark code start after 0.2.0.
+
 ## Later
 
 Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.md#semanticdiff) on 2026-10-22: features it has that SMART Diff lacks. Their order among the other items is still open.
+
+The structural relationships and refactoring-awareness program that spans several of these items is specified in [STRUCTURAL-RELATIONSHIPS.md](STRUCTURAL-RELATIONSHIPS.md); its benchmark is [RELATIONSHIP-BENCHMARK.md](RELATIONSHIP-BENCHMARK.md). It is a proposal, not a commitment.
 
 ### Multi-file summary in the Changes tree
 
@@ -41,6 +53,10 @@ The first item after the 0.1.1 noise pass. Show changed declarations for each fi
 - **Level 1 (implemented):** a summary next to each file, for example `Parser.kt  2 changed · 1 added`, in the Local Changes view and the Commit tool window ([technical spec §9.4](TECHNICAL-SPECIFICATION.md#94-changes-tree-summary)).
 - **Level 2 (implemented):** expandable declarations under each file, the same rows as the file's outline. Double-click or Enter on one opens the file's diff with that declaration selected in the outline; the rows are computed with the summary, so they follow edits the same way ([technical spec §9.4](TECHNICAL-SPECIFICATION.md#94-changes-tree-summary)).
 - **Spike (done 2026-10-22, S5):** the Local Changes and Commit tree takes the summary through the public `changesViewModifier` extension point ([ADR 0006](adr/0006-changes-tree-summary-through-changes-view-modifier.md)). The modal commit dialog and the Git log's commit details have no such hook, so they show no summary.
+
+### Summaries for added and deleted files
+
+Give added and deleted files in the Changes tree a summary and declaration rows, as every declaration of the file added or removed. Today they get none (decided 2026-10-30 to keep for 0.2.0 and revisit).
 
 ### Scala
 
@@ -122,3 +138,18 @@ Link an added method or function to the code it was extracted from. When most of
 ### Third-party engines
 
 Consider making the `comparisonEngine` extension point public once a second production engine has used the result model without breaking changes (technical spec Q5).
+
+## Review comments
+
+> **Model author:** DeepSeek V4.1 Flash · 2026-10-30. These are review notes; the normative text above is unchanged.
+
+- The rename-candidate/overload/readable-label work shipped in 0.1.0; the “0.1.1: noise pass” heading needs correction or a release-history note.
+- Include Scala in the first-release language list and mark the Scala section implemented, not planned after 0.1.1.
+- Mark Changes-tree level 1/2 and extraction detection consistently as implemented.
+- Link “Rename grouping across usages” and “Moves inside declarations” to STRUCTURAL-RELATIONSHIPS.md so the program is not duplicated across roadmap items.
+- Update the roadmap status date after these edits.
+
+> **Model author:** OpenAI Codex (GPT-6) · 2026-10-30. Review comments; these do not change roadmap commitments.
+
+- The first-release list still says Java/Kotlin only and says renamed declarations remain literal; later sections document Scala and rename candidates as shipped. Add a current “shipped baseline” summary, then preserve historical release notes separately.
+- The roadmap calls the semantic matching proposal a program spanning extraction and three-way merge, but the merge proposal has its own phased plan. Identify which roadmap entries the program supersedes and which it only informs, to avoid two competing schedules.

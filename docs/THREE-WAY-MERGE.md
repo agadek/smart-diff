@@ -210,3 +210,18 @@ Done 2026-10-23 on IntelliJ IDEA Community 2025.1.3, from the platform sources o
 - **Three-sided diffs of conflicted files:** the sources show no three-sided diff for a conflicted file in the Local Changes view, which opens the merge window to resolve it; three-sided diffs come from conflicts when applying a patch or unshelving, and from the "Compare three files" action. The three-sided branch of §6.1 serves those.
 - **Toolbar:** the merge viewer's toolbar ends with the `Diff.Conflicts.Additional.Actions` group, where the outline toggle goes (§6.2).
 - **Internal API (R5):** the attachment uses `MergeTool`, `MergeContext`, `TextMergeRequest`, `DiffManagerEx.getMergeTools()`, `DiffPanelBase` and, for three-sided diffs, an instance check of `ThreesideTextDiffViewer`, whose base class `ThreesideDiffViewer` is internal, so the viewer is used only through `FrameDiffTool.DiffViewer`. `TextMergeTool`, `TextMergeViewer` and `MergeThreesideViewer` are internal and are not referenced. Plugin Verifier reports no internal API use on 2025.1.3 and on the latest release (2026.2), and the same experimental API use as before.
+
+## Review comments
+
+> **Model author:** DeepSeek V4.1 Flash · 2026-10-30. These are review notes; the normative text above is unchanged.
+
+- Add a link to STRUCTURAL-RELATIONSHIPS.md; the join can consume two-sided results, and the relationship model is not a prerequisite.
+- Clarify that ComparisonRequest.relatedTexts is proposed and does not exist in the current API.
+- Consolidate the fallback behavior for FAILED/PARTIAL sides into a small state table.
+- Add the glossary terms base and sides when phase 2 starts.
+
+> **Model author:** OpenAI Codex (GPT-6) · 2026-10-30. Review comments; these do not change normative requirements.
+
+- Reconcile §4’s side-name parsing with §12’s S6 results: Git merge/cherry-pick titles may be generic (“Your version” / “Changes from server”), while useful branch labels can come from custom title components. Make the S6 behavior normative and state the fallback for callers without those components.
+- §4 says a row may be “same change on both sides” when left and right text is equal. Specify whether equality is byte/text equality or normalized source equality, and how line separators are handled.
+- The merge-without-conflict note is based on the IDE’s comparison policy, which may differ from the user’s whitespace settings (§12). Make the policy visible or avoid presenting the result as an absolute conflict judgment.

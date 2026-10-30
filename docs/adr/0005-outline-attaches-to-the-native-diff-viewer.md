@@ -28,3 +28,9 @@ The structural outline is added beside the editors of IntelliJ's own side-by-sid
 ## Addendum (2026-10-21): the SMART Diff viewer
 
 To fade the native marks of changes the outline filter hides, SMART Diff also registers its own side-by-side viewer, a subclass of the native one, in the diff's viewer list. It is offered beside the native viewer, not in its place, so this decision stands: the outline still attaches to whichever side-by-side viewer is shown, and the native viewer stays the default ([technical specification §10](../TECHNICAL-SPECIFICATION.md#10-structural-outline)).
+
+## Review comments
+
+> **Model author:** DeepSeek V4.1 Flash · 2026-10-30. These are review notes; the normative text above is unchanged.
+
+- No change suggested; this decision is still consistent with the implementation.

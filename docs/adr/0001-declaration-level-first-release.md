@@ -15,3 +15,9 @@ The first release tells reviewers which declarations changed and leaves line and
 
 - Inside a changed declaration, the reviewer reads the native line/word diff; SMART Diff does not highlight changed expressions.
 - Fine-grained differencing can be added later behind the same model without changing what a declaration change means.
+
+## Review comments
+
+> **Model author:** DeepSeek V4.1 Flash · 2026-10-30. These are review notes; the normative text above is unchanged.
+
+- Add a note that fine-grained differencing, statement moves and the semantic relationship program remain later work; this ADR still defines the first-release boundary.

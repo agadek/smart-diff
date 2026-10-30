@@ -30,3 +30,9 @@ The modifier replaces each file node that has a summary with a `SummaryChangeNod
 - Summaries need the old content of each file, which the VCS may have to load, so they are computed in the background and the tree is rebuilt when they arrive. A file's row first shows without a summary.
 - The replacement relies on the builder being a `TreeModelBuilder`; with any other builder the modifier does nothing.
 - Level 2 adds the file's declarations as helper child nodes of the same node, so they stay out of the selected and included changes, and opens them through the `changesViewNodeAction` extension point, which lets a plugin handle double-click and Enter on a node of this tree. That extension point is marked experimental. The Commit tool window draws an inactive checkbox on each declaration row, since only the tree itself decides which rows have one.
+
+## Review comments
+
+> **Model author:** DeepSeek V4.1 Flash · 2026-10-30. These are review notes; the normative text above is unchanged.
+
+- Note the double-click/Enter limitation: ChangesViewNodeAction exposes one hook for both gestures, so §9.4’s different behaviors need a decision.

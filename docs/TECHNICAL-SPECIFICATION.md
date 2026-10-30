@@ -493,3 +493,21 @@ Spikes S1 to S3 ran as platform tests and were retired once the tests of §12 co
 - **Q5 Third-party engines (resolved 2026-10-21).** The `comparisonEngine` extension point stays internal: only SMART Diff and its own optional descriptors register engines, and the engine interface and result model may change freely. Revisit after a second production engine has used the result model without breaking changes.
 - **Q6 Engine choice scope (resolved 2026-10-21).** The default engine is chosen per language (§4, §11).
 - **Q7 Scala declaration model (resolved 2026-10-22).** For the [Scala provider](ROADMAP.md#scala) (§6.8): `TRAIT`, `GIVEN` and `EXTENSION` are added to `DeclarationKind`, rather than mapping traits to `INTERFACE`, since traits can hold state and code; anonymous givens are named by their type as written; an extension block is an `EXTENSION` container named by its receiver type, with its methods as children; a pattern definition such as `val (a, b) = …` is one property named `(a, b)`; parameter clauses are joined with `;`, and a `using` or `implicit` clause keeps its keyword.
+
+## Review comments
+
+> **Model author:** DeepSeek V4.1 Flash · 2026-10-30. These are review notes; the normative text above is unchanged.
+
+- §1 and §6.8 still treat Scala as out of scope or planned; update both now that the provider is implemented and covered by fixtures.
+- §8’s step order contradicts §6.7, ContentClassifier and ContentClassifierTest. Put identical tokens with an unchanged signature first, then parse error, then signature change, then whitespace normalization.
+- §6.1’s internal model snippet is behind the code: add displaySignature, receiver, ownTokenStarts and body, or point to the extraction and signature sections.
+- §6.3 says the Java lexer uses the default project’s language level; the code passes the file’s project. Verify and correct the wording.
+- §7 needs notes or tests for empty constructors of renamed classes, arrow-containing parameter types in M3 similarity, same-name M5 fallback, and whether below-threshold rivals count in the 0.1 margin.
+- §9.4’s double-click/Enter distinction cannot be implemented with the current ChangesViewNodeAction hook as written; decide the behavior. §10’s PARTIAL banner also points to an Unanalyzed group that the declaration engine does not populate.
+- §12 is stale for Scala, extraction flags and the contract corpus; §12.1 omits the pinned Scala plugin and should say whether Plugin Verifier installs it for both IDEs. Update Q2’s 0.1.1 reference in §14.
+
+> **Model author:** OpenAI Codex (GPT-6) · 2026-10-30. Review comments; these do not change normative requirements.
+
+- The technical spec contains the most complete current behavior, but its title/status and historical wording (“first release”, “After the first release”) make shipped behavior look planned. State which sections are current normative behavior and which are archived release-plan context.
+- §9.4 already specifies the summary exclusions and 500-file cap, and §10 specifies `TOO_LARGE`, `FAILED`, `UNSUPPORTED` and `PARTIAL` presentation. Keep the product-level gap focused on documenting these behaviors and verify that implementation actually presents each state; unsupported engines currently bypass result rendering.
+- In §9.4, state what happens to files beyond the cap in terms of ordering and whether repeated rebuilds can change which 500 receive analysis. This makes the cap’s observable behavior testable.

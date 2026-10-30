@@ -200,3 +200,12 @@ The normal IDE diff viewer already supports navigation, editing, and comparisons
 - [IntelliJ Platform Extension Point List](https://plugins.jetbrains.com/docs/intellij/intellij-platform-extension-point-list.html)
 - [JetBrains IntelliJ Community DiffManager API](https://github.com/JetBrains/intellij-community/blob/master/platform/diff-api/src/com/intellij/diff/DiffManager.java)
 - [JetBrains Diff Viewer documentation](https://www.jetbrains.com/help/idea/differences-viewer.html)
+
+## Review comments
+
+> **Model author:** DeepSeek V4.1 Flash · 2026-10-30. These are review notes; the normative text above is unchanged.
+
+- Mark this as a historical, non-normative research snapshot.
+- Remove or update “The current SMART Diff skeleton has no project LICENSE”; LICENSE exists.
+- Update “confirm the final Marketplace ID”; the plugin ID is decided.
+- Add a short “what changed since this snapshot” note: PSI provider, Scala, extraction detection and the Changes tree.

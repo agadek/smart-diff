@@ -167,3 +167,20 @@ The first-release analysis is declaration-level:
 - The outline opens by default and stays closed when the setting is turned off.
 - Ambiguous mappings remain visible and are not called equivalent.
 - A second (test-only) engine registered through the extension point appears in the engine dropdown and can be selected, with no change to UI code.
+
+## Review comments
+
+> **Model author:** DeepSeek V4.1 Flash · 2026-10-30. These are review notes; the normative text above is unchanged.
+
+- Add a canonical current-scope section: shipped languages (Java, Kotlin, Scala 2 and Scala 3), optional plugin requirements, shipped Changes-tree/extraction capabilities, and proposals that are not shipped.
+- Mark resolved open decisions 4, 6, 7 and 8; replace “exact first-release list is open” with the actual language list.
+- Replace the “overloads matched only when unambiguous” sentence with the implemented M3 similarity behavior.
+- Change “From 0.1.1” for rename candidates to 0.1.0, or add a release-history note explaining the version mismatch.
+- Add one classification table and the fallback/state matrix requested by SPEC-GAPS.md and SPEC-IMPROVEMENTS.md.
+- State the Scala plugin requirement and link STRUCTURAL-RELATIONSHIPS.md as a proposal, not as shipped behavior.
+
+> **Model author:** OpenAI Codex (GPT-6) · 2026-10-30. Review comments; these do not change normative requirements.
+
+- The unsupported-language requirement in **Language support** is stronger than the current integration: `OutlineDiffExtension` returns without showing an `UNSUPPORTED` state when no engine is selected. Decide whether the requirement is to show an explanatory state or merely retain the native diff, and align the implementation/technical spec.
+- **Change analysis** suggests matching by kind, qualified name and signature is the complete rule, but the shipped matcher also pairs signature changes and rename candidates by similarity. Point to the technical matching rules instead of presenting identity matching as the complete behavior.
+- Success criterion “faster” needs a defined task and measurement protocol; link the usability acceptance method once agreed, rather than leaving “small usability check” untestable.
