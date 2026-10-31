@@ -19,10 +19,10 @@ interface DeclarationProvider {
     fun supports(languageId: String): Boolean
 
     /**
-     * The dialect both sides are parsed in, chosen once from both texts so their trees compare (§6.2); null for a
-     * language with one dialect.
+     * The dialect every side is parsed in, chosen once from all [texts] so their trees compare (§6.2): both sides of the
+     * request, then its related texts. Null for a language with one dialect.
      */
-    fun dialect(project: Project, oldText: CharSequence, newText: CharSequence, fileName: String?): Language? = null
+    fun dialect(project: Project, texts: List<CharSequence>, fileName: String?): Language? = null
 
     /**
      * Parses [text] into a PSI file that belongs to no module (§6.2), in [dialect] if it is not null. [fileName] is the

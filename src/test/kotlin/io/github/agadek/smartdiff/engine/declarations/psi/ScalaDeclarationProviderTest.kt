@@ -491,6 +491,26 @@ class ScalaDeclarationProviderTest : ProviderTestCase() {
         assertEquals("Scala 3", dialect(SCALA_3, plain))
     }
 
+    fun `test all texts of a merge choose one dialect`() {
+        val base = "object Plain { def f() = 1 }\n"
+
+        // Alone, each side would read the base in another dialect (three-way merge plan, risk R3).
+        assertEquals("Scala 3", dialect(base, SCALA_3))
+        assertEquals("Scala", dialect(base, SCALA_2_ONLY))
+        val both = dialect(base, SCALA_3, SCALA_2_ONLY)
+        assertEquals(both, dialect(base, SCALA_2_ONLY, SCALA_3))
+    }
+
+    fun `test the related texts of a request choose the dialect of both runs of a merge`() {
+        val base = "object Plain {\n  def f() = 1\n}\n"
+        val engine = DeclarationEngine(null)
+        fun baseTree(side: String, other: String?) =
+            engine.trees(ComparisonRequest(base, side, "Scala", "A.scala", relatedTexts = listOfNotNull(other)), Cancellation.NONE)!!.first
+
+        assertFalse(baseTree(SCALA_3, null).whitespacePolicy == baseTree(SCALA_2_ONLY, null).whitespacePolicy)
+        assertEquals(baseTree(SCALA_3, SCALA_2_ONLY).whitespacePolicy, baseTree(SCALA_2_ONLY, SCALA_3).whitespacePolicy)
+    }
+
     fun `test a Scala 3 indentation change is never formatting-only`() {
         val old = "object A:\n  def f =\n    println(1)\n    println(2)\n"
         val new = "object A:\n  def f =\n    println(1)\n  println(2)\n"
@@ -520,8 +540,8 @@ class ScalaDeclarationProviderTest : ProviderTestCase() {
         assertEquals(Content.FORMATTING_ONLY, result.changes.single().children.single().content)
     }
 
-    private fun dialect(old: String, new: String): String? = ReadAction.compute(ThrowableComputable<String?, RuntimeException> {
-        provider("Scala").dialect(ProjectManager.getInstance().defaultProject, old, new, null)?.id
+    private fun dialect(vararg texts: String): String? = ReadAction.compute(ThrowableComputable<String?, RuntimeException> {
+        provider("Scala").dialect(ProjectManager.getInstance().defaultProject, texts.toList(), null)?.id
     })
 
     private fun compare(old: String, new: String) =

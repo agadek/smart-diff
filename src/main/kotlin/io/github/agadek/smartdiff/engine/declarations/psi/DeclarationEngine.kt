@@ -18,7 +18,8 @@ import java.util.concurrent.CancellationException
  * The declaration engine (technical specification §6 to §8): a language's [DeclarationProvider] turns each side into a
  * declaration tree, then [DeclarationAnalysis] matches and classifies them.
  *
- * The provider first chooses the dialect from both texts; then each side is parsed in its own cancellable read action.
+ * The provider first chooses the dialect from both texts and the request's related texts; then each side is parsed in its
+ * own cancellable read action.
  * Matching and classification run outside any read action and hold no PSI.
  */
 class DeclarationEngine(private val project: Project?) : ComparisonEngine {
@@ -51,7 +52,7 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
 
     private fun trees(provider: DeclarationProvider, request: ComparisonRequest, cancellation: Cancellation): Pair<DeclarationTree, DeclarationTree> {
         val dialect = cancellableReadAction(cancellation) {
-            provider.dialect(project(), request.oldText, request.newText, request.fileName)
+            provider.dialect(project(), listOf(request.oldText, request.newText) + request.relatedTexts, request.fileName)
         }
         return build(provider, request.oldText, request.fileName, dialect, cancellation) to
             build(provider, request.newText, request.fileName, dialect, cancellation)

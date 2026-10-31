@@ -105,7 +105,7 @@ class CorpusValidationTest : BasePlatformTestCase() {
     private fun dialect(languageId: String, old: String, new: String): String? {
         val provider = DeclarationProvider.EP_NAME.extensionList.firstOrNull { it.supports(languageId) } ?: return null
         return ReadAction.compute(ThrowableComputable<String?, RuntimeException> {
-            provider.dialect(ProjectManager.getInstance().defaultProject, old, new, null)?.id
+            provider.dialect(ProjectManager.getInstance().defaultProject, listOf(old, new), null)?.id
         })
     }
 
