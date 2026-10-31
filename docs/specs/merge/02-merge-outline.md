@@ -32,6 +32,15 @@ Status: implemented, 2026-10-31
 - **R22** When one side cannot be analyzed, the outline shows that side's status and reason, and still lists the other side's changes.
 - **R23** The outline works for Java, Kotlin, Scala 2 and Scala 3.
 - **R24** The outline never claims that a merge is safe, and never edits the result.
+- **R25** When one side cannot be analyzed, the other side's group and its count in the summary line leave out "only".
+- **R26** A pane whose side cannot be analyzed says so when a row is selected, instead of "not present".
+- **R27** A [candidate](../../GLOSSARY.md#candidate) row names the side it comes from.
+- **R28** Selecting a candidate frames it in the pane where it is.
+- **R29** In the container tree, an uncertain row lists its candidates under it.
+- **R30** A side's labels include its [extraction](../../GLOSSARY.md#extraction) notes.
+- **R31** The banner "the base was read differently for each side" appears once, above the lists.
+- **R32** When the base was read differently, the summary line counts the rows the filter hides.
+- **R33** The "changed on both sides" filter entry is offered only in the container tree.
 
 ## Out of scope
 

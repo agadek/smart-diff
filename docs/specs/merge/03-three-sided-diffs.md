@@ -16,6 +16,8 @@ Status: implemented, 2026-10-31
 - **R6** Synchronized scrolling pauses while the panes scroll, and the next scroll by the user syncs them again.
 - **R7** Each side is named after the title its caller gives the pane.
 - **R8** Three-sided diffs never show [merged without conflict](../../GLOSSARY.md#merged-without-conflict), since they have no conflicts.
+- **R9** An edit to any pane compares the three versions again, 300 ms after typing stops.
+- **R10** A result computed before an edit is never shown.
 
 ## References
 
