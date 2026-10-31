@@ -148,6 +148,31 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test losing the engine clears faded changes and shows NoEngine`() {
+        val diffSettings = DiffSettings.getSettings()
+        val savedOrder = diffSettings.diffToolsOrder
+        val registration = Disposer.newDisposable(testRootDisposable)
+        try {
+            ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(LineEngineFactory()), registration)
+            diffSettings.diffToolsOrder = listOf(FilteringDiffTool::class.java.canonicalName) + savedOrder
+
+            val viewer = openAny(history("one\n", "two\n", "notes.txt")) as FilteringDiffViewer
+            val outline = OutlineController.of(viewer)!!
+            awaitResult(outline) { it.result.engineId == LineEngine.ID }
+            outline.setHidden(ChangeType.CHANGED, true)
+            awaitChanges(viewer) { changes -> changes.any { it.isSkipped } }
+
+            Disposer.dispose(registration)
+            outline.refresh()
+
+            val languageName = requireNotNull(Language.findLanguageByID("TEXT")?.displayName)
+            assertEquals(OutlineState.NoEngine(languageName), outline.state)
+            assertEquals("the no-engine message shows the native diff without faded marks", HiddenLines.NONE, viewer.hiddenLines)
+        } finally {
+            diffSettings.diffToolsOrder = savedOrder
+        }
+    }
+
     fun `test a Kotlin diff shows the outline`() {
         val outline = open(history(KOTLIN_OLD, KOTLIN_NEW, "Greeter.kt")).awaitResult()
 

@@ -181,7 +181,8 @@ class ChangesSummaryService(private val project: Project) {
      * The summary of each of [changes], or null where it is not known yet or there is none: an added or deleted file, or
      * a language without an engine. A file the engine could not analyze (`FAILED` or `TOO_LARGE`) gets a summary that says
      * why, with no declaration rows. Unknown summaries are computed in the background, and the tree is refreshed when
-     * they are ready. Files that are no longer in [changes] are forgotten.
+     * they are ready. A timed-out summary is shown once and retried on the next tree build. Files that are no longer in
+     * [changes] are forgotten.
      */
     fun summaries(changes: List<Change>): List<FileSummary?> {
         val requests = changes.map(::request)
@@ -194,7 +195,11 @@ class ChangesSummaryService(private val project: Project) {
                     null
                 }
                 Entry.Pending -> null
-                is Entry.Done -> entry.summary
+                is Entry.Done -> {
+                    // A timeout may have been transient. Show the reason once, then let the next tree build try again.
+                    if (entry.summary?.retryable == true) cache.remove(request.key)
+                    entry.summary
+                }
             }
         }
     }
@@ -270,12 +275,12 @@ class ChangesSummaryService(private val project: Project) {
                 OutlineModel.build(result, oldText, newText, SmartDiffSettings.getInstance().formattingOnlyInline)
             else -> emptyList()
         }
-        return FileSummary(text, items)
+        return FileSummary(text, items, retryable = result.status == Status.FAILED && isTimedOut(result))
     }
 
     /** A failed result for the time limit, or null when the cancellation came from somewhere else, such as project disposal. */
     private fun timedOut(engine: ComparisonEngine, deadline: Deadline, limits: Limits): ComparisonResult? =
-        if (deadline.timedOut) ComparisonResult.failed(engine, "timed out after ${limits.timeoutMillis} ms") else null
+        if (deadline.timedOut) ComparisonResult.timedOut(engine, limits.timeoutMillis) else null
 
     private fun content(revision: ContentRevision?): String? = try {
         revision?.content
@@ -322,11 +327,16 @@ class ChangesSummaryService(private val project: Project) {
             Status.ANALYZED, Status.PARTIAL -> OutlineModel.summary(result).replaceFirstChar { it.lowercase() }
             Status.TOO_LARGE -> "not analyzed: too large"
             Status.FAILED -> when {
-                result.fallbackReason?.contains("timed out") == true -> "not analyzed: timed out"
+                isTimedOut(result) -> "not analyzed: timed out"
+                result.fallbackReason?.contains("could not be parsed") == true -> "not analyzed: parse errors"
                 else -> "not analyzed: analysis failed"
             }
             Status.UNSUPPORTED -> null
         }
+
+        /** Whether [result] is the failed result for a comparison over its time limit. */
+        fun isTimedOut(result: ComparisonResult): Boolean =
+            result.status == Status.FAILED && result.fallbackReason?.startsWith(ComparisonResult.TIMEOUT_REASON) == true
     }
 }
 
@@ -334,9 +344,9 @@ class ChangesSummaryService(private val project: Project) {
  * What the Changes tree shows for a file: its summary line, such as `2 changed · 1 added`, or the reason it was not
  * analyzed, and its outline's top-level rows. The rows are the outline's own (§10) without the change type filter,
  * which applies to outlines only, as the summary counts every change. A row that carries a reason has no declaration
- * rows.
+ * rows. A [retryable] summary is shown once and recomputed on the next tree build.
  */
-class FileSummary(val text: String, val items: List<OutlineItem>)
+class FileSummary(val text: String, val items: List<OutlineItem>, val retryable: Boolean = false)
 
 /** Rebuilds the Local Changes and Commit tree, which asks [ChangesSummaryModifier] again. */
 internal fun refreshChangesView(project: Project) {

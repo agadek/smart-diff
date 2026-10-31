@@ -9,7 +9,7 @@
 
 ### Fixed
 
-- A changed file in the Changes tree that was not analyzed shows the reason in place of its summary, such as `not analyzed: too large`, `not analyzed: timed out` or `not analyzed: analysis failed`.
+- A changed file in the Changes tree that was not analyzed shows the reason in place of its summary, such as `not analyzed: too large`, `not analyzed: timed out`, `not analyzed: parse errors` or `not analyzed: analysis failed`.
 
 ## [0.1.1] - 2026-10-23
 

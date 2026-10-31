@@ -185,6 +185,7 @@ class ChangesSummaryTest : BasePlatformTestCase() {
         assertEquals("no structural changes", ChangesSummaryService.summary(ComparisonResult(engine, "1", Status.ANALYZED)))
         assertEquals("not analyzed: too large", ChangesSummaryService.summary(ComparisonResult(engine, "1", Status.TOO_LARGE)))
         assertEquals("not analyzed: timed out", ChangesSummaryService.summary(failed("timed out after 100 ms")))
+        assertEquals("not analyzed: parse errors", ChangesSummaryService.summary(failed("the old side could not be parsed")))
         assertEquals("not analyzed: analysis failed", ChangesSummaryService.summary(failed("engine test failed: boom")))
         assertEquals("not analyzed: analysis failed", ChangesSummaryService.summary(failed(null)))
         assertNull(ChangesSummaryService.summary(ComparisonResult(engine, "1", Status.UNSUPPORTED)))
@@ -217,6 +218,13 @@ class ChangesSummaryTest : BasePlatformTestCase() {
         assertEquals(0, node.childCount)
         assertTrue("no declaration rows, so no expand arrow", node.isLeaf)
         assertTrue("the engine was canceled", engine.canceled)
+        assertEquals(1, engine.calls)
+
+        // A timed-out summary is shown once and retried on the next tree build.
+        summaryNode(change)
+        summaryNode(change)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        assertTrue("a timeout is retried instead of being cached forever", engine.calls >= 2)
     }
 
     fun `test added and deleted files and other languages get no summary`() {
@@ -283,9 +291,13 @@ class ChangesSummaryTest : BasePlatformTestCase() {
         @Volatile
         var canceled = false
 
+        @Volatile
+        var calls = 0
+
         override fun supports(languageId: String) = true
 
         override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult {
+            calls++
             while (true) {
                 try {
                     cancellation.checkCanceled()

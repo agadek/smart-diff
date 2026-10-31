@@ -18,6 +18,13 @@ data class ComparisonResult(
         get() = fileRegion?.isReported == true || changes.any { it.isReported } || unanalyzed.isNotEmpty()
 
     companion object {
+        /** Prefix of the reason a comparison carries when it exceeded its time limit (§9.2 step 5). */
+        const val TIMEOUT_REASON = "timed out"
+
+        /** A failed result for a comparison over its time limit, with the reason the outline and Changes tree show. */
+        fun timedOut(engine: ComparisonEngine, timeoutMillis: Long): ComparisonResult =
+            failed(engine, "$TIMEOUT_REASON after $timeoutMillis ms")
+
         fun failed(engine: ComparisonEngine, reason: String): ComparisonResult =
             ComparisonResult(engine.id, engine.version, Status.FAILED, fallbackReason = reason)
 
