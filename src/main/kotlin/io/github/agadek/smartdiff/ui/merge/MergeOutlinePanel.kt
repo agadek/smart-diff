@@ -205,7 +205,12 @@ class MergeOutlinePanel internal constructor(private val controller: MergeOutlin
 
     private fun select(item: MergeOutlineItem?) {
         controller.selection.select(item)
-        absence.text = controller.noteFor(item)
+        refreshAbsence()
+    }
+
+    /** Updates the note for the selected row after an edit; the merge window's result pane calls this. */
+    internal fun refreshAbsence() {
+        absence.text = controller.noteFor(selectedItem())
     }
 
     private inner class LayoutAction : DumbAwareToggleAction("Group by side") {

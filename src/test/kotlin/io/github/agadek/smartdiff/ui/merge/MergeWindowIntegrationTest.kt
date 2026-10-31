@@ -204,10 +204,11 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
         // merge/04-merge-window R10
         val (viewer, outline, output) = openWithOutput()
         try {
+            select(outline, "method total(int)")
             val start = BASE.indexOf("    int total")
             val end = BASE.indexOf("\n    int calc")
             WriteCommandAction.runWriteCommandAction(project) { output.deleteString(start, end) }
-            select(outline, "method total(int)")
+            PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
             assertEquals("not tracked", outline.panel.absence.text)
         } finally {
             Disposer.dispose(viewer)

@@ -110,6 +110,8 @@ class MergeOutlineController private constructor(
             baseDocument.addDocumentListener(documentListener, this)
             if (leftDocument !== baseDocument) leftDocument.addDocumentListener(documentListener, this)
             if (rightDocument !== leftDocument && rightDocument !== baseDocument) rightDocument.addDocumentListener(documentListener, this)
+        } else {
+            (selection as? MergeResultPane)?.onSelectionChanged = panel::refreshAbsence
         }
         applyVisibility()
     }

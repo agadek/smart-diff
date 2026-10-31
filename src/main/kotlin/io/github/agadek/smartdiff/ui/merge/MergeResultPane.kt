@@ -37,12 +37,22 @@ internal class MergeResultPane(
     private val highlighters = mutableListOf<RangeHighlighter>()
     private var selected: MergeOutlineItem? = null
     private var preparedRanges: List<TextRange> = emptyList()
+    private var prepared = false
     private var mappingReady = false
     private var released = false
+
+    /** Lets the panel update its note when an edit changes whether the selected row is still tracked. */
+    var onSelectionChanged: (() -> Unit)? = null
     private val debounce = Timer(MAPPING_DELAY_MILLIS) { mapNow() }.apply { isRepeats = false }
     private val documentListener = object : DocumentListener {
         override fun documentChanged(event: DocumentEvent) {
-            if (mappingReady) render(scroll = false) else debounce.restart()
+            if (!prepared) return
+            if (mappingReady) {
+                render(scroll = false)
+                onSelectionChanged?.invoke()
+            } else {
+                debounce.restart()
+            }
         }
     }
 
@@ -59,6 +69,7 @@ internal class MergeResultPane(
     /** Starts mapping once the viewer has set the result to the base, or to the auto-applied result after that. */
     fun prepare(ranges: List<TextRange>) {
         preparedRanges = ranges.distinct()
+        prepared = true
         if (mappingReady) return
         if (resultDocument.text == baseDocument.text) mapNow() else debounce.restart()
     }
@@ -91,7 +102,7 @@ internal class MergeResultPane(
 
     private fun mapNow() {
         debounce.stop()
-        if (mappingReady) return
+        if (!prepared || mappingReady) return
         val mapping = MergeResultMapping.create(baseDocument, resultDocument)
         mapping?.let { map ->
             preparedRanges.forEach { range ->
@@ -102,6 +113,7 @@ internal class MergeResultPane(
         }
         mappingReady = true
         render(scroll = false)
+        onSelectionChanged?.invoke()
     }
 
     private fun render(scroll: Boolean) {
@@ -140,8 +152,10 @@ internal class MergeResultPane(
         markers.values.forEach { it.dispose() }
         markers.clear()
         preparedRanges = emptyList()
+        prepared = false
         selected = null
         mappingReady = false
+        onSelectionChanged = null
     }
 
     private companion object {
