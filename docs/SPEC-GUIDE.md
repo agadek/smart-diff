@@ -10,7 +10,7 @@ SMART Diff follows spec-driven development. The specification says what the plug
 - Get the spec change reviewed before the code that depends on it.
 - When the code must behave differently, change the spec first, in the same pull request or an earlier one.
 - Every requirement can be checked by a test or a manual check.
-- Tests name the requirement they check, for example `// EXTRACTION-DETECTION R3`.
+- Tests name the requirement they check, by folder, file and ID, for example `// declarations/05-extraction-detection R3`.
 - When the code and the spec disagree, the spec is right until it is changed.
 
 ## 2. Folders
@@ -36,7 +36,7 @@ Feature specs are in `docs/specs/`, in one folder per context. A context is a pa
 Each feature has its own file, named with an order number and the feature name:
 
 ```text
-docs/specs/declarations/03-extraction-detection.md
+docs/specs/declarations/05-extraction-detection.md
 ```
 
 - The number has two digits and gives the feature's order inside its folder: the order it was built in, or will be built in.
@@ -44,6 +44,7 @@ docs/specs/declarations/03-extraction-detection.md
 - Never renumber a file or reuse a number, so links and test references stay valid.
 - The name is the feature's name in lower case, with hyphens.
 - One file describes one feature. If a file needs two use cases that a reviewer would ask for separately, split it.
+- Every feature file is listed in [docs/specs/README.md](specs/README.md), by folder and in order, with its status.
 
 ## 4. What a feature file contains
 
@@ -60,7 +61,7 @@ A feature can end with two optional parts:
 - **Out of scope:** short bullets on nearby work the feature does not do.
 - **References:** links to the decision records, technical sections and validation results behind it.
 
-Nothing else goes in a feature file. How the feature is built (algorithms, classes, thresholds and their reasons) goes in the [technical specification](../TECHNICAL-SPECIFICATION.md) or a [decision record](../adr/), linked from References.
+Nothing else goes in a feature file. How the feature is built (algorithms, classes, thresholds and their reasons) goes in the [technical specification](TECHNICAL-SPECIFICATION.md) or a [decision record](adr/), linked from References.
 
 ## 5. Writing requirements
 
@@ -74,7 +75,7 @@ Nothing else goes in a feature file. How the feature is built (algorithms, class
 
 ## 6. Key words and the dictionary
 
-The dictionary is [GLOSSARY.md](../GLOSSARY.md). It defines the words the specs and the UI use.
+The dictionary is [GLOSSARY.md](GLOSSARY.md). It defines the words the specs and the UI use.
 
 - Link a key word to its dictionary entry the first time it appears in a file: `[declaration](../../GLOSSARY.md#declaration)`.
 - A key word is a word with a meaning in SMART Diff that a new reader might not know, such as *declaration*, *old side*, *comparison engine* or *rename candidate*.
@@ -123,6 +124,7 @@ that the helper's code was moved unchanged, without searching for it on the old 
 Before opening a pull request that adds or changes a feature spec:
 
 - The file is in the right context folder and named `NN-feature-name.md` with the next free number.
+- The file is listed in `docs/specs/README.md`.
 - It has a title, a status with a date, a description, a use case and requirements.
 - Each requirement is one short, simple sentence with an ID, and can be checked.
 - Each key word links to the dictionary the first time it appears, and new key words are added there.
