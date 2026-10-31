@@ -235,6 +235,9 @@ object OutlineModel {
             names.take(MAX_NAMES).joinToString(", ") + if (names.size > MAX_NAMES) ", +${names.size - MAX_NAMES} more" else ""
     }
 
+    /** The extraction note for [node] in [result], or null when it has no extraction link. */
+    fun note(result: ComparisonResult, node: ChangeNode): String? = Links(result).note(node)
+
     /** The change labels of a node that is a change itself; none for a node shown only as a container. */
     fun tags(node: ChangeNode): List<Tag> {
         if (!node.isChangedItself) return emptyList()

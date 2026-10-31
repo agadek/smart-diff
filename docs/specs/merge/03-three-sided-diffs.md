@@ -1,6 +1,6 @@
 # Merge outline in three-sided diffs
 
-Status: proposed, 2026-10-31
+Status: implemented, 2026-10-31
 
 **Description:** Shows the [merge outline](02-merge-outline.md) beside a [three-sided diff](../../GLOSSARY.md#three-sided-diff), with the middle pane as the [base](../../GLOSSARY.md#base).
 

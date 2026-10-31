@@ -33,6 +33,8 @@ import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
 import io.github.agadek.smartdiff.ui.DiffContents
+import io.github.agadek.smartdiff.ui.merge.MergeOutlineController
+import io.github.agadek.smartdiff.ui.merge.MergeOutlineState
 import javax.swing.JComponent
 
 /**
@@ -57,8 +59,8 @@ class S6MergeSpikeTest : BasePlatformTestCase() {
         ExtensionTestUtil.addExtensions(DiffExtension.EP_NAME, listOf(recorder), testRootDisposable)
     }
 
-    fun `test a Java three-sided diff gets the placeholder with its side titles`() {
-        enablePreview()
+    fun `test a Java three-sided diff gets the merge outline with its side titles`() {
+        // merge/02-merge-outline R1, R8; merge/03-three-sided-diffs R1, R2, R7
         val request = SimpleDiffRequest(
             "OrderService.java",
             DiffContents.vcsRevision(project, LEFT, "/repo/OrderService.java"),
@@ -71,11 +73,17 @@ class S6MergeSpikeTest : BasePlatformTestCase() {
         val viewer = openDiff(request)
 
         assertInstanceOf(viewer, ThreesideTextDiffViewer::class.java)
-        val placeholder = placeholderIn(viewer.component) ?: error("no placeholder in the three-sided diff")
-        assertEquals(MergeOutlinePlaceholder.Kind.THREE_SIDED_DIFF, placeholder.kind)
-        assertEquals("JAVA", placeholder.languageId)
-        assertEquals("main", placeholder.leftTitle)
-        assertEquals("feature", placeholder.rightTitle)
+        val outline = MergeOutlineController.of(viewer) ?: error("no merge outline in the three-sided diff")
+        PlatformTestUtil.waitWithEventsDispatching(
+            { "the outline is ${outline.state}" },
+            { outline.state is MergeOutlineState.Shown },
+            20,
+        )
+        val shown = outline.state as MergeOutlineState.Shown
+        assertEquals("1 changed on both sides · 1 in feature only", shown.summary)
+        val rows = shown.items.flatMap { it.children }.joinToString("\n") { it.label }
+        assertTrue(rows, rows.contains("main"))
+        assertTrue(rows, rows.contains("feature"))
     }
 
     fun `test the merge window chooses the SMART Diff tool and keeps the platform's own viewer`() {
@@ -92,7 +100,6 @@ class S6MergeSpikeTest : BasePlatformTestCase() {
             // The platform's viewer object itself, so code that looks for it by type (Annotate, import resolution) still finds it.
             assertEquals("com.intellij.diff.merge.TextMergeViewer", viewer.javaClass.name)
             val placeholder = placeholderIn(viewer.component) ?: error("no placeholder in the merge window")
-            assertEquals(MergeOutlinePlaceholder.Kind.MERGE_WINDOW, placeholder.kind)
             assertEquals("JAVA", placeholder.languageId)
             // Git's rebase titles are HTML with the branch in bold (GitRebaseMergeDialogCustomizer).
             assertEquals("Your version, branch feature/rates", placeholder.leftTitle)
@@ -133,6 +140,7 @@ class S6MergeSpikeTest : BasePlatformTestCase() {
             ),
         )
         assertNull(placeholderIn(viewer.component))
+        assertNotNull("the three-sided outline does not depend on the preview key", MergeOutlineController.of(viewer))
     }
 
     /**

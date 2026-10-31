@@ -29,7 +29,7 @@ class MergeOutlineTool : MergeTool {
         val viewer = delegate.createComponent(context, request)
         val textRequest = request as? TextMergeRequest ?: return viewer
         val languageId = MergeOutlinePreview.supportedLanguage(context.project, textRequest.contents) ?: return viewer
-        MergeOutlinePreview.attach(viewer.component, MergeOutlinePlaceholder.Kind.MERGE_WINDOW, languageId, textRequest.contentTitles)
+        MergeOutlinePreview.attach(viewer.component, languageId, textRequest.contentTitles)
         return viewer
     }
 

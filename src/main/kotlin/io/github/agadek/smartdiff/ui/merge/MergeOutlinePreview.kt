@@ -1,11 +1,7 @@
 package io.github.agadek.smartdiff.ui.merge
 
-import com.intellij.diff.DiffContext
-import com.intellij.diff.FrameDiffTool
 import com.intellij.diff.contents.DiffContent
 import com.intellij.diff.contents.DocumentContent
-import com.intellij.diff.requests.ContentDiffRequest
-import com.intellij.diff.requests.DiffRequest
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.registry.Registry
@@ -21,9 +17,9 @@ import javax.swing.JPanel
 import javax.swing.SwingConstants
 
 /**
- * The placeholder of spike S6 for the three-way merge outline (docs/THREE-WAY-MERGE.md, phase 0, ADR 0007): it shows where the outline will sit in three-sided diffs and in the merge window, and which side
- * titles it receives. It is off unless the registry key [REGISTRY_KEY] is on, and is replaced by the outline in later
- * phases.
+ * The placeholder of spike S6 for the merge window outline (docs/THREE-WAY-MERGE.md, phase 0, ADR 0007): it shows where
+ * the outline will sit and which side titles it receives. It is off unless the registry key [REGISTRY_KEY] is on, and is
+ * replaced by the outline in the merge-window phase.
  */
 internal object MergeOutlinePreview {
 
@@ -32,14 +28,6 @@ internal object MergeOutlinePreview {
     private const val PROPORTION_KEY = "smartdiff.merge.outline.proportion"
 
     fun isEnabled(): Boolean = Registry.`is`(REGISTRY_KEY, false)
-
-    /** Attaches the placeholder to a three-sided diff (plan §6.1); the middle content is the base. */
-    fun attachToThreeSidedDiff(viewer: FrameDiffTool.DiffViewer, context: DiffContext, request: DiffRequest) {
-        if (!isEnabled()) return
-        val contentRequest = request as? ContentDiffRequest ?: return
-        val languageId = supportedLanguage(context.project, contentRequest.contents) ?: return
-        attach(viewer.component, MergeOutlinePlaceholder.Kind.THREE_SIDED_DIFF, languageId, contentRequest.contentTitles)
-    }
 
     /**
      * The language shared by three document [contents] (left, base, right), or null when they are not three documents
@@ -54,25 +42,23 @@ internal object MergeOutlinePreview {
     }
 
     /** Puts the placeholder beside the editors of a viewer component; returns it, or null if the layout is not known. */
-    fun attach(component: JComponent, kind: MergeOutlinePlaceholder.Kind, languageId: String, titles: List<String?>): MergeOutlinePlaceholder? {
+    fun attach(component: JComponent, languageId: String, titles: List<String?>): MergeOutlinePlaceholder? {
         val splitter = insertOutlineSplitter(component, PROPORTION_KEY) ?: return null
-        val placeholder = MergeOutlinePlaceholder(kind, languageId, titles.getOrNull(0), titles.getOrNull(2))
+        val placeholder = MergeOutlinePlaceholder(languageId, titles.getOrNull(0), titles.getOrNull(2))
         splitter.secondComponent = placeholder
         return placeholder
     }
 }
 
-/** What the outline will show in [kind]: the language and both sides' titles as the window gives them, without markup. */
-internal class MergeOutlinePlaceholder(val kind: Kind, val languageId: String, leftTitle: String?, rightTitle: String?) : JPanel(BorderLayout()) {
-
-    enum class Kind(val text: String) { THREE_SIDED_DIFF("three-sided diff"), MERGE_WINDOW("merge window") }
+/** What the merge window outline will show: the language and both sides' titles, without markup. */
+internal class MergeOutlinePlaceholder(val languageId: String, leftTitle: String?, rightTitle: String?) : JPanel(BorderLayout()) {
 
     val leftTitle: String = plain(leftTitle)
     val rightTitle: String = plain(rightTitle)
 
     init {
         val label = JBLabel(
-            "<html>SMART Diff merge outline preview<br>${kind.text}, $languageId<br><br>" +
+            "<html>SMART Diff merge outline preview<br>merge window, $languageId<br><br>" +
                 "Left: ${StringUtil.escapeXmlEntities(this.leftTitle)}<br>Right: ${StringUtil.escapeXmlEntities(this.rightTitle)}</html>",
         )
         label.verticalAlignment = SwingConstants.TOP

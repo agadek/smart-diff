@@ -12,7 +12,6 @@ import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.Key
 import com.intellij.ui.OnePixelSplitter
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
@@ -56,7 +55,7 @@ class OutlineController internal constructor(
     private val newDocument: Document,
     /** A row to select in the first result shown, when the diff was opened from the Changes tree (§9.4). */
     private var reveal: OutlinePath? = null,
-) : Disposable {
+) : Disposable, OutlineToggleTarget {
 
     val panel = OutlinePanel(this)
     internal val navigator = OutlineNavigator(viewer)
@@ -68,7 +67,7 @@ class OutlineController internal constructor(
      * Whether the outline is shown; starts from the window's last choice, or from the setting in a new window, and is
      * shown for a diff opened to show a row of it.
      */
-    var isOutlineVisible: Boolean = reveal != null || (context.getUserData(VISIBLE) ?: SmartDiffSettings.getInstance().showOutline)
+    override var isOutlineVisible: Boolean = reveal != null || (context.getUserData(OutlineVisibility.VISIBLE) ?: SmartDiffSettings.getInstance().showOutline)
         private set
 
     private var running: Job? = null
@@ -89,10 +88,10 @@ class OutlineController internal constructor(
     }
 
     /** Shows or hides the outline in this diff window only; the editors stay as they are (§10). */
-    fun setOutlineVisible(visible: Boolean) {
+    override fun setOutlineVisible(visible: Boolean) {
         if (disposed || visible == isOutlineVisible) return
         isOutlineVisible = visible
-        context.putUserData(VISIBLE, visible)
+        context.putUserData(OutlineVisibility.VISIBLE, visible)
         applyVisibility()
     }
 
@@ -246,7 +245,6 @@ class OutlineController internal constructor(
         const val DEBOUNCE_MILLIS = 300
 
         /** The outline toggle's state for one diff window, shared by the viewers it shows one after another. */
-        private val VISIBLE = Key.create<Boolean>("smartdiff.outline.visible")
         private const val CONTROLLER = "smartdiff.outline.controller"
 
         /** The outline attached to [viewer], or null if it has none. */
