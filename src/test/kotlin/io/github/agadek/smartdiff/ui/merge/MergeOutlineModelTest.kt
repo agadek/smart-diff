@@ -119,13 +119,13 @@ class MergeOutlineModelTest {
 
     @Test
     fun `a base mismatch gives each side its own group`() {
-        // merge/02-merge-outline R21
+        // merge/02-merge-outline R21, R31
         val joined = JoinedResult(result(changed(decl("f"))), result(changed(decl("f"))), baseMismatch = true)
 
         val model = build(joined, MergeOutlineLayout.GROUPED_BY_SIDE)
 
         assertTrue(model.baseMismatch)
-        assertEquals("the base was read differently for each side", model.summary)
+        assertEquals("1 in main · 1 in feature", model.summary)
         assertEquals(listOf("Left: main", "Right: feature"), model.items.map { it.title })
     }
 
@@ -192,7 +192,7 @@ class MergeOutlineModelTest {
 
     @Test
     fun `a mismatch counts hidden rows`() {
-        // merge/02-merge-outline R21
+        // merge/02-merge-outline R21, R32
         val left = changed(decl("f"))
         val right = changed(decl("g"))
         val joined = JoinedResult(result(left), result(right), baseMismatch = true)
@@ -203,7 +203,7 @@ class MergeOutlineModelTest {
         )
 
         assertEquals(2, model.hiddenCount)
-        assertEquals("the base was read differently for each side · 2 hidden", model.summary)
+        assertEquals("1 in main · 1 in feature · 2 hidden", model.summary)
     }
 
     private fun build(joined: JoinedResult, layout: MergeOutlineLayout) =
