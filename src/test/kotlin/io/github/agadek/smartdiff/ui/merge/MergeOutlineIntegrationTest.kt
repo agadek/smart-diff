@@ -24,6 +24,8 @@ import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.api.Limits
+import io.github.agadek.smartdiff.engine.lines.LineEngine
+import io.github.agadek.smartdiff.engine.lines.LineEngineFactory
 import io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory
 import io.github.agadek.smartdiff.ui.ChangeType
 import io.github.agadek.smartdiff.ui.DiffContents
@@ -86,6 +88,19 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
         assertEquals("", outline.panel.absence.text)
     }
 
+    fun `test the base and left panes keep their own texts`() {
+        // merge/03-three-sided-diffs R1, R2
+        val base = "// base comment\n$BASE"
+        val outline = open(base = base, left = LEFT, right = base).awaitShown()
+        val shown = outline.state as MergeOutlineState.Shown
+
+        assertTrue(shown.summary, shown.summary.contains("in main only"))
+        assertFalse(shown.summary, shown.summary.contains("both sides"))
+        select(outline, rows(outline).first { it.contains("method total(int)") }.trim())
+        assertHighlightedAt(viewer(outline).getEditor(ThreeSide.LEFT), LEFT.indexOf("int total"))
+        assertHighlightedAt(viewer(outline).getEditor(ThreeSide.BASE), base.indexOf("int total"))
+    }
+
     fun `test the outline toggle hides and restores the merge outline`() {
         // merge/02-merge-outline R18, R19
         val outline = open().awaitShown()
@@ -117,6 +132,61 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
         outline.setHidden(ChangeType.CHANGED, true)
         assertEquals(emptyList<String>(), rows(outline))
         assertEquals("All changes are hidden by the filter", outline.panel.tree.emptyText.text)
+
+        outline.setHidden(ChangeType.CHANGED, false)
+        assertTrue(rows(outline).contains("class OrderService"))
+
+        // The layout is a setting, so a new viewer keeps it; the filter no longer hides the row.
+        val next = open().awaitShown()
+        assertEquals(MergeOutlineLayout.CONTAINER_TREE, (next.state as MergeOutlineState.Shown).layout)
+        assertTrue(rows(next).contains("class OrderService"))
+    }
+
+    fun `test an added row says which panes are absent`() {
+        // merge/02-merge-outline R17
+        val outline = open(right = RIGHT_ADDED).awaitShown()
+        val row = rows(outline).first { it.contains("method extra()") }.trim()
+        select(outline, row)
+
+        assertTrue(outline.panel.absence.text, outline.panel.absence.text.contains("left"))
+        assertTrue(outline.panel.absence.text, outline.panel.absence.text.contains("base"))
+    }
+
+    fun `test one unanalyzed side keeps the other side and does not say only`() {
+        // merge/02-merge-outline R22
+        val engine = LeftFailsEngine()
+        ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(engine)), testRootDisposable)
+        val outline = open().awaitShown()
+
+        val shown = outline.state as MergeOutlineState.Shown
+        assertTrue(shown.banner.orEmpty(), shown.banner.orEmpty().contains("main was not analyzed"))
+        assertTrue(shown.items.isNotEmpty())
+        assertTrue(shown.summary, !shown.summary.contains("only"))
+    }
+
+    fun `test the engine dropdown and refresh work in the merge outline`() {
+        // merge/02-merge-outline R18
+        ExtensionTestUtil.addExtensions(ComparisonEngineFactory.EP_NAME, listOf(LineEngineFactory()), testRootDisposable)
+        val outline = open().awaitShown()
+
+        assertTrue("the dropdown is shown with two engines", outline.panel.engines.isVisible)
+        outline.refresh()
+        outline.awaitShown()
+        assertTrue(outline.panel.engines.isVisible)
+    }
+
+    fun `test the merge outline attaches for Kotlin and Scala`() {
+        // merge/02-merge-outline R23
+        for ((fileName, base, right) in listOf(
+            Triple("Greeter.kt", KOTLIN_BASE, KOTLIN_RIGHT),
+            Triple("Greeter.scala", SCALA2_BASE, SCALA2_RIGHT),
+            Triple("Greeter.scala", SCALA3_BASE, SCALA3_RIGHT),
+        )) {
+            val outline = open(fileName = fileName, base = base, left = base, right = right).awaitShown()
+            val shown = outline.state as MergeOutlineState.Shown
+            assertTrue("$fileName: ${shown.summary}", shown.summary.contains("in feature only"))
+            assertTrue("$fileName: ${shown.items}", shown.items.isNotEmpty())
+        }
     }
 
     fun `test a three-sided diff without an engine gets no outline`() {
@@ -150,12 +220,17 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
         assertTrue("the engine was canceled", engine.canceled)
     }
 
-    private fun open(): MergeOutlineController {
+    private fun open(
+        fileName: String = "OrderService.java",
+        base: String = BASE,
+        left: String = LEFT,
+        right: String = RIGHT,
+    ): MergeOutlineController {
         val request = SimpleDiffRequest(
-            "OrderService.java",
-            DiffContents.vcsRevision(project, LEFT, "/repo/OrderService.java"),
-            DiffContents.vcsRevision(project, BASE, "/repo/OrderService.java"),
-            DiffContents.vcsRevision(project, RIGHT, "/repo/OrderService.java"),
+            fileName,
+            DiffContents.vcsRevision(project, left, "/repo/$fileName"),
+            DiffContents.vcsRevision(project, base, "/repo/$fileName"),
+            DiffContents.vcsRevision(project, right, "/repo/$fileName"),
             "main",
             "Base",
             "feature",
@@ -212,6 +287,22 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
         override fun create(project: Project?): ComparisonEngine = engine
     }
 
+    /** Fails the left comparison and delegates the right one to the line engine, for the one-side status case. */
+    private class LeftFailsEngine : ComparisonEngine {
+        override val id = EngineId("smartdiff.test.merge.leftFails")
+        override val displayName = "Left fails (test)"
+        override val version = "1"
+
+        override fun supports(languageId: String) = true
+
+        override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult =
+            if (request.newText.toString() == LEFT) {
+                ComparisonResult.failed(this, "left parse failed")
+            } else {
+                LineEngine().compare(request, cancellation)
+            }
+    }
+
     /** Never finishes; it checks for cancellation until it is canceled. */
     private class SlowEngine : ComparisonEngine {
         override val id = EngineId("smartdiff.test.merge.slow")
@@ -240,5 +331,12 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
         const val BASE = "class OrderService {\n    int total(int a) {\n        return a;\n    }\n\n    boolean validate(int a) {\n        return a > 0;\n    }\n}\n"
         const val LEFT = "class OrderService {\n    int total(int a) {\n        return a + 1;\n    }\n\n    boolean validate(int a) {\n        return a > 0;\n    }\n}\n"
         const val RIGHT = "class OrderService {\n    int total(int a) {\n        return a * 2;\n    }\n\n    boolean validate(int a) {\n        return a >= 0;\n    }\n}\n"
+        const val RIGHT_ADDED = "class OrderService {\n    int total(int a) {\n        return a * 2;\n    }\n\n    boolean validate(int a) {\n        return a >= 0;\n    }\n\n    void extra() {}\n}\n"
+        const val KOTLIN_BASE = "class Greeter {\n    fun hello() = \"hi\"\n}\n"
+        const val KOTLIN_RIGHT = "class Greeter {\n    fun hello() = \"hello\"\n}\n"
+        const val SCALA2_BASE = "class Greeter {\n  def hello = \"hi\"\n}\n"
+        const val SCALA2_RIGHT = "class Greeter {\n  def hello = \"hello\"\n}\n"
+        const val SCALA3_BASE = "class Greeter:\n  def hello = \"hi\"\n"
+        const val SCALA3_RIGHT = "class Greeter:\n  def hello = \"hello\"\n"
     }
 }
