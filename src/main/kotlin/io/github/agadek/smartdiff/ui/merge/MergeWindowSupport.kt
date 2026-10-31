@@ -57,16 +57,22 @@ internal object MergeWindowSupport {
         val texts = listOf(left, base, right)
         val offsets = texts.map(LineOffsetsUtil::create)
         val baseOffsets = offsets[ThreeSide.BASE.index]
+        // The window may use another policy, such as ignoring whitespace. Default policy can only add conflicts, so a
+        // row is marked "merged without conflict" only when this stricter reading agrees (ADR 0003).
         ComparisonManager.getInstance()
             .mergeLines(left, base, right, ComparisonPolicy.DEFAULT, DumbProgressIndicator.INSTANCE)
             .filter {
                 MergeRangeUtil.getLineMergeType(it, texts, offsets, ComparisonPolicy.DEFAULT).type == MergeConflictType.Type.CONFLICT
             }
             .map {
-                val startLine = it.getStartLine(ThreeSide.BASE)
-                val endLine = it.getEndLine(ThreeSide.BASE)
-                val start = baseOffsets.getLineStart(startLine)
-                val end = if (endLine > startLine) baseOffsets.getLineEnd(endLine - 1) else start
+                val startLine = it.getStartLine(ThreeSide.BASE).coerceIn(0, baseOffsets.lineCount)
+                val endLine = it.getEndLine(ThreeSide.BASE).coerceIn(startLine, baseOffsets.lineCount)
+                val start = if (startLine == baseOffsets.lineCount) baseOffsets.textLength else baseOffsets.getLineStart(startLine)
+                val end = if (endLine > startLine) {
+                    baseOffsets.getLineEnd((endLine - 1).coerceAtMost(baseOffsets.lineCount - 1))
+                } else {
+                    start
+                }
                 TextRange(start, end)
             }
     } catch (e: DiffTooBigException) {

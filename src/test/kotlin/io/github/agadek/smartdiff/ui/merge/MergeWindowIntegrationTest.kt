@@ -23,6 +23,8 @@ import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import io.github.agadek.smartdiff.engine.lines.LineEngineFactory
+import io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory
 import io.github.agadek.smartdiff.merge.MergeGroup
 import io.github.agadek.smartdiff.ui.DiffContents
 import io.github.agadek.smartdiff.ui.SmartDiffSettings
@@ -110,7 +112,6 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
             assertTrue(action.isSelected(event))
 
             action.setSelected(event, false)
-            assertEquals(MergeOutlineState.Hidden, outline.state)
             assertFalse(com.intellij.util.ui.UIUtil.isAncestor(viewer.component, outline.panel))
 
             action.setSelected(event, true)
@@ -219,7 +220,7 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
         // merge/04-merge-window R11
         val base = EditorFactory.getInstance().createDocument(BASE)
         val result = EditorFactory.getInstance().createDocument(BASE.replace("return a;", "return a + 1;"))
-        val pane = MergeResultPane(project, base, result)
+        val pane = MergeResultPane(project, base, base, base, result)
         try {
             val total = range(BASE.indexOf("    int total"), BASE.indexOf("\n    int calc"))
             val calc = range(BASE.indexOf("    int calc"), BASE.indexOf("\n    boolean validate"))
@@ -228,6 +229,110 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
 
             assertEquals("not tracked", pane.note(MergeOutlineItem(MergeOutlineItem.Kind.CHANGE, "total", baseRange = total)))
             assertEquals("", pane.note(MergeOutlineItem(MergeOutlineItem.Kind.CHANGE, "calc", baseRange = calc)))
+        } finally {
+            pane.dispose()
+        }
+    }
+
+    fun `test selecting a row frames the left, base, right and result panes`() {
+        // merge/04-merge-window R8; merge/02-merge-outline R16
+        val output = EditorFactory.getInstance().createDocument(CONFLICTED)
+        val request = request(output, titles = listOf("feature/rates", "Base", "main"))
+        val (viewer, outline) = open(request)
+        try {
+            select(outline, "method total(int)")
+            assertHighlightedAt(resultEditor(output), BASE.indexOf("int total"))
+            assertHighlightedAt(sideEditor(request, 0), LEFT.indexOf("int total"))
+            assertHighlightedAt(sideEditor(request, 2), RIGHT.indexOf("int total"))
+        } finally {
+            Disposer.dispose(viewer)
+        }
+    }
+
+    fun `test an added row names the panes where it is absent`() {
+        // merge/02-merge-outline R17
+        val output = EditorFactory.getInstance().createDocument(CONFLICTED)
+        val request = request(output, titles = listOf("feature/rates", "Base", "main"), right = RIGHT_ADDED)
+        val (viewer, outline) = open(request)
+        try {
+            select(outline, "method extra()")
+            val note = outline.panel.absence.text
+            assertTrue(note, note.contains("Not present in the left pane"))
+            assertTrue(note, note.contains("not tracked"))
+        } finally {
+            Disposer.dispose(viewer)
+        }
+    }
+
+    fun `test accepting a side over a declaration keeps it tracked`() {
+        // merge/04-merge-window R9, R10
+        val (viewer, outline, output) = openWithOutput()
+        try {
+            select(outline, "method total(int)")
+            val start = BASE.indexOf("    int total")
+            val end = BASE.indexOf("\n    int calc")
+            val accepted = LEFT.substring(LEFT.indexOf("    int total"), LEFT.indexOf("\n    int calc"))
+            WriteCommandAction.runWriteCommandAction(project) { output.replaceString(start, end, accepted) }
+            PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+
+            assertEquals("", outline.panel.absence.text)
+            select(outline, "method total(int)")
+            assertHighlightedAt(resultEditor(output), BASE.indexOf("int total"))
+        } finally {
+            Disposer.dispose(viewer)
+        }
+    }
+
+    fun `test the merge window keeps the engine dropdown`() {
+        // merge/02-merge-outline R18
+        ExtensionTestUtil.addExtensions(ComparisonEngineFactory.EP_NAME, listOf(LineEngineFactory()), testRootDisposable)
+        val (viewer, outline) = open()
+        try {
+            assertTrue("the engine dropdown is shown", outline.panel.engines.isVisible)
+        } finally {
+            Disposer.dispose(viewer)
+        }
+    }
+
+    fun `test Git merge and cherry-pick titles name the branch without ours or theirs`() {
+        // merge/04-merge-window R5; merge/02-merge-outline R9
+        val cases = listOf(
+            listOf("Local Changes", "Base", "Changes from <b>main</b>") to listOf("Local Changes", "main"),
+            listOf("Local Changes", "Base", "Changes from cherry-pick 1a2b3c4d") to listOf("Local Changes", "cherry-pick 1a2b3c4d"),
+        )
+        for ((customizers, expected) in cases) {
+            val output = EditorFactory.getInstance().createDocument(CONFLICTED)
+            val request = request(output, titles = listOf("Your version", "Base", "Changes from server (revision 1a2b3c4d)"))
+            DiffUtil.addTitleCustomizers(request, customizers.map { text -> DiffEditorTitleCustomizer { JLabel(text) } })
+            val (viewer, outline) = open(request)
+            try {
+                val shown = outline.state as MergeOutlineState.Shown
+                assertEquals(expected, listOf(shown.leftName.display, shown.rightName.display))
+                assertFalse(shown.leftName.display.contains("ours", ignoreCase = true))
+                assertFalse(shown.rightName.display.contains("theirs", ignoreCase = true))
+            } finally {
+                Disposer.dispose(viewer)
+            }
+        }
+    }
+
+    fun `test a late viewer rediff remaps an early mapping`() {
+        // merge/04-merge-window R7, R11; plan §6.3
+        val left = EditorFactory.getInstance().createDocument(LEFT)
+        val base = EditorFactory.getInstance().createDocument(BASE)
+        val right = EditorFactory.getInstance().createDocument(RIGHT)
+        val result = EditorFactory.getInstance().createDocument(CONFLICTED)
+        val totalRange = range(BASE.indexOf("    int total"), BASE.indexOf("\n    int calc"))
+        val item = MergeOutlineItem(MergeOutlineItem.Kind.CHANGE, "total", baseRange = totalRange)
+        val pane = MergeResultPane(project, left, base, right, result)
+        try {
+            pane.prepare(listOf(totalRange))
+            PlatformTestUtil.waitWithEventsDispatching({ "the result is not mapped" }, { pane.isMapped }, 60)
+            assertEquals("not tracked", pane.note(item))
+
+            // The viewer's first comparison replaces the conflict markers with the base after the outline mapped.
+            WriteCommandAction.runWriteCommandAction(project) { result.setText(BASE) }
+            PlatformTestUtil.waitWithEventsDispatching({ "the result was not remapped" }, { pane.note(item).isEmpty() }, 60)
         } finally {
             pane.dispose()
         }
@@ -275,6 +380,7 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
         }
     }
 
+    @Suppress("DEPRECATION")
     fun `test closing the merge window releases the outline`() {
         // merge/04-merge-window R17
         val (viewer, outline) = open()
@@ -283,6 +389,7 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
 
         assertEquals(MergeOutlineState.Hidden, outline.state)
         assertTrue(result.isReleased)
+        assertTrue("the result pane is disposed with the viewer", Disposer.isDisposed(result))
         assertNull(MergeOutlineController.of(viewer))
     }
 
@@ -352,6 +459,10 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
     private fun resultEditor(output: Document): Editor =
         EditorFactory.getInstance().getEditors(output, project).firstOrNull() ?: error("no result editor")
 
+    private fun sideEditor(request: TextMergeRequest, index: Int): Editor =
+        EditorFactory.getInstance().getEditors(request.contents[index].document, project).firstOrNull()
+            ?: error("no editor for side $index")
+
     private fun assertHighlightedAt(editor: Editor, offset: Int) {
         assertTrue("offset $offset not found", offset >= 0)
         val starts = editor.markupModel.allHighlighters.map { it.startOffset }
@@ -381,7 +492,8 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
     private companion object {
         const val BASE = "class OrderService {\n    int total(int a) {\n        return a;\n    }\n\n    int calc(int a) {\n        int x = a;\n        int p1 = 0;\n        int p2 = 0;\n        int p3 = 0;\n        int y = 1;\n        return x + y;\n    }\n\n    boolean validate(int a) {\n        return a > 0;\n    }\n}\n"
         const val LEFT = "class OrderService {\n    int total(int a) {\n        return a + 1;\n    }\n\n    int calc(int a) {\n        int x = a + 1;\n        int p1 = 0;\n        int p2 = 0;\n        int p3 = 0;\n        int y = 1;\n        return x + y;\n    }\n\n    boolean validate(int a) {\n        return a > 0;\n    }\n}\n"
-        const val RIGHT = "class OrderService {\n    int total(int a) {\n        return a * 2;\n    }\n\n    int calc(int a) {\n        int x = a;\n        int p1 = 0;\n        int p2 = 0;\n        int p3 = 0;\n        int y = 2;\n        return x + y;\n    }\n\n    boolean validate(int a) {\n        return a >= 0;\n    }\n}\n"
+        const val RIGHT = "class OrderService {\n    int total(int a) {\n        return a * 2;\n    }\n\n    int calc(int a) {\n        int x = a;\n        int p1 = 0;\n        int p2 = 0;\n        int p3 = 0;\n        int y = 2;\n        return x + y;\n    }\n\n    boolean validate(int a) {\n        return a >= 0;\n    }\n\n    void extra() {}\n}\n"
+        const val RIGHT_ADDED = RIGHT
         const val CONFLICTED = "class OrderService {\n<<<<<<< HEAD\n=======\n>>>>>>> 1a2b3c4d\n}\n"
     }
 }

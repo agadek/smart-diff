@@ -24,3 +24,15 @@ internal fun insertOutlineSplitter(component: JComponent, proportionKey: String)
     panel.add(splitter, BorderLayout.CENTER)
     return splitter
 }
+
+/** Puts the editors back when the outline cannot attach after [insertOutlineSplitter] changed the viewer. */
+internal fun removeOutlineSplitter(splitter: OnePixelSplitter) {
+    val panel = splitter.parent as? DiffPanelBase ?: return
+    val editors = splitter.firstComponent ?: return
+    splitter.secondComponent = null
+    splitter.firstComponent = null
+    panel.remove(splitter)
+    panel.add(editors, BorderLayout.CENTER)
+    panel.revalidate()
+    panel.repaint()
+}

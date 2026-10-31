@@ -114,6 +114,8 @@ class MergeOutlineController private constructor(
             (selection as? MergeResultPane)?.onSelectionChanged = panel::refreshAbsence
         }
         applyVisibility()
+        // The merge window computes the outline once even when it starts hidden, so R11's "on opening" is the window.
+        if (mergeWindow && !isOutlineVisible && state === MergeOutlineState.Hidden) refresh()
     }
 
     override fun setOutlineVisible(visible: Boolean) {
@@ -126,12 +128,13 @@ class MergeOutlineController private constructor(
     private fun applyVisibility() {
         if (isOutlineVisible) {
             splitter.secondComponent = panel
-            refresh()
+            // The merge window's result is computed once, even while hidden, so showing it again does not compare again.
+            if (mergeWindow && state is MergeOutlineState.Shown) panel.show(state) else refresh()
         } else {
             cancel()
             selection.clear()
             splitter.secondComponent = null
-            show(MergeOutlineState.Hidden)
+            if (!mergeWindow) show(MergeOutlineState.Hidden)
         }
         splitter.revalidate()
         splitter.repaint()
@@ -149,7 +152,7 @@ class MergeOutlineController private constructor(
     /** Cancels any running comparison and starts a new one from the three documents. */
     fun refresh() {
         cancel()
-        if (disposed || !isOutlineVisible) return
+        if (disposed || (!isOutlineVisible && !mergeWindow)) return
         val selection = selection()
         panel.showEngines(selection)
         val engine = selection.selected
@@ -279,19 +282,23 @@ class MergeOutlineController private constructor(
     /** The note under the tree for [item]: an unanalyzed or absent pane, or a result pane that no longer tracks it. */
     internal fun noteFor(item: MergeOutlineItem?): String {
         if (item == null || item.isGroup) return ""
-        (selection as? MergeResultPane)?.let { return it.note(item) }
-        val shown = state as? MergeOutlineState.Shown ?: return ""
-        return buildList {
-            if (!shown.joined.isAnalyzed(MergeSide.LEFT)) add("${shown.leftName.display} was not analyzed")
-            if (!shown.joined.isAnalyzed(MergeSide.RIGHT)) add("${shown.rightName.display} was not analyzed")
-            val missing = listOfNotNull(
-                "left".takeIf { shown.joined.isAnalyzed(MergeSide.LEFT) && item.leftRange == null },
-                "base".takeIf { item.baseRange == null },
-                "right".takeIf { shown.joined.isAnalyzed(MergeSide.RIGHT) && item.rightRange == null },
-            )
-            if (missing.isNotEmpty()) add("Not present in the ${missing.joinToString(", ")} pane")
-        }.joinToString("; ")
+        val resultNote = (selection as? MergeResultPane)?.note(item)
+        val shown = state as? MergeOutlineState.Shown ?: return resultNote.orEmpty()
+        // The merge window shows the result between the sides, so the base is not a pane there.
+        val includeBase = selection !is MergeResultPane
+        return listOfNotNull(resultNote, paneNote(item, shown, includeBase)).filter { it.isNotEmpty() }.joinToString("; ")
     }
+
+    private fun paneNote(item: MergeOutlineItem, shown: MergeOutlineState.Shown, includeBase: Boolean): String = buildList {
+        if (!shown.joined.isAnalyzed(MergeSide.LEFT)) add("${shown.leftName.display} was not analyzed")
+        if (!shown.joined.isAnalyzed(MergeSide.RIGHT)) add("${shown.rightName.display} was not analyzed")
+        val missing = listOfNotNull(
+            "left".takeIf { shown.joined.isAnalyzed(MergeSide.LEFT) && item.leftRange == null },
+            "base".takeIf { includeBase && item.baseRange == null },
+            "right".takeIf { shown.joined.isAnalyzed(MergeSide.RIGHT) && item.rightRange == null },
+        )
+        if (missing.isNotEmpty()) add("Not present in the ${missing.joinToString(", ")} pane")
+    }.joinToString("; ")
 
     private fun documentChanged() {
         if (disposed || !isOutlineVisible) return
@@ -418,7 +425,7 @@ class MergeOutlineController private constructor(
             leftName,
             rightName,
             result,
-            showsEngineChoice = false,
+            showsEngineChoice = true,
             showsRefresh = false,
             mergeWindow = true,
         )

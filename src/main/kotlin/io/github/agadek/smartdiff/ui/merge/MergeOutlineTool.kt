@@ -7,7 +7,9 @@ import com.intellij.diff.merge.MergeTool
 import com.intellij.diff.merge.TextMergeRequest
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
+import com.intellij.ui.OnePixelSplitter
 import io.github.agadek.smartdiff.ui.insertOutlineSplitter
+import io.github.agadek.smartdiff.ui.removeOutlineSplitter
 
 /**
  * Attaches to the merge window (ADR 0007): a merge tool registered first that lets the next tool accepting the request,
@@ -37,14 +39,16 @@ class MergeOutlineTool : MergeTool {
     private fun attach(context: MergeContext, request: TextMergeRequest, viewer: MergeTool.MergeViewer) {
         val project = context.project ?: ProjectManager.getInstance().defaultProject
         val languageId = MergeWindowSupport.languageId(project, request.contents) ?: return
+        var splitter: OnePixelSplitter? = null
+        var controller: MergeOutlineController? = null
         var result: MergeResultPane? = null
         try {
-            val splitter = insertOutlineSplitter(viewer.component, PROPORTION_KEY) ?: return
+            splitter = insertOutlineSplitter(viewer.component, PROPORTION_KEY) ?: return
             val contents = request.contents
             val baseDocument = contents[1].document
-            result = MergeResultPane(project, baseDocument, request.outputContent.document)
+            result = MergeResultPane(project, contents[0].document, baseDocument, contents[2].document, request.outputContent.document)
             val (leftName, rightName) = MergeWindowSupport.names(request)
-            val controller = MergeOutlineController.mergeWindow(
+            controller = MergeOutlineController.mergeWindow(
                 project,
                 viewer,
                 context,
@@ -58,11 +62,13 @@ class MergeOutlineTool : MergeTool {
                 rightName,
                 result,
             )
+            Disposer.register(controller, result)
             Disposer.register(viewer, controller)
             controller.start()
         } catch (e: RuntimeException) {
             // The native merge window shows as usual when the outline cannot attach (merge window spec R3).
-            result?.dispose()
+            controller?.let { Disposer.dispose(it) } ?: result?.let { Disposer.dispose(it) }
+            splitter?.let(::removeOutlineSplitter)
         }
     }
 

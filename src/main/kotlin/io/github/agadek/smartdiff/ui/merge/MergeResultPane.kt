@@ -18,6 +18,7 @@ import com.intellij.openapi.editor.markup.HighlighterTargetArea
 import com.intellij.openapi.editor.markup.RangeHighlighter
 import com.intellij.openapi.progress.DumbProgressIndicator
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.IdeFocusManager
 import io.github.agadek.smartdiff.engine.api.TextRange
 import javax.swing.Timer
@@ -29,17 +30,21 @@ import javax.swing.Timer
  */
 internal class MergeResultPane(
     private val project: Project,
+    private val leftDocument: Document,
     private val baseDocument: Document,
+    private val rightDocument: Document,
     private val resultDocument: Document,
 ) : MergeOutlineSelection, Disposable {
 
     private val markers = LinkedHashMap<TextRange, RangeMarker>()
     private val highlighters = mutableListOf<RangeHighlighter>()
+    private val sideHighlighters = mutableListOf<RangeHighlighter>()
     private var selected: MergeOutlineItem? = null
     private var preparedRanges: List<TextRange> = emptyList()
     private var prepared = false
     private var mappingReady = false
     private var released = false
+    private val listenerParent = Disposer.newDisposable("smartdiff.merge.result.listener")
 
     /** Lets the panel update its note when an edit changes whether the selected row is still tracked. */
     var onSelectionChanged: (() -> Unit)? = null
@@ -47,6 +52,11 @@ internal class MergeResultPane(
     private val documentListener = object : DocumentListener {
         override fun documentChanged(event: DocumentEvent) {
             if (!prepared) return
+            // The viewer's first comparison sets the result back to the base; an earlier map would be against markers.
+            if (resultDocument.text == baseDocument.text || isWholeDocumentReplacement(event)) {
+                resetMapping()
+                return
+            }
             if (mappingReady) {
                 render(scroll = false)
                 onSelectionChanged?.invoke()
@@ -63,14 +73,24 @@ internal class MergeResultPane(
     internal val isReleased: Boolean get() = released
 
     init {
-        resultDocument.addDocumentListener(documentListener, this)
+        resultDocument.addDocumentListener(documentListener, listenerParent)
     }
 
     /** Starts mapping once the viewer has set the result to the base, or to the auto-applied result after that. */
     fun prepare(ranges: List<TextRange>) {
-        preparedRanges = ranges.distinct()
+        val distinct = ranges.distinct()
+        if (prepared && distinct == preparedRanges) {
+            if (!mappingReady && resultDocument.text == baseDocument.text) mapNow()
+            return
+        }
+        if (mappingReady) {
+            markers.values.forEach { it.dispose() }
+            markers.clear()
+            mappingReady = false
+            clearHighlighters()
+        }
+        preparedRanges = distinct
         prepared = true
-        if (mappingReady) return
         if (resultDocument.text == baseDocument.text) mapNow() else debounce.restart()
     }
 
@@ -82,7 +102,7 @@ internal class MergeResultPane(
     override fun navigate(item: MergeOutlineItem) {
         selected = item
         render(scroll = true)
-        val editor = editor() ?: return
+        val editor = editor(resultDocument) ?: return
         marker(item)?.let { editor.caretModel.moveToOffset(it.startOffset) }
         editor.scrollingModel.scrollToCaret(ScrollType.MAKE_VISIBLE)
         IdeFocusManager.getGlobalInstance().requestFocus(editor.contentComponent, true)
@@ -91,13 +111,14 @@ internal class MergeResultPane(
     override fun clear() {
         selected = null
         clearHighlighters()
+        clearSideHighlighters()
     }
 
     /** The panel's note for [item] when the result no longer tracks its declaration (merge window spec R10, R11). */
     fun note(item: MergeOutlineItem?): String {
         if (item == null || item.isGroup || !mappingReady) return ""
         val range = item.baseRange ?: return "not tracked"
-        return if (markers[range]?.isValid == true) "" else "not tracked"
+        return if (markers[range]?.let(::tracked) == true) "" else "not tracked"
     }
 
     private fun mapNow() {
@@ -107,7 +128,11 @@ internal class MergeResultPane(
         mapping?.let { map ->
             preparedRanges.forEach { range ->
                 map.map(range)?.let { mapped ->
-                    markers[range] = resultDocument.createRangeMarker(mapped.start, mapped.end)
+                    markers[range] = resultDocument.createRangeMarker(mapped.start, mapped.end).also {
+                        // A side accepted over a whole declaration should still frame it; a delete leaves it empty.
+                        it.isGreedyToLeft = true
+                        it.isGreedyToRight = true
+                    }
                 }
             }
         }
@@ -116,39 +141,86 @@ internal class MergeResultPane(
         onSelectionChanged?.invoke()
     }
 
+    /** Rebuilds the map after the viewer or an accepted side replaced the whole result. */
+    private fun resetMapping() {
+        debounce.stop()
+        markers.values.forEach { it.dispose() }
+        markers.clear()
+        mappingReady = false
+        render(scroll = false)
+        onSelectionChanged?.invoke()
+        if (prepared) debounce.restart()
+    }
+
+    private fun isWholeDocumentReplacement(event: DocumentEvent): Boolean {
+        val oldLength = event.document.textLength - event.newLength + event.oldLength
+        return event.offset == 0 && oldLength > 0 && event.oldLength == oldLength
+    }
+
     private fun render(scroll: Boolean) {
         clearHighlighters()
+        clearSideHighlighters()
         val item = selected ?: return
+        renderResult(item, scroll)
+        renderSide(leftDocument, item.leftRange)
+        renderSide(baseDocument, item.baseRange)
+        renderSide(rightDocument, item.rightRange)
+    }
+
+    private fun renderResult(item: MergeOutlineItem, scroll: Boolean) {
         val marker = marker(item) ?: return
-        val editor = editor() ?: return
+        val editor = editor(resultDocument) ?: return
         val start = marker.startOffset.coerceIn(0, editor.document.textLength)
         val end = marker.endOffset.coerceIn(start, editor.document.textLength)
+        frame(editor, start, end, highlighters)
+        if (scroll) DiffUtil.scrollEditor(editor, editor.document.getLineNumber(start), false)
+    }
+
+    private fun renderSide(document: Document, range: TextRange?) {
+        if (range == null) return
+        val editor = editor(document) ?: return
+        val start = range.start.coerceIn(0, editor.document.textLength)
+        val end = range.end.coerceIn(start, editor.document.textLength)
+        frame(editor, start, end, sideHighlighters)
+    }
+
+    private fun frame(editor: Editor, start: Int, end: Int, into: MutableList<RangeHighlighter>) {
         editor.markupModel
             .addRangeHighlighter(null, start, end, HighlighterLayer.SELECTION - 1, HighlighterTargetArea.LINES_IN_RANGE)
             .also {
                 it.customRenderer = MergeOutlineFrame
                 it.setErrorStripeMarkColor(MergeOutlineFrame.COLOR)
                 it.isThinErrorStripeMark = false
-                highlighters += it
+                into += it
             }
-        if (scroll) DiffUtil.scrollEditor(editor, editor.document.getLineNumber(start), false)
     }
 
     private fun marker(item: MergeOutlineItem): RangeMarker? =
-        item.baseRange?.let(markers::get)?.takeIf { it.isValid }
+        item.baseRange?.let(markers::get)?.takeIf(::tracked)
 
-    private fun editor(): Editor? = EditorFactory.getInstance().getEditors(resultDocument, project).firstOrNull()
+    /** A marker the edit consumed is no longer a frame; greedy markers survive a replacement but collapse on a delete. */
+    private fun tracked(marker: RangeMarker): Boolean = marker.isValid && marker.endOffset > marker.startOffset
+
+    private fun editor(document: Document): Editor? =
+        EditorFactory.getInstance().getEditors(document, project).firstOrNull()
 
     private fun clearHighlighters() {
         highlighters.forEach { it.dispose() }
         highlighters.clear()
     }
 
+    private fun clearSideHighlighters() {
+        sideHighlighters.forEach { it.dispose() }
+        sideHighlighters.clear()
+    }
+
     override fun dispose() {
+        if (released) return
         released = true
         debounce.stop()
-        resultDocument.removeDocumentListener(documentListener)
+        Disposer.dispose(listenerParent)
         clearHighlighters()
+        clearSideHighlighters()
         markers.values.forEach { it.dispose() }
         markers.clear()
         preparedRanges = emptyList()

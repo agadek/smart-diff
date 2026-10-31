@@ -107,7 +107,7 @@ object MergeOutlineModel {
             )
             MergeOutlineLayout.CONTAINER_TREE -> container(joined, leftName, rightName, hidden, hideBothSides, layout, conflictRanges)
         }
-        val baseRanges = rows.mapNotNull(::baseRange)
+        val baseRanges = (rows.mapNotNull(::baseRange) + items.flatMap(::itemBaseRanges)).distinct()
         return MergeOutlineResult(
             summary(rows, leftName, rightName, hiddenCount, joined.isAnalyzed(MergeSide.LEFT), joined.isAnalyzed(MergeSide.RIGHT)),
             items,
@@ -222,6 +222,10 @@ object MergeOutlineModel {
             tooltip = "${leftName.fullTitle} | ${rightName.fullTitle}",
         )
     }
+
+    /** The base ranges of a row and its candidate rows, for the merge window's result-pane markers. */
+    private fun itemBaseRanges(item: MergeOutlineItem): List<TextRange> =
+        listOfNotNull(item.baseRange) + item.children.flatMap(::itemBaseRanges)
 
     /** Where the row's declaration is in the base, from the node or an extraction source. */
     private fun baseRange(node: MergeNode): TextRange? =
@@ -351,7 +355,13 @@ object MergeOutlineModel {
             changedCount(joined.right).takeIf { it > 0 }?.let { "$it in ${rightName.display}" },
             hiddenCount.takeIf { it > 0 }?.let { "$it hidden" },
         ).joinToString(" · ").ifEmpty { "No structural changes" }
-        return MergeOutlineResult(summary, groups, hiddenCount, baseMismatch = true)
+        return MergeOutlineResult(
+            summary,
+            groups,
+            hiddenCount,
+            baseMismatch = true,
+            baseRanges = groups.flatMap(::itemBaseRanges),
+        )
     }
 
     /** The declarations a side changed itself, including those inside changed containers. */

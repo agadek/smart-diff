@@ -191,6 +191,31 @@ class MergeOutlineModelTest {
     }
 
     @Test
+    fun `a base mismatch keeps each side's base ranges`() {
+        // merge/04-merge-window R8
+        val joined = JoinedResult(result(changed(decl("f"))), result(changed(decl("g"))), baseMismatch = true)
+
+        val model = build(joined, MergeOutlineLayout.GROUPED_BY_SIDE)
+
+        assertTrue(model.baseRanges.toString(), model.baseRanges.contains(range(0, 5)))
+    }
+
+    @Test
+    fun `a candidate row contributes its base range`() {
+        // merge/04-merge-window R8; merge/02-merge-outline R28
+        val f = decl("f")
+        val uncertain = ChangeNode(
+            f, null, range(0, 5), Presence.UNCERTAIN,
+            candidates = listOf(io.github.agadek.smartdiff.engine.api.Candidate(f, range(2, 4))),
+        )
+        val joined = JoinedResult(result(uncertain), result(changed(f)), nodes = listOf(row(f, MergeGroup.UNCERTAIN, left = uncertain)))
+
+        val model = build(joined, MergeOutlineLayout.GROUPED_BY_SIDE)
+
+        assertTrue(model.baseRanges.toString(), model.baseRanges.contains(range(2, 4)))
+    }
+
+    @Test
     fun `a mismatch counts hidden rows`() {
         // merge/02-merge-outline R21, R32
         val left = changed(decl("f"))
