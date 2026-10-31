@@ -152,6 +152,48 @@ _Avoid_: origin, original method
 Source that could not be parsed reliably, shown without any classification.
 _Avoid_: broken, error region, unknown
 
+## Merges
+
+### Base
+
+The common ancestor of the two versions being merged. In a merge, the old side of both comparisons is the base.
+_Avoid_: ancestor, original, common version
+
+### Side
+
+One of the two versions being merged into the base, shown in the left or the right pane of the merge window. A side is named after the branch or revision it comes from, never "ours" or "theirs".
+_Avoid_: ours, theirs, mine, local, remote
+
+### Merge window
+
+The IDE window that opens when a merge, rebase, cherry-pick or unstash stops on a conflict: the two sides around an editable result pane.
+_Avoid_: merge dialog, conflict editor
+
+### Result pane
+
+The editable middle pane of the merge window, which starts as the base and holds the merged file.
+_Avoid_: output, merged pane, center editor
+
+### Three-sided diff
+
+A read-only diff of three versions side by side, with the base in the middle, such as a patch or shelf conflict.
+_Avoid_: three-way diff, 3-pane diff
+
+### Changed on both sides
+
+A base declaration that each side changed. It is where a merge is most likely to need the reviewer's attention, whether or not the merge window shows a conflict there.
+_Avoid_: conflict, conflicting declaration
+
+### Same change on both sides
+
+A declaration changed on both sides whose text is the same on the left and the right.
+_Avoid_: duplicate change, identical conflict
+
+### Merged without conflict
+
+A declaration changed on both sides with no conflict of the merge window inside it.
+_Avoid_: auto-merged, safe merge
+
 ## Presentation
 
 ### Structural outline

@@ -1,6 +1,6 @@
 # Three-Way Merge Outline Plan
 
-Status: proposal, 2026-10-23, with its open questions T1 to T5 decided the same day (§10). Phase 0, spike S6, is done ([§12](#12-spike-s6-results), [ADR 0007](adr/0007-merge-outline-attaches-through-a-delegating-merge-tool.md)); it raised question T6, decided the same day (§10). Phase 1, the join, is implemented (§5). It expands the roadmap's [structural outline for three-way merges](ROADMAP.md#structural-outline-for-three-way-merges) entry. Section numbers (§) refer to the [technical specification](TECHNICAL-SPECIFICATION.md), and terms follow the [glossary](GLOSSARY.md). Supported languages are those of the declaration engine today: Java, Kotlin, Scala 2 and Scala 3.
+Status: proposal, 2026-10-23, with its open questions T1 to T5 decided the same day (§10). Phase 0, spike S6, is done ([§12](#12-spike-s6-results), [ADR 0007](adr/0007-merge-outline-attaches-through-a-delegating-merge-tool.md)); it raised question T6, decided the same day (§10). Phase 1, the join, is implemented (§5). It expands the roadmap's [structural outline for three-way merges](ROADMAP.md#structural-outline-for-three-way-merges) entry. Section numbers (§) refer to the [technical specification](TECHNICAL-SPECIFICATION.md), and terms follow the [glossary](GLOSSARY.md). Supported languages are those of the declaration engine today: Java, Kotlin, Scala 2 and Scala 3. The requirements are in [docs/specs/merge/](specs/README.md#merges).
 
 ## 1. Problem
 
