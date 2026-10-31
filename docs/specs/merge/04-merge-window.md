@@ -1,6 +1,6 @@
 # Merge outline in the merge window
 
-Status: proposed, 2026-10-31
+Status: implemented, 2026-10-31
 
 **Description:** Shows the [merge outline](02-merge-outline.md) in the [merge window](../../GLOSSARY.md#merge-window), and keeps its rows pointing at the right code in the [result pane](../../GLOSSARY.md#result-pane) while the reviewer edits it.
 

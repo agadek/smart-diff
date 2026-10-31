@@ -57,4 +57,4 @@ One file per feature, in one folder per context, written as described in the [sp
 | [01 Merge join](merge/01-merge-join.md) | implemented, 2026-10-31 |
 | [02 Merge outline](merge/02-merge-outline.md) | implemented, 2026-10-31 |
 | [03 Merge outline in three-sided diffs](merge/03-three-sided-diffs.md) | implemented, 2026-10-31 |
-| [04 Merge outline in the merge window](merge/04-merge-window.md) | proposed, 2026-10-31 |
+| [04 Merge outline in the merge window](merge/04-merge-window.md) | implemented, 2026-10-31 |

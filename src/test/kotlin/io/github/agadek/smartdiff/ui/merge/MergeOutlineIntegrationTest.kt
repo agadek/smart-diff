@@ -254,7 +254,8 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
         return this
     }
 
-    private fun viewer(outline: MergeOutlineController): ThreesideTextDiffViewer = outline.viewer
+    private fun viewer(outline: MergeOutlineController): ThreesideTextDiffViewer =
+        viewers.map { it.second }.filterIsInstance<ThreesideTextDiffViewer>().last { MergeOutlineController.of(it) === outline }
 
     private fun select(outline: MergeOutlineController, label: String) {
         val root = outline.panel.tree.model.root as DefaultMutableTreeNode

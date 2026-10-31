@@ -71,7 +71,7 @@ class OutlineDiffExtension : DiffExtension() {
 
         val splitter = insertOutlineSplitter(viewer.component, "smartdiff.merge.outline.proportion") ?: return
         val fileName = contents.firstNotNullOfOrNull { it.highlightFile }?.name
-        val controller = MergeOutlineController(
+        val controller = MergeOutlineController.threeSided(
             project,
             viewer,
             context,
