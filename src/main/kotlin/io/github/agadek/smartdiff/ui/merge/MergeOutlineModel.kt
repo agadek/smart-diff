@@ -304,8 +304,19 @@ object MergeOutlineModel {
                 MergeOutlineItem(MergeOutlineItem.Kind.GROUP, "Right: ${rightName.display}", children = it)
             },
         )
-        val summary = "the base was read differently for each side" + if (hiddenCount > 0) " · $hiddenCount hidden" else ""
+        // The banner says that the base was read differently (spec 02 R31); the summary line only counts.
+        val summary = listOfNotNull(
+            changedCount(joined.left).takeIf { it > 0 }?.let { "$it in ${leftName.display}" },
+            changedCount(joined.right).takeIf { it > 0 }?.let { "$it in ${rightName.display}" },
+            hiddenCount.takeIf { it > 0 }?.let { "$it hidden" },
+        ).joinToString(" · ").ifEmpty { "No structural changes" }
         return MergeOutlineResult(summary, groups, hiddenCount, baseMismatch = true)
+    }
+
+    /** The declarations a side changed itself, including those inside changed containers. */
+    private fun changedCount(result: ComparisonResult): Int {
+        fun count(node: ChangeNode): Int = (if (node.isChangedItself) 1 else 0) + node.children.sumOf(::count)
+        return (result.fileRegion?.let(::count) ?: 0) + result.changes.sumOf(::count)
     }
 
     private fun sideItem(item: OutlineItem, name: MergeSideName, side: MergeSide): MergeOutlineItem {
