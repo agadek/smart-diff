@@ -8,6 +8,8 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.editor.Document
+import com.intellij.openapi.editor.event.DocumentEvent
+import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
 import com.intellij.ui.OnePixelSplitter
@@ -27,6 +29,7 @@ import io.github.agadek.smartdiff.ui.SmartDiffSettings
 import io.github.agadek.smartdiff.ui.merge.MergeOutlineLayout.CONTAINER_TREE
 import io.github.agadek.smartdiff.ui.merge.MergeOutlineLayout.GROUPED_BY_SIDE
 import java.util.concurrent.CancellationException
+import javax.swing.Timer
 
 /** What the merge outline of one three-sided diff shows. */
 sealed interface MergeOutlineState {
@@ -46,6 +49,8 @@ sealed interface MergeOutlineState {
         val items: List<MergeOutlineItem>,
         val hiddenCount: Int,
         val layout: MergeOutlineLayout,
+        val leftName: MergeSideName,
+        val rightName: MergeSideName,
         /** A status or base-mismatch warning shown above the tree; null when there is none. */
         val banner: String? = null,
     ) : MergeOutlineState
@@ -88,9 +93,16 @@ class MergeOutlineController internal constructor(
     private var shownTexts: MergeTexts? = null
     private var shownJoined: JoinedResult? = null
     private var disposed = false
+    private val debounce = Timer(DEBOUNCE_MILLIS) { refresh() }.apply { isRepeats = false }
+    private val documentListener = object : DocumentListener {
+        override fun documentChanged(event: DocumentEvent) = documentChanged()
+    }
 
     internal fun start() {
         viewer.component.putClientProperty(CONTROLLER, this)
+        baseDocument.addDocumentListener(documentListener, this)
+        if (leftDocument !== baseDocument) leftDocument.addDocumentListener(documentListener, this)
+        if (rightDocument !== leftDocument && rightDocument !== baseDocument) rightDocument.addDocumentListener(documentListener, this)
         applyVisibility()
     }
 
@@ -142,7 +154,13 @@ class MergeOutlineController internal constructor(
             fileName = fileName,
             limits = SmartDiffSettings.getInstance().limits,
         )
-        val job = Job(engine, texts.limits.timeoutMillis)
+        val job = Job(
+            engine,
+            baseDocument.modificationStamp,
+            leftDocument.modificationStamp,
+            rightDocument.modificationStamp,
+            texts.limits.timeoutMillis,
+        )
         running = job
         show(MergeOutlineState.Loading)
         val modality = ModalityState.stateForComponent(viewer.component)
@@ -151,10 +169,10 @@ class MergeOutlineController internal constructor(
             val joined = try {
                 MergeComparison.compare(engine, texts, job, executor)
             } catch (e: ProcessCanceledException) {
-                timedOut(job)
+                ApplicationManager.getApplication().invokeLater({ finishTimedOut(job) }, modality)
                 return@executeOnPooledThread
             } catch (e: CancellationException) {
-                timedOut(job)
+                ApplicationManager.getApplication().invokeLater({ finishTimedOut(job) }, modality)
                 return@executeOnPooledThread
             } catch (e: Exception) {
                 ApplicationManager.getApplication().invokeLater(
@@ -167,7 +185,8 @@ class MergeOutlineController internal constructor(
         }
     }
 
-    private fun timedOut(job: Job) {
+    /** Runs on the EDT after a cancellation, so the panel is never updated off it. */
+    private fun finishTimedOut(job: Job) {
         if (job !== running) return
         running = null
         val reason = if (job.timedOut) "timed out after ${job.timeoutMillis} ms" else "analysis was canceled"
@@ -177,6 +196,13 @@ class MergeOutlineController internal constructor(
     private fun finish(job: Job, texts: MergeTexts, joined: JoinedResult) {
         if (disposed || job !== running || job.canceled) return
         running = null
+        if (baseDocument.modificationStamp != job.baseStamp ||
+            leftDocument.modificationStamp != job.leftStamp ||
+            rightDocument.modificationStamp != job.rightStamp
+        ) {
+            // A document listener has already scheduled the next comparison.
+            return
+        }
         if (selection().selected?.id != job.engine.id) return refresh()
         showResult(texts, joined)
     }
@@ -224,7 +250,7 @@ class MergeOutlineController internal constructor(
             problem(joined, MergeSide.LEFT, leftName)?.let(::add)
             problem(joined, MergeSide.RIGHT, rightName)?.let(::add)
         }.takeIf { it.isNotEmpty() }?.joinToString(" ")
-        show(MergeOutlineState.Shown(joined, result.summary, result.items, result.hiddenCount, layout, banner))
+        show(MergeOutlineState.Shown(joined, result.summary, result.items, result.hiddenCount, layout, leftName, rightName, banner))
     }
 
     private fun problem(joined: JoinedResult, side: MergeSide, name: MergeSideName): String? {
@@ -234,7 +260,14 @@ class MergeOutlineController internal constructor(
         return "${name.display} was not analyzed: $reason"
     }
 
+    private fun documentChanged() {
+        if (disposed || !isOutlineVisible) return
+        cancel()
+        debounce.restart()
+    }
+
     private fun cancel() {
+        debounce.stop()
         running?.canceled = true
         running = null
     }
@@ -257,7 +290,13 @@ class MergeOutlineController internal constructor(
         viewer.component.putClientProperty(CONTROLLER, null)
     }
 
-    private class Job(val engine: ComparisonEngine, val timeoutMillis: Long) : Cancellation {
+    private class Job(
+        val engine: ComparisonEngine,
+        val baseStamp: Long,
+        val leftStamp: Long,
+        val rightStamp: Long,
+        val timeoutMillis: Long,
+    ) : Cancellation {
         @Volatile
         var canceled = false
 
@@ -276,6 +315,7 @@ class MergeOutlineController internal constructor(
     }
 
     companion object {
+        private const val DEBOUNCE_MILLIS = 300
         private const val CONTROLLER = "smartdiff.merge.outline.controller"
 
         /** The merge outline attached to [viewer], or null if it has none. */

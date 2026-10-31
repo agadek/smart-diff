@@ -11,12 +11,20 @@ import com.intellij.diff.util.ThreeSide
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
+import io.github.agadek.smartdiff.engine.api.Cancellation
+import io.github.agadek.smartdiff.engine.api.ComparisonEngine
+import io.github.agadek.smartdiff.engine.api.ComparisonRequest
+import io.github.agadek.smartdiff.engine.api.ComparisonResult
+import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.Limits
+import io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory
 import io.github.agadek.smartdiff.ui.ChangeType
 import io.github.agadek.smartdiff.ui.DiffContents
 import io.github.agadek.smartdiff.ui.SmartDiffSettings
@@ -126,6 +134,22 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
         assertNull(MergeOutlineController.of(openViewer(request)))
     }
 
+    fun `test a comparison over the time limit fails on the EDT`() {
+        // merge/02-merge-outline R20
+        val engine = SlowEngine()
+        ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(engine)), testRootDisposable)
+        settings.limits = Limits.DEFAULT.copy(timeoutMillis = 100)
+        val outline = open()
+
+        PlatformTestUtil.waitWithEventsDispatching(
+            { "the outline is ${outline.state}" },
+            { outline.state is MergeOutlineState.Failed },
+            20,
+        )
+        assertTrue((outline.state as MergeOutlineState.Failed).reason.contains("timed out"))
+        assertTrue("the engine was canceled", engine.canceled)
+    }
+
     private fun open(): MergeOutlineController {
         val request = SimpleDiffRequest(
             "OrderService.java",
@@ -182,6 +206,34 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
         assertTrue("offset $offset not found", offset >= 0)
         val starts = editor.markupModel.allHighlighters.map { it.startOffset }
         assertTrue("no highlighter starts at $offset; highlighters start at $starts", offset in starts)
+    }
+
+    private fun factory(engine: ComparisonEngine) = object : ComparisonEngineFactory {
+        override fun create(project: Project?): ComparisonEngine = engine
+    }
+
+    /** Never finishes; it checks for cancellation until it is canceled. */
+    private class SlowEngine : ComparisonEngine {
+        override val id = EngineId("smartdiff.test.merge.slow")
+        override val displayName = "Slow merge (test)"
+        override val version = "1"
+
+        @Volatile
+        var canceled = false
+
+        override fun supports(languageId: String) = true
+
+        override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult {
+            while (true) {
+                try {
+                    cancellation.checkCanceled()
+                } catch (e: Throwable) {
+                    canceled = true
+                    throw e
+                }
+                Thread.sleep(5)
+            }
+        }
     }
 
     private companion object {

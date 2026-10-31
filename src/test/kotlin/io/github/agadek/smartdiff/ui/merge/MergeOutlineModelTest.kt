@@ -25,7 +25,8 @@ class MergeOutlineModelTest {
         assertEquals("feature/rates", MergeSideNames.fromTitle("<html>Your version, branch <b>feature/rates</b></html>", "Left").display)
         assertEquals("main", MergeSideNames.fromTitle("Changes from branch main, revision 1a2b3c4d", "Left").display)
         assertEquals("feature/rates", MergeSideNames.fromTitle("Changes from origin/feature/rates", "Left").display)
-        assertEquals("1a2b3c4d", MergeSideNames.fromTitle("Changes from server (revision 1a2b3c4d)", "Left").display)
+        assertEquals("1a2b3c4", MergeSideNames.fromTitle("Changes from server (revision 1a2b3c4d)", "Left").display)
+        assertEquals("a-very-long-branch-name", MergeSideNames.fromTitle("Changes from branch a-very-long-branch-name", "Left").display)
         assertEquals("a very long side tit", MergeSideNames.fromTitle("a very long side title that is over twenty", "Left").display)
         assertEquals("a very long side title that is over twenty", MergeSideNames.fromTitle("a very long side title that is over twenty", "Left").fullTitle)
     }
@@ -150,6 +151,53 @@ class MergeOutlineModelTest {
 
         val row = model.items.single().children.single()
         assertEquals("candidate: method f()", row.children.single().title)
+    }
+
+    @Test
+    fun `a hidden change type removes only that side's label`() {
+        // merge/02-merge-outline R13
+        val f = decl("f")
+        val left = ChangeNode(f, range(0, 5), range(0, 5), Presence.MATCHED, moved = true, content = Content.CHANGED)
+        val right = changed(f)
+        val node = row(f, MergeGroup.CHANGED_ON_BOTH_SIDES, left = left, right = right)
+        val joined = JoinedResult(result(left), result(right), nodes = listOf(node))
+
+        val model = MergeOutlineModel.build(
+            joined, "base", "left", "right", MergeSideName("main", "main"), MergeSideName("feature", "feature"),
+            MergeOutlineLayout.GROUPED_BY_SIDE, setOf(ChangeType.CHANGED),
+        )
+
+        assertEquals("method f()  main: moved", model.items.single().children.single().label)
+    }
+
+    @Test
+    fun `an unanalyzed side does not claim the other side changed alone`() {
+        // merge/02-merge-outline R22
+        val f = decl("f")
+        val node = row(f, MergeGroup.RIGHT_ONLY, left = null, right = changed(f))
+        val left = ComparisonResult(EngineId("test"), "1", Status.FAILED, fallbackReason = "parse failed")
+        val joined = JoinedResult(left, result(changed(f)), nodes = listOf(node))
+
+        val model = build(joined, MergeOutlineLayout.GROUPED_BY_SIDE)
+
+        assertEquals("1 in feature", model.summary)
+        assertEquals("Changed in feature", model.items.single().title)
+    }
+
+    @Test
+    fun `a mismatch counts hidden rows`() {
+        // merge/02-merge-outline R21
+        val left = changed(decl("f"))
+        val right = changed(decl("g"))
+        val joined = JoinedResult(result(left), result(right), baseMismatch = true)
+
+        val model = MergeOutlineModel.build(
+            joined, "base", "left", "right", MergeSideName("main", "main"), MergeSideName("feature", "feature"),
+            MergeOutlineLayout.GROUPED_BY_SIDE, setOf(ChangeType.CHANGED),
+        )
+
+        assertEquals(2, model.hiddenCount)
+        assertEquals("the base was read differently for each side · 2 hidden", model.summary)
     }
 
     private fun build(joined: JoinedResult, layout: MergeOutlineLayout) =

@@ -1,11 +1,13 @@
 package io.github.agadek.smartdiff.ui.merge
 
 import io.github.agadek.smartdiff.engine.api.ChangeNode
+import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.merge.JoinedResult
 import io.github.agadek.smartdiff.merge.MergeGroup
 import io.github.agadek.smartdiff.merge.MergeNode
+import io.github.agadek.smartdiff.merge.MergeSide
 import io.github.agadek.smartdiff.ui.ChangeType
 import io.github.agadek.smartdiff.ui.ItemKind
 import io.github.agadek.smartdiff.ui.Tag
@@ -95,10 +97,13 @@ object MergeOutlineModel {
         joined.fileRegion?.let(rows::add)
         val hiddenCount = rows.count { it.group != MergeGroup.UNCHANGED && isHidden(it, hidden, hideBothSides, layout) }
         val items = when (layout) {
-            MergeOutlineLayout.GROUPED_BY_SIDE -> grouped(rows, leftName, rightName, hidden, hideBothSides, layout)
+            MergeOutlineLayout.GROUPED_BY_SIDE -> grouped(
+                rows, joined.left, joined.right, leftName, rightName, hidden, hideBothSides, layout,
+                joined.isAnalyzed(MergeSide.LEFT), joined.isAnalyzed(MergeSide.RIGHT),
+            )
             MergeOutlineLayout.CONTAINER_TREE -> container(joined, leftName, rightName, hidden, hideBothSides, layout)
         }
-        return MergeOutlineResult(summary(rows, leftName, rightName, hiddenCount), items, hiddenCount)
+        return MergeOutlineResult(summary(rows, leftName, rightName, hiddenCount, joined.isAnalyzed(MergeSide.LEFT), joined.isAnalyzed(MergeSide.RIGHT)), items, hiddenCount)
     }
 
     /** Every row, including containers whose own group is unchanged. */
@@ -111,11 +116,15 @@ object MergeOutlineModel {
 
     private fun grouped(
         rows: List<MergeNode>,
+        leftResult: ComparisonResult,
+        rightResult: ComparisonResult,
         leftName: MergeSideName,
         rightName: MergeSideName,
         hidden: Set<ChangeType>,
         hideBothSides: Boolean,
         layout: MergeOutlineLayout,
+        leftAnalyzed: Boolean,
+        rightAnalyzed: Boolean,
     ): List<MergeOutlineItem> {
         val byGroup = rows.filter { it.group != MergeGroup.UNCHANGED && !isHidden(it, hidden, hideBothSides, layout) }
             .groupBy { it.group }
@@ -123,10 +132,10 @@ object MergeOutlineModel {
         return groups.mapNotNull { group ->
             val children = byGroup[group].orEmpty()
                 .sortedWith(compareBy<MergeNode> { it.sameChange }.thenBy { rows.indexOf(it) })
-                .map { row(it, candidates(it), leftName, rightName, hidden = false) }
+                .map { row(it, candidates(it, leftName, rightName), leftName, rightName, leftResult, rightResult, hidden = false, hiddenTypes = hidden) }
             if (children.isEmpty()) null else MergeOutlineItem(
                 MergeOutlineItem.Kind.GROUP,
-                groupTitle(group, leftName, rightName),
+                groupTitle(group, leftName, rightName, leftAnalyzed, rightAnalyzed),
                 group = group,
                 children = children,
             )
@@ -144,15 +153,16 @@ object MergeOutlineModel {
         val rows = mutableListOf<MergeOutlineItem>()
         joined.fileRegion?.let { row ->
             if (!isHidden(row, hidden, hideBothSides, layout)) {
-                rows += row(row, candidates(row), leftName, rightName, hidden = false)
+                rows += row(row, candidates(row, leftName, rightName), leftName, rightName, joined.left, joined.right, hidden = false, hiddenTypes = hidden)
             }
         }
         fun visit(nodes: List<MergeNode>): List<MergeOutlineItem> = nodes.mapNotNull { node ->
             val children = visit(node.children)
+            val candidates = candidates(node, leftName, rightName)
             val hiddenNode = isHidden(node, hidden, hideBothSides, layout)
             if (node.group == MergeGroup.UNCHANGED && children.isEmpty()) return@mapNotNull null
-            if (hiddenNode && children.isEmpty()) return@mapNotNull null
-            row(node, candidates(node), leftName, rightName, hiddenNode).copy(children = children)
+            if (hiddenNode && candidates.isEmpty() && children.isEmpty()) return@mapNotNull null
+            row(node, emptyList(), leftName, rightName, joined.left, joined.right, hiddenNode, hidden).copy(children = candidates + children)
         }
         rows += visit(joined.nodes)
         return rows
@@ -163,12 +173,17 @@ object MergeOutlineModel {
         candidates: List<MergeOutlineItem>,
         leftName: MergeSideName,
         rightName: MergeSideName,
+        leftResult: ComparisonResult,
+        rightResult: ComparisonResult,
         hidden: Boolean,
+        hiddenTypes: Set<ChangeType>,
     ): MergeOutlineItem {
         val changed = node.group != MergeGroup.UNCHANGED
-        val left = node.left?.takeIf { changed && !hidden }?.let { sideLabel(it, leftName) }
-        val right = node.right?.takeIf { changed && !hidden }?.let { sideLabel(it, rightName) }
-        val baseRange = node.baseRange ?: node.left?.oldRange ?: node.right?.oldRange
+        val left = node.left?.takeIf { changed && !hidden }?.let { sideLabel(it, leftName, leftResult, hiddenTypes) }
+        val right = node.right?.takeIf { changed && !hidden }?.let { sideLabel(it, rightName, rightResult, hiddenTypes) }
+        val baseRange = node.baseRange ?: node.left?.extractedFrom?.firstOrNull()?.declarationRange
+            ?: node.right?.extractedFrom?.firstOrNull()?.declarationRange
+            ?: node.left?.oldRange ?: node.right?.oldRange
         return MergeOutlineItem(
             kind = if (node.subject is io.github.agadek.smartdiff.engine.api.Subject.Region) {
                 MergeOutlineItem.Kind.FILE_REGION
@@ -189,29 +204,41 @@ object MergeOutlineModel {
     }
 
     /** A side's labels; a rename candidate shows its new name after the label, as the merge plan's example does. */
-    private fun sideLabel(node: ChangeNode, name: MergeSideName): MergeSideLabel? {
-        val tags = OutlineModel.tags(node)
+    private fun sideLabel(
+        node: ChangeNode,
+        name: MergeSideName,
+        result: ComparisonResult,
+        hidden: Set<ChangeType>,
+    ): MergeSideLabel? {
+        val hiddenTags = hidden.flatMapTo(HashSet()) { it.tags }
+        val tags = OutlineModel.tags(node).filter { it !in hiddenTags }
+        val note = OutlineModel.note(result, node)
         val value = when {
             node.renamedFrom != null -> "rename candidate → ${OutlineModel.title(node.subject)}"
-            tags.isEmpty() -> return null
-            else -> tags.joinToString(", ") { it.text }
+            tags.isEmpty() && note == null -> return null
+            else -> (tags.map { it.text } + listOfNotNull(note)).joinToString(", ")
         }
         return MergeSideLabel(name.display, value, tags, name.fullTitle)
     }
 
-    /** Candidates of an uncertain declaration, with their ranges on the base. */
-    private fun candidates(node: MergeNode): List<MergeOutlineItem> =
-        listOfNotNull(node.left, node.right)
-            .filter { it.presence == Presence.UNCERTAIN }
-            .flatMap { uncertain ->
-                uncertain.candidates.map {
-                    MergeOutlineItem(
-                        MergeOutlineItem.Kind.CANDIDATE,
-                        "candidate: ${OutlineModel.title(it.subject)}",
-                        baseRange = it.range,
-                    )
-                }
-            }
+    /** Candidates of an uncertain declaration, on the side where they live and with that side named. */
+    private fun candidates(node: MergeNode, leftName: MergeSideName, rightName: MergeSideName): List<MergeOutlineItem> =
+        candidates(node.left, MergeSide.LEFT, leftName) + candidates(node.right, MergeSide.RIGHT, rightName)
+
+    private fun candidates(node: ChangeNode?, side: MergeSide, name: MergeSideName): List<MergeOutlineItem> {
+        if (node?.presence != Presence.UNCERTAIN) return emptyList()
+        val onBase = node.oldRange == null
+        return node.candidates.map { candidate ->
+            MergeOutlineItem(
+                MergeOutlineItem.Kind.CANDIDATE,
+                "candidate: ${OutlineModel.title(candidate.subject)}",
+                baseRange = candidate.range.takeIf { onBase },
+                leftRange = candidate.range.takeIf { !onBase && side == MergeSide.LEFT },
+                rightRange = candidate.range.takeIf { !onBase && side == MergeSide.RIGHT },
+                note = "from ${name.display}",
+            )
+        }
+    }
 
     /** A row is hidden when every side label is hidden, or, in the container tree, by the changed-on-both-sides filter. */
     private fun isHidden(node: MergeNode, hidden: Set<ChangeType>, hideBothSides: Boolean, layout: MergeOutlineLayout): Boolean {
@@ -221,10 +248,16 @@ object MergeOutlineModel {
         return sides.isNotEmpty() && sides.all { OutlineModel.isHidden(it, hidden) }
     }
 
-    private fun groupTitle(group: MergeGroup, leftName: MergeSideName, rightName: MergeSideName): String = when (group) {
+    private fun groupTitle(
+        group: MergeGroup,
+        leftName: MergeSideName,
+        rightName: MergeSideName,
+        leftAnalyzed: Boolean,
+        rightAnalyzed: Boolean,
+    ): String = when (group) {
         MergeGroup.CHANGED_ON_BOTH_SIDES -> "Changed on both sides"
-        MergeGroup.LEFT_ONLY -> "Changed in ${leftName.display} only"
-        MergeGroup.RIGHT_ONLY -> "Changed in ${rightName.display} only"
+        MergeGroup.LEFT_ONLY -> "Changed in ${leftName.display}" + if (rightAnalyzed) " only" else ""
+        MergeGroup.RIGHT_ONLY -> "Changed in ${rightName.display}" + if (leftAnalyzed) " only" else ""
         MergeGroup.UNCERTAIN -> "Uncertain"
         MergeGroup.UNCHANGED -> "Unchanged"
     }
@@ -234,12 +267,14 @@ object MergeOutlineModel {
         leftName: MergeSideName,
         rightName: MergeSideName,
         hiddenCount: Int,
+        leftAnalyzed: Boolean,
+        rightAnalyzed: Boolean,
     ): String {
         val counts = rows.filter { it.group != MergeGroup.UNCHANGED }.groupingBy { it.group }.eachCount()
         val parts = listOfNotNull(
             counts[MergeGroup.CHANGED_ON_BOTH_SIDES]?.let { "$it changed on both sides" },
-            counts[MergeGroup.LEFT_ONLY]?.let { "$it in ${leftName.display} only" },
-            counts[MergeGroup.RIGHT_ONLY]?.let { "$it in ${rightName.display} only" },
+            counts[MergeGroup.LEFT_ONLY]?.let { "$it in ${leftName.display}" + if (rightAnalyzed) " only" else "" },
+            counts[MergeGroup.RIGHT_ONLY]?.let { "$it in ${rightName.display}" + if (leftAnalyzed) " only" else "" },
             counts[MergeGroup.UNCERTAIN]?.let { "$it uncertain" },
             hiddenCount.takeIf { it > 0 }?.let { "$it hidden" },
         )
@@ -260,6 +295,7 @@ object MergeOutlineModel {
             .map { sideItem(it, leftName, MergeSide.LEFT) }
         val right = OutlineModel.build(joined.right, baseText, rightText, formattingInline = false, hidden = hidden)
             .map { sideItem(it, rightName, MergeSide.RIGHT) }
+        val hiddenCount = OutlineModel.hiddenCount(joined.left, hidden) + OutlineModel.hiddenCount(joined.right, hidden)
         val groups = listOfNotNull(
             left.takeIf { it.isNotEmpty() }?.let {
                 MergeOutlineItem(MergeOutlineItem.Kind.GROUP, "Left: ${leftName.display}", children = it)
@@ -268,7 +304,8 @@ object MergeOutlineModel {
                 MergeOutlineItem(MergeOutlineItem.Kind.GROUP, "Right: ${rightName.display}", children = it)
             },
         )
-        return MergeOutlineResult("the base was read differently for each side", groups, baseMismatch = true)
+        val summary = "the base was read differently for each side" + if (hiddenCount > 0) " · $hiddenCount hidden" else ""
+        return MergeOutlineResult(summary, groups, hiddenCount, baseMismatch = true)
     }
 
     private fun sideItem(item: OutlineItem, name: MergeSideName, side: MergeSide): MergeOutlineItem {
@@ -287,10 +324,9 @@ object MergeOutlineModel {
             baseRange = item.oldRange,
             leftRange = item.newRange.takeIf { side == MergeSide.LEFT },
             rightRange = item.newRange.takeIf { side == MergeSide.RIGHT },
+            note = item.note,
             children = item.children.map { sideItem(it, name, side) },
             tooltip = name.fullTitle,
         )
     }
-
-    private enum class MergeSide { LEFT, RIGHT }
 }

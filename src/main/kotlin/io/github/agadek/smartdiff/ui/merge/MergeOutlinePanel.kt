@@ -21,6 +21,7 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import io.github.agadek.smartdiff.engine.registry.EngineSelection
+import io.github.agadek.smartdiff.merge.MergeSide
 import io.github.agadek.smartdiff.ui.ChangeType
 import io.github.agadek.smartdiff.ui.SmartDiffSettings
 import io.github.agadek.smartdiff.ui.Tag
@@ -202,16 +203,21 @@ class MergeOutlinePanel internal constructor(private val controller: MergeOutlin
 
     private fun select(item: MergeOutlineItem?) {
         controller.navigator.select(item)
+        val shown = controller.state as? MergeOutlineState.Shown
         absence.text = when {
             item == null || item.isGroup -> ""
-            item.leftRange == null && item.baseRange == null && item.rightRange == null -> ""
             else -> {
-                val missing = listOfNotNull(
-                    "left".takeIf { item.leftRange == null },
-                    "base".takeIf { item.baseRange == null },
-                    "right".takeIf { item.rightRange == null },
-                )
-                if (missing.isEmpty()) "" else "Not present in the ${missing.joinToString(", ")} pane"
+                val notes = buildList {
+                    if (shown != null && !shown.joined.isAnalyzed(MergeSide.LEFT)) add("${shown.leftName.display} was not analyzed")
+                    if (shown != null && !shown.joined.isAnalyzed(MergeSide.RIGHT)) add("${shown.rightName.display} was not analyzed")
+                    val missing = listOfNotNull(
+                        "left".takeIf { (shown == null || shown.joined.isAnalyzed(MergeSide.LEFT)) && item.leftRange == null },
+                        "base".takeIf { item.baseRange == null },
+                        "right".takeIf { (shown == null || shown.joined.isAnalyzed(MergeSide.RIGHT)) && item.rightRange == null },
+                    )
+                    if (missing.isNotEmpty()) add("Not present in the ${missing.joinToString(", ")} pane")
+                }
+                notes.joinToString("; ")
             }
         }
     }
@@ -239,6 +245,13 @@ class MergeOutlinePanel internal constructor(private val controller: MergeOutlin
 
     /** The merge-only filter entry for rows changed on both sides (merge outline spec 02 R15). */
     private inner class HideBothSidesAction : DumbAwareToggleAction("Changed on both sides") {
+        override fun update(e: AnActionEvent) {
+            super.update(e)
+            val layout = (controller.state as? MergeOutlineState.Shown)?.layout
+                ?: if (SmartDiffSettings.getInstance().mergeGroupedBySide) MergeOutlineLayout.GROUPED_BY_SIDE else MergeOutlineLayout.CONTAINER_TREE
+            e.presentation.isEnabledAndVisible = layout == MergeOutlineLayout.CONTAINER_TREE
+        }
+
         override fun isSelected(e: AnActionEvent): Boolean = SmartDiffSettings.getInstance().mergeHideBothSides
 
         override fun setSelected(e: AnActionEvent, state: Boolean) = controller.setHideBothSides(state)
@@ -251,6 +264,7 @@ class MergeOutlinePanel internal constructor(private val controller: MergeOutlin
             val item = (value as? DefaultMutableTreeNode)?.userObject as? MergeOutlineItem ?: return
             appendMergeItem(this, item)
             toolTipText = item.tooltip
+            accessibleContext?.let { it.accessibleName = item.accessibleName }
         }
     }
 
