@@ -13,7 +13,7 @@ import com.intellij.openapi.fileTypes.PlainTextLanguage
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
-import io.github.agadek.smartdiff.ui.merge.MergeOutlinePreview
+import io.github.agadek.smartdiff.ui.merge.MergeOutlineController
 
 /**
  * Attaches the structural outline beside the editors of IntelliJ's own side-by-side viewer (technical specification
@@ -26,15 +26,14 @@ import io.github.agadek.smartdiff.ui.merge.MergeOutlinePreview
  * supports still gets the outline, which says so in place of the tree (§10), except plain text: without an engine it is
  * left alone so a mixed change list does not show the message on every text file.
  *
- * A three-sided viewer gets the merge outline placeholder of spike S6 while its preview is switched on
- * ([MergeOutlinePreview], three-way merge plan §6.1).
+ * A three-sided viewer gets the merge outline (merge outline spec 03), with the middle pane as the base.
  */
 class OutlineDiffExtension : DiffExtension() {
 
     override fun onViewerCreated(viewer: FrameDiffTool.DiffViewer, context: DiffContext, request: DiffRequest) {
         when (viewer) {
             is TwosideTextDiffViewer -> attachTwoSided(viewer, context, request)
-            is ThreesideTextDiffViewer -> MergeOutlinePreview.attachToThreeSidedDiff(viewer, context, request)
+            is ThreesideTextDiffViewer -> attachThreeSided(viewer, context, request)
         }
     }
 
@@ -57,6 +56,33 @@ class OutlineDiffExtension : DiffExtension() {
         // Taken off the request, so showing it again later does not select the row again.
         val reveal = request.getUserData(OutlinePath.KEY)?.also { request.putUserData(OutlinePath.KEY, null) }
         val controller = OutlineController(project, viewer, context, splitter, languageId, fileName, old.document, new.document, reveal)
+        Disposer.register(viewer, controller)
+        controller.start()
+    }
+
+    /** Attaches the merge outline to a three-sided diff; the middle content is the base (merge outline spec 03). */
+    private fun attachThreeSided(viewer: ThreesideTextDiffViewer, context: DiffContext, request: DiffRequest) {
+        val contentRequest = request as? ContentDiffRequest ?: return
+        if (contentRequest.contents.size != 3) return
+        val contents = contentRequest.contents.map { it as? DocumentContent ?: return }
+        val languageId = contents.map { it.languageId() }.toSet().singleOrNull() ?: return
+        val project = context.project ?: ProjectManager.getInstance().defaultProject
+        if (EngineRegistry.getInstance(project).select(languageId).selected == null) return
+
+        val splitter = insertOutlineSplitter(viewer.component, "smartdiff.merge.outline.proportion") ?: return
+        val fileName = contents.firstNotNullOfOrNull { it.highlightFile }?.name
+        val controller = MergeOutlineController(
+            project,
+            viewer,
+            context,
+            splitter,
+            languageId,
+            fileName,
+            contents[0].document,
+            contents[1].document,
+            contents[2].document,
+            contentRequest.contentTitles,
+        )
         Disposer.register(viewer, controller)
         controller.start()
     }

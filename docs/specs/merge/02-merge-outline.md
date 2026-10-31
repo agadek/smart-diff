@@ -1,6 +1,6 @@
 # Merge outline
 
-Status: proposed, 2026-10-31
+Status: implemented, 2026-10-31
 
 **Description:** A [structural outline](../../GLOSSARY.md#structural-outline) for merges, built from the [merge join](01-merge-join.md), that groups declarations by which [side](../../GLOSSARY.md#side) changed them.
 

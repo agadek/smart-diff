@@ -26,6 +26,12 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         /** Show formatting-only changes inline instead of in a collapsed group per container. */
         var formattingOnlyInline: Boolean = false
 
+        /** List merge rows grouped by side instead of as the base's container tree. */
+        var mergeGroupedBySide: Boolean = true
+
+        /** Hide rows changed on both sides from the merge container tree. */
+        var mergeHideBothSides: Boolean = false
+
         /** The [ChangeType] names hidden from the outline, comma-separated. */
         var hiddenChangeTypes: String = ""
         var maxChars: Int = Limits.DEFAULT.maxChars
@@ -54,6 +60,14 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         get() = current.formattingOnlyInline
         set(value) = update { formattingOnlyInline = value }
 
+    var mergeGroupedBySide: Boolean
+        get() = current.mergeGroupedBySide
+        set(value) = update { mergeGroupedBySide = value }
+
+    var mergeHideBothSides: Boolean
+        get() = current.mergeHideBothSides
+        set(value) = update { mergeHideBothSides = value }
+
     /** The change types hidden from every outline; a stored name that is no longer a type is ignored. */
     var hiddenChangeTypes: Set<ChangeType>
         get() = current.hiddenChangeTypes.split(',').mapNotNullTo(LinkedHashSet()) { name -> ChangeType.entries.firstOrNull { it.name == name.trim() } }
@@ -79,6 +93,8 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
             it.showOutline = old.showOutline
             it.showChangesSummary = old.showChangesSummary
             it.formattingOnlyInline = old.formattingOnlyInline
+            it.mergeGroupedBySide = old.mergeGroupedBySide
+            it.mergeHideBothSides = old.mergeHideBothSides
             it.hiddenChangeTypes = old.hiddenChangeTypes
             it.maxChars = old.maxChars
             it.maxDeclarations = old.maxDeclarations

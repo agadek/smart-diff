@@ -5,6 +5,7 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.actionSystem.ToggleAction
+import io.github.agadek.smartdiff.ui.merge.MergeOutlineController
 
 /**
  * The toolbar button in every diff with an outline (technical specification §10): switches that diff between the
@@ -17,14 +18,17 @@ class ToggleOutlineAction : ToggleAction(), DumbAware {
 
     override fun update(e: AnActionEvent) {
         super.update(e)
-        e.presentation.isEnabledAndVisible = controller(e) != null
+        e.presentation.isEnabledAndVisible = target(e) != null
     }
 
-    override fun isSelected(e: AnActionEvent): Boolean = controller(e)?.isOutlineVisible == true
+    override fun isSelected(e: AnActionEvent): Boolean = target(e)?.isOutlineVisible == true
 
     override fun setSelected(e: AnActionEvent, state: Boolean) {
-        controller(e)?.setOutlineVisible(state)
+        target(e)?.setOutlineVisible(state)
     }
 
-    private fun controller(e: AnActionEvent): OutlineController? = OutlineController.of(e.getData(DiffDataKeys.DIFF_VIEWER))
+    private fun target(e: AnActionEvent): OutlineToggleTarget? {
+        val viewer = e.getData(DiffDataKeys.DIFF_VIEWER)
+        return OutlineController.of(viewer) ?: MergeOutlineController.of(viewer)
+    }
 }
