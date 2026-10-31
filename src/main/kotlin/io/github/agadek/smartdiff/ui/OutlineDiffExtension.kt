@@ -78,8 +78,8 @@ class OutlineDiffExtension : DiffExtension() {
             splitter,
             languageId,
             fileName,
-            contents[0].document,
             contents[1].document,
+            contents[0].document,
             contents[2].document,
             contentRequest.contentTitles,
         )

@@ -14,6 +14,7 @@ import io.github.agadek.smartdiff.merge.MergeGroup
 import io.github.agadek.smartdiff.merge.MergeNode
 import io.github.agadek.smartdiff.ui.ChangeType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -29,6 +30,8 @@ class MergeOutlineModelTest {
         assertEquals("a-very-long-branch-name", MergeSideNames.fromTitle("Changes from branch a-very-long-branch-name", "Left").display)
         assertEquals("a very long side tit", MergeSideNames.fromTitle("a very long side title that is over twenty", "Left").display)
         assertEquals("a very long side title that is over twenty", MergeSideNames.fromTitle("a very long side title that is over twenty", "Left").fullTitle)
+        assertFalse(MergeSideNames.fromTitle("Your version, branch feature/rates", "Left").display.contains("ours", ignoreCase = true))
+        assertFalse(MergeSideNames.fromTitle("Changes from branch main, revision 1a2b3c4d", "Left").display.contains("theirs", ignoreCase = true))
     }
 
     @Test
@@ -43,7 +46,10 @@ class MergeOutlineModelTest {
         assertEquals("1 changed on both sides", model.summary)
         val group = model.items.single()
         assertEquals("Changed on both sides", group.title)
-        assertEquals("method f()  main: changed  feature: changed", group.children.single().label)
+        val row = group.children.single()
+        assertEquals("method f()  main: changed  feature: changed", row.label)
+        assertEquals("main | feature", row.tooltip)
+        assertTrue(row.accessibleName, row.accessibleName.contains("main"))
     }
 
     @Test
