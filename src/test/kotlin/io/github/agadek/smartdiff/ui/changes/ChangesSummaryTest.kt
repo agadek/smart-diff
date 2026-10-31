@@ -37,9 +37,14 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
 import com.intellij.util.ThreeState
 import com.intellij.vcsUtil.VcsUtil
+import io.github.agadek.smartdiff.engine.api.Cancellation
+import io.github.agadek.smartdiff.engine.api.ComparisonEngine
+import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.Limits
 import io.github.agadek.smartdiff.engine.api.Status
+import io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory
 import io.github.agadek.smartdiff.ui.OutlineController
 import io.github.agadek.smartdiff.ui.OutlinePath
 import io.github.agadek.smartdiff.ui.OutlineState
@@ -173,12 +178,57 @@ class ChangesSummaryTest : BasePlatformTestCase() {
         assertNull("the request selects the row once", request.getUserData(OutlinePath.KEY))
     }
 
-    fun `test the summary is the outline's summary line, or none when the file was not analyzed`() {
+    fun `test the summary is the outline's summary line, or the reason it was not analyzed`() {
         val engine = EngineId("test")
+        fun failed(reason: String?) = ComparisonResult(engine, "1", Status.FAILED, fallbackReason = reason)
 
         assertEquals("no structural changes", ChangesSummaryService.summary(ComparisonResult(engine, "1", Status.ANALYZED)))
-        assertNull(ChangesSummaryService.summary(ComparisonResult(engine, "1", Status.TOO_LARGE)))
-        assertNull(ChangesSummaryService.summary(ComparisonResult(engine, "1", Status.FAILED)))
+        assertEquals("not analyzed: too large", ChangesSummaryService.summary(ComparisonResult(engine, "1", Status.TOO_LARGE)))
+        assertEquals("not analyzed: timed out", ChangesSummaryService.summary(failed("timed out after 100 ms")))
+        assertEquals("not analyzed: parse errors", ChangesSummaryService.summary(failed("the old side could not be parsed")))
+        assertEquals("not analyzed: analysis failed", ChangesSummaryService.summary(failed("engine test failed: boom")))
+        assertEquals("not analyzed: analysis failed", ChangesSummaryService.summary(failed(null)))
+        assertNull(ChangesSummaryService.summary(ComparisonResult(engine, "1", Status.UNSUPPORTED)))
+    }
+
+    fun `test a file over the size limit says it was not analyzed`() {
+        settings.limits = Limits.DEFAULT.copy(maxChars = 10)
+        val change = modified("Cart.java", OLD_CART, NEW_CART)
+
+        summaryNode(change)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+
+        val node = summaryNode(change)!!
+        assertEquals("not analyzed: too large", node.summary)
+        assertEquals(0, node.childCount)
+        assertTrue("no declaration rows, so no expand arrow", node.isLeaf)
+    }
+
+    fun `test a file over the time limit says it timed out`() {
+        val engine = SlowEngine()
+        ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(engine)), testRootDisposable)
+        settings.limits = Limits.DEFAULT.copy(timeoutMillis = 100)
+        val change = modified("Cart.java", OLD_CART, NEW_CART)
+
+        summaryNode(change)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+
+        val node = summaryNode(change)!!
+        assertEquals("not analyzed: timed out", node.summary)
+        assertEquals(0, node.childCount)
+        assertTrue("no declaration rows, so no expand arrow", node.isLeaf)
+        assertTrue("the engine was canceled", engine.canceled)
+        assertEquals(1, engine.calls)
+
+        // The reason stays visible while one retry is queued after the delay.
+        Thread.sleep(ChangesSummaryService.RETRY_DELAY_MILLIS + 100)
+        summaryNode(change)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        assertEquals("a timeout retries once", 2, engine.calls)
+
+        summaryNode(change)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        assertEquals("the retry is not repeated", 2, engine.calls)
     }
 
     fun `test added and deleted files and other languages get no summary`() {
@@ -229,6 +279,39 @@ class ChangesSummaryTest : BasePlatformTestCase() {
         }
         visit(node, 0)
         return rows
+    }
+
+    /** A factory for an engine that is not in the plugin's own extensions. */
+    private fun factory(engine: ComparisonEngine) = object : ComparisonEngineFactory {
+        override fun create(project: Project?): ComparisonEngine = engine
+    }
+
+    /** Never finishes; it checks for cancellation until it is canceled. */
+    private class SlowEngine : ComparisonEngine {
+        override val id = EngineId("smartdiff.test.slow")
+        override val displayName = "Slow (test)"
+        override val version = "1"
+
+        @Volatile
+        var canceled = false
+
+        @Volatile
+        var calls = 0
+
+        override fun supports(languageId: String) = true
+
+        override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult {
+            calls++
+            while (true) {
+                try {
+                    cancellation.checkCanceled()
+                } catch (e: Throwable) {
+                    canceled = true
+                    throw e
+                }
+                Thread.sleep(5)
+            }
+        }
     }
 
     /** The platform's diff request for [changes], without the titles that need a project on disk. */

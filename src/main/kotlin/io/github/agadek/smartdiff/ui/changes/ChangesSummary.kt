@@ -29,9 +29,11 @@ import com.intellij.ui.SimpleTextAttributes
 import com.intellij.util.FontUtil
 import com.intellij.util.concurrency.AppExecutorUtil
 import io.github.agadek.smartdiff.engine.api.Cancellation
+import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.Limits
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.compareSafely
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
@@ -92,7 +94,7 @@ class ChangesSummaryModifier(private val project: Project) : ChangesViewModifier
 /**
  * A file row with its structural summary. It renders as the platform's own node for the change, which keeps that node's
  * decorations such as partial-commit marks, followed by the summary in grey. It starts collapsed, so the tree shows
- * files until the user opens one.
+ * files until the user opens one. A row can carry a reason with no declaration rows, such as `not analyzed: too large`.
  */
 class SummaryChangeNode internal constructor(
     project: Project,
@@ -165,7 +167,16 @@ class ChangesSummaryService(private val project: Project) {
     private sealed interface Entry {
         data object Pending : Entry
 
-        data class Done(val summary: FileSummary?) : Entry
+        /**
+         * A computed summary. [retryAt] is when a timed-out summary may be retried; [retried] records that the one retry
+         * has run, and [retrying] keeps a queued retry from being queued again while the row still shows the old reason.
+         */
+        data class Done(
+            val summary: FileSummary?,
+            val retryAt: Long = Long.MAX_VALUE,
+            val retried: Boolean = false,
+            val retrying: Boolean = false,
+        ) : Entry
     }
 
     /** What a summary was computed from: the file's paths, a version of each side and the engine. */
@@ -176,9 +187,11 @@ class ChangesSummaryService(private val project: Project) {
     private val refreshScheduled = AtomicBoolean()
 
     /**
-     * The summary of each of [changes], or null where it is not known yet or there is none: an added or deleted file, a
-     * language without an engine, or a file the engine could not analyze. Unknown summaries are computed in the
-     * background, and the tree is refreshed when they are ready. Files that are no longer in [changes] are forgotten.
+     * The summary of each of [changes], or null where it is not known yet or there is none: an added or deleted file, or
+     * a language without an engine. A file the engine could not analyze (`FAILED` or `TOO_LARGE`) gets a summary that says
+     * why, with no declaration rows. Unknown summaries are computed in the background, and the tree is refreshed when
+     * they are ready. A timed-out summary stays visible while one retry is queued; a second timeout is kept. Files that
+     * are no longer in [changes] are forgotten.
      */
     fun summaries(changes: List<Change>): List<FileSummary?> {
         val requests = changes.map(::request)
@@ -191,7 +204,13 @@ class ChangesSummaryService(private val project: Project) {
                     null
                 }
                 Entry.Pending -> null
-                is Entry.Done -> entry.summary
+                is Entry.Done -> {
+                    if (!entry.retrying && !entry.retried && entry.retryAt <= System.currentTimeMillis()) {
+                        cache.replace(request.key, entry, entry.copy(retrying = true))
+                        executor.execute { compute(request, retry = true) }
+                    }
+                    entry.summary
+                }
             }
         }
     }
@@ -225,7 +244,7 @@ class ChangesSummaryService(private val project: Project) {
         return "local:$stamp"
     }
 
-    private fun compute(request: Request) {
+    private fun compute(request: Request, retry: Boolean = false) {
         if (project.isDisposed) return
         val summary = try {
             summarize(request)
@@ -240,19 +259,46 @@ class ChangesSummaryService(private val project: Project) {
             null
         }
         // Only an entry still requested is stored, so a file that left the tree meanwhile is not kept.
-        if (cache.replace(request.key, Entry.Pending, Entry.Done(summary))) scheduleRefresh()
+        val current = cache[request.key] ?: return
+        val retryable = summary?.retryable == true && !retry
+        val next = Entry.Done(
+            summary,
+            retryAt = if (retryable) System.currentTimeMillis() + RETRY_DELAY_MILLIS else Long.MAX_VALUE,
+            retried = retry || !retryable,
+        )
+        if (cache.replace(request.key, current, next)) scheduleRefresh()
     }
 
+    /**
+     * The summary of [request], or null when a side cannot be read. A comparison over the time limit becomes a failed
+     * result; a file over a limit or not analyzed gets a reason and no declaration rows.
+     */
     private fun summarize(request: Request): FileSummary? {
         val engine = EngineRegistry.getInstance(project).findEngine(EngineId(request.key.engineId)) ?: return null
         val oldText = content(request.change.beforeRevision) ?: return null
         val newText = content(request.change.afterRevision) ?: return null
         val limits = SmartDiffSettings.getInstance().limits
         val comparison = ComparisonRequest(oldText, newText, request.languageId, request.fileName, limits)
-        val result = compareSafely(engine, comparison, Deadline(limits.timeoutMillis))
+        val deadline = Deadline(limits.timeoutMillis)
+        val result = try {
+            compareSafely(engine, comparison, deadline)
+        } catch (e: ProcessCanceledException) {
+            timedOut(engine, deadline, limits) ?: throw e
+        } catch (e: CancellationException) {
+            timedOut(engine, deadline, limits) ?: throw e
+        }
         val text = summary(result) ?: return null
-        return FileSummary(text, OutlineModel.build(result, oldText, newText, SmartDiffSettings.getInstance().formattingOnlyInline))
+        val items = when (result.status) {
+            Status.ANALYZED, Status.PARTIAL ->
+                OutlineModel.build(result, oldText, newText, SmartDiffSettings.getInstance().formattingOnlyInline)
+            else -> emptyList()
+        }
+        return FileSummary(text, items, retryable = result.status == Status.FAILED && isTimedOut(result))
     }
+
+    /** A failed result for the time limit, or null when the cancellation came from somewhere else, such as project disposal. */
+    private fun timedOut(engine: ComparisonEngine, deadline: Deadline, limits: Limits): ComparisonResult? =
+        if (deadline.timedOut) ComparisonResult.timedOut(engine, limits.timeoutMillis) else null
 
     private fun content(revision: ContentRevision?): String? = try {
         revision?.content
@@ -273,33 +319,55 @@ class ChangesSummaryService(private val project: Project) {
     private class Deadline(timeoutMillis: Long) : Cancellation {
         private val deadline = System.nanoTime() + timeoutMillis * 1_000_000
 
+        /** Whether this deadline canceled the comparison, as opposed to a cancellation from somewhere else. */
+        @Volatile
+        var timedOut = false
+            private set
+
         override fun checkCanceled() {
-            if (System.nanoTime() - deadline > 0) throw ProcessCanceledException()
+            if (System.nanoTime() - deadline > 0) {
+                timedOut = true
+                throw ProcessCanceledException()
+            }
         }
     }
 
     companion object {
         const val REFRESH_DELAY_MILLIS = 300L
 
+        /** How long a timed-out summary stays visible before its one retry is queued. */
+        internal const val RETRY_DELAY_MILLIS = 1_000L
+
         fun getInstance(project: Project): ChangesSummaryService = project.service()
 
         /**
-         * The text shown after a file: the outline's summary line, such as `2 changed · 1 added`, or null when the
-         * engine did not analyze the file.
+         * The text shown after a file: the outline's summary line, such as `2 changed · 1 added`, or why the engine did
+         * not analyze it. Null only for [Status.UNSUPPORTED], where the file gets no summary.
          */
-        fun summary(result: ComparisonResult): String? {
-            if (result.status != Status.ANALYZED && result.status != Status.PARTIAL) return null
-            return OutlineModel.summary(result).replaceFirstChar { it.lowercase() }
+        fun summary(result: ComparisonResult): String? = when (result.status) {
+            Status.ANALYZED, Status.PARTIAL -> OutlineModel.summary(result).replaceFirstChar { it.lowercase() }
+            Status.TOO_LARGE -> "not analyzed: too large"
+            Status.FAILED -> when {
+                isTimedOut(result) -> "not analyzed: timed out"
+                result.fallbackReason?.contains("could not be parsed") == true -> "not analyzed: parse errors"
+                else -> "not analyzed: analysis failed"
+            }
+            Status.UNSUPPORTED -> null
         }
+
+        /** Whether [result] is the failed result for a comparison over its time limit. */
+        fun isTimedOut(result: ComparisonResult): Boolean =
+            result.status == Status.FAILED && result.fallbackReason?.startsWith(ComparisonResult.TIMEOUT_REASON) == true
     }
 }
 
 /**
- * What the Changes tree shows for a file: its summary line, such as `2 changed · 1 added`, and its outline's top-level
- * rows. The rows are the outline's own (§10) without the change type filter, which applies to outlines only, as the
- * summary counts every change.
+ * What the Changes tree shows for a file: its summary line, such as `2 changed · 1 added`, or the reason it was not
+ * analyzed, and its outline's top-level rows. The rows are the outline's own (§10) without the change type filter,
+ * which applies to outlines only, as the summary counts every change. A row that carries a reason has no declaration
+ * rows. A [retryable] summary stays visible while one retry is pending.
  */
-class FileSummary(val text: String, val items: List<OutlineItem>)
+class FileSummary(val text: String, val items: List<OutlineItem>, val retryable: Boolean = false)
 
 /** Rebuilds the Local Changes and Commit tree, which asks [ChangesSummaryModifier] again. */
 internal fun refreshChangesView(project: Project) {

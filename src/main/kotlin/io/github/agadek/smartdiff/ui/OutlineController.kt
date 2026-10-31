@@ -3,6 +3,7 @@ package io.github.agadek.smartdiff.ui
 import com.intellij.diff.DiffContext
 import com.intellij.diff.FrameDiffTool
 import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
+import com.intellij.lang.Language
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
@@ -31,8 +32,8 @@ sealed interface OutlineState {
 
     data object Loading : OutlineState
 
-    /** No engine supports the language any more, for example after its plugin was removed. */
-    data class NoEngine(val languageId: String) : OutlineState
+    /** No installed engine supports the language, for example plain text or one whose plugin was removed (§10). */
+    data class NoEngine(val languageName: String) : OutlineState
 
     /** [hiddenCount] changes of the result are left out of [items] by the change type filter. */
     data class Shown(val result: ComparisonResult, val summary: String, val items: List<OutlineItem>, val hiddenCount: Int = 0) : OutlineState
@@ -126,7 +127,12 @@ class OutlineController internal constructor(
         if (disposed || !isOutlineVisible) return
         val selection = selection()
         panel.showEngines(selection)
-        val engine = selection.selected ?: return show(OutlineState.NoEngine(languageId))
+        val engine = selection.selected
+        if (engine == null) {
+            // A previous result may have faded native changes; the message below promises the native diff shows every change.
+            (viewer as? FilteringDiffViewer)?.hide(HiddenLines.NONE)
+            return show(OutlineState.NoEngine(Language.findLanguageByID(languageId)?.displayName ?: languageId))
+        }
 
         val request = ComparisonRequest(
             oldText = oldDocument.immutableCharSequence,
@@ -155,7 +161,7 @@ class OutlineController internal constructor(
     }
 
     private fun timedOut(job: Job): ComparisonResult? =
-        if (job.timedOut) ComparisonResult.failed(job.engine, "timed out after ${job.timeoutMillis} ms") else null
+        if (job.timedOut) ComparisonResult.timedOut(job.engine, job.timeoutMillis) else null
 
     /** Renders [result] unless it is stale: a document or the selected engine changed since the request (§9.2 step 3). */
     private fun finish(job: Job, request: ComparisonRequest, result: ComparisonResult) {
