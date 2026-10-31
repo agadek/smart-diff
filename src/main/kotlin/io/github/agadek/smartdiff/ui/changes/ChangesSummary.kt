@@ -167,7 +167,16 @@ class ChangesSummaryService(private val project: Project) {
     private sealed interface Entry {
         data object Pending : Entry
 
-        data class Done(val summary: FileSummary?) : Entry
+        /**
+         * A computed summary. [retryAt] is when a timed-out summary may be retried; [retried] records that the one retry
+         * has run, and [retrying] keeps a queued retry from being queued again while the row still shows the old reason.
+         */
+        data class Done(
+            val summary: FileSummary?,
+            val retryAt: Long = Long.MAX_VALUE,
+            val retried: Boolean = false,
+            val retrying: Boolean = false,
+        ) : Entry
     }
 
     /** What a summary was computed from: the file's paths, a version of each side and the engine. */
@@ -181,8 +190,8 @@ class ChangesSummaryService(private val project: Project) {
      * The summary of each of [changes], or null where it is not known yet or there is none: an added or deleted file, or
      * a language without an engine. A file the engine could not analyze (`FAILED` or `TOO_LARGE`) gets a summary that says
      * why, with no declaration rows. Unknown summaries are computed in the background, and the tree is refreshed when
-     * they are ready. A timed-out summary is shown once and retried on the next tree build. Files that are no longer in
-     * [changes] are forgotten.
+     * they are ready. A timed-out summary stays visible while one retry is queued; a second timeout is kept. Files that
+     * are no longer in [changes] are forgotten.
      */
     fun summaries(changes: List<Change>): List<FileSummary?> {
         val requests = changes.map(::request)
@@ -196,8 +205,10 @@ class ChangesSummaryService(private val project: Project) {
                 }
                 Entry.Pending -> null
                 is Entry.Done -> {
-                    // A timeout may have been transient. Show the reason once, then let the next tree build try again.
-                    if (entry.summary?.retryable == true) cache.remove(request.key)
+                    if (!entry.retrying && !entry.retried && entry.retryAt <= System.currentTimeMillis()) {
+                        cache.replace(request.key, entry, entry.copy(retrying = true))
+                        executor.execute { compute(request, retry = true) }
+                    }
                     entry.summary
                 }
             }
@@ -233,7 +244,7 @@ class ChangesSummaryService(private val project: Project) {
         return "local:$stamp"
     }
 
-    private fun compute(request: Request) {
+    private fun compute(request: Request, retry: Boolean = false) {
         if (project.isDisposed) return
         val summary = try {
             summarize(request)
@@ -248,7 +259,14 @@ class ChangesSummaryService(private val project: Project) {
             null
         }
         // Only an entry still requested is stored, so a file that left the tree meanwhile is not kept.
-        if (cache.replace(request.key, Entry.Pending, Entry.Done(summary))) scheduleRefresh()
+        val current = cache[request.key] ?: return
+        val retryable = summary?.retryable == true && !retry
+        val next = Entry.Done(
+            summary,
+            retryAt = if (retryable) System.currentTimeMillis() + RETRY_DELAY_MILLIS else Long.MAX_VALUE,
+            retried = retry || !retryable,
+        )
+        if (cache.replace(request.key, current, next)) scheduleRefresh()
     }
 
     /**
@@ -317,6 +335,9 @@ class ChangesSummaryService(private val project: Project) {
     companion object {
         const val REFRESH_DELAY_MILLIS = 300L
 
+        /** How long a timed-out summary stays visible before its one retry is queued. */
+        internal const val RETRY_DELAY_MILLIS = 1_000L
+
         fun getInstance(project: Project): ChangesSummaryService = project.service()
 
         /**
@@ -344,7 +365,7 @@ class ChangesSummaryService(private val project: Project) {
  * What the Changes tree shows for a file: its summary line, such as `2 changed · 1 added`, or the reason it was not
  * analyzed, and its outline's top-level rows. The rows are the outline's own (§10) without the change type filter,
  * which applies to outlines only, as the summary counts every change. A row that carries a reason has no declaration
- * rows. A [retryable] summary is shown once and recomputed on the next tree build.
+ * rows. A [retryable] summary stays visible while one retry is pending.
  */
 class FileSummary(val text: String, val items: List<OutlineItem>, val retryable: Boolean = false)
 

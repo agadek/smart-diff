@@ -220,11 +220,15 @@ class ChangesSummaryTest : BasePlatformTestCase() {
         assertTrue("the engine was canceled", engine.canceled)
         assertEquals(1, engine.calls)
 
-        // A timed-out summary is shown once and retried on the next tree build.
-        summaryNode(change)
+        // The reason stays visible while one retry is queued after the delay.
+        Thread.sleep(ChangesSummaryService.RETRY_DELAY_MILLIS + 100)
         summaryNode(change)
         ChangesSummaryService.getInstance(project).waitForSummaries()
-        assertTrue("a timeout is retried instead of being cached forever", engine.calls >= 2)
+        assertEquals("a timeout retries once", 2, engine.calls)
+
+        summaryNode(change)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        assertEquals("the retry is not repeated", 2, engine.calls)
     }
 
     fun `test added and deleted files and other languages get no summary`() {
