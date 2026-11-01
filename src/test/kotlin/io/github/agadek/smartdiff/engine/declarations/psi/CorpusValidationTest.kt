@@ -19,6 +19,7 @@ import io.github.agadek.smartdiff.engine.declarations.analysis.ContentClassifier
 import io.github.agadek.smartdiff.engine.declarations.analysis.DeclarationMatcher
 import io.github.agadek.smartdiff.engine.declarations.analysis.ExtractionDetector
 import io.github.agadek.smartdiff.engine.declarations.analysis.Match
+import io.github.agadek.smartdiff.merge.MergeValidation
 import java.io.File
 import java.util.concurrent.Callable
 import java.util.concurrent.TimeUnit
@@ -31,6 +32,10 @@ import java.util.concurrent.TimeUnit
  * The commits come from the file named by `-Psmartdiff.validation.corpus=<list>`; without it the test only says it was
  * skipped, so CI does not need the corpus. Each line of the list is a local Git repository followed by `git rev-list`
  * arguments, for example `/src/okhttp --no-merges --max-count=40 HEAD`; lines starting with `#` are comments.
+ *
+ * The merge mode runs with `-Psmartdiff.validation.merges=<list>`: every listed merge commit with two parents is
+ * replayed, every source file changed on both sides since the merge base is joined, and the report goes to
+ * `build/reports/smartdiff-validation/merge/`.
  *
  * The report goes to `build/reports/smartdiff-validation/`: `summary.tsv` with one row per file, its flags and, for Scala,
  * the dialect both sides were parsed in, and
@@ -90,6 +95,18 @@ class CorpusValidationTest : BasePlatformTestCase() {
             }
         }
         write(rows)
+    }
+
+    /** The merge mode (`-Psmartdiff.validation.merges=<list>`); skipped without the property so CI needs no corpus. */
+    fun `test real merges`() {
+        // merge/06-merge-validation R1, R2, R3
+        val list = MergeValidation.listFile(System.getProperty(MergeValidation.PROPERTY))
+        if (list == null) {
+            println("MERGE VALIDATION skipped: no corpus (run with -P${MergeValidation.PROPERTY}=<file listing repositories and merge commits>)")
+            return
+        }
+        val report = MergeValidation.run(list, enforceCoverage = true)
+        println("MERGE VALIDATION ${report.rows.size} files; coverage ${report.coverage}; ready ${report.readiness.ready}")
     }
 
     private class Row(

@@ -104,10 +104,12 @@ tasks.test {
     // K2 is the Kotlin plugin's default mode from 2025.1; set it explicitly so the Kotlin tests always run in it.
     systemProperty("idea.kotlin.plugin.use.k2", "true")
     // -Psmartdiff.updateGolden=true rewrites the golden fixtures' expected files; -Psmartdiff.limits.corpus=<list> runs the limits
-    // benchmark; -Psmartdiff.validation.corpus=<list> runs the corpus validation over real commits.
+    // benchmark; -Psmartdiff.validation.corpus=<list> runs the corpus validation over real commits;
+    // -Psmartdiff.validation.merges=<list> runs the merge corpus validation.
     systemProperty("smartdiff.updateGolden", providers.gradleProperty("smartdiff.updateGolden").getOrElse("false"))
     systemProperty("smartdiff.limits.corpus", providers.gradleProperty("smartdiff.limits.corpus").getOrElse(""))
     systemProperty("smartdiff.validation.corpus", providers.gradleProperty("smartdiff.validation.corpus").getOrElse(""))
+    systemProperty("smartdiff.validation.merges", providers.gradleProperty("smartdiff.validation.merges").getOrElse(""))
     // The golden fixtures, the limits benchmark and the corpus validation print "GOLDEN ...", "BENCHMARK ..." and
     // "VALIDATION ..." lines; copy them into the build log.
     addTestOutputListener(TestOutputListener { _, event ->

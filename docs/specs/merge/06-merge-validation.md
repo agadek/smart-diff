@@ -1,6 +1,6 @@
 # Merge validation
 
-Status: proposed, 2026-10-31
+Status: implemented, 2026-11-01
 
 **Description:** Runs the merge outline on real merge commits before it ships, and flags results to review by hand.
 
