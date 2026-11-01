@@ -17,8 +17,8 @@ Status: implemented, 2026-10-23
 - **R7** The tree keeps the rows the user expanded when it is rebuilt.
 - **R8** Declaration rows are not changes: they are not counted, included or selected for a commit.
 - **R9** Enter on a declaration row opens the file's diff with that declaration selected in the outline.
-- **R10** Double-click on a declaration row without children opens it the same way.
-- **R11** Double-click on a declaration row with children expands it.
+- **R10** Double-click on a declaration row opens it the same way, whether or not it has children.
+- **R11** A declaration row with children expands through the tree's expansion control.
 - **R12** When the filter hides the declaration, the nearest row above it is selected.
 - **R13** The outline is shown in that diff even if it starts off by default.
 

@@ -1,5 +1,7 @@
 # SMART Diff Validation
 
+Classification quality beyond this release corpus is measured by the labelled [relationship benchmark](RELATIONSHIP-BENCHMARK.md); this file stays the record of the release runs. Every run below that includes Scala uses the pinned Scala plugin version (`scalaPluginVersion` in `gradle.properties`, currently 2025.1.32).
+
 Results of running the declaration engine on real commits before a release, and what they changed. Rerun with
 `CorpusValidationTest` (technical specification §12):
 
@@ -57,7 +59,7 @@ is not ready to ship from this run yet.
 
 ## 2026-10-23: extraction detection
 
-**Corpus:** the same Java and Kotlin list as the [0.1.1 noise pass](#2026-10-22-011-noise-pass) (1279 files from 234
+**Corpus:** the same Java and Kotlin list as the [0.1.0 noise pass](#2026-10-22-010-noise-pass) (1279 files from 234
 commits) and the same [Scala](#2026-10-22-scala) list (596 files from 145 commits). The report gains two flags,
 `extraction` for a file with a link and `extraction-near-miss` for a link that a covered or removed share from 0.5 up to
 the threshold would make ([extraction detection](EXTRACTION-DETECTION.md) §8).
@@ -85,7 +87,7 @@ tests, commons-lang `getPackageName` from both `toFullyQualified` methods), an o
 (commons-lang `isAssignable`, zio `Supervisor.fibersIn`), and small predicates pulled out of a large method (scala3
 `RefChecks.checkAllOverrides`, `TryCatchPatterns.isCatchCase`).
 
-8 near misses remain:
+8 near misses remain (7 rows, because the guava row covers both copies of `Maps.java`):
 
 | File | Near miss | Covered | Removed |
 | --- | --- | --- | --- |
@@ -211,6 +213,9 @@ corpus did that.
 5. Recheck the 10 parser-gap files with newer Scala plugin releases; report the constructs to the Scala plugin if
    they still fail.
 
+Items 1, 2, 3 and 4 shipped in 0.1.1; item 5 remains a check for later Scala plugin releases. The text above and below
+records the run before those fixes.
+
 **After fixes 1, 2 and 4** (Scaladoc errors ignored, identical declarations unchanged despite parse errors, Scala 2 for
 code without Scala 3 syntax), on the same corpus: 595 files `ANALYZED` and 1 `PARTIAL` (scala3 `Implicits.scala`,
 where the changed declaration itself has a parser gap), against 536 and 60; 1 unanalyzed row, against 163. All 307
@@ -230,7 +235,7 @@ while the `F` really added to `RWSTAlternative` stays added (9 to 5). scala3 `Sc
 rest of that file is a real rewrite. Every file is still `ANALYZED` but scala3 `Implicits.scala`; the median time was
 22 ms.
 
-## 2026-10-22: 0.1.1 noise pass
+## 2026-10-22: 0.1.0 noise pass
 
 **Corpus:** the same 234 commits and 1279 files as before 0.1.0, from the same clones.
 
@@ -240,7 +245,7 @@ rest of that file is a real rewrite. Every file is still `ANALYZED` but scala3 `
 
 84 files were flagged for review, against 100 before 0.1.0:
 
-| Flag | Before 0.1.0 | 0.1.1 |
+| Flag | Before the noise pass | After the noise pass (0.1.0) |
 | --- | --- | --- |
 | `rename` (removed + added that look like a rename) | 70 | 21 |
 | `uncertain` | 7 overload sets, plus the M4 cases fixed for 0.1.0 | 1 |
