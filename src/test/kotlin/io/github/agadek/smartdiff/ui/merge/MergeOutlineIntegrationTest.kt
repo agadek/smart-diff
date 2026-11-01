@@ -1,18 +1,27 @@
 package io.github.agadek.smartdiff.ui.merge
 
+import com.intellij.diff.DiffContentFactory
 import com.intellij.diff.DiffContext
 import com.intellij.diff.DiffExtension
 import com.intellij.diff.DiffManager
 import com.intellij.diff.FrameDiffTool
+import com.intellij.diff.contents.DocumentContent
 import com.intellij.diff.requests.DiffRequest
 import com.intellij.diff.requests.SimpleDiffRequest
 import com.intellij.diff.tools.util.side.ThreesideTextDiffViewer
 import com.intellij.diff.util.ThreeSide
+import com.intellij.ide.highlighter.JavaFileType
+import com.intellij.openapi.actionSystem.ActionGroup
 import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionToolbar
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.impl.ActionToolbarImpl
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import com.intellij.testFramework.EditorTestUtil
 import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.TestActionEvent
@@ -31,8 +40,15 @@ import io.github.agadek.smartdiff.ui.ChangeType
 import io.github.agadek.smartdiff.ui.DiffContents
 import io.github.agadek.smartdiff.ui.SmartDiffSettings
 import io.github.agadek.smartdiff.ui.ToggleOutlineAction
+import java.awt.Component
+import java.awt.Container
+import java.awt.event.KeyEvent
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.TreePath
+import org.junit.Assert.assertNotEquals
 
 /**
  * The merge outline in a three-sided diff (merge outline spec 02 and three-sided diff spec 03): attachment, side names,
@@ -220,6 +236,168 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
         assertTrue("the engine was canceled", engine.canceled)
     }
 
+    fun `test selecting a row pauses and then resumes synchronized scrolling`() {
+        // merge/03-three-sided-diffs R6
+        val paddingBefore = (1..200).joinToString("\n") { "// before $it" }
+        val paddingAfter = (1..200).joinToString("\n") { "// after $it" }
+        val outline = open(
+            base = "$paddingBefore\n$BASE$paddingAfter",
+            left = "$paddingBefore\n$LEFT$paddingAfter",
+            right = "$paddingBefore\n$RIGHT$paddingAfter",
+        ).awaitShown()
+        val viewer = viewer(outline)
+        val sync = syncSupport(viewer) ?: error("the viewer has no synchronized scrolling")
+        ThreeSide.values().forEach { EditorTestUtil.setEditorVisibleSize(viewer.getEditor(it), 80, 8) }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+
+        val duringSelection = mutableListOf<Boolean>()
+        val listener = com.intellij.openapi.editor.event.VisibleAreaListener {
+            duringSelection += duringSyncScroll(sync)
+        }
+        val left = viewer.getEditor(ThreeSide.LEFT)
+        left.scrollingModel.addVisibleAreaListener(listener)
+        try {
+            selectFirstChange(outline)
+        } finally {
+            left.scrollingModel.removeVisibleAreaListener(listener)
+        }
+
+        assertTrue("the selection did not scroll a pane", duringSelection.isNotEmpty())
+        assertTrue("a pane scrolled with synchronized scrolling active", duringSelection.all { it })
+
+        val base = viewer.getEditor(ThreeSide.BASE)
+        val right = viewer.getEditor(ThreeSide.RIGHT)
+        val leftBefore = left.scrollingModel.verticalScrollOffset
+        val baseBefore = base.scrollingModel.verticalScrollOffset
+        val rightBefore = right.scrollingModel.verticalScrollOffset
+        left.scrollingModel.scrollVertically(leftBefore + left.lineHeight * 20)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+
+        assertNotEquals("the left pane did not scroll", leftBefore, left.scrollingModel.verticalScrollOffset)
+        assertNotEquals("the base pane did not follow the next user scroll", baseBefore, base.scrollingModel.verticalScrollOffset)
+        assertNotEquals("the right pane did not follow the next user scroll", rightBefore, right.scrollingModel.verticalScrollOffset)
+    }
+
+    fun `test the outline never claims a merge is safe and never edits a pane`() {
+        // merge/02-merge-outline R24
+        val outline = open().awaitShown()
+        val viewer = viewer(outline)
+        val before = ThreeSide.values().map { viewer.getEditor(it).document.text }
+        val shown = outline.state as MergeOutlineState.Shown
+        val shownText = (listOf(shown.summary, shown.banner.orEmpty()) + rows(outline)).joinToString("\n")
+        assertFalse(shownText, shownText.contains("safe", ignoreCase = true))
+        assertFalse(shownText, shownText.contains("resolved", ignoreCase = true))
+
+        assertNotNull(selectFirstChange(outline))
+        val event = KeyEvent(outline.panel.tree, KeyEvent.KEY_PRESSED, System.currentTimeMillis(), 0, KeyEvent.VK_ENTER, '\n')
+        outline.panel.tree.keyListeners.forEach { it.keyPressed(event) }
+
+        assertEquals(before, ThreeSide.values().map { viewer.getEditor(it).document.text })
+    }
+
+    fun `test selecting a row on an unanalyzed side says so instead of not present`() {
+        // merge/02-merge-outline R26
+        val engine = LeftFailsEngine()
+        ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(engine)), testRootDisposable)
+        val outline = open().awaitShown()
+
+        selectFirstChange(outline)
+
+        val note = outline.panel.absence.text
+        assertTrue(note, note.contains("main was not analyzed"))
+        assertFalse(note, note.contains("Not present"))
+    }
+
+    fun `test the changed on both sides filter entry is offered only in the container tree`() {
+        // merge/02-merge-outline R33
+        val outline = open().awaitShown()
+        val action = filterAction(outline.panel, "Changed on both sides")
+        val event = TestActionEvent.createTestEvent(action)
+
+        action.update(event)
+        assertFalse("the entry is offered while grouped by side", event.presentation.isEnabledAndVisible)
+
+        outline.setLayout(MergeOutlineLayout.CONTAINER_TREE)
+        action.update(event)
+        assertTrue("the entry is missing from the container tree", event.presentation.isEnabledAndVisible)
+    }
+
+    fun `test the native three-sided diff keeps its three panes`() {
+        // merge/03-three-sided-diffs R3
+        val outline = open().awaitShown()
+        val viewer = viewer(outline)
+
+        assertInstanceOf(viewer, ThreesideTextDiffViewer::class.java)
+        assertEquals(listOf(LEFT, BASE, RIGHT), ThreeSide.values().map { viewer.getEditor(it).document.text })
+    }
+
+    fun `test a three-sided diff never shows merged without conflict`() {
+        // merge/03-three-sided-diffs R8
+        val outline = open().awaitShown()
+
+        fun assertNoMergedNote() {
+            val shown = outline.state as MergeOutlineState.Shown
+            assertTrue(notes(shown.items).none { it.contains("merged without conflict") })
+        }
+        assertNoMergedNote()
+
+        outline.setLayout(MergeOutlineLayout.CONTAINER_TREE)
+        assertNoMergedNote()
+    }
+
+    fun `test an edit to a pane compares again after typing stops`() {
+        // merge/03-three-sided-diffs R9
+        val contents = editableContents()
+        val outline = openRequest(threeSidedRequest(contents)).awaitShown()
+        val before = outline.state as MergeOutlineState.Shown
+
+        WriteCommandAction.runWriteCommandAction(project) {
+            val document = contents[0].document
+            document.insertString(document.text.lastIndexOf("}"), "    void extra() {}\n")
+        }
+        pumpFor(100)
+        assertSame("the outline compared again before the 300 ms debounce", before, outline.state)
+
+        PlatformTestUtil.waitWithEventsDispatching(
+            { "the outline is ${outline.state}" },
+            { outline.state.let { it is MergeOutlineState.Shown && it.joined !== before.joined } },
+            20,
+        )
+        val after = outline.state as MergeOutlineState.Shown
+        assertNotEquals(before.summary, after.summary)
+        assertTrue(after.summary, after.summary.contains("in main only"))
+    }
+
+    fun `test a result computed before an edit is never shown`() {
+        // merge/03-three-sided-diffs R10
+        val engine = GatedEngine()
+        ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(engine)), testRootDisposable)
+        val contents = editableContents()
+        val outline = openRequest(threeSidedRequest(contents))
+
+        assertTrue("the first comparisons did not start", engine.started.await(10, TimeUnit.SECONDS))
+        try {
+            WriteCommandAction.runWriteCommandAction(project) {
+                val document = contents[0].document
+                document.insertString(document.text.lastIndexOf("}"), "    void extra() {}\n")
+            }
+        } finally {
+            engine.release.countDown()
+        }
+
+        PlatformTestUtil.waitWithEventsDispatching(
+            { "the outline is ${outline.state}" },
+            { outline.state !is MergeOutlineState.Loading },
+            20,
+        )
+        val shown = outline.state as? MergeOutlineState.Shown
+        assertNotNull("the outline did not show a result: ${outline.state}", shown)
+        assertFalse(
+            "a comparison from before the edit was shown",
+            shown!!.joined.left.engineVersion.startsWith("stale") || shown.joined.right.engineVersion.startsWith("stale"),
+        )
+    }
+
     private fun open(
         fileName: String = "OrderService.java",
         base: String = BASE,
@@ -235,8 +413,19 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
             "Base",
             "feature",
         )
-        return MergeOutlineController.of(openViewer(request)) ?: error("no merge outline attached")
+        return openRequest(request)
     }
+
+    private fun openRequest(request: SimpleDiffRequest): MergeOutlineController =
+        MergeOutlineController.of(openViewer(request)) ?: error("no merge outline attached")
+
+    private fun editableContents() = listOf(LEFT, BASE, RIGHT).map {
+        DiffContentFactory.getInstance().createEditable(project, it, JavaFileType.INSTANCE)
+    }
+
+    private fun threeSidedRequest(contents: List<DocumentContent>) = SimpleDiffRequest(
+        "OrderService.java", contents[0], contents[1], contents[2], "main", "Base", "feature",
+    )
 
     private fun openViewer(request: SimpleDiffRequest): FrameDiffTool.DiffViewer {
         val panel = DiffManager.getInstance().createRequestPanel(project, Disposer.newDisposable(testRootDisposable), null)
@@ -252,6 +441,16 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
             20,
         )
         return this
+    }
+
+    /** Dispatches queued events for [millis], without reaching a longer delay such as the comparison debounce. */
+    private fun pumpFor(millis: Long) {
+        val deadline = System.currentTimeMillis() + millis
+        while (System.currentTimeMillis() < deadline) {
+            PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+            Thread.sleep(5)
+        }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
     }
 
     private fun viewer(outline: MergeOutlineController): ThreesideTextDiffViewer =
@@ -278,6 +477,43 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
         return rows
     }
 
+    private fun selectFirstChange(outline: MergeOutlineController): MergeOutlineItem {
+        val root = outline.panel.tree.model.root as DefaultMutableTreeNode
+        val node = root.depthFirstEnumeration().toList()
+            .map { it as DefaultMutableTreeNode }
+            .first { (it.userObject as? MergeOutlineItem)?.isGroup == false }
+        outline.panel.tree.selectionPath = TreePath(node.path)
+        return node.userObject as MergeOutlineItem
+    }
+
+    private fun notes(items: List<MergeOutlineItem>): List<String> =
+        items.flatMap { listOfNotNull(it.note) + notes(it.children) }
+
+    private fun filterAction(panel: MergeOutlinePanel, name: String): AnAction {
+        val toolbar = findToolbar(panel) ?: error("no merge outline toolbar")
+        fun find(group: ActionGroup): AnAction? = group.getChildren(null).firstNotNullOfOrNull { child ->
+            if (child.templatePresentation.text == name) child else (child as? ActionGroup)?.let(::find)
+        }
+        return find(toolbar.actionGroup) ?: error("no $name filter entry")
+    }
+
+    private fun findToolbar(component: Component): ActionToolbar? {
+        if (component is ActionToolbarImpl) return component
+        if (component is Container) {
+            for (child in component.components) findToolbar(child)?.let { return it }
+        }
+        return null
+    }
+
+    private fun syncSupport(viewer: ThreesideTextDiffViewer): Any? {
+        val field = ThreesideTextDiffViewer::class.java.getDeclaredField("mySyncScrollSupport")
+        field.isAccessible = true
+        return field.get(viewer)
+    }
+
+    private fun duringSyncScroll(sync: Any): Boolean =
+        sync.javaClass.getMethod("isDuringSyncScroll").invoke(sync) as Boolean
+
     private fun assertHighlightedAt(editor: Editor, offset: Int) {
         assertTrue("offset $offset not found", offset >= 0)
         val starts = editor.markupModel.allHighlighters.map { it.startOffset }
@@ -302,6 +538,30 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
             } else {
                 LineEngine().compare(request, cancellation)
             }
+    }
+
+    /** Blocks the first two comparisons, so a test can edit a pane while the result is still being computed. */
+    private class GatedEngine : ComparisonEngine {
+        override val id = EngineId("smartdiff.test.merge.gated")
+        override val displayName = "Gated merge (test)"
+        override val version = "1"
+
+        private val calls = AtomicInteger()
+        val started = CountDownLatch(2)
+        val release = CountDownLatch(1)
+
+        override fun supports(languageId: String) = true
+
+        override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult {
+            val call = calls.incrementAndGet()
+            if (call <= 2) {
+                started.countDown()
+                release.await(10, TimeUnit.SECONDS)
+                return LineEngine().compare(request, cancellation).copy(engineVersion = "stale-$call")
+            }
+            cancellation.checkCanceled()
+            return LineEngine().compare(request, cancellation)
+        }
     }
 
     /** Never finishes; it checks for cancellation until it is canceled. */

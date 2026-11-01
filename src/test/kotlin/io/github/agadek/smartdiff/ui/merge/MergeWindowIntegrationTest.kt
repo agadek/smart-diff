@@ -462,6 +462,21 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test selecting a row and pressing Enter leaves the result text unchanged`() {
+        // merge/02-merge-outline R24
+        val (viewer, outline, output) = openWithOutput()
+        try {
+            val before = output.text
+            select(outline, "method total(int)")
+            val event = KeyEvent(outline.panel.tree, KeyEvent.KEY_PRESSED, System.currentTimeMillis(), 0, KeyEvent.VK_ENTER, '\n')
+            outline.panel.tree.keyListeners.forEach { it.keyPressed(event) }
+
+            assertEquals(before, output.text)
+        } finally {
+            Disposer.dispose(viewer)
+        }
+    }
+
     @Suppress("DEPRECATION")
     fun `test closing the merge window releases the outline`() {
         // merge/04-merge-window R17
