@@ -1,5 +1,10 @@
 package io.github.agadek.smartdiff.engine.declarations.psi
 
+import io.github.agadek.smartdiff.engine.api.Cancellation
+import io.github.agadek.smartdiff.engine.api.ComparisonRequest
+import io.github.agadek.smartdiff.engine.api.Content
+import io.github.agadek.smartdiff.engine.api.Status
+import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
 import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy
 import org.jetbrains.kotlin.idea.base.plugin.KotlinPluginModeProvider
@@ -155,5 +160,17 @@ class KotlinDeclarationProviderTest : ProviderTestCase() {
             assertEmpty(tree.topLevel)
             assertFalse(tree.fileRegion.hasParseError)
         }
+    }
+
+    fun `test adding a declaration above the first one is formatting-only on that declaration`() {
+        // declarations/02-change-classification R14
+        val old = "object Plain {\n    fun f() = 1\n}\n"
+        val new = "fun top() = 0\n" + old
+
+        val result = DeclarationEngine(null).compare(ComparisonRequest(old, new, "kotlin", "A.kt"), Cancellation.NONE)
+
+        assertEquals(Status.ANALYZED, result.status)
+        val plain = result.changes.single { (it.subject as? Subject.Declaration)?.name == "Plain" }
+        assertEquals("object Plain has the same own source: ${Rendering.result(result, old, new)}", Content.FORMATTING_ONLY, plain.content)
     }
 }

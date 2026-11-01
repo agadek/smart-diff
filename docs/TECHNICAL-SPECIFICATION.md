@@ -227,7 +227,7 @@ class Declaration(
 class FileRegion(val ranges: List<TextRange>, val tokens: List<Token>, val hasParseError: Boolean)
 ```
 
-A declaration's *leading whitespace* is the run of whitespace tokens between it and its previous sibling (or its container's start, or the previous top-level declaration); its *extent* is its range with that whitespace. The leading whitespace is the declaration's own source, not its container's, so adding, removing or moving a declaration takes the blank line before it along and leaves its container unchanged. A container's own tokens and the file region skip the children's extents. A node that is a change itself lists its leading whitespace on each side in `details`, so that whitespace is covered (§3.1 rule 6); `range` stays the declaration itself, for navigation.
+A declaration's *leading whitespace* is the run of whitespace tokens between it and its previous sibling (or its container's start, or the previous top-level declaration); its *extent* is its range with that whitespace. The leading whitespace is the declaration's own source, not its container's, so adding, removing or moving a declaration takes the blank line before it along and leaves its container unchanged. A container's own tokens and the file region skip the children's extents. A node that is a change itself lists its leading whitespace on each side in `details`, so that whitespace is covered (§3.1 rule 6); `range` stays the declaration itself, for navigation. The run holds the line break that ends the previous sibling's line; classification treats the whole run as layout, so it never makes a declaration changed by itself (§8, declarations/02-change-classification R14).
 
 ```kotlin
 class DeclarationTree(
@@ -378,6 +378,8 @@ The steps are applied in order, and the first that applies decides the content:
    Equal → `FORMATTING_ONLY`; otherwise → `CHANGED`.
 
 In step 4 a run of adjacent `WHITESPACE` tokens counts as one: own tokens skip the children's extents, so the whitespace before and after a child can become adjacent, and adding or removing a child must not change the count of line breaks; under `INDENTATION_SIGNIFICANT` the run's indentation is the text after its last line break. Because each child owns its leading whitespace (§6.1), adding, removing, moving or reordering members leaves their container `UNCHANGED`. Removing the first member is the exception: the next member's leading whitespace changes (the blank line after `{` goes), so that member is `FORMATTING_ONLY`.
+
+A difference only in the leading whitespace run is `FORMATTING_ONLY`, even when the policy counts line breaks, because the run holds the line break that ends the previous sibling's line (§6.1, declarations/02-change-classification R14). Under `INDENTATION_SIGNIFICANT` the indentation after the run's last line break still counts, so re-indenting a declaration keeps it `CHANGED`.
 
 `COMMENT` tokens are compared by exact text, including whitespace inside them. The declaration engine puts only leading whitespace in `details` (§6.1); the native diff shows the detail.
 

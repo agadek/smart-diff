@@ -74,6 +74,16 @@ class MergeFixturesTest : BasePlatformTestCase() {
         assertEquals(MergeGroup.CHANGED_ON_BOTH_SIDES, given!!.group)
     }
 
+    fun `test a declaration added above the first one leaves it formatting-only in a merge`() {
+        // declarations/02-change-classification R14; merge/01-merge-join R23
+        val joined = joinFixture("scala3", "dialect-mix", "Scala", "scala")
+        val plain = joined.nodes.first { it.subject is Subject.Declaration && it.subject.name == "Plain" }
+        assertEquals(Content.FORMATTING_ONLY, plain.left!!.content)
+        assertEquals(Content.FORMATTING_ONLY, plain.right!!.content)
+        assertEquals(MergeGroup.CHANGED_ON_BOTH_SIDES, plain.group)
+        assertTrue(plain.sameChange)
+    }
+
     fun `test Scala 2 and Scala 3 cover a three-text dialect choice`() {
         // merge/05-scala-merges R13
         for (directory in listOf("scala2", "scala3")) {

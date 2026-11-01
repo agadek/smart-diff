@@ -19,7 +19,7 @@ Status: implemented, 2026-10-22
 - **R9** A [signature](../../GLOSSARY.md#signature) joins the parameter clauses with `;` and keeps `using` and `implicit`.
 - **R10** Both sides of a diff are read as the same Scala version.
 - **R11** Code without Scala 3 syntax is read as Scala 2.
-- **R12** In Scala 2, adding or removing a line break between tokens is a change.
+- **R12** In Scala 2, adding or removing a line break between tokens inside a declaration is a change; the line break before a declaration is layout ([declarations/02-change-classification](../declarations/02-change-classification.md) R14).
 - **R13** In Scala 3, a change of indentation is a change, so moving from braces to indentation is never [formatting-only](../../GLOSSARY.md#formatting-only).
 - **R14** Errors in Scaladoc markup are not [parse errors](../../GLOSSARY.md#parse-error).
 

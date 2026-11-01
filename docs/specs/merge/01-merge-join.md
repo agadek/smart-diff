@@ -30,6 +30,7 @@ Status: implemented, 2026-10-31
 - **R20** When one side cannot be analyzed, the join keeps its status and reason, and still gives the other side's rows.
 - **R21** Both runs run at the same time, and cancelling one cancels the other.
 - **R22** The same three texts always give the same rows.
+- **R23** A declaration whose only change on each side is the line break before it is [formatting-only](../../GLOSSARY.md#formatting-only) on both sides, and the pair is the [same change on both sides](../../GLOSSARY.md#same-change-on-both-sides).
 
 ## Out of scope
 
