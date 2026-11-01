@@ -36,6 +36,7 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.opentest4j:opentest4j:1.3.0")
     testImplementation("com.tngtech.archunit:archunit:1.5.1")
+    testImplementation("org.yaml:snakeyaml:2.3")
 }
 
 intellijPlatform {
@@ -105,14 +106,19 @@ tasks.test {
     systemProperty("idea.kotlin.plugin.use.k2", "true")
     // -Psmartdiff.updateGolden=true rewrites the golden fixtures' expected files; -Psmartdiff.limits.corpus=<list> runs the limits
     // benchmark; -Psmartdiff.validation.corpus=<list> runs the corpus validation over real commits;
-    // -Psmartdiff.validation.merges=<list> runs the merge corpus validation.
+    // -Psmartdiff.validation.merges=<list> runs the merge corpus validation;
+    // -Psmartdiff.relationships.corpus=<list> runs the relationship benchmark.
     systemProperty("smartdiff.updateGolden", providers.gradleProperty("smartdiff.updateGolden").getOrElse("false"))
     systemProperty("smartdiff.limits.corpus", providers.gradleProperty("smartdiff.limits.corpus").getOrElse(""))
     systemProperty("smartdiff.validation.corpus", providers.gradleProperty("smartdiff.validation.corpus").getOrElse(""))
     systemProperty("smartdiff.validation.merges", providers.gradleProperty("smartdiff.validation.merges").getOrElse(""))
+    systemProperty("smartdiff.relationships.corpus", providers.gradleProperty("smartdiff.relationships.corpus").getOrElse(""))
+    systemProperty("smartdiff.relationships.gate", providers.gradleProperty("smartdiff.relationships.gate").getOrElse("no-new-wrong-pairs"))
+    systemProperty("smartdiff.relationships.baseline", providers.gradleProperty("smartdiff.relationships.baseline").getOrElse(""))
+    systemProperty("smartdiff.relationships.tolerance", providers.gradleProperty("smartdiff.relationships.tolerance").getOrElse("0"))
     // The golden fixtures, the limits benchmark and the corpus validation print "GOLDEN ...", "BENCHMARK ..." and
     // "VALIDATION ..." lines; copy them into the build log.
     addTestOutputListener(TestOutputListener { _, event ->
-        if (listOf("BENCHMARK ", "GOLDEN ", "VALIDATION ").any { event.message.startsWith(it) }) logger.lifecycle(event.message.trimEnd())
+        if (listOf("BENCHMARK ", "GOLDEN ", "RELATIONSHIPS ", "VALIDATION ").any { event.message.startsWith(it) }) logger.lifecycle(event.message.trimEnd())
     })
 }

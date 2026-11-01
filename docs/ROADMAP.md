@@ -56,7 +56,7 @@ Decided 2026-10-30. It comes before everything else under [Later](#later), and s
 
 ## After 0.2.0: structural relationships
 
-Proposed 2026-11-01 as the next item after 0.2.0. Relationships between declarations (renames, moves, kind changes, extractions, inlinings) become one list with a confidence and evidence, measured by a labelled benchmark before any matcher change. Planned in [STRUCTURAL-RELATIONSHIPS.md](STRUCTURAL-RELATIONSHIPS.md) and [RELATIONSHIP-BENCHMARK.md](RELATIONSHIP-BENCHMARK.md); the model is decided in [ADR 0008](adr/0008-relationships-are-the-source-of-truth-for-pairing.md).
+Proposed 2026-11-01 as the next item after 0.2.0. The benchmark and today's baseline are implemented (2026-11-01). Relationships between declarations (renames, moves, kind changes, extractions, inlinings) become one list with a confidence and evidence, measured by the benchmark before any matcher change. Planned in [STRUCTURAL-RELATIONSHIPS.md](STRUCTURAL-RELATIONSHIPS.md) and [RELATIONSHIP-BENCHMARK.md](RELATIONSHIP-BENCHMARK.md); the model is decided in [ADR 0008](adr/0008-relationships-are-the-source-of-truth-for-pairing.md).
 
 | Step | Spec | Done when |
 | --- | --- | --- |

@@ -80,7 +80,7 @@ Out of scope for now: AI explanations, cloud processing, expression-level differ
 
 | Feature | Status |
 | --- | --- |
-| [01 Relationship benchmark](relationships/01-relationship-benchmark.md) | proposed, 2026-11-01 |
+| [01 Relationship benchmark](relationships/01-relationship-benchmark.md) | implemented, 2026-11-01 |
 | [02 Relationship model](relationships/02-relationship-model.md) | proposed, 2026-11-01 |
 | [03 Relationship matching](relationships/03-relationship-matching.md) | proposed, 2026-11-01 |
 | [04 Rename grouping](relationships/04-rename-grouping.md) | proposed, 2026-11-01 |

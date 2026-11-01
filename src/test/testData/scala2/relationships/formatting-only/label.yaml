@@ -1,0 +1,14 @@
+case: formatting-only
+language: Scala
+split: held-out
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: Order, signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: total, signature: "" }
+      presence: MATCHED
+      content: FORMATTING_ONLY
+  ambiguous: []
+notes: "Spacing only."
