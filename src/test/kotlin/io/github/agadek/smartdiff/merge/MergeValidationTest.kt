@@ -51,6 +51,8 @@ class MergeValidationTest : BasePlatformTestCase() {
         val node = MergeNode(decl(), baseRange(), changed(), changed(), MergeGroup.CHANGED_ON_BOTH_SIDES)
         val joined = JoinedResult(result(node), result(node), nodes = listOf(node))
         assertTrue("both-sides-clean" in flags(row(joined = joined, conflicts = emptyList())))
+        assertTrue("a conflict elsewhere does not suppress it", "both-sides-clean" in flags(row(joined = joined, conflicts = listOf(TextRange(10, 15)))))
+        assertFalse("a conflict inside it suppresses it", "both-sides-clean" in flags(row(joined = joined, conflicts = listOf(baseRange()))))
 
         val added = MergeNode(decl(), null, changed(), changed(), MergeGroup.CHANGED_ON_BOTH_SIDES)
         val addBoth = JoinedResult(result(added), result(added), nodes = listOf(added))
@@ -148,8 +150,10 @@ class MergeValidationTest : BasePlatformTestCase() {
         assertFalse(MergeValidation.readiness(listOf(clean.copy(flags = listOf("join-mismatch"))), 10, 6).noJoinMismatch)
 
         val review = clean.copy(flags = listOf("both-sides-clean"))
-        assertFalse(MergeValidation.readiness(listOf(review), 10, 6).reviewed)
-        assertTrue(MergeValidation.readiness(listOf(review), 10, 6, setOf(review.id)).reviewed)
+        val reviewState = MergeValidation.readiness(listOf(review), 10, 6)
+        assertEquals(1, reviewState.filesToReview)
+        assertFalse(reviewState.reviewed)
+        assertFalse(reviewState.ready)
 
         assertTrue(MergeValidation.readiness(listOf(clean), 12, 6).fastEnough)
         assertFalse(MergeValidation.readiness(listOf(clean), 13, 6).fastEnough)

@@ -83,9 +83,10 @@ object MergeValidation {
     data class Readiness(
         val hasFiles: Boolean,
         val noJoinMismatch: Boolean,
-        val reviewed: Boolean,
+        val filesToReview: Int,
         val fastEnough: Boolean,
     ) {
+        val reviewed: Boolean get() = filesToReview == 0
         val ready: Boolean get() = hasFiles && noJoinMismatch && reviewed && fastEnough
     }
 
@@ -116,24 +117,19 @@ object MergeValidation {
 
     fun flags(row: Row): List<String> = buildList {
         if (row.joined.baseMismatch) add("join-mismatch")
-        if (row.conflicts != null && row.conflicts.isEmpty()) {
-            if (changedOnBoth(row.joined)) add("both-sides-clean")
-        }
+        if (row.conflicts != null && changedOnBothWithoutConflict(row.joined, row.conflicts)) add("both-sides-clean")
         if (row.conflicts != null && conflictInsideOneSidedChange(row.joined, row.conflicts)) add("conflict-one-side")
         if (row.joined.left.status != Status.ANALYZED || row.joined.right.status != Status.ANALYZED) add("status")
         if (leftHidden(row.base, row.left, row.joined) || rightHidden(row.base, row.right, row.joined)) add("hidden")
         if (row.nanos > SLOW_NANOS) add("slow")
     }
 
-    fun readiness(rows: List<Row>, mergeMedian: Long, sideMedian: Long, reviewed: Set<String> = emptySet()): Readiness {
-        val reviewFlags = setOf("both-sides-clean", "conflict-one-side")
-        return Readiness(
-            hasFiles = rows.isNotEmpty(),
-            noJoinMismatch = rows.none { "join-mismatch" in it.flags },
-            reviewed = rows.filter { row -> row.flags.any { it in reviewFlags } }.all { it.id in reviewed },
-            fastEnough = if (sideMedian <= 0) mergeMedian <= 0 else mergeMedian <= sideMedian * 2,
-        )
-    }
+    fun readiness(rows: List<Row>, mergeMedian: Long, sideMedian: Long): Readiness = Readiness(
+        hasFiles = rows.isNotEmpty(),
+        noJoinMismatch = rows.none { "join-mismatch" in it.flags },
+        filesToReview = rows.count { row -> row.flags.any { it == "both-sides-clean" || it == "conflict-one-side" } },
+        fastEnough = if (sideMedian <= 0) mergeMedian <= 0 else mergeMedian <= sideMedian * 2,
+    )
 
     fun coverage(rows: List<Row>): Map<String, Int> = LANGUAGE_KEYS.associateWith { key -> rows.count { it.language == key } }
 
@@ -184,7 +180,8 @@ object MergeValidation {
                     val nanos = System.nanoTime() - started
                     val millis = nanos / 1_000_000
                     // R13 asks for one comparison of the base with a side; use the left side for every file.
-                    val sideMillis = sideMillis(engine, baseText, leftText, languageId, path)
+                    val leftRequest = MergeComparison.sideRequests(MergeTexts(baseText, leftText, rightText, languageId, File(path).name)).first
+                    val sideMillis = sideMillis(engine, leftRequest)
                     val conflicts = MergeWindowSupport.conflictRanges(leftText, baseText, rightText)
                     val row = Row(
                         corpus.repository.name,
@@ -249,7 +246,7 @@ object MergeValidation {
             appendLine("## Readiness")
             appendLine("- has files: ${report.readiness.hasFiles}")
             appendLine("- no join mismatch: ${report.readiness.noJoinMismatch}")
-            appendLine("- reviewed both-sides-clean and conflict-one-side files: ${report.readiness.reviewed}")
+            appendLine("- files needing review: ${report.readiness.filesToReview}")
             appendLine("- median within twice the side comparison: ${report.readiness.fastEnough}")
             for (row in report.rows.filter { it.flagged }) {
                 appendLine()
@@ -267,9 +264,11 @@ object MergeValidation {
         println("MERGE VALIDATION ${report.rows.size} files, ${report.rows.count { it.flagged }} flagged; report in ${report.directory.absolutePath}")
     }
 
-    private fun changedOnBoth(joined: JoinedResult): Boolean {
-        fun visit(nodes: List<MergeNode>): Boolean =
-            nodes.any { (it.baseRange != null && it.group == MergeGroup.CHANGED_ON_BOTH_SIDES) || visit(it.children) }
+    private fun changedOnBothWithoutConflict(joined: JoinedResult, conflicts: List<TextRange>): Boolean {
+        fun visit(nodes: List<MergeNode>): Boolean = nodes.any { node ->
+            val range = node.baseRange
+            (range != null && node.group == MergeGroup.CHANGED_ON_BOTH_SIDES && conflicts.none { it.intersects(range) }) || visit(node.children)
+        }
         return visit(joined.nodes)
     }
 
@@ -310,9 +309,9 @@ object MergeValidation {
         }
     }
 
-    private fun sideMillis(engine: DeclarationEngine, base: String, side: String, languageId: String, path: String): Long {
+    private fun sideMillis(engine: DeclarationEngine, request: ComparisonRequest): Long {
         val started = System.nanoTime()
-        onPooledThread { compareSafely(engine, ComparisonRequest(base, side, languageId, File(path).name), Cancellation.NONE) }
+        onPooledThread { compareSafely(engine, request, Cancellation.NONE) }
         return (System.nanoTime() - started) / 1_000_000
     }
 
