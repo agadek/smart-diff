@@ -25,6 +25,15 @@ Status: implemented, 2026-10-31
 - **R15** Enter moves the caret into the result pane.
 - **R16** The outline never edits the result pane.
 - **R17** Closing the merge window releases the outline and all its text.
+- **R18** Selecting a row also frames the declaration in the left and right panes.
+- **R19** A row with no base declaration names every pane where it is absent, the result pane included.
+- **R20** Accepting a side's change over a declaration keeps the declaration framed over the accepted code.
+- **R21** When one edit replaces several declarations, each one whose lines the edit left unchanged stays framed.
+- **R22** Code inserted right before or after a declaration is not part of its frame.
+- **R23** Changing the change type filter or the layout keeps every frame where the edits left it.
+- **R24** The merge window keeps the [engine dropdown](../../GLOSSARY.md#engine-dropdown).
+- **R25** The frames are right even when the merge window fills the result pane after the outline is computed.
+- **R26** Selecting a row scrolls the result pane to the declaration, and the side panes follow it through the window's synchronized scrolling.
 
 ## Out of scope
 
@@ -32,6 +41,7 @@ Status: implemented, 2026-10-31
 - Comparing the result with the base or the sides.
 - Following a declaration added on one side after the reviewer accepts it into the result.
 - Re-mapping declarations after the reviewer chooses another engine once the result has been edited.
+- Following a declaration whose own lines an edit over several declarations rewrote; it shows "not tracked".
 
 ## References
 
