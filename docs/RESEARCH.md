@@ -1,6 +1,6 @@
 # SMART Diff: Research Notes
 
-Research snapshot: 2026-10-20; recommendation revised 2026-10-21.
+Historical research snapshot from 2026-10-20; the recommendation was revised 2026-10-21. This file is non-normative: current behavior and scope are in the [product scope](specs/README.md#product-scope) and the [feature specifications](specs/README.md).
 
 ## Product landscape
 
@@ -8,7 +8,7 @@ Research snapshot: 2026-10-20; recommendation revised 2026-10-21.
 
 [SemanticDiff](https://semanticdiff.com/docs/what-is-semanticdiff/) is an existing language-aware diff product for Visual Studio Code and GitHub. It parses supported source formats, suppresses selected whitespace and token changes, applies language-specific equivalence rules, and can identify moves and renames. It also has a fallback diff for unsupported text. Its [invariances list](https://semanticdiff.com/docs/invariances/) shows that equivalence rules vary considerably by language.
 
-This is a direct feature-space overlap with the original working name “Semantic Diff.” The project has since adopted **SMART Diff** to distinguish its product name. Avoid implying affiliation with SemanticDiff; confirm the final Marketplace ID and name availability before publishing.
+This is a direct feature-space overlap with the original working name “Semantic Diff.” The project has since adopted **SMART Diff** to distinguish its product name. Avoid implying affiliation with SemanticDiff; the plugin ID is `io.github.agadek.smartdiff` (technical specification Q4).
 
 The product's [description of its diff model](https://semanticdiff.com/docs/understand-diff/) is useful: it compares corresponding blocks rather than insisting that every old line map to one new line. It also exposes the tradeoff: structural views can be more informative but no longer preserve line-for-line alignment expected from a conventional diff.
 
@@ -81,7 +81,7 @@ Keep provenance explicit in agent tasks: name the upstream files consulted, ask 
 
 Parser licenses are separate from Difftastic's license. Difftastic says its vendored Tree-sitter parsers include MIT- and Apache-licensed components and keeps license files under `vendored_parsers/*/LICENSE`; check every grammar actually bundled rather than assuming all are MIT. For SMART Diff, licenses must be reviewed for the complete selected language set and parser runtime. IntelliJ PSI may avoid bundling grammars for a given provider, but does not address other parser providers or dependencies. GumTree's LGPL-3.0 terms are a separate compliance question and are one reason not to add it without review.
 
-The current SMART Diff skeleton has no project `LICENSE` or third-party notices file yet. Before distributing a plugin, choose SMART Diff's own license, inventory all runtime and bundled components (including parser grammars and native binaries), include required notices in the plugin distribution, and verify that the chosen project license is compatible with each dependency. Maintain a simple dependency/license inventory in CI or release preparation. A qualified open-source licensing review is appropriate before Marketplace or commercial distribution if a close port is planned.
+SMART Diff is under the [PolyForm Noncommercial License 1.0.0](https://github.com/agadek/smart-diff/blob/main/LICENSE). Before adding a port, inventory all runtime and bundled components (including parser grammars and native binaries), add the required notices in the plugin distribution, and verify that the chosen project license is compatible with each dependency. Maintain a simple dependency/license inventory in CI or release preparation. A qualified open-source licensing review is appropriate before Marketplace or commercial distribution if a close port is planned.
 
 ### Using a coding agent for the Java port
 
@@ -146,7 +146,7 @@ Additional candidates worth separating by what they diff:
 | Tree-sitter provider | Language breadth beyond what the host IDE parses | Native JVM integration, grammar packaging, licensing, and maintenance work | Later provider for languages PSI cannot cover |
 | Native text/word diff | Reliable, familiar, editable IDE workflow | Line-oriented mapping | Always retain as fallback |
 
-**Recommendation (revised 2026-10-21):** the specification's first release is declaration-level, not a fine-grained syntax-node diff, and the engine choice should follow from that. Treat multi-language support as an architectural requirement through a parser-neutral declaration model and provider interface. Start with IntelliJ PSI as the first provider: parse both sides, extract declarations, match them by kind, qualified name, and signature, detect formatting-only changes from token sequences, and show detail with the native diff. This needs no tree-matching algorithm, native binaries, or grammar licenses. Use `sem` as a design reference for entity extraction and matching. Add a Tree-sitter provider later for languages the host IDE cannot parse. Defer fine-grained differencing; when it is added, compare a project-owned matcher with Difftastic and suitable GumTree generators, keeping GumTree-Spoon as a Java-only benchmark. The first-release language list remains open, constrained by PSI coverage in the target IDEs.
+**Recommendation (revised 2026-10-21):** the specification's first release is declaration-level, not a fine-grained syntax-node diff, and the engine choice should follow from that. Treat multi-language support as an architectural requirement through a parser-neutral declaration model and provider interface. Start with IntelliJ PSI as the first provider: parse both sides, extract declarations, match them by kind, qualified name, and signature, detect formatting-only changes from token sequences, and show detail with the native diff. This needs no tree-matching algorithm, native binaries, or grammar licenses. Use `sem` as a design reference for entity extraction and matching. Add a Tree-sitter provider later for languages the host IDE cannot parse. Defer fine-grained differencing; when it is added, compare a project-owned matcher with Difftastic and suitable GumTree generators, keeping GumTree-Spoon as a Java-only benchmark. The first release shipped Java, Kotlin and Scala 2 and 3; the language list beyond them remains open, constrained by PSI coverage in the target IDEs.
 
 ## JetBrains platform fit
 
@@ -163,6 +163,14 @@ The normal IDE diff viewer already supports navigation, editing, and comparisons
 - Formatting-only suppression must be parser-aware; global whitespace stripping is incorrect for indentation-sensitive languages, literals, and embedded languages.
 - Moves, renames, and cross-file changes are valuable but harder than highlighting syntax-node insertions and removals. They should follow a trusted within-file structural diff.
 - An alternate diff view is a lower-risk first integration than replacing the native viewer by default.
+
+## What changed since this snapshot
+
+- The declaration engine shipped with an IntelliJ PSI provider for Java, Kotlin and Scala 2 and 3 ([languages](specs/languages/03-scala.md)).
+- The outline attaches to the native diff viewer ([ADR 0005](adr/0005-outline-attaches-to-the-native-diff-viewer.md)), rather than the alternate viewer this snapshot preferred.
+- Classification includes rename candidates, kind changes and signature changes ([declarations](specs/README.md#declaration-engine)).
+- Extraction detection and the Changes tree summary shipped, and the three-way merge outline is implemented ([ROADMAP.md](ROADMAP.md)).
+- The license and plugin ID are decided, as above.
 
 ## References
 

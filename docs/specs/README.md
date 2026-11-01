@@ -17,6 +17,27 @@ SMART Diff adds a [structural outline](../GLOSSARY.md#structural-outline) to the
 
 Out of scope for now: AI explanations, cloud processing, expression-level differencing inside a declaration, and cross-file refactoring detection. Later work is in the [roadmap](../ROADMAP.md).
 
+### Change labels
+
+The outline and the Changes tree use one set of [labels](../GLOSSARY.md#label). The full semantics are in [declarations/06](declarations/06-change-labels.md).
+
+| Label | Meaning | Summary count | Can be hidden |
+| --- | --- | --- | --- |
+| added | No counterpart on the old side | added | yes |
+| removed | No counterpart on the new side | removed | yes |
+| changed | A matched declaration whose content differs beyond formatting | changed | yes |
+| signature changed | The parameter types differ; the declaration is also changed | changed | yes |
+| kind change | The kind differs, shown as `trait → class Shape`; also signature changed | changed | yes |
+| moved | The container or order among siblings differs | moved | yes |
+| formatting-only | Only whitespace the language treats as insignificant differs | formatting-only | yes |
+| extraction | An added declaration linked to code removed from a changed declaration | extracted, not added | as added |
+| rename candidate | A removed and an added declaration paired by similar content | rename candidate | never |
+| uncertain | The counterpart cannot be determined unambiguously | uncertain | never |
+| unanalyzed | The content could not be classified, though presence and kind are known | unanalyzed | never |
+
+The summary counts every change, hidden or not, and ends with how many are hidden. Signature changes and kind changes count as changed; an extraction counts as extracted instead of added. The [relationship model](relationships/02-relationship-model.md) keeps these labels when it replaces the extraction and rename fields.
+
+
 ## Engines
 
 | Feature | Status |
@@ -34,6 +55,7 @@ Out of scope for now: AI explanations, cloud processing, expression-level differ
 | [03 Rename candidates](declarations/03-rename-candidates.md) | implemented, 2026-10-22 |
 | [04 Kind changes](declarations/04-kind-changes.md) | implemented, 2026-10-23 |
 | [05 Extraction detection](declarations/05-extraction-detection.md) | implemented, 2026-10-23 |
+| [06 Change labels](declarations/06-change-labels.md) | implemented, 2026-11-01 |
 
 ## Languages
 
@@ -51,6 +73,7 @@ Out of scope for now: AI explanations, cloud processing, expression-level differ
 | [02 Outline toggle](outline/02-outline-toggle.md) | implemented, 2026-10-21 |
 | [03 Change type filter](outline/03-change-type-filter.md) | implemented, 2026-10-22 |
 | [04 SMART Diff viewer](outline/04-smart-diff-viewer.md) | implemented, 2026-10-22 |
+| [05 Analysis fallback states](outline/05-analysis-fallback.md) | implemented, 2026-11-01 |
 
 ## Changes tree
 
@@ -58,6 +81,7 @@ Out of scope for now: AI explanations, cloud processing, expression-level differ
 | --- | --- |
 | [01 Changes tree summary](changes-tree/01-changes-tree-summary.md) | implemented, 2026-10-22 |
 | [02 Declarations in the Changes tree](changes-tree/02-changes-tree-declarations.md) | implemented, 2026-10-23 |
+| [03 Coverage and scale](changes-tree/03-coverage-and-scale.md) | implemented, 2026-11-01 |
 
 ## Settings
 
@@ -87,3 +111,9 @@ Out of scope for now: AI explanations, cloud processing, expression-level differ
 | [05 Inlining detection](relationships/05-inlining-detection.md) | proposed, 2026-11-01 |
 | [06 Refactorings view](relationships/06-refactorings-view.md) | proposed, 2026-11-01 |
 | [07 Relationship validation](relationships/07-relationship-validation.md) | proposed, 2026-11-01 |
+
+## Validation
+
+| Feature | Status |
+| --- | --- |
+| [01 Usability validation](validation/01-usability-validation.md) | proposed, 2026-11-01 |

@@ -1,6 +1,6 @@
 # Extraction Detection Specification
 
-Status: implemented, 2026-10-22; the validation results are in [VALIDATION.md](VALIDATION.md). Third item after the first release, following the [Changes tree summary](ROADMAP.md#multi-file-summary-in-the-changes-tree) and [Scala](ROADMAP.md#scala). It expands the roadmap's [extraction detection](ROADMAP.md#extraction-detection) entry. Section numbers (§) refer to the [technical specification](TECHNICAL-SPECIFICATION.md), and terms follow the [glossary](GLOSSARY.md).
+Status: implemented, 2026-10-22; the validation results are in [VALIDATION.md](VALIDATION.md). Third item after the first release, following the [Changes tree summary](ROADMAP.md#multi-file-summary-in-the-changes-tree) and [Scala](ROADMAP.md#scala). It expands the roadmap's [extraction detection](ROADMAP.md#extraction-detection) entry. Section numbers (§) refer to the [technical specification](TECHNICAL-SPECIFICATION.md), and terms follow the [glossary](GLOSSARY.md). The links stay `ChangeNode` fields until the [relationship model](specs/relationships/02-relationship-model.md) replaces them; that model is not a prerequisite for this item.
 
 ## 1. Problem
 
@@ -49,7 +49,7 @@ class ShippingRates  added
 - **Source:** stays *changed* and gets the note `code extracted to <declaration>`. Selecting it frames it on both sides as today, and also highlights the extracted code on the old side, so the reviewer can tell the extracted lines from the lines that really changed.
 - **Names in notes** use the outline's labels (§10), qualified by the container only when it differs from the other end's container.
 - **Several links:** an added declaration with code from two sources (duplicated code merged into one helper) lists both: `extracted from a(), b()`. A source with code extracted to several declarations lists them all. After three names the note ends with `+N more`.
-- **Summary line and Changes tree:** an extraction counts as *extracted* instead of *added*: `2 changed · 1 extracted · 1 added`. The change type filter treats it as *added*, so hiding added changes hides it too.
+- **Summary line and Changes tree:** an extraction counts as *extracted* instead of *added*: `2 changed · 1 extracted · 1 added`. `extracted` is a presentation and count category; the declaration's presence is still `ADDED`, and detection never changes matching or classification. The change type filter treats it as *added*, so hiding added changes hides it too.
 - **SMART Diff viewer:** no change. The source's extracted code is part of the source's change, so it fades only when the filter hides changed declarations.
 
 ## 4. Detection
@@ -95,7 +95,7 @@ The values were tuned on the validation corpus (§8). They are constants, not se
 
 ### 4.6 Cost
 
-Comparing every token of a target with every token of a source costs the product of their token counts, which for a method of a few hundred lines moved whole into a helper is already more than `MAX_WORK`. Tiling therefore indexes the source's runs of `MIN_TILE` tokens and extends only the runs the target shares, keeping at most 64 places per run against repetitive code; its work grows with the token counts and the shared runs. Before tiling, a pair is skipped when the bags of adjacent token pairs of the target body and the source's removed tokens share less than half of the target's pairs (the Dice measure the matcher already uses, §7). If the work for a file, counted as token comparisons in the alignments and the tiling, exceeds `MAX_WORK`, detection is skipped for the file and the result is as today; this is not a failure and is not reported. Detection checks cancellation between pairs.
+Comparing every token of a target with every token of a source costs the product of their token counts, which for a method of a few hundred lines moved whole into a helper is already more than `MAX_WORK`. Tiling therefore indexes the source's runs of `MIN_TILE` tokens and extends only the runs the target shares, keeping at most 64 places per run against repetitive code; its work grows with the token counts and the shared runs. Before tiling, a pair is skipped when the bags of adjacent token pairs of the target body and the source's removed tokens share less than half of the target's pairs (the Dice measure the matcher already uses, §7). If the work for a file, counted as token comparisons in the alignments and the tiling, exceeds `MAX_WORK`, detection is skipped for the file and the result is as today; this is not a failure and is not reported. Detection checks cancellation between pairs. The skip is an accepted false negative with no status: detection only adds information and never hides a change, and the [relationship benchmark](RELATIONSHIP-BENCHMARK.md) reports such files as false negatives alongside source coverage.
 
 ## 5. Model and result
 
@@ -153,7 +153,7 @@ The detector is language-neutral. A provider supports it by filling `ownTokenSta
 
 ### 6.3 Scala
 
-Scala follows once its provider is merged ([roadmap](ROADMAP.md#scala)); nothing in the detector changes.
+Scala 2 and Scala 3 are supported, when the Scala plugin is installed ([languages/03](specs/languages/03-scala.md)); nothing in the detector is language-specific.
 
 - `body`: for `def`, the inside of a block body's braces or the whole expression body. In Scala 3 an indented body without braces is the region after `=` up to the end of the definition.
 - Targets are `def`s, including those in objects, traits, givens and `extension` blocks. Like Kotlin extensions, an `extension` method loses its receiver qualifier.
@@ -174,32 +174,32 @@ Scala follows once its provider is merged ([roadmap](ROADMAP.md#scala)); nothing
 
 ## 8. Validation
 
-Before the feature ships, run `CorpusValidationTest` (§12) on the same corpus as [VALIDATION.md](VALIDATION.md) with two new flags:
+The feature shipped after `CorpusValidationTest` (§12) ran on the same corpus as [VALIDATION.md](VALIDATION.md) with two extra flags. The gate is kept here as the acceptance evidence; the results are in [VALIDATION.md](VALIDATION.md#2026-10-23-extraction-detection):
 
 - `extraction`: every file with a link, for review. Each link is checked by hand as right or wrong.
 - `extraction-near-miss`: a changed declaration and an added method in the same file whose covered share is from 0.5 up to `MIN_SHARE`, or whose removed share falls short, for tuning the thresholds.
 
-Done when:
+The acceptance criteria were:
 
 - Both `noisy-change` extractions and the moshi `AdapterGenerator` case are linked.
 - No reviewed link is wrong. A wrong link is worse than none, since the reviewer would trust it.
 - The median analysis time is unchanged and the slowest file takes at most 20% longer than without detection.
 
-The results and the chosen thresholds are added to VALIDATION.md.
+The results and the chosen thresholds are in VALIDATION.md.
 
 ## 9. Tests
 
 - **Analysis unit tests** (no IDE, trees built by hand as in `Trees.kt`): an extraction from a changed method; reformatted extracted code; a few changed tokens inside the extracted code (tiling); code copied while kept in the source is not linked; code from an unchanged declaration is not linked; a short body is not linked; a body only partly made of removed code is not linked; tiles scattered across the source are not linked; two sources for one target; one source for two targets; an extraction into a member of an added class; a rename candidate is not turned into an extraction; detection skipped above `MAX_WORK`; cancellation.
-- **Provider tests:** `body` and `ownTokenStarts` for Java methods and constructors, Kotlin block and expression bodies, secondary constructors, and declarations without a body; later for Scala 2 and 3.
+- **Provider tests:** `body` and `ownTokenStarts` for Java methods and constructors, Kotlin block and expression bodies, secondary constructors, declarations without a body, and Scala 2 and 3 definitions.
 - **Golden fixtures:** `noisy-change` (Java) shows both links. New fixtures `extract-method` for Java and Kotlin cover extraction into the same class, a new class, and (Kotlin) an extension function and an expression body.
 - **Contract suite:** the origin checks in §5.3.
 - **`OutlineModelTest`:** notes, the `extracted` count, and the old-side range of a selected extraction.
 
 ## 10. Open questions
 
-- **X1 Thresholds.** The values in §4.5 come from the uncompiled prototype and two fixtures. The validation (§8) decides them.
-- **X2 Property and field targets.** Extracting an expression into a Kotlin property or a Java field initializer is common, but the extracted code is usually short. Include them once the validation shows how often they would pass `MIN_TOKENS`.
-- **X3 Order with rename candidates.** Detection runs after rule M5 (§4.1). If the validation shows M5 pairing extracted methods with unrelated removed ones, run detection on M5's candidates first.
+- **X1 Thresholds (resolved 2026-10-23).** The values in §4.5 were tuned on the validation corpus (§8); the results are in [VALIDATION.md](VALIDATION.md#2026-10-23-extraction-detection).
+- **X2 Property and field targets.** Extracting an expression into a Kotlin property or a Java field initializer is common, but the extracted code is usually short. Include them once the validation shows how often they would pass `MIN_TOKENS`. Still open.
+- **X3 Order with rename candidates (resolved 2026-10-23).** Detection runs after rule M5 (§4.1); the validation found no case where M5 paired an extracted method with an unrelated removed one.
 
 ## 11. Later
 
@@ -207,13 +207,13 @@ The results and the chosen thresholds are added to VALIDATION.md.
 - **Cross-file extraction,** once the multi-file view can compare more than one file at a time.
 - **Extract and modify:** showing the remaining token differences between the origin and the extracted body, through `details`, once fine-grained differencing exists ([roadmap](ROADMAP.md#fine-grained-differencing)).
 
-## 12. Implementation plan
+## 12. Historical implementation plan
 
-The prototype (kept outside the repository, never compiled) has the model fields, a single-run detector, the outline note and eight analysis tests. It predates the 0.1.1 noise pass, so it must be rebased onto rename candidates, `displaySignature` and `receiver`.
+This is the plan the feature was built from; all six steps shipped in 0.1.1. The prototype (kept outside the repository, never compiled) had the model fields, a single-run detector, the outline note and eight analysis tests. It predates the 0.1.0 noise pass and was rebased onto rename candidates, `displaySignature` and `receiver`.
 
 1. Model and providers: `ownTokenStarts` and `body` (§5.1) for Java and Kotlin, with provider tests.
 2. Detector: removed tokens, tiling and the thresholds (§4), with the analysis unit tests.
 3. Result and contract: `extractedFrom`, `extractedTo`, `Origin` and the source `details` (§5.2, §5.3).
 4. Outline and Changes tree: notes, selection, the `extracted` count, golden fixtures (§7).
 5. Validation: run the corpus, tune the thresholds, record the results (§8).
-6. Scala: `body` for the Scala provider and its fixtures, once the provider is merged (§6.3).
+6. Scala: `body` for the Scala provider and its fixtures (§6.3), after the provider was merged.
