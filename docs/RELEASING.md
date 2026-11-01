@@ -35,11 +35,16 @@ These steps need the maintainer's own accounts and keys; nothing in the reposito
 2. On a branch, set `pluginVersion` in `gradle.properties` (for example `0.2.0`, or `0.2.0-beta.1` for the beta channel)
    and run `./gradlew patchChangelog`, which moves the unreleased notes under the new version. Merge it through a pull
    request once CI passes.
-3. Publish a GitHub release with the tag `v<pluginVersion>` (for example `v0.2.0`), with the version's section of
+3. Run the corpus validation in [VALIDATION.md](VALIDATION.md) and record the results. Once [relationships/07](specs/relationships/07-relationship-validation.md) is accepted, run the [relationship benchmark](RELATIONSHIP-BENCHMARK.md) and record its results too. Neither gate may be skipped for a release that changes matching, classification or extraction.
+4. Publish a GitHub release with the tag `v<pluginVersion>` (for example `v0.2.0`), with the version's section of
    `CHANGELOG.md` as its notes. The workflow checks that the tag matches `pluginVersion`, runs the same build, tests and
    Plugin Verifier as CI, signs the plugin and attaches `smart-diff-<version>-signed.zip` to the release.
-4. With Marketplace publishing on, the workflow then publishes the same zip. The Marketplace reviews each update before
+5. With Marketplace publishing on, the workflow then publishes the same zip. The Marketplace reviews each update before
    it appears; the notes shown there come from the version's section of `CHANGELOG.md`.
+
+Plugin Verifier runs on both target IDEs with the pinned Scala plugin installed, so the optional Scala provider is checked on each. The verifier's internal-API report includes Scala PSI use; review it each release, as [ROADMAP.md](ROADMAP.md#scala) says.
+
+Before publishing, check that `CHANGELOG.md` and `ROADMAP.md` use the same release labels: work still marked as planned in the roadmap must not appear as released in the changelog, and the other way around. `./gradlew patchChangelog` moves the notes, so check the roadmap by hand.
 
 A pre-release suffix picks the Marketplace channel: `0.2.0-beta.1` is published to the `beta` channel, which users add
 as a custom plugin repository; a version without a suffix goes to the default channel.
