@@ -18,6 +18,7 @@ import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
 import io.github.agadek.smartdiff.engine.declarations.model.FileRegion
 import io.github.agadek.smartdiff.engine.declarations.model.Token
 import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
+import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy
 import java.util.IdentityHashMap
 
 /**
@@ -195,13 +196,46 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
         }
 
         private fun content(match: Match): Content = contents.getOrPut(match) {
-            ContentClassifier.classify(
-                renamed(match.old.ownTokens, match.old.name, match.new.name),
-                match.new.ownTokens,
-                new.whitespacePolicy,
-                parseError = match.old.hasParseError || match.new.hasParseError,
-                signatureChanged = signatureChanged(match),
-            )
+            val oldTokens = renamed(match.old.ownTokens, match.old.name, match.new.name)
+            val newTokens = match.new.ownTokens
+            val policy = new.whitespacePolicy
+            val parseError = match.old.hasParseError || match.new.hasParseError
+            val changedSignature = signatureChanged(match)
+            val classified = ContentClassifier.classify(oldTokens, newTokens, policy, parseError, changedSignature)
+            if (classified != Content.CHANGED || parseError || changedSignature || policy == WhitespacePolicy.SIGNIFICANT) {
+                return@getOrPut classified
+            }
+            // The whitespace before a declaration is layout, even a line break that the policy would otherwise count
+            // (declarations/02 R14). If the source from the first token on is the same, only that layout differs.
+            val oldLeading = leadingTokens(match.old)
+            val newLeading = leadingTokens(match.new)
+            val sameSource =
+                ContentClassifier.normalize(oldTokens.drop(oldLeading.size), policy) ==
+                    ContentClassifier.normalize(newTokens.drop(newLeading.size), policy)
+            // Scala 3 indentation is significant, the indentation on the declaration's first line included.
+            val sameIndentation =
+                policy != WhitespacePolicy.INDENTATION_SIGNIFICANT ||
+                    indentation(oldLeading) == indentation(newLeading)
+            if (sameSource && sameIndentation) Content.FORMATTING_ONLY else Content.CHANGED
+        }
+
+        /** The tokens of [declaration]'s leading whitespace, a prefix of its own tokens. */
+        private fun leadingTokens(declaration: Declaration): List<Token> {
+            val length = declaration.leadingWhitespace?.length ?: 0
+            var end = 0
+            var count = 0
+            while (count < declaration.ownTokens.size && end < length) {
+                end += declaration.ownTokens[count].text.length
+                count++
+            }
+            return declaration.ownTokens.subList(0, count)
+        }
+
+        /** The text after the last line break of [tokens], as the indentation policy compares it. */
+        private fun indentation(tokens: List<Token>): String {
+            val text = tokens.joinToString("") { it.text }
+            val lastBreak = maxOf(text.lastIndexOf('\n'), text.lastIndexOf('\r'))
+            return if (lastBreak >= 0) text.substring(lastBreak + 1) else ""
         }
 
         /** A different signature, or a different kind (rule M4b), which changes how the declaration is used. */

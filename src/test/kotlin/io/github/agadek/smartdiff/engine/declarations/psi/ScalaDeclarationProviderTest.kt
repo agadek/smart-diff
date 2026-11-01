@@ -540,6 +540,39 @@ class ScalaDeclarationProviderTest : ProviderTestCase() {
         assertEquals(Content.FORMATTING_ONLY, result.changes.single().children.single().content)
     }
 
+    fun `test adding a declaration above the first one is formatting-only on that declaration`() {
+        // declarations/02-change-classification R14
+        val old = "object Plain {\n  def f() = 1\n}\n"
+        val additions = listOf(
+            "given Ordering[Int] = Ordering.Int\n", // Scala 3
+            "object Legacy {\n  val enum = 1\n}\n", // Scala 2
+        )
+
+        for (addition in additions) {
+            val result = compare(old, addition + old)
+
+            assertEquals(Status.ANALYZED, result.status)
+            val plain = result.changes.single { (it.subject as? Subject.Declaration)?.name == "Plain" }
+            assertEquals(
+                "object Plain has the same own source after adding $addition: ${Rendering.result(result, old, addition + old)}",
+                Content.FORMATTING_ONLY,
+                plain.content,
+            )
+        }
+    }
+
+    fun `test re-indenting a Scala 3 declaration is still a change`() {
+        // languages/03-scala R13
+        val old = "object A:\n  def f = 1\n"
+        val new = "object A:\n    def f = 1\n"
+
+        val result = compare(old, new)
+
+        assertEquals(Status.ANALYZED, result.status)
+        val a = result.changes.single { (it.subject as? Subject.Declaration)?.name == "A" }
+        assertEquals(Content.CHANGED, a.children.single { (it.subject as? Subject.Declaration)?.name == "f" }.content)
+    }
+
     private fun dialect(vararg texts: String): String? = ReadAction.compute(ThrowableComputable<String?, RuntimeException> {
         provider("Scala").dialect(ProjectManager.getInstance().defaultProject, texts.toList(), null)?.id
     })
