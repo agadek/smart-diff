@@ -71,6 +71,8 @@ data class MergeOutlineResult(
     val hiddenCount: Int = 0,
     /** The two results read the base differently; [items] holds each side's own list instead of joined rows. */
     val baseMismatch: Boolean = false,
+    /** The base ranges of the declarations the rows frame, for the merge window's result-pane markers. */
+    val baseRanges: List<TextRange> = emptyList(),
 )
 
 /**
@@ -89,6 +91,8 @@ object MergeOutlineModel {
         layout: MergeOutlineLayout,
         hidden: Set<ChangeType> = emptySet(),
         hideBothSides: Boolean = false,
+        /** The base ranges of the merge window's conflicts; null when they cannot be read (merge window spec R14). */
+        conflictRanges: List<TextRange>? = null,
     ): MergeOutlineResult {
         if (joined.baseMismatch) return mismatch(joined, baseText, leftText, rightText, leftName, rightName, hidden)
 
@@ -99,11 +103,18 @@ object MergeOutlineModel {
         val items = when (layout) {
             MergeOutlineLayout.GROUPED_BY_SIDE -> grouped(
                 rows, joined.left, joined.right, leftName, rightName, hidden, hideBothSides, layout,
-                joined.isAnalyzed(MergeSide.LEFT), joined.isAnalyzed(MergeSide.RIGHT),
+                joined.isAnalyzed(MergeSide.LEFT), joined.isAnalyzed(MergeSide.RIGHT), conflictRanges,
             )
-            MergeOutlineLayout.CONTAINER_TREE -> container(joined, leftName, rightName, hidden, hideBothSides, layout)
+            MergeOutlineLayout.CONTAINER_TREE -> container(joined, leftName, rightName, hidden, hideBothSides, layout, conflictRanges)
         }
-        return MergeOutlineResult(summary(rows, leftName, rightName, hiddenCount, joined.isAnalyzed(MergeSide.LEFT), joined.isAnalyzed(MergeSide.RIGHT)), items, hiddenCount)
+        // Ranges are independent of the filter and layout: hidden and candidate rows need markers too.
+        val baseRanges = (rows.mapNotNull(::baseRange) + candidateBaseRanges(joined.nodes)).distinct()
+        return MergeOutlineResult(
+            summary(rows, leftName, rightName, hiddenCount, joined.isAnalyzed(MergeSide.LEFT), joined.isAnalyzed(MergeSide.RIGHT)),
+            items,
+            hiddenCount,
+            baseRanges = baseRanges,
+        )
     }
 
     /** Every row, including containers whose own group is unchanged. */
@@ -125,14 +136,20 @@ object MergeOutlineModel {
         layout: MergeOutlineLayout,
         leftAnalyzed: Boolean,
         rightAnalyzed: Boolean,
+        conflictRanges: List<TextRange>?,
     ): List<MergeOutlineItem> {
         val byGroup = rows.filter { it.group != MergeGroup.UNCHANGED && !isHidden(it, hidden, hideBothSides, layout) }
             .groupBy { it.group }
         val groups = listOf(MergeGroup.CHANGED_ON_BOTH_SIDES, MergeGroup.LEFT_ONLY, MergeGroup.RIGHT_ONLY, MergeGroup.UNCERTAIN)
         return groups.mapNotNull { group ->
             val children = byGroup[group].orEmpty()
-                .sortedWith(compareBy<MergeNode> { it.sameChange }.thenBy { rows.indexOf(it) })
-                .map { row(it, candidates(it, leftName, rightName), leftName, rightName, leftResult, rightResult, hidden = false, hiddenTypes = hidden) }
+                // Merged-without-conflict rows come after rows with conflicts (merge window spec R13).
+                .sortedWith(
+                    compareBy<MergeNode> { mergedWithoutConflict(it, conflictRanges) }
+                        .thenBy { it.sameChange }
+                        .thenBy { rows.indexOf(it) },
+                )
+                .map { row(it, candidates(it, leftName, rightName), leftName, rightName, leftResult, rightResult, hidden = false, hiddenTypes = hidden, conflictRanges) }
             if (children.isEmpty()) null else MergeOutlineItem(
                 MergeOutlineItem.Kind.GROUP,
                 groupTitle(group, leftName, rightName, leftAnalyzed, rightAnalyzed),
@@ -149,11 +166,12 @@ object MergeOutlineModel {
         hidden: Set<ChangeType>,
         hideBothSides: Boolean,
         layout: MergeOutlineLayout,
+        conflictRanges: List<TextRange>?,
     ): List<MergeOutlineItem> {
         val rows = mutableListOf<MergeOutlineItem>()
         joined.fileRegion?.let { row ->
             if (!isHidden(row, hidden, hideBothSides, layout)) {
-                rows += row(row, candidates(row, leftName, rightName), leftName, rightName, joined.left, joined.right, hidden = false, hiddenTypes = hidden)
+                rows += row(row, candidates(row, leftName, rightName), leftName, rightName, joined.left, joined.right, hidden = false, hiddenTypes = hidden, conflictRanges)
             }
         }
         fun visit(nodes: List<MergeNode>): List<MergeOutlineItem> = nodes.mapNotNull { node ->
@@ -162,7 +180,7 @@ object MergeOutlineModel {
             val hiddenNode = isHidden(node, hidden, hideBothSides, layout)
             if (node.group == MergeGroup.UNCHANGED && children.isEmpty()) return@mapNotNull null
             if (hiddenNode && candidates.isEmpty() && children.isEmpty()) return@mapNotNull null
-            row(node, emptyList(), leftName, rightName, joined.left, joined.right, hiddenNode, hidden).copy(children = candidates + children)
+            row(node, emptyList(), leftName, rightName, joined.left, joined.right, hiddenNode, hidden, conflictRanges).copy(children = candidates + children)
         }
         rows += visit(joined.nodes)
         return rows
@@ -177,13 +195,16 @@ object MergeOutlineModel {
         rightResult: ComparisonResult,
         hidden: Boolean,
         hiddenTypes: Set<ChangeType>,
+        conflictRanges: List<TextRange>?,
     ): MergeOutlineItem {
         val changed = node.group != MergeGroup.UNCHANGED
         val left = node.left?.takeIf { changed && !hidden }?.let { sideLabel(it, leftName, leftResult, hiddenTypes) }
         val right = node.right?.takeIf { changed && !hidden }?.let { sideLabel(it, rightName, rightResult, hiddenTypes) }
-        val baseRange = node.baseRange ?: node.left?.extractedFrom?.firstOrNull()?.declarationRange
-            ?: node.right?.extractedFrom?.firstOrNull()?.declarationRange
-            ?: node.left?.oldRange ?: node.right?.oldRange
+        val baseRange = baseRange(node)
+        val notes = buildList {
+            if (!hidden && node.sameChange && changed) add("same change on both sides")
+            if (!hidden && mergedWithoutConflict(node, conflictRanges)) add("merged without conflict")
+        }
         return MergeOutlineItem(
             kind = if (node.subject is io.github.agadek.smartdiff.engine.api.Subject.Region) {
                 MergeOutlineItem.Kind.FILE_REGION
@@ -194,7 +215,7 @@ object MergeOutlineModel {
             group = node.group,
             left = left,
             right = right,
-            note = if (!hidden && node.sameChange && changed) "same change on both sides" else null,
+            note = notes.takeIf { it.isNotEmpty() }?.joinToString(" · "),
             baseRange = baseRange,
             leftRange = node.left?.newRange,
             rightRange = node.right?.newRange,
@@ -202,6 +223,35 @@ object MergeOutlineModel {
             tooltip = "${leftName.fullTitle} | ${rightName.fullTitle}",
         )
     }
+
+    /** Candidate ranges on the base, even when the change-type filter hides the uncertain row. */
+    private fun candidateBaseRanges(nodes: List<MergeNode>): List<TextRange> = nodes.flatMap { node ->
+        val here = listOfNotNull(node.left, node.right).flatMap { side ->
+            if (side.presence == Presence.UNCERTAIN && side.oldRange == null) side.candidates.map { it.range } else emptyList()
+        }
+        here + candidateBaseRanges(node.children)
+    }
+
+    /** Where the row's declaration is in the base, from the node or an extraction source. */
+    private fun baseRange(node: MergeNode): TextRange? =
+        node.baseRange ?: node.left?.extractedFrom?.firstOrNull()?.declarationRange
+            ?: node.right?.extractedFrom?.firstOrNull()?.declarationRange
+            ?: node.left?.oldRange ?: node.right?.oldRange
+
+    /**
+     * Whether a changed-on-both-sides row has no merge conflict inside it (merge window spec R12). When the conflicts
+     * cannot be read, or a row has no base declaration to check, the note is left out (R14).
+     */
+    private fun mergedWithoutConflict(node: MergeNode, conflictRanges: List<TextRange>?): Boolean {
+        if (conflictRanges == null || node.group != MergeGroup.CHANGED_ON_BOTH_SIDES) return false
+        val range = baseRange(node) ?: return false
+        return conflictRanges.none { it.intersects(range) }
+    }
+
+    private fun TextRange.intersects(other: TextRange): Boolean =
+        if (start == end) start >= other.start && start <= other.end
+        else if (other.start == other.end) other.start >= start && other.start <= end
+        else start < other.end && end > other.start
 
     /** A side's labels; a rename candidate shows its new name after the label, as the merge plan's example does. */
     private fun sideLabel(
@@ -310,7 +360,25 @@ object MergeOutlineModel {
             changedCount(joined.right).takeIf { it > 0 }?.let { "$it in ${rightName.display}" },
             hiddenCount.takeIf { it > 0 }?.let { "$it hidden" },
         ).joinToString(" · ").ifEmpty { "No structural changes" }
-        return MergeOutlineResult(summary, groups, hiddenCount, baseMismatch = true)
+        return MergeOutlineResult(
+            summary,
+            groups,
+            hiddenCount,
+            baseMismatch = true,
+            baseRanges = (resultBaseRanges(joined.left) + resultBaseRanges(joined.right)).distinct(),
+        )
+    }
+
+    /** Every declaration's base range in one result, independent of the outline filter. */
+    private fun resultBaseRanges(result: ComparisonResult): List<TextRange> {
+        val ranges = mutableListOf<TextRange>()
+        fun visit(node: ChangeNode) {
+            node.oldRange?.let(ranges::add)
+            node.children.forEach(::visit)
+        }
+        result.fileRegion?.let(::visit)
+        result.changes.forEach(::visit)
+        return ranges
     }
 
     /** The declarations a side changed itself, including those inside changed containers. */

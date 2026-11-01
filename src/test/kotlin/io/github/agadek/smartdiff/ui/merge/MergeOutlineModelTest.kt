@@ -191,6 +191,31 @@ class MergeOutlineModelTest {
     }
 
     @Test
+    fun `a base mismatch keeps each side's base ranges`() {
+        // merge/04-merge-window R8
+        val joined = JoinedResult(result(changed(decl("f"))), result(changed(decl("g"))), baseMismatch = true)
+
+        val model = build(joined, MergeOutlineLayout.GROUPED_BY_SIDE)
+
+        assertTrue(model.baseRanges.toString(), model.baseRanges.contains(range(0, 5)))
+    }
+
+    @Test
+    fun `a candidate row contributes its base range`() {
+        // merge/04-merge-window R8; merge/02-merge-outline R28
+        val f = decl("f")
+        val uncertain = ChangeNode(
+            f, null, range(0, 5), Presence.UNCERTAIN,
+            candidates = listOf(io.github.agadek.smartdiff.engine.api.Candidate(f, range(2, 4))),
+        )
+        val joined = JoinedResult(result(uncertain), result(changed(f)), nodes = listOf(row(f, MergeGroup.UNCERTAIN, left = uncertain)))
+
+        val model = build(joined, MergeOutlineLayout.GROUPED_BY_SIDE)
+
+        assertTrue(model.baseRanges.toString(), model.baseRanges.contains(range(2, 4)))
+    }
+
+    @Test
     fun `a mismatch counts hidden rows`() {
         // merge/02-merge-outline R21, R32
         val left = changed(decl("f"))
@@ -206,11 +231,59 @@ class MergeOutlineModelTest {
         assertEquals("1 in main · 1 in feature · 2 hidden", model.summary)
     }
 
-    private fun build(joined: JoinedResult, layout: MergeOutlineLayout) =
-        MergeOutlineModel.build(
-            joined, "base", "left", "right",
-            MergeSideName("main", "main"), MergeSideName("feature", "feature"), layout,
-        )
+    @Test
+    fun `a changed row without a conflict is merged without conflict`() {
+        // merge/04-merge-window R12
+        val clean = decl("clean")
+        val conflicted = decl("conflicted")
+        val cleanRow = MergeNode(clean, range(0, 5), changed(clean), changed(clean), MergeGroup.CHANGED_ON_BOTH_SIDES)
+        val conflictRow = MergeNode(conflicted, range(10, 15), changed(conflicted), changed(conflicted), MergeGroup.CHANGED_ON_BOTH_SIDES)
+        val joined = JoinedResult(result(changed(clean)), result(changed(clean)), nodes = listOf(cleanRow, conflictRow))
+
+        val rows = build(joined, MergeOutlineLayout.GROUPED_BY_SIDE, listOf(range(10, 15))).items.single().children
+
+        assertEquals(null, rows.first { it.title == "method conflicted()" }.note)
+        assertEquals("merged without conflict", rows.first { it.title == "method clean()" }.note)
+    }
+
+    @Test
+    fun `merged rows come after conflicting rows in their group`() {
+        // merge/04-merge-window R13; merge/02-merge-outline R6
+        val clean = decl("clean")
+        val conflicted = decl("conflicted")
+        val same = decl("same")
+        val cleanRow = MergeNode(clean, range(0, 5), changed(clean), changed(clean), MergeGroup.CHANGED_ON_BOTH_SIDES)
+        val conflictRow = MergeNode(conflicted, range(10, 15), changed(conflicted), changed(conflicted), MergeGroup.CHANGED_ON_BOTH_SIDES)
+        val sameRow = MergeNode(same, range(20, 25), changed(same), changed(same), MergeGroup.CHANGED_ON_BOTH_SIDES, sameChange = true)
+        val joined = JoinedResult(result(changed(clean)), result(changed(clean)), nodes = listOf(cleanRow, conflictRow, sameRow))
+
+        val rows = build(joined, MergeOutlineLayout.GROUPED_BY_SIDE, listOf(range(10, 15))).items.single().children
+
+        assertEquals(listOf("method conflicted()", "method clean()", "method same()"), rows.map { it.title })
+        assertEquals("same change on both sides · merged without conflict", rows.last().note)
+    }
+
+    @Test
+    fun `unreadable conflicts leave the note out`() {
+        // merge/04-merge-window R14
+        val f = decl("f")
+        val node = MergeNode(f, range(0, 5), changed(f), changed(f), MergeGroup.CHANGED_ON_BOTH_SIDES)
+        val joined = JoinedResult(result(changed(f)), result(changed(f)), nodes = listOf(node))
+
+        val rows = build(joined, MergeOutlineLayout.GROUPED_BY_SIDE, conflictRanges = null).items.single().children
+
+        assertEquals(null, rows.single().note)
+    }
+
+    private fun build(
+        joined: JoinedResult,
+        layout: MergeOutlineLayout,
+        conflictRanges: List<TextRange>? = null,
+    ) = MergeOutlineModel.build(
+        joined, "base", "left", "right",
+        MergeSideName("main", "main"), MergeSideName("feature", "feature"), layout,
+        conflictRanges = conflictRanges,
+    )
 
     private fun row(
         subject: Subject,

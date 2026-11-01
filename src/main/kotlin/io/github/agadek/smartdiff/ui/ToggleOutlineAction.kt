@@ -29,6 +29,8 @@ class ToggleOutlineAction : ToggleAction(), DumbAware {
 
     private fun target(e: AnActionEvent): OutlineToggleTarget? {
         val viewer = e.getData(DiffDataKeys.DIFF_VIEWER)
-        return OutlineController.of(viewer) ?: MergeOutlineController.of(viewer)
+        OutlineController.of(viewer)?.let { return it }
+        MergeOutlineController.of(viewer)?.let { return it }
+        return e.getData(DiffDataKeys.MERGE_VIEWER)?.let { MergeOutlineController.of(it) }
     }
 }

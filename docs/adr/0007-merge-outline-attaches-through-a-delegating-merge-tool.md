@@ -4,7 +4,7 @@ status: accepted
 
 # The merge outline attaches to the merge window through a delegating MergeTool
 
-The three-way merge outline ([THREE-WAY-MERGE.md](../THREE-WAY-MERGE.md)) attaches to three-sided diffs through the existing `DiffExtension` (plan §6.1) and to the merge window through a `MergeTool` registered first, which lets the platform's text merge tool create the viewer and then puts the outline beside that viewer's editors (plan §6.2). Spike S6 read the platform sources for 2025.1 (branch 251) and checked the attachment in a platform test, `S6MergeSpikeTest`, with a placeholder behind the registry key `smartdiff.merge.outline.preview` (off by default).
+The three-way merge outline ([THREE-WAY-MERGE.md](../THREE-WAY-MERGE.md)) attaches to three-sided diffs through the existing `DiffExtension` (plan §6.1) and to the merge window through a `MergeTool` registered first, which lets the platform's text merge tool create the viewer and then puts the outline beside that viewer's editors (plan §6.2). Spike S6 read the platform sources for 2025.1 (branch 251) and checked the attachment in a platform test, `S6MergeSpikeTest`, with a placeholder behind the registry key `smartdiff.merge.outline.preview` (off by default); phase 3 replaced the placeholder with the real outline.
 
 ## What the platform offers
 

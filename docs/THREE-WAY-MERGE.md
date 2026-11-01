@@ -1,6 +1,6 @@
 # Three-Way Merge Outline Plan
 
-Status: proposal, 2026-10-23, with its open questions T1 to T5 decided the same day (§10). Phase 0, spike S6, is done ([§12](#12-spike-s6-results), [ADR 0007](adr/0007-merge-outline-attaches-through-a-delegating-merge-tool.md)); it raised question T6, decided the same day (§10). Phase 1, the join, is implemented (§5), and phase 2, three-sided diffs, is implemented (specs [02](specs/merge/02-merge-outline.md) and [03](specs/merge/03-three-sided-diffs.md)). It expands the roadmap's [structural outline for three-way merges](ROADMAP.md#structural-outline-for-three-way-merges) entry. Section numbers (§) refer to the [technical specification](TECHNICAL-SPECIFICATION.md), and terms follow the [glossary](GLOSSARY.md). Supported languages are those of the declaration engine today: Java, Kotlin, Scala 2 and Scala 3. The requirements are in [docs/specs/merge/](specs/README.md#merges).
+Status: proposal, 2026-10-23, with its open questions T1 to T5 decided the same day (§10). Phase 0, spike S6, is done ([§12](#12-spike-s6-results), [ADR 0007](adr/0007-merge-outline-attaches-through-a-delegating-merge-tool.md)); it raised question T6, decided the same day (§10). Phase 1, the join, is implemented (§5), phase 2, three-sided diffs, is implemented (specs [02](specs/merge/02-merge-outline.md) and [03](specs/merge/03-three-sided-diffs.md)), and phase 3, the merge window, is implemented ([04](specs/merge/04-merge-window.md)). It expands the roadmap's [structural outline for three-way merges](ROADMAP.md#structural-outline-for-three-way-merges) entry. Section numbers (§) refer to the [technical specification](TECHNICAL-SPECIFICATION.md), and terms follow the [glossary](GLOSSARY.md). Supported languages are those of the declaration engine today: Java, Kotlin, Scala 2 and Scala 3. The requirements are in [docs/specs/merge/](specs/README.md#merges).
 
 ## 1. Problem
 
@@ -194,7 +194,7 @@ Decided 2026-10-23:
 
 ## 12. Spike S6 results
 
-Done 2026-10-23 on IntelliJ IDEA Community 2025.1.3, from the platform sources of branch 251 and the platform test `S6MergeSpikeTest`. The placeholder that the test attaches stays in the plugin behind the registry key `smartdiff.merge.outline.preview`, off by default, until phases 2 and 3 replace it with the outline.
+Done 2026-10-23 on IntelliJ IDEA Community 2025.1.3, from the platform sources of branch 251 and the platform test `S6MergeSpikeTest`. The spike used a placeholder behind the registry key `smartdiff.merge.outline.preview`; phase 3 replaced it with the real outline.
 
 - **Attachment (R1):** the merge window runs no `DiffExtension` (the test opens a merge and no extension is offered a viewer). A `MergeTool` registered first lets the next accepting tool create the viewer and decorates it in place ([ADR 0007](adr/0007-merge-outline-attaches-through-a-delegating-merge-tool.md)); the test shows the platform's `TextMergeViewer` is still the window's viewer, with the placeholder beside its editors. Three-sided diffs attach through `OutlineDiffExtension` as planned (§6.1).
 - **Side titles (R2, T2):** the merge window's content titles come from the VCS's `MergeDialogCustomizer`, and Git's are:

@@ -1,6 +1,6 @@
 # Merge outline in the merge window
 
-Status: proposed, 2026-10-31
+Status: implemented, 2026-10-31
 
 **Description:** Shows the [merge outline](02-merge-outline.md) in the [merge window](../../GLOSSARY.md#merge-window), and keeps its rows pointing at the right code in the [result pane](../../GLOSSARY.md#result-pane) while the reviewer edits it.
 
@@ -30,6 +30,8 @@ Status: proposed, 2026-10-31
 
 - Conflicted files in the Changes tree.
 - Comparing the result with the base or the sides.
+- Following a declaration added on one side after the reviewer accepts it into the result.
+- Re-mapping declarations after the reviewer chooses another engine once the result has been edited.
 
 ## References
 

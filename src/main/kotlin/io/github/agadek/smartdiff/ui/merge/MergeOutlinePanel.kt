@@ -21,7 +21,6 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import io.github.agadek.smartdiff.engine.registry.EngineSelection
-import io.github.agadek.smartdiff.merge.MergeSide
 import io.github.agadek.smartdiff.ui.ChangeType
 import io.github.agadek.smartdiff.ui.SmartDiffSettings
 import io.github.agadek.smartdiff.ui.Tag
@@ -69,8 +68,11 @@ class MergeOutlinePanel internal constructor(private val controller: MergeOutlin
             templatePresentation.icon = AllIcons.General.Filter
             isPopup = true
         }
+        val toolbarActions = DefaultActionGroup(layout, filter).apply {
+            if (controller.showsRefresh) add(refresh)
+        }
         val toolbar = ActionManager.getInstance()
-            .createActionToolbar("SmartDiffMergeOutline", DefaultActionGroup(layout, filter, refresh), true)
+            .createActionToolbar("SmartDiffMergeOutline", toolbarActions, true)
         toolbar.targetComponent = this
 
         engines.renderer = object : SimpleListCellRenderer<ComparisonEngine>() {
@@ -107,13 +109,13 @@ class MergeOutlinePanel internal constructor(private val controller: MergeOutlin
         tree.addTreeSelectionListener { select(selectedItem()) }
         tree.addKeyListener(object : KeyAdapter() {
             override fun keyPressed(e: KeyEvent) {
-                if (e.keyCode == KeyEvent.VK_ENTER) selectedItem()?.let { controller.navigator.navigate(it); e.consume() }
+                if (e.keyCode == KeyEvent.VK_ENTER) selectedItem()?.let { controller.selection.navigate(it); e.consume() }
             }
         })
         object : DoubleClickListener() {
             override fun onDoubleClick(event: MouseEvent): Boolean {
                 val item = selectedItem() ?: return false
-                controller.navigator.navigate(item)
+                controller.selection.navigate(item)
                 return true
             }
         }.installOn(tree)
@@ -136,14 +138,14 @@ class MergeOutlinePanel internal constructor(private val controller: MergeOutlin
             engines.removeAllItems()
             selection.candidates.forEach(engines::addItem)
             engines.selectedItem = selection.selected
-            engines.isVisible = selection.offersChoice
+            engines.isVisible = controller.showsEngineChoice && selection.offersChoice
         } finally {
             updatingEngines = false
         }
     }
 
     internal fun show(state: MergeOutlineState) {
-        controller.navigator.clear()
+        controller.selection.clear()
         absence.text = ""
         banner.isVisible = false
         when (state) {
@@ -202,24 +204,13 @@ class MergeOutlinePanel internal constructor(private val controller: MergeOutlin
         (tree.selectionPath?.lastPathComponent as? DefaultMutableTreeNode)?.userObject as? MergeOutlineItem
 
     private fun select(item: MergeOutlineItem?) {
-        controller.navigator.select(item)
-        val shown = controller.state as? MergeOutlineState.Shown
-        absence.text = when {
-            item == null || item.isGroup -> ""
-            else -> {
-                val notes = buildList {
-                    if (shown != null && !shown.joined.isAnalyzed(MergeSide.LEFT)) add("${shown.leftName.display} was not analyzed")
-                    if (shown != null && !shown.joined.isAnalyzed(MergeSide.RIGHT)) add("${shown.rightName.display} was not analyzed")
-                    val missing = listOfNotNull(
-                        "left".takeIf { (shown == null || shown.joined.isAnalyzed(MergeSide.LEFT)) && item.leftRange == null },
-                        "base".takeIf { item.baseRange == null },
-                        "right".takeIf { (shown == null || shown.joined.isAnalyzed(MergeSide.RIGHT)) && item.rightRange == null },
-                    )
-                    if (missing.isNotEmpty()) add("Not present in the ${missing.joinToString(", ")} pane")
-                }
-                notes.joinToString("; ")
-            }
-        }
+        controller.selection.select(item)
+        refreshAbsence()
+    }
+
+    /** Updates the note for the selected row after an edit; the merge window's result pane calls this. */
+    internal fun refreshAbsence() {
+        absence.text = controller.noteFor(selectedItem())
     }
 
     private inner class LayoutAction : DumbAwareToggleAction("Group by side") {

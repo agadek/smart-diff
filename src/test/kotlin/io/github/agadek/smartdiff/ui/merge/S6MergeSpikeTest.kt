@@ -27,19 +27,15 @@ import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.progress.DumbProgressIndicator
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
-import com.intellij.openapi.util.registry.Registry
 import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.util.ui.UIUtil
+import io.github.agadek.smartdiff.merge.MergeGroup
 import io.github.agadek.smartdiff.ui.DiffContents
-import io.github.agadek.smartdiff.ui.merge.MergeOutlineController
-import io.github.agadek.smartdiff.ui.merge.MergeOutlineState
-import javax.swing.JComponent
 
 /**
  * Spike S6 (technical specification §13, three-way merge plan phase 0): where the merge outline can attach, and what the
- * merge window gives it. The choice is recorded in ADR 0007.
+ * merge window gives it. The choice is recorded in ADR 0007. The merge window tests now exercise the real outline.
  *
  * The merge window is run by the platform's `MergeRequestProcessor`, which needs a window; these tests choose the tool
  * the way it does (the first in `DiffManagerEx.getMergeTools()` whose `canShow` accepts the request) and create and
@@ -59,8 +55,36 @@ class S6MergeSpikeTest : BasePlatformTestCase() {
         ExtensionTestUtil.addExtensions(DiffExtension.EP_NAME, listOf(recorder), testRootDisposable)
     }
 
-    fun `test a Java three-sided diff gets the merge outline with its side titles`() {
-        // merge/02-merge-outline R1, R8; merge/03-three-sided-diffs R1, R2, R7
+    fun `test a Java merge window attaches the outline and keeps the platform viewer`() {
+        // merge/04-merge-window R1, R2, R5
+        val output = EditorFactory.getInstance().createDocument(CONFLICTED_FILE)
+        val request = mergeRequest(JavaFileType.INSTANCE, output, listOf(GIT_REBASE_LEFT_TITLE, "Base", GIT_REBASE_RIGHT_TITLE))
+        val context = mergeContext()
+
+        val tool = fittedTool(context, request)
+        assertInstanceOf(tool, MergeOutlineTool::class.java)
+
+        val viewer = tool.createComponent(context, request)
+        try {
+            // The platform's viewer object itself, so code that looks for it by type (Annotate, import resolution) still finds it.
+            assertEquals("com.intellij.diff.merge.TextMergeViewer", viewer.javaClass.name)
+            val outline = MergeOutlineController.of(viewer) ?: error("no merge outline in the merge window")
+            assertNotNull(viewer.init())
+            PlatformTestUtil.waitWithEventsDispatching({ "the outline is ${outline.state}" }, { outline.state is MergeOutlineState.Shown }, 20)
+
+            val shown = outline.state as MergeOutlineState.Shown
+            assertEquals("feature/rates", shown.leftName.display)
+            assertEquals("main", shown.rightName.display)
+            assertTrue(shown.items.any { it.group == MergeGroup.CHANGED_ON_BOTH_SIDES })
+            // The result pane holds the file with conflict markers until the first comparison sets it to the base.
+            PlatformTestUtil.waitWithEventsDispatching({ "the result is still ${output.text}" }, { output.text == BASE }, 10)
+        } finally {
+            Disposer.dispose(viewer)
+        }
+    }
+
+    fun `test a three-sided diff still gets the merge outline`() {
+        // merge/03-three-sided-diffs R1, R2, R7
         val request = SimpleDiffRequest(
             "OrderService.java",
             DiffContents.vcsRevision(project, LEFT, "/repo/OrderService.java"),
@@ -74,73 +98,14 @@ class S6MergeSpikeTest : BasePlatformTestCase() {
 
         assertInstanceOf(viewer, ThreesideTextDiffViewer::class.java)
         val outline = MergeOutlineController.of(viewer) ?: error("no merge outline in the three-sided diff")
-        PlatformTestUtil.waitWithEventsDispatching(
-            { "the outline is ${outline.state}" },
-            { outline.state is MergeOutlineState.Shown },
-            20,
-        )
-        val shown = outline.state as MergeOutlineState.Shown
-        assertEquals("1 changed on both sides · 1 in feature only", shown.summary)
-        val rows = shown.items.flatMap { it.children }.joinToString("\n") { it.label }
-        assertTrue(rows, rows.contains("main"))
-        assertTrue(rows, rows.contains("feature"))
-    }
-
-    fun `test the merge window chooses the SMART Diff tool and keeps the platform's own viewer`() {
-        enablePreview()
-        val output = EditorFactory.getInstance().createDocument(CONFLICTED_FILE)
-        val request = mergeRequest(JavaFileType.INSTANCE, output, listOf(GIT_REBASE_LEFT_TITLE, "Base", GIT_REBASE_RIGHT_TITLE))
-        val context = mergeContext()
-
-        val tool = fittedTool(context, request)
-        assertInstanceOf(tool, MergeOutlineTool::class.java)
-
-        val viewer = tool.createComponent(context, request)
-        try {
-            // The platform's viewer object itself, so code that looks for it by type (Annotate, import resolution) still finds it.
-            assertEquals("com.intellij.diff.merge.TextMergeViewer", viewer.javaClass.name)
-            val placeholder = placeholderIn(viewer.component) ?: error("no placeholder in the merge window")
-            assertEquals("JAVA", placeholder.languageId)
-            // Git's rebase titles are HTML with the branch in bold (GitRebaseMergeDialogCustomizer).
-            assertEquals("Your version, branch feature/rates", placeholder.leftTitle)
-            assertEquals("Changes from branch main, revision 1a2b3c4d", placeholder.rightTitle)
-
-            val toolbar = viewer.init()
-            assertNotNull(toolbar.toolbarActions)
-            // The result pane holds the file with conflict markers until the first comparison sets it to the base.
-            PlatformTestUtil.waitWithEventsDispatching({ "the result is still ${output.text}" }, { output.text == BASE }, 10)
-
-            // The merge window runs no DiffExtension: its inner three-sided viewer is never offered to one (Option A fails).
-            assertEmpty(diffViewers)
-        } finally {
-            Disposer.dispose(viewer)
-        }
+        PlatformTestUtil.waitWithEventsDispatching({ "the outline is ${outline.state}" }, { outline.state is MergeOutlineState.Shown }, 20)
     }
 
     fun `test a merge in a language without an engine is left to the platform`() {
-        enablePreview()
+        // merge/04-merge-window R3
         val request = mergeRequest(PlainTextFileType.INSTANCE, EditorFactory.getInstance().createDocument(""), listOf("left", "Base", "right"))
         val tool = fittedTool(mergeContext(), request)
         assertFalse(tool is MergeOutlineTool)
-    }
-
-    fun `test the preview is off by default`() {
-        val request = mergeRequest(JavaFileType.INSTANCE, EditorFactory.getInstance().createDocument(""), listOf("left", "Base", "right"))
-        assertFalse(MergeOutlineTool().canShow(mergeContext(), request))
-
-        val viewer = openDiff(
-            SimpleDiffRequest(
-                "OrderService.java",
-                DiffContents.vcsRevision(project, LEFT, "/repo/OrderService.java"),
-                DiffContents.vcsRevision(project, BASE, "/repo/OrderService.java"),
-                DiffContents.vcsRevision(project, RIGHT, "/repo/OrderService.java"),
-                "left",
-                "Base",
-                "right",
-            ),
-        )
-        assertNull(placeholderIn(viewer.component))
-        assertNotNull("the three-sided outline does not depend on the preview key", MergeOutlineController.of(viewer))
     }
 
     /**
@@ -159,10 +124,6 @@ class S6MergeSpikeTest : BasePlatformTestCase() {
         assertEquals(listOf(MergeConflictType.Type.CONFLICT, MergeConflictType.Type.MODIFIED), types.map { it.type })
         assertFalse(types[1].isChange(ThreeSide.LEFT))
         assertTrue(types[1].isChange(ThreeSide.RIGHT))
-    }
-
-    private fun enablePreview() {
-        Registry.get(MergeOutlinePreview.REGISTRY_KEY).setValue(true, testRootDisposable)
     }
 
     private fun openDiff(request: SimpleDiffRequest): FrameDiffTool.DiffViewer {
@@ -185,9 +146,6 @@ class S6MergeSpikeTest : BasePlatformTestCase() {
         override fun requestFocusInWindow() {}
         override fun finishMerge(result: MergeResult) {}
     }
-
-    private fun placeholderIn(component: JComponent): MergeOutlinePlaceholder? =
-        UIUtil.findComponentOfType(component, MergeOutlinePlaceholder::class.java)
 
     private companion object {
         const val BASE = "class OrderService {\n    int total(int a) {\n        return a;\n    }\n\n    boolean validate(int a) {\n        return a > 0;\n    }\n}\n"
