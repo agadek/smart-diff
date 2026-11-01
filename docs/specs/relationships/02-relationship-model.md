@@ -42,6 +42,7 @@ Status: proposed, 2026-11-01
 
 ## References
 
+- [Details: design and tests](02-relationship-model-details.md)
 - [ADR 0008](../../adr/0008-relationships-are-the-source-of-truth-for-pairing.md)
 - [Structural relationships plan §5 and §9](../../STRUCTURAL-RELATIONSHIPS.md)
 - [Engine contract](../engines/02-engine-contract.md)

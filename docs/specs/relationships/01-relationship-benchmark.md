@@ -46,6 +46,7 @@ Status: proposed, 2026-11-01
 
 ## References
 
+- [Details: design and tests](01-relationship-benchmark-details.md)
 - [Structural relationships plan](../../STRUCTURAL-RELATIONSHIPS.md)
 - [Relationship benchmark plan](../../RELATIONSHIP-BENCHMARK.md)
 - [ADR 0008](../../adr/0008-relationships-are-the-source-of-truth-for-pairing.md)

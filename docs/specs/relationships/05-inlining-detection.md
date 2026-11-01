@@ -34,6 +34,7 @@ Status: proposed, 2026-11-01
 
 ## References
 
+- [Details: design and tests](05-inlining-detection-details.md)
 - [Structural relationships plan §6.5](../../STRUCTURAL-RELATIONSHIPS.md#65-extraction-and-inlining)
 - [Extraction detection design](../../EXTRACTION-DETECTION.md)
 - [ADR 0003](../../adr/0003-conservative-classification.md)

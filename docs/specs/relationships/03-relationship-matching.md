@@ -36,6 +36,7 @@ Status: proposed, 2026-11-01
 
 ## References
 
+- [Details: design and tests](03-relationship-matching-details.md)
 - [Structural relationships plan §6](../../STRUCTURAL-RELATIONSHIPS.md#6-matching)
 - [Rename candidates](../declarations/03-rename-candidates.md)
 - [Relationship model](02-relationship-model.md)

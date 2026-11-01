@@ -35,6 +35,7 @@ Status: proposed, 2026-11-01
 
 ## References
 
+- [Details: design and tests](04-rename-grouping-details.md)
 - [Structural relationships plan §7](../../STRUCTURAL-RELATIONSHIPS.md#7-reference-aware-rename-grouping)
 - [ADR 0008](../../adr/0008-relationships-are-the-source-of-truth-for-pairing.md)
 - [ADR 0002](../../adr/0002-parser-neutral-model-with-psi-first.md)

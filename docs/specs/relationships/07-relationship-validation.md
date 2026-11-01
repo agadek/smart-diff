@@ -28,6 +28,7 @@ Status: proposed, 2026-11-01
 
 ## References
 
+- [Details: design and tests](07-relationship-validation-details.md)
 - [Structural relationships plan §11 to §13](../../STRUCTURAL-RELATIONSHIPS.md#11-benchmark-and-release-gates)
 - [Relationship benchmark plan](../../RELATIONSHIP-BENCHMARK.md)
 - [VALIDATION.md](../../VALIDATION.md)

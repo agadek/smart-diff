@@ -1,6 +1,6 @@
 # Relationship Benchmark
 
-Status: proposal, 2026-10-30; specified in [relationships/01](specs/relationships/01-relationship-benchmark.md) (2026-11-01), which also settles Q1, Q3, Q5 and Q7 as proposed there. This benchmark supports the [structural relationships and refactoring-awareness program](STRUCTURAL-RELATIONSHIPS.md). It measures matching quality before and after every matcher change; it does not define the matcher itself.
+Status: proposal, 2026-10-30; specified in [relationships/01](specs/relationships/01-relationship-benchmark.md) (2026-11-01), which also settles Q1, Q3, Q5 and Q7 as proposed there. The label format, metrics, gates and harness are in its [details file](specs/relationships/01-relationship-benchmark-details.md), which takes precedence over §3 to §9 below. This benchmark supports the [structural relationships and refactoring-awareness program](STRUCTURAL-RELATIONSHIPS.md). It measures matching quality before and after every matcher change; it does not define the matcher itself.
 
 Related: [product scope](specs/README.md#product-scope), [technical specification](TECHNICAL-SPECIFICATION.md), [roadmap](ROADMAP.md), [extraction detection](EXTRACTION-DETECTION.md), [validation](VALIDATION.md), [structural relationships](STRUCTURAL-RELATIONSHIPS.md).
 

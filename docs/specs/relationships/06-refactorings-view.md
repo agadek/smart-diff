@@ -34,6 +34,7 @@ Status: proposed, 2026-11-01
 
 ## References
 
+- [Details: design and tests](06-refactorings-view-details.md)
 - [Structural relationships plan §10](../../STRUCTURAL-RELATIONSHIPS.md#10-viewer)
 - [ADR 0008](../../adr/0008-relationships-are-the-source-of-truth-for-pairing.md)
 - [Structural outline](../outline/01-structural-outline.md)
