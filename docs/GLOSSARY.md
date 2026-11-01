@@ -194,6 +194,23 @@ _Avoid_: duplicate change, identical conflict
 A declaration changed on both sides with no conflict of the merge window inside it.
 _Avoid_: auto-merged, safe merge
 
+## Relationships
+
+### Relationship
+
+A link between declarations on the two sides that belong together, such as a rename, a move, a kind change, an extraction or an inlining. It adds to the change tree and never replaces or hides a change.
+_Avoid_: mapping, correspondence, semantic match
+
+### Confidence
+
+How strong the evidence for a relationship is: high, medium or low. It is never a claim that the two versions behave the same.
+_Avoid_: probability, certainty, score
+
+### Evidence
+
+The facts a relationship rests on, such as the old and new names, the shared code or the containers, with the ranges they compare.
+_Avoid_: reason, proof
+
 ## Presentation
 
 ### Structural outline

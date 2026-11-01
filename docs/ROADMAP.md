@@ -1,6 +1,6 @@
 # SMART Diff Roadmap
 
-Status: 2026-10-23. Items after the first release are candidates, not commitments; their order is a proposal. Scope details live in the [product specification](SPECIFICATION.md) and [technical specification](TECHNICAL-SPECIFICATION.md).
+Status: 2026-11-01. Items after the first release are candidates, not commitments; their order is a proposal. Scope details live in the [product specification](SPECIFICATION.md) and [technical specification](TECHNICAL-SPECIFICATION.md).
 
 ## First release
 
@@ -29,6 +29,33 @@ Keep a single space where the source separates words in a type (`Class<out Annot
 ### Full nothing-hidden coverage in the validation
 
 A nothing-hidden check cheap enough for large files, so the corpus validation covers every file (414 of 1279 were too large for the current one).
+
+## 0.2.0: three-way merge outline
+
+Decided 2026-10-30. It comes before everything else under [Later](#later), and ships the [structural outline for three-way merges](#structural-outline-for-three-way-merges) for Java, Kotlin, Scala 2 and Scala 3 together. Its features are specified in [docs/specs/merge/](specs/README.md#merges).
+
+| Work | Spec | State |
+| --- | --- | --- |
+| Join of the two comparisons | [merge/01](specs/merge/01-merge-join.md) | Implemented, PR #40 |
+| Merge outline and three-sided diffs | [merge/02](specs/merge/02-merge-outline.md), [merge/03](specs/merge/03-three-sided-diffs.md) | Implemented, PRs #42 to #44 |
+| Merge window | [merge/04](specs/merge/04-merge-window.md) | Implemented, PRs #46 and #47 |
+| Scala merges and golden merge fixtures | [merge/05](specs/merge/05-scala-merges.md) | Implemented, PR #49 |
+| Validation on real merge commits | [merge/06](specs/merge/06-merge-validation.md) | Specified, PR #48; not started |
+| Outline for languages without an engine, and the "not analyzed" reason in the Changes tree | [outline/01](specs/outline/01-structural-outline.md), [changes-tree/01](specs/changes-tree/01-changes-tree-summary.md) | Implemented, PR #37 |
+
+0.2.0 is released once the merge validation meets its criteria (merge/06 R15 to R17) and its results are in [VALIDATION.md](VALIDATION.md), following [RELEASING.md](RELEASING.md).
+
+## After 0.2.0: structural relationships
+
+Proposed 2026-11-01 as the next item after 0.2.0. Relationships between declarations (renames, moves, kind changes, extractions, inlinings) become one list with a confidence and evidence, measured by a labelled benchmark before any matcher change. Planned in [STRUCTURAL-RELATIONSHIPS.md](STRUCTURAL-RELATIONSHIPS.md) and [RELATIONSHIP-BENCHMARK.md](RELATIONSHIP-BENCHMARK.md); the model is decided in [ADR 0008](adr/0008-relationships-are-the-source-of-truth-for-pairing.md).
+
+| Step | Spec | Done when |
+| --- | --- | --- |
+| Benchmark and today's baseline | [relationships/01](specs/relationships/01-relationship-benchmark.md) | The baseline report of today's engine is in VALIDATION.md |
+| Relationship model, with today's fields computed from it | [relationships/02](specs/relationships/02-relationship-model.md) | The outline, Changes tree and merge outline are unchanged, and the contract checks relationships |
+| Better pairing, references, inlining, refactorings view | Not specified yet | Each step passes the benchmark gate |
+
+It also covers the later [rename grouping across usages](#rename-grouping-across-usages) item, through a separate reference pass.
 
 ## Later
 
@@ -60,7 +87,7 @@ It comes right after the [Changes tree level 2](#multi-file-summary-in-the-chang
 - **Approach:** run the selected comparison engine twice, base → left and base → right, and join both results on base-side ranges. No change to the engine interface; the request gains an optional hint so the Scala dialect is chosen from all three texts.
 - **Groups:** changed on both sides (likely conflicts), changed only on one side, uncertain; the same change on both sides is marked as such.
 - **Integration:** a `DiffExtension` for three-sided diffs, and for the merge window a `MergeTool` registered first that decorates the platform's own merge viewer, decided by spike S6 ([ADR 0007](adr/0007-merge-outline-attaches-through-a-delegating-merge-tool.md)). Base ranges are tracked into the editable result pane.
-- **Phases:** spike S6 first (done 2026-10-23, [THREE-WAY-MERGE.md §12](THREE-WAY-MERGE.md#12-spike-s6-results)), then the join (done 2026-10-23), three-sided diffs, the merge window, Scala fixtures and a validation on replayed merge commits.
+- **Phases:** spike S6 (done 2026-10-23, [THREE-WAY-MERGE.md §12](THREE-WAY-MERGE.md#12-spike-s6-results)), the join, three-sided diffs, the merge window and the merge fixtures (done 2026-11-01), then a validation on replayed merge commits. Tracked in [0.2.0](#020-three-way-merge-outline).
 - **Decided 2026-10-23** ([THREE-WAY-MERGE.md §10](THREE-WAY-MERGE.md#10-decisions)): grouped by side with a toggle to the container tree; sides named by the merge window's titles, shortened; rows changed on both sides that merged without a conflict marked as such; the outline follows the existing setting; the item comes right after the Changes tree level 2.
 
 ### More languages
