@@ -101,7 +101,7 @@ Planned for the release after the first one (decided 2026-10-21), after the 0.1.
 - **Declaration kinds:** classes, traits, objects (including companions and package objects), enums and enum cases, `def`, `val`/`var`, type aliases, Scala 3 givens and extension methods, and top-level definitions. This adds `TRAIT`, `GIVEN` and `EXTENSION` to `DeclarationKind` (decided 2026-10-22, technical spec §6.8).
 - **Naming and signatures:** anonymous givens are named by their type, an extension block is a container named by its receiver type, `val (a, b) = …` is one property named `(a, b)`, and parameter lists are joined with `;`, keeping `using`/`implicit` (decided 2026-10-22, technical spec §6.8).
 - **Build and CI:** the Scala plugin is not bundled, so the build pins a Marketplace version compatible with the lowest supported IDE, and Plugin Verifier needs a compatible Scala plugin for every IDE it checks. The Scala PSI is not a public API, so internal-API usage is expected in verifier reports and must be reviewed each release.
-- **Fixtures:** the standard set from the product spec for both dialects, plus companion objects, givens, extension methods and a braces-versus-indentation change in Scala 3.
+- **Fixtures:** the standard set of the [technical specification](TECHNICAL-SPECIFICATION.md#12-testing) for both dialects, plus companion objects, givens, extension methods and a braces-versus-indentation change in Scala 3.
 
 ### Structural outline for three-way merges
 
@@ -115,7 +115,7 @@ It comes right after the [Changes tree level 2](#multi-file-summary-in-the-chang
 
 ### More languages
 
-Add declaration-engine providers for further languages the host IDE parses, after [Scala](#scala) (for example JavaScript/TypeScript in Ultimate/WebStorm, Python in PyCharm), each with the fixtures the product spec requires.
+Add declaration-engine providers for further languages the host IDE parses, after [Scala](#scala) (for example JavaScript/TypeScript in Ultimate/WebStorm, Python in PyCharm), each with the fixtures the [technical specification](TECHNICAL-SPECIFICATION.md#12-testing) requires.
 
 *(gap review)* SemanticDiff supports 14+ languages and formats. Structured data files (JSON, XML, YAML) are a cheap addition on top of the IDE's own parsers: keys and elements are the declarations, and reordered keys in formats where order carries no meaning can be reported as moved.
 
@@ -143,7 +143,7 @@ Link an added method or function to the code it was extracted from. When most of
 
 ### Hide comment-only changes
 
-*(gap review)* An opt-in toggle in the diff that hides declarations whose only change is in comments, or marks them as comment-only. Comments count as changes by default (product spec), and the first release has no global ignore rule, so this stays off unless the user turns it on.
+*(gap review)* An opt-in toggle in the diff that hides declarations whose only change is in comments, or marks them as comment-only. Comments count as changes by default ([change classification](specs/declarations/02-change-classification.md)), and the first release has no global ignore rule, so this stays off unless the user turns it on.
 
 ### Opt-in equivalence rules
 

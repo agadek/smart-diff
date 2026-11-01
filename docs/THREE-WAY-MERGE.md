@@ -28,7 +28,7 @@ Goals:
 
 Non-goals:
 
-- Resolving, applying or editing anything. SMART Diff never touches the result pane; merge conflict resolution stays a product non-goal ([product specification](SPECIFICATION.md#non-goals-for-the-first-release)).
+- Resolving, applying or editing anything. SMART Diff never touches the result pane; merge conflict resolution stays a product non-goal ([product scope](specs/README.md#product-scope), P4).
 - A semantic merge: deciding that two edits can be combined, or combining them.
 - Files with conflict markers opened in an ordinary editor, and merges of directories or binary files.
 - Cross-file effects, such as a method one side renamed and the other side calls from another file.

@@ -2,6 +2,21 @@
 
 One file per feature, in one folder per context, written as described in the [specification guide](../SPEC-GUIDE.md). Key words link to the [glossary](../GLOSSARY.md).
 
+## Product scope
+
+SMART Diff adds a [structural outline](../GLOSSARY.md#structural-outline) to the IntelliJ diff. It shows which [declarations](../GLOSSARY.md#declaration) changed and how, and the [native diff](../GLOSSARY.md#native-diff) stays the detail view and the fallback. These rules hold for every feature below:
+
+- **P1** No source code leaves the IDE process, and the plugin sends no telemetry.
+- **P2** The plugin never claims that two versions behave the same.
+- **P3** The plugin never hides a change by default, and every change stays reachable in the native diff.
+- **P4** The plugin never edits code, resolves merge conflicts or applies patches.
+- **P5** Unsupported, malformed or oversized files still open in the native diff.
+- **P6** The plugin works in IntelliJ Platform 2025.1 and newer, checked by Plugin Verifier on 2025.1 and the latest release.
+- **P7** Comparisons never run on the UI thread, and the IDE stays responsive.
+- **P8** The outline is usable from the keyboard, every row has an accessible name, and labels never rely on color alone.
+
+Out of scope for now: AI explanations, cloud processing, expression-level differencing inside a declaration, and cross-file refactoring detection. Later work is in the [roadmap](../ROADMAP.md).
+
 ## Engines
 
 | Feature | Status |
