@@ -184,6 +184,7 @@ class MergeOutlineModelTest {
 
         val model = build(joined, MergeOutlineLayout.GROUPED_BY_SIDE)
 
+        assertEquals("Uncertain", model.items.single().title)
         val row = model.items.single().children.single()
         assertEquals("candidate: method f()", row.children.single().title)
     }
@@ -204,7 +205,9 @@ class MergeOutlineModelTest {
         )
         val joined = JoinedResult(result(left), result(right), nodes = listOf(row(f, MergeGroup.UNCERTAIN, left = left, right = right)))
 
-        val candidates = build(joined, MergeOutlineLayout.GROUPED_BY_SIDE).items.single().children.single().children
+        val group = build(joined, MergeOutlineLayout.GROUPED_BY_SIDE).items.single()
+        assertEquals("Uncertain", group.title)
+        val candidates = group.children.single().children
 
         assertEquals(
             listOf("candidate: method leftCandidate()", "candidate: method rightCandidate()"),

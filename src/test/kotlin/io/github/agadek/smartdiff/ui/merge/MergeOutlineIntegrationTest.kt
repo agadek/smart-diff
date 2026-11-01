@@ -21,6 +21,7 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import com.intellij.testFramework.EditorTestUtil
 import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.TestActionEvent
@@ -237,23 +238,44 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
 
     fun `test selecting a row pauses and then resumes synchronized scrolling`() {
         // merge/03-three-sided-diffs R6
-        val outline = open().awaitShown()
+        val paddingBefore = (1..200).joinToString("\n") { "// before $it" }
+        val paddingAfter = (1..200).joinToString("\n") { "// after $it" }
+        val outline = open(
+            base = "$paddingBefore\n$BASE$paddingAfter",
+            left = "$paddingBefore\n$LEFT$paddingAfter",
+            right = "$paddingBefore\n$RIGHT$paddingAfter",
+        ).awaitShown()
         val viewer = viewer(outline)
         val sync = syncSupport(viewer) ?: error("the viewer has no synchronized scrolling")
+        ThreeSide.values().forEach { EditorTestUtil.setEditorVisibleSize(viewer.getEditor(it), 80, 8) }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+
         val duringSelection = mutableListOf<Boolean>()
         val listener = com.intellij.openapi.editor.event.VisibleAreaListener {
             duringSelection += duringSyncScroll(sync)
         }
-        viewer.getEditor(ThreeSide.LEFT).scrollingModel.addVisibleAreaListener(listener)
+        val left = viewer.getEditor(ThreeSide.LEFT)
+        left.scrollingModel.addVisibleAreaListener(listener)
         try {
             selectFirstChange(outline)
         } finally {
-            viewer.getEditor(ThreeSide.LEFT).scrollingModel.removeVisibleAreaListener(listener)
+            left.scrollingModel.removeVisibleAreaListener(listener)
         }
 
         assertTrue("the selection did not scroll a pane", duringSelection.isNotEmpty())
         assertTrue("a pane scrolled with synchronized scrolling active", duringSelection.all { it })
-        assertFalse("the next user scroll does not sync the panes", duringSyncScroll(sync))
+
+        val base = viewer.getEditor(ThreeSide.BASE)
+        val right = viewer.getEditor(ThreeSide.RIGHT)
+        val leftBefore = left.scrollingModel.verticalScrollOffset
+        val baseBefore = base.scrollingModel.verticalScrollOffset
+        val rightBefore = right.scrollingModel.verticalScrollOffset
+        left.scrollingModel.scrollVertically(leftBefore + left.lineHeight * 20)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+
+        assertNotEquals("the left pane did not scroll", leftBefore, left.scrollingModel.verticalScrollOffset)
+        assertNotEquals("the base pane did not follow the next user scroll", baseBefore, base.scrollingModel.verticalScrollOffset)
+        assertNotEquals("the right pane did not follow the next user scroll", rightBefore, right.scrollingModel.verticalScrollOffset)
     }
 
     fun `test the outline never claims a merge is safe and never edits a pane`() {
@@ -333,7 +355,8 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
             val document = contents[0].document
             document.insertString(document.text.lastIndexOf("}"), "    void extra() {}\n")
         }
-        assertSame("the outline compared again before typing stopped", before, outline.state)
+        pumpFor(100)
+        assertSame("the outline compared again before the 300 ms debounce", before, outline.state)
 
         PlatformTestUtil.waitWithEventsDispatching(
             { "the outline is ${outline.state}" },
@@ -353,11 +376,14 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
         val outline = openRequest(threeSidedRequest(contents))
 
         assertTrue("the first comparisons did not start", engine.started.await(10, TimeUnit.SECONDS))
-        WriteCommandAction.runWriteCommandAction(project) {
-            val document = contents[0].document
-            document.insertString(document.text.lastIndexOf("}"), "    void extra() {}\n")
+        try {
+            WriteCommandAction.runWriteCommandAction(project) {
+                val document = contents[0].document
+                document.insertString(document.text.lastIndexOf("}"), "    void extra() {}\n")
+            }
+        } finally {
+            engine.release.countDown()
         }
-        engine.release.countDown()
 
         PlatformTestUtil.waitWithEventsDispatching(
             { "the outline is ${outline.state}" },
@@ -415,6 +441,16 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
             20,
         )
         return this
+    }
+
+    /** Dispatches queued events for [millis], without reaching a longer delay such as the comparison debounce. */
+    private fun pumpFor(millis: Long) {
+        val deadline = System.currentTimeMillis() + millis
+        while (System.currentTimeMillis() < deadline) {
+            PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+            Thread.sleep(5)
+        }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
     }
 
     private fun viewer(outline: MergeOutlineController): ThreesideTextDiffViewer =
@@ -520,7 +556,7 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
             val call = calls.incrementAndGet()
             if (call <= 2) {
                 started.countDown()
-                release.await()
+                release.await(10, TimeUnit.SECONDS)
                 return LineEngine().compare(request, cancellation).copy(engineVersion = "stale-$call")
             }
             cancellation.checkCanceled()
