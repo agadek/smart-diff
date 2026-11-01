@@ -1,6 +1,6 @@
 # Change labels: details
 
-Status: implemented, 2026-11-01
+Status: accepted, 2026-11-01
 
 Feature: [Change labels](06-change-labels.md)
 
@@ -33,3 +33,5 @@ Feature: [Change labels](06-change-labels.md)
 | R6, R8, R9 | `OutlineModelTest` summary cases, including hidden changes |
 | R10–R12 | `OutlineModelTest` filter cases |
 | R13 | `OutlineModelTest` accessible names and the label rendering tests |
+
+The tests above check the behavior but do not name these requirements; requirement-named tests are still needed before the feature moves to implemented.

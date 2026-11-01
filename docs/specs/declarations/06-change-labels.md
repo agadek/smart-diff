@@ -1,6 +1,6 @@
 # Change labels
 
-Status: implemented, 2026-11-01
+Status: accepted, 2026-11-01
 
 **Description:** One set of user-facing [labels](../../GLOSSARY.md#label) says how each change is classified, how the [summary line](../../GLOSSARY.md#summary-line) counts it, and whether the [change type filter](../../GLOSSARY.md#change-type-filter) can hide it.
 

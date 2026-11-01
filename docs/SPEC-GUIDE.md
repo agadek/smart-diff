@@ -26,10 +26,10 @@ Feature specs are in `docs/specs/`, in one folder per context. A context is a pa
 | `docs/specs/changes-tree/` | The summary and declarations in the Changes tree |
 | `docs/specs/merge/` | The outline in three-way merges and three-sided diffs |
 | `docs/specs/relationships/` | Relationships between declarations: their model, matching, rename grouping, inlining, refactorings view, benchmark and validation |
-| `docs/specs/validation/` | Repeatable studies that are not release-corpus runs, such as usability validation |
 | `docs/specs/settings/` | Settings and toolbar toggles |
 
 - Put a feature in the folder of the context it changes most.
+- Put a validation study in the folder of the context it validates, such as `outline/06-usability-validation.md`.
 - Add a new folder only when a feature fits none of the existing ones.
 - Folder names are lower case, with hyphens.
 

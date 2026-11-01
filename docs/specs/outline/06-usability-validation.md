@@ -27,7 +27,7 @@ Status: proposed, 2026-11-01
 
 ## References
 
-- [Details: method and analysis](01-usability-validation-details.md)
+- [Details: method and analysis](06-usability-validation-details.md)
 - [Product scope](../README.md#product-scope)
 - [Validation](../../VALIDATION.md)
 - [Relationship benchmark](../relationships/01-relationship-benchmark.md)
