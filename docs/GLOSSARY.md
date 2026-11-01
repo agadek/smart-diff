@@ -194,12 +194,49 @@ _Avoid_: duplicate change, identical conflict
 A declaration changed on both sides with no conflict of the merge window inside it.
 _Avoid_: auto-merged, safe merge
 
+## Relationships
+
+### Relationship
+
+A link between declarations on the two sides that belong together, such as a rename, a move, a kind change, an extraction or an inlining. It adds to the change tree and never replaces or hides a change.
+_Avoid_: mapping, correspondence, semantic match
+
+### Confidence
+
+How strong the evidence for a relationship is: high, medium or low. It is never a claim that the two versions behave the same.
+_Avoid_: probability, certainty, score
+
+### Evidence
+
+The facts a relationship rests on, such as the old and new names, the shared code or the containers, with the ranges they compare.
+_Avoid_: reason, proof
+
+### Usage
+
+A place in the compared file that refers to a declaration by name, such as a call or a type reference.
+_Avoid_: call site, reference, occurrence
+
+### Inlining
+
+A removed method or function whose body is mostly code that a changed declaration on the new side has and did not have. It stays removed and is linked to that declaration, its inlining target. Specified in [inlining detection](specs/relationships/05-inlining-detection.md).
+_Avoid_: merged method, moved code
+
+### Inlining target
+
+The changed declaration that an inlining's code went into. It is labelled `code inlined from <declaration>`.
+_Avoid_: destination, caller
+
 ## Presentation
 
 ### Structural outline
 
 The tree of changed declarations and file regions shown for one comparison.
 _Avoid_: semantic view, structure diff, change tree
+
+### Refactorings view
+
+The view of the structural outline that lists relationships first and the other changes after them. A toolbar button switches between it and the container tree.
+_Avoid_: refactoring panel, semantic view
 
 ### Summary line
 
