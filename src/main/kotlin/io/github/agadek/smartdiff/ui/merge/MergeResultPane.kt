@@ -44,23 +44,42 @@ internal class MergeResultPane(
     private var prepared = false
     private var mappingReady = false
     private var released = false
+    private var coveredByChange = emptyList<TextRange>()
     private val listenerParent = Disposer.newDisposable("smartdiff.merge.result.listener")
 
     /** Lets the panel update its note when an edit changes whether the selected row is still tracked. */
     var onSelectionChanged: (() -> Unit)? = null
     private val debounce = Timer(MAPPING_DELAY_MILLIS) { mapNow() }.apply { isRepeats = false }
     private val documentListener = object : DocumentListener {
+        override fun beforeDocumentChange(event: DocumentEvent) {
+            if (!prepared || !mappingReady) return
+            val end = event.offset + event.oldLength
+            coveredByChange = markers.filterValues {
+                it.isValid && it.startOffset >= event.offset && it.endOffset <= end
+            }.keys.toList()
+        }
+
         override fun documentChanged(event: DocumentEvent) {
             if (!prepared) return
             // The viewer's first comparison sets the result back to the base; an earlier map would be against markers.
-            if (resultDocument.text == baseDocument.text || isWholeDocumentReplacement(event)) {
+            if (resultIsBase() || isWholeDocumentReplacement(event)) {
+                coveredByChange = emptyList()
                 resetMapping()
                 return
             }
             if (mappingReady) {
-                render(scroll = false)
+                // A replace over one declaration (an accepted side) keeps its frame; a delete leaves it untracked.
+                if (event.oldLength > 0 && event.newLength > 0 && coveredByChange.size == 1) {
+                    coveredByChange.single().let { key ->
+                        markers.remove(key)?.dispose()
+                        markers[key] = resultDocument.createRangeMarker(event.offset, event.offset + event.newLength)
+                    }
+                }
+                coveredByChange = emptyList()
+                renderResultOnly()
                 onSelectionChanged?.invoke()
             } else {
+                coveredByChange = emptyList()
                 debounce.restart()
             }
         }
@@ -80,7 +99,7 @@ internal class MergeResultPane(
     fun prepare(ranges: List<TextRange>) {
         val distinct = ranges.distinct()
         if (prepared && distinct == preparedRanges) {
-            if (!mappingReady && resultDocument.text == baseDocument.text) mapNow()
+            if (!mappingReady && resultIsBase()) mapNow()
             return
         }
         if (mappingReady) {
@@ -91,7 +110,7 @@ internal class MergeResultPane(
         }
         preparedRanges = distinct
         prepared = true
-        if (resultDocument.text == baseDocument.text) mapNow() else debounce.restart()
+        if (resultIsBase()) mapNow() else debounce.restart()
     }
 
     override fun select(item: MergeOutlineItem?) {
@@ -117,7 +136,7 @@ internal class MergeResultPane(
     /** The panel's note for [item] when the result no longer tracks its declaration (merge window spec R10, R11). */
     fun note(item: MergeOutlineItem?): String {
         if (item == null || item.isGroup || !mappingReady) return ""
-        val range = item.baseRange ?: return "not tracked"
+        val range = item.baseRange ?: return "Not present in the result pane"
         return if (markers[range]?.let(::tracked) == true) "" else "not tracked"
     }
 
@@ -128,11 +147,7 @@ internal class MergeResultPane(
         mapping?.let { map ->
             preparedRanges.forEach { range ->
                 map.map(range)?.let { mapped ->
-                    markers[range] = resultDocument.createRangeMarker(mapped.start, mapped.end).also {
-                        // A side accepted over a whole declaration should still frame it; a delete leaves it empty.
-                        it.isGreedyToLeft = true
-                        it.isGreedyToRight = true
-                    }
+                    markers[range] = resultDocument.createRangeMarker(mapped.start, mapped.end)
                 }
             }
         }
@@ -141,7 +156,10 @@ internal class MergeResultPane(
         onSelectionChanged?.invoke()
     }
 
-    /** Rebuilds the map after the viewer or an accepted side replaced the whole result. */
+    /**
+     * Rebuilds the map after the viewer's first comparison or a whole-file paste replaced the result. The frame clears
+     * for the mapping delay; that is intended for both cases, and the line diff then marks edited lines as untracked.
+     */
     private fun resetMapping() {
         debounce.stop()
         markers.values.forEach { it.dispose() }
@@ -151,6 +169,9 @@ internal class MergeResultPane(
         onSelectionChanged?.invoke()
         if (prepared) debounce.restart()
     }
+
+    private fun resultIsBase(): Boolean =
+        resultDocument.textLength == baseDocument.textLength && resultDocument.text == baseDocument.text
 
     private fun isWholeDocumentReplacement(event: DocumentEvent): Boolean {
         val oldLength = event.document.textLength - event.newLength + event.oldLength
@@ -162,9 +183,15 @@ internal class MergeResultPane(
         clearSideHighlighters()
         val item = selected ?: return
         renderResult(item, scroll)
-        renderSide(leftDocument, item.leftRange)
-        renderSide(baseDocument, item.baseRange)
-        renderSide(rightDocument, item.rightRange)
+        renderSide(leftDocument, item.leftRange, scroll)
+        renderSide(baseDocument, item.baseRange, scroll)
+        renderSide(rightDocument, item.rightRange, scroll)
+    }
+
+    /** Redraws only the changing result pane; the sides never change while the result is edited. */
+    private fun renderResultOnly() {
+        clearHighlighters()
+        selected?.let { renderResult(it, scroll = false) }
     }
 
     private fun renderResult(item: MergeOutlineItem, scroll: Boolean) {
@@ -176,12 +203,13 @@ internal class MergeResultPane(
         if (scroll) DiffUtil.scrollEditor(editor, editor.document.getLineNumber(start), false)
     }
 
-    private fun renderSide(document: Document, range: TextRange?) {
+    private fun renderSide(document: Document, range: TextRange?, scroll: Boolean) {
         if (range == null) return
         val editor = editor(document) ?: return
         val start = range.start.coerceIn(0, editor.document.textLength)
         val end = range.end.coerceIn(start, editor.document.textLength)
         frame(editor, start, end, sideHighlighters)
+        if (scroll) DiffUtil.scrollEditor(editor, editor.document.getLineNumber(start), false)
     }
 
     private fun frame(editor: Editor, start: Int, end: Int, into: MutableList<RangeHighlighter>) {

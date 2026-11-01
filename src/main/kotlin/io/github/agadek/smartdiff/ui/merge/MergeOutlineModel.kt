@@ -107,7 +107,8 @@ object MergeOutlineModel {
             )
             MergeOutlineLayout.CONTAINER_TREE -> container(joined, leftName, rightName, hidden, hideBothSides, layout, conflictRanges)
         }
-        val baseRanges = (rows.mapNotNull(::baseRange) + items.flatMap(::itemBaseRanges)).distinct()
+        // Ranges are independent of the filter and layout: hidden and candidate rows need markers too.
+        val baseRanges = (rows.mapNotNull(::baseRange) + candidateBaseRanges(joined.nodes)).distinct()
         return MergeOutlineResult(
             summary(rows, leftName, rightName, hiddenCount, joined.isAnalyzed(MergeSide.LEFT), joined.isAnalyzed(MergeSide.RIGHT)),
             items,
@@ -223,9 +224,13 @@ object MergeOutlineModel {
         )
     }
 
-    /** The base ranges of a row and its candidate rows, for the merge window's result-pane markers. */
-    private fun itemBaseRanges(item: MergeOutlineItem): List<TextRange> =
-        listOfNotNull(item.baseRange) + item.children.flatMap(::itemBaseRanges)
+    /** Candidate ranges on the base, even when the change-type filter hides the uncertain row. */
+    private fun candidateBaseRanges(nodes: List<MergeNode>): List<TextRange> = nodes.flatMap { node ->
+        val here = listOfNotNull(node.left, node.right).flatMap { side ->
+            if (side.presence == Presence.UNCERTAIN && side.oldRange == null) side.candidates.map { it.range } else emptyList()
+        }
+        here + candidateBaseRanges(node.children)
+    }
 
     /** Where the row's declaration is in the base, from the node or an extraction source. */
     private fun baseRange(node: MergeNode): TextRange? =
@@ -360,8 +365,20 @@ object MergeOutlineModel {
             groups,
             hiddenCount,
             baseMismatch = true,
-            baseRanges = groups.flatMap(::itemBaseRanges),
+            baseRanges = (resultBaseRanges(joined.left) + resultBaseRanges(joined.right)).distinct(),
         )
+    }
+
+    /** Every declaration's base range in one result, independent of the outline filter. */
+    private fun resultBaseRanges(result: ComparisonResult): List<TextRange> {
+        val ranges = mutableListOf<TextRange>()
+        fun visit(node: ChangeNode) {
+            node.oldRange?.let(ranges::add)
+            node.children.forEach(::visit)
+        }
+        result.fileRegion?.let(::visit)
+        result.changes.forEach(::visit)
+        return ranges
     }
 
     /** The declarations a side changed itself, including those inside changed containers. */

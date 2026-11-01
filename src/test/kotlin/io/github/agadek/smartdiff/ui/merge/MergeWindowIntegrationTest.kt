@@ -258,7 +258,7 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
             select(outline, "method extra()")
             val note = outline.panel.absence.text
             assertTrue(note, note.contains("Not present in the left pane"))
-            assertTrue(note, note.contains("not tracked"))
+            assertTrue(note, note.contains("Not present in the result pane"))
         } finally {
             Disposer.dispose(viewer)
         }
@@ -278,6 +278,43 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
             assertEquals("", outline.panel.absence.text)
             select(outline, "method total(int)")
             assertHighlightedAt(resultEditor(output), BASE.indexOf("int total"))
+        } finally {
+            Disposer.dispose(viewer)
+        }
+    }
+
+    fun `test changing the layout after an edit keeps the marker`() {
+        // merge/04-merge-window R9
+        val (viewer, outline, output) = openWithOutput()
+        try {
+            select(outline, "method total(int)")
+            val inserted = "// an edit\n"
+            WriteCommandAction.runWriteCommandAction(project) { output.insertString(0, inserted) }
+            outline.setLayout(MergeOutlineLayout.CONTAINER_TREE)
+            select(outline, "method total(int)")
+
+            assertEquals("", outline.panel.absence.text)
+            assertHighlightedAt(resultEditor(output), BASE.indexOf("int total") + inserted.length)
+        } finally {
+            Disposer.dispose(viewer)
+        }
+    }
+
+    fun `test an insertion after a declaration is not pulled into its frame`() {
+        // merge/04-merge-window R9
+        val (viewer, outline, output) = openWithOutput()
+        try {
+            select(outline, "method calc(int)")
+            val end = resultEditor(output).markupModel.allHighlighters
+                .first { it.startOffset == BASE.indexOf("int calc") }
+                .endOffset
+            val inserted = "    void after() {}\n"
+            WriteCommandAction.runWriteCommandAction(project) { output.insertString(end, inserted) }
+            select(outline, "method calc(int)")
+
+            val highlighter = resultEditor(output).markupModel.allHighlighters
+                .first { it.startOffset == BASE.indexOf("int calc") }
+            assertEquals(end, highlighter.endOffset)
         } finally {
             Disposer.dispose(viewer)
         }
