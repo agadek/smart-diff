@@ -1,6 +1,6 @@
 # Changes tree coverage and scale: details
 
-Status: implemented, 2026-11-01
+Status: accepted, 2026-11-01
 
 Feature: [Changes tree coverage and scale](03-coverage-and-scale.md)
 
@@ -22,6 +22,8 @@ Rebuilds use the same traversal. A file that moves in the tree, for example beca
 
 A considered file that is `TOO_LARGE` or `FAILED` gets a reason row instead of a summary (feature R7). A considered added or deleted file gets nothing. Files after the limit keep the platform's row in every case and do not get a reason either.
 
+A considered file whose summary times out keeps `not analyzed: timed out` visible while one retry is queued after `RETRY_DELAY_MILLIS` (1 s). If the retry also times out, the reason stays and the retry is not repeated (feature R10), matching [technical specification §9.4](../../TECHNICAL-SPECIFICATION.md#94-changes-tree-summary) and `ChangesSummaryService`.
+
 ## Tests
 
 | Requirement | Check |
@@ -33,3 +35,6 @@ A considered file that is `TOO_LARGE` or `FAILED` gets a reason row instead of a
 | R7 | `ChangesSummaryTest` checks `TOO_LARGE`, timeout, parse-error and failed reasons |
 | R8 | `ChangesSummaryTest` waits for background summaries and checks that the tree is not blocked |
 | R9 | Manual check: select, include and open a file after the limit |
+| R10 | `ChangesSummaryTest` timeout case checks one retry and the kept reason |
+
+No test names these requirements yet; requirement-named tests are still needed before the feature moves to implemented. R1 to R4 and R9 also rely on manual checks.

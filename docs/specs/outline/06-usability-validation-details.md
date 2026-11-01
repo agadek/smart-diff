@@ -2,7 +2,7 @@
 
 Status: proposed, 2026-11-01
 
-Feature: [Usability validation](01-usability-validation.md)
+Feature: [Usability validation](06-usability-validation.md)
 
 ## Design
 
@@ -23,7 +23,7 @@ The study is done by the maintainer, not by an external lab. Participants may be
 
 ### Why these thresholds
 
-The 20% threshold is larger than the variation seen between two runs of the same condition in a pilot, and small enough to matter for a reviewer's time. The accuracy guard keeps a faster but wrong answer from passing. The sample is small on purpose: it is a release check, not a research result, and a larger study would need more participants than the project has.
+The 20% threshold is a choice: it is large enough to matter for a reviewer's time and small enough to be plausible for a study this size. No pilot has measured the run-to-run variation yet, so the threshold may change after one (see [Open questions](#open-questions)). The accuracy guard keeps a faster but wrong answer from passing. The sample is small on purpose: it is a release check, not a research result.
 
 ### Failure behavior
 
@@ -40,3 +40,8 @@ If the outline does not pass, the results still go into VALIDATION.md, and the g
 | R7 | The analysis of the result table |
 | R8, R9 | The VALIDATION.md section and its stored task sheet |
 | R10 | Review of the published record for personal data |
+
+## Open questions
+
+- **Is 20% above the run-to-run variation?** Run a pilot with a few participants on the same tasks and compare two runs of the native condition before the first full study. If the variation approaches 20%, raise the threshold or report the difference as inconclusive.
+- **Can at least 5 participants be recruited?** R3 sets a minimum. If fewer are available, decide whether a smaller sample still supports the release check or whether the study waits for more participants.

@@ -1,6 +1,6 @@
 # Analysis fallback states: details
 
-Status: implemented, 2026-11-01
+Status: accepted, 2026-11-01
 
 Feature: [Analysis fallback states](05-analysis-fallback.md)
 
@@ -28,7 +28,7 @@ The messages are one line, centered in the outline panel. The native diff is nev
 
 ### Failure behavior
 
-A comparison that is canceled by a timeout reaches the panel as `FAILED` with the reason `timed out`; a cancellation for another reason is not shown as a result. A fallback state never throws and never leaves an empty outline without a message.
+A comparison that is canceled by a timeout reaches the panel as `FAILED` with the reason `timed out`; a cancellation for another reason is not shown as a result. A fallback state never throws and never leaves an empty outline without a message. In the [Changes tree](../changes-tree/03-coverage-and-scale.md), a timed-out summary keeps its reason visible while one retry is queued after 1 s, and a second timeout is kept (changes-tree/03 R10).
 
 ## Tests
 
@@ -42,3 +42,5 @@ A comparison that is canceled by a timeout reaches the panel as `FAILED` with th
 | R9, R10 | `OutlineIntegrationTest` checks that the native diff stays and that the viewer still hides no lines; product-scope P2 is checked in the label tests |
 | R11 | `OutlineIntegrationTest` toggles the outline in a fallback state |
 | R12 | `OutlineModelTest` `UNSUPPORTED` state |
+
+The tests above check the behavior but do not name these requirements; requirement-named tests are still needed before the feature moves to implemented.

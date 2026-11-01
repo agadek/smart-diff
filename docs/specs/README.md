@@ -55,7 +55,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [03 Rename candidates](declarations/03-rename-candidates.md) | implemented, 2026-10-22 |
 | [04 Kind changes](declarations/04-kind-changes.md) | implemented, 2026-10-23 |
 | [05 Extraction detection](declarations/05-extraction-detection.md) | implemented, 2026-10-23 |
-| [06 Change labels](declarations/06-change-labels.md) | implemented, 2026-11-01 |
+| [06 Change labels](declarations/06-change-labels.md) | accepted, 2026-11-01 |
 
 ## Languages
 
@@ -73,15 +73,18 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [02 Outline toggle](outline/02-outline-toggle.md) | implemented, 2026-10-21 |
 | [03 Change type filter](outline/03-change-type-filter.md) | implemented, 2026-10-22 |
 | [04 SMART Diff viewer](outline/04-smart-diff-viewer.md) | implemented, 2026-10-22 |
-| [05 Analysis fallback states](outline/05-analysis-fallback.md) | implemented, 2026-11-01 |
+| [05 Analysis fallback states](outline/05-analysis-fallback.md) | accepted, 2026-11-01 |
+| [06 Usability validation](outline/06-usability-validation.md) | proposed, 2026-11-01 |
+
+The accepted features added on 2026-11-01 (outline/05, declarations/06 and changes-tree/03) have tests for much of their behavior, but no test names their requirements yet; requirement-named tests are still needed before they move to implemented.
 
 ## Changes tree
 
 | Feature | Status |
 | --- | --- |
 | [01 Changes tree summary](changes-tree/01-changes-tree-summary.md) | implemented, 2026-10-22 |
-| [02 Declarations in the Changes tree](changes-tree/02-changes-tree-declarations.md) | implemented, 2026-10-23 |
-| [03 Coverage and scale](changes-tree/03-coverage-and-scale.md) | implemented, 2026-11-01 |
+| [02 Declarations in the Changes tree](changes-tree/02-changes-tree-declarations.md) | implemented, 2026-11-01 |
+| [03 Coverage and scale](changes-tree/03-coverage-and-scale.md) | accepted, 2026-11-01 |
 
 ## Settings
 
@@ -111,9 +114,3 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [05 Inlining detection](relationships/05-inlining-detection.md) | proposed, 2026-11-01 |
 | [06 Refactorings view](relationships/06-refactorings-view.md) | proposed, 2026-11-01 |
 | [07 Relationship validation](relationships/07-relationship-validation.md) | proposed, 2026-11-01 |
-
-## Validation
-
-| Feature | Status |
-| --- | --- |
-| [01 Usability validation](validation/01-usability-validation.md) | proposed, 2026-11-01 |

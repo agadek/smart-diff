@@ -12,7 +12,7 @@ Status: 2026-11-01. Items after the shipped baseline are candidates, not commitm
 - Conservative classification: added, removed, changed, moved, formatting-only, uncertain, unanalyzed ([ADR 0003](adr/0003-conservative-classification.md)), plus rename candidates, kind changes and signature changes. Renamed declarations, classes included, are paired as rename candidates rather than reported literally.
 - Extraction detection for Java, Kotlin, Scala 2 and Scala 3 (0.1.1).
 - Changes tree summary and declaration rows in Local Changes and the Commit tool window (Unreleased).
-- Structural outline for three-way merges and three-sided diffs, for Java, Kotlin, Scala 2 and Scala 3 (Unreleased; the merge validation is not started).
+- Structural outline for three-way merges and three-sided diffs, for Java, Kotlin, Scala 2 and Scala 3 (Unreleased; merge validation results are in [VALIDATION.md](VALIDATION.md), flagged files still under review).
 - IntelliJ Platform 2025.1 and newer, checked by Plugin Verifier on 2025.1 and the latest release.
 
 Specified in [outline/01](specs/outline/01-structural-outline.md), [outline/02](specs/outline/02-outline-toggle.md), [outline/05](specs/outline/05-analysis-fallback.md), [engines/01](specs/engines/01-comparison-engines.md) to [engines/03](specs/engines/03-analysis-limits.md), [declarations/01](specs/declarations/01-declaration-matching.md), [declarations/02](specs/declarations/02-change-classification.md), [declarations/06](specs/declarations/06-change-labels.md), [languages/01](specs/languages/01-java.md) to [languages/03](specs/languages/03-scala.md), [changes-tree/01](specs/changes-tree/01-changes-tree-summary.md), [changes-tree/03](specs/changes-tree/03-coverage-and-scale.md) and [merge/01](specs/merge/01-merge-join.md) to [merge/05](specs/merge/05-scala-merges.md).
@@ -87,7 +87,7 @@ Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.
 | [Structural outline for three-way merges](#structural-outline-for-three-way-merges) | [merge/01](specs/merge/01-merge-join.md) to [merge/06](specs/merge/06-merge-validation.md) |
 | [Extraction detection](#extraction-detection) | [declarations/05](specs/declarations/05-extraction-detection.md); inlining in [relationships/05](specs/relationships/05-inlining-detection.md) |
 | [Rename grouping across usages](#rename-grouping-across-usages) | [relationships/04](specs/relationships/04-rename-grouping.md) |
-| [Usability validation](#usability-validation) | [validation/01](specs/validation/01-usability-validation.md) |
+| [Usability validation](#usability-validation) | [outline/06](specs/outline/06-usability-validation.md) |
 | [Summaries for added and deleted files](#summaries-for-added-and-deleted-files) | Not specified yet |
 | Every other item below | Not specified yet |
 
@@ -112,7 +112,7 @@ Implemented in 0.1.0, when the Scala plugin is installed ([languages/03](specs/l
 
 ### Structural outline for three-way merges
 
-It comes right after the [Changes tree level 2](#multi-file-summary-in-the-changes-tree) (decided 2026-10-23). Show which declarations changed on each side of a merge, to help the user understand conflicts before resolving them, in the merge window and in three-sided diffs, for Java, Kotlin, Scala 2 and Scala 3. SMART Diff still never resolves or edits anything (merge conflict resolution stays a non-goal). Implemented for 0.2.0, except the merge validation, which is specified in [merge/06](specs/merge/06-merge-validation.md) and not started. Designed in [THREE-WAY-MERGE.md](THREE-WAY-MERGE.md) (proposal, 2026-10-23).
+It comes right after the [Changes tree level 2](#multi-file-summary-in-the-changes-tree) (decided 2026-10-23). Show which declarations changed on each side of a merge, to help the user understand conflicts before resolving them, in the merge window and in three-sided diffs, for Java, Kotlin, Scala 2 and Scala 3. SMART Diff still never resolves or edits anything (merge conflict resolution stays a non-goal). Implemented for 0.2.0; the merge validation results are in [VALIDATION.md](VALIDATION.md), with flagged files still under review ([merge/06](specs/merge/06-merge-validation.md)). Designed in [THREE-WAY-MERGE.md](THREE-WAY-MERGE.md) (proposal, 2026-10-23).
 
 - **Approach:** run the selected comparison engine twice, base → left and base → right, and join both results on base-side ranges. No change to the engine interface; the request gains an optional hint so the Scala dialect is chosen from all three texts.
 - **Groups:** changed on both sides (likely conflicts), changed only on one side, uncertain; the same change on both sides is marked as such.
@@ -150,7 +150,7 @@ Link an added method or function to the code it was extracted from. When most of
 
 ### Usability validation
 
-Decided 2026-11-01 as the check that the outline meets its main goal. A small, repeatable study compares finding changed declarations with the outline and with the native diff, and records time and accuracy. Specified in [validation/01](specs/validation/01-usability-validation.md). The corpus validation in [VALIDATION.md](VALIDATION.md) stays the record of analysis quality; the study is separate.
+Decided 2026-11-01 as the check that the outline meets its main goal. A small, repeatable study compares finding changed declarations with the outline and with the native diff, and records time and accuracy. Specified in [outline/06](specs/outline/06-usability-validation.md). The corpus validation in [VALIDATION.md](VALIDATION.md) stays the record of analysis quality; the study is separate.
 
 ### Summaries for added and deleted files
 

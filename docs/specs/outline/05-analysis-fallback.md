@@ -1,6 +1,6 @@
 # Analysis fallback states
 
-Status: implemented, 2026-11-01
+Status: accepted, 2026-11-01
 
 **Description:** When a comparison cannot be analyzed, or its language has no [comparison engine](../../GLOSSARY.md#comparison-engine), the [structural outline](../../GLOSSARY.md#structural-outline) says why and the [native diff](../../GLOSSARY.md#native-diff) stays available.
 

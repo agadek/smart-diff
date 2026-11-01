@@ -1,6 +1,6 @@
 # Changes tree coverage and scale
 
-Status: implemented, 2026-11-01
+Status: accepted, 2026-11-01
 
 **Description:** The [Changes tree](../../GLOSSARY.md#changes-tree) summarizes at most 500 files in one tree, in tree order, and leaves every other file as the platform draws it.
 
@@ -17,6 +17,7 @@ Status: implemented, 2026-11-01
 - **R7** A modified or moved file that is not analyzed shows its reason in place of the summary, as [outline/05](../outline/05-analysis-fallback.md) specifies.
 - **R8** The summary is computed in the background, one file at a time, so a large tree stays responsive.
 - **R9** A file left out by the limit is still selectable, includable in a commit and openable in the native diff.
+- **R10** A file whose summary times out keeps `not analyzed: timed out` visible and retries once after 1 s; a second timeout is kept.
 
 ## Out of scope
 
