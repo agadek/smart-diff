@@ -1,6 +1,5 @@
 left: PARTIAL  right: ANALYZED
-File region  LEFT_ONLY  left: unanalyzed  base 3  left 1-4  right -
-object Plain  CHANGED_ON_BOTH_SIDES  left: changed  right: changed  note: same change on both sides  base 1-3  left 2-4  right 5-7
-object Legacy  RIGHT_ONLY  right: added  base -  left -  right 1-4
-  property enum  RIGHT_ONLY  right: added  base -  left -  right 2
-  property given  RIGHT_ONLY  right: added  base -  left -  right 3
+File region  LEFT_ONLY  left: unanalyzed  base 3  left 3-5  right -
+object Legacy  RIGHT_ONLY  right: added  base -  left -  right 5-8
+  property enum  RIGHT_ONLY  right: added  base -  left -  right 6
+  property given  RIGHT_ONLY  right: added  base -  left -  right 7

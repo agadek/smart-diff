@@ -6,5 +6,4 @@ class OrderService {
     int total(int a) {
         return a;
     }
-
 }

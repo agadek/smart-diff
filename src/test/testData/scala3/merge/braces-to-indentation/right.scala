@@ -1,6 +1,6 @@
 package merge
 
 class OrderService {
-  def total(a: Int): Int = a
-  def label(): String = "changed"
+  def total(a: Int): Int = a * 2
+  def label(): String = "order"
 }

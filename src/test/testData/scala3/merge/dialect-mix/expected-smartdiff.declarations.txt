@@ -1,9 +1,8 @@
 left: ANALYZED  right: ANALYZED
-object Plain  CHANGED_ON_BOTH_SIDES  left: changed  right: changed  note: same change on both sides  base 1-3  left 4-6  right 4-6
-given Ordering[Int]  LEFT_ONLY  left: added  base -  left 1  right -
-enum Color  LEFT_ONLY  left: added  base -  left 2  right -
-  enum constant Red  LEFT_ONLY  left: added  base -  left 2  right -
-  enum constant Green  LEFT_ONLY  left: added  base -  left 2  right -
-extension String  LEFT_ONLY  left: added  base -  left 3  right -
-  function shout  LEFT_ONLY  left: added  base -  left 3  right -
-object Legacy  RIGHT_ONLY  right: added  base -  left -  right 1-3
+given Ordering[Int]  LEFT_ONLY  left: added  base -  left 5  right -
+enum Color  LEFT_ONLY  left: added  base -  left 6  right -
+  enum constant Red  LEFT_ONLY  left: added  base -  left 6  right -
+  enum constant Green  LEFT_ONLY  left: added  base -  left 6  right -
+extension String  LEFT_ONLY  left: added  base -  left 7  right -
+  function shout  LEFT_ONLY  left: added  base -  left 7  right -
+object Legacy  RIGHT_ONLY  right: added  base -  left -  right 5-7

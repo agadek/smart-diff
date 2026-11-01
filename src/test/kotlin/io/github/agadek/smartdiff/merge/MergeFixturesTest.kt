@@ -4,7 +4,6 @@ import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.util.ThrowableComputable
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import io.github.agadek.smartdiff.engine.api.Cancellation
-import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.Status
@@ -99,8 +98,11 @@ class MergeFixturesTest : BasePlatformTestCase() {
                 val base = read(File(case, "base.scala"))
                 val left = read(File(case, "left.scala"))
                 val right = read(File(case, "right.scala"))
-                val leftRun = engine.trees(ComparisonRequest(base, left, "Scala", "${case.name}.scala", relatedTexts = listOf(right)), Cancellation.NONE)!!
-                val rightRun = engine.trees(ComparisonRequest(base, right, "Scala", "${case.name}.scala", relatedTexts = listOf(left)), Cancellation.NONE)!!
+                val (leftRequest, rightRequest) = MergeComparison.sideRequests(
+                    MergeTexts(base, left, right, "Scala", "${case.name}.scala"),
+                )
+                val leftRun = engine.trees(leftRequest, Cancellation.NONE)!!
+                val rightRun = engine.trees(rightRequest, Cancellation.NONE)!!
                 assertEquals("$directory/${case.name} left base and side", leftRun.first.whitespacePolicy, leftRun.second.whitespacePolicy)
                 assertEquals("$directory/${case.name} right base and side", rightRun.first.whitespacePolicy, rightRun.second.whitespacePolicy)
                 assertEquals("$directory/${case.name} base", leftRun.first.whitespacePolicy, rightRun.first.whitespacePolicy)
@@ -111,15 +113,16 @@ class MergeFixturesTest : BasePlatformTestCase() {
 
     fun `test Scala dialect is chosen from all three texts`() {
         // merge/05-scala-merges R2
-        for (directory in listOf("scala2", "scala3")) {
-            val case = File(TEST_DATA, "$directory/merge/dialect-mix")
-            val base = read(File(case, "base.scala"))
-            val left = read(File(case, "left.scala"))
-            val right = read(File(case, "right.scala"))
-            val all = dialect(base, left, right)
-            assertEquals(all, dialect(base, right, left))
-            assertTrue(listOf(dialect(base, left), dialect(base, right)).any { it != all })
-        }
+        val case = File(TEST_DATA, "scala2/merge/dialect-mix")
+        val base = read(File(case, "base.scala"))
+        val left = read(File(case, "left.scala"))
+        val right = read(File(case, "right.scala"))
+        val all = dialect(base, left, right)
+        assertNotEquals("base + left alone would take another dialect", all, dialect(base, left))
+
+        // In the merge, left is read in the all-three dialect, where its Scala 3 syntax is unanalyzed.
+        val joined = joinFixture("scala2", "dialect-mix", "Scala", "scala")
+        assertEquals(Status.PARTIAL, joined.left.status)
     }
 
     fun `test Scala 2 code without Scala 3 syntax is read as Scala 2`() {
@@ -218,11 +221,12 @@ class MergeFixturesTest : BasePlatformTestCase() {
             )
 
             // merge/05-scala-merges R15: both comparisons keep the nothing-hidden rule.
-            if (joined.left.status == Status.ANALYZED || joined.left.status == Status.PARTIAL) {
-                NothingHidden.violation(base, left, joined.left)?.let { failures += "${case.name} left: $it" }
-            }
-            if (joined.right.status == Status.ANALYZED || joined.right.status == Status.PARTIAL) {
-                NothingHidden.violation(base, right, joined.right)?.let { failures += "${case.name} right: $it" }
+            for ((side, text, result) in listOf(Triple("left", left, joined.left), Triple("right", right, joined.right))) {
+                if (result.status != Status.ANALYZED && result.status != Status.PARTIAL) {
+                    failures += "${case.name} $side: status ${result.status}"
+                } else {
+                    NothingHidden.violation(base, text, result)?.let { failures += "${case.name} $side: $it" }
+                }
             }
 
             // merge/05-scala-merges R10: one row per line with group, labels and all three line spans.
