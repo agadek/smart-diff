@@ -1,6 +1,6 @@
 # Technical Specification: SMART Diff first release
 
-Status: draft, 2026-10-21. Refines the [product specification](SPECIFICATION.md). Terms follow the [glossary](GLOSSARY.md). Decisions are recorded in [ADR 0001](adr/0001-declaration-level-first-release.md), [ADR 0002](adr/0002-parser-neutral-model-with-psi-first.md), [ADR 0003](adr/0003-conservative-classification.md), [ADR 0004](adr/0004-pluggable-comparison-engines.md) and [ADR 0005](adr/0005-outline-attaches-to-the-native-diff-viewer.md).
+Status: draft, 2026-10-21. Describes how the features in the [feature specifications](specs/README.md) are built. Terms follow the [glossary](GLOSSARY.md). Decisions are recorded in [ADR 0001](adr/0001-declaration-level-first-release.md), [ADR 0002](adr/0002-parser-neutral-model-with-psi-first.md), [ADR 0003](adr/0003-conservative-classification.md), [ADR 0004](adr/0004-pluggable-comparison-engines.md) and [ADR 0005](adr/0005-outline-attaches-to-the-native-diff-viewer.md).
 
 IntelliJ Platform API names below are the expected entry points. The items that needed checking against IntelliJ Platform 2025.1 were confirmed or rewritten by spikes S1 and S2 (§13); each is marked **(confirmed by S1)** or **(confirmed by S2)**.
 
@@ -475,7 +475,7 @@ Application-level, under *Settings → Tools → SMART Diff*:
 
 ## 13. Prototype spikes
 
-This table is the single list of spikes; the product specification and roadmap refer to it.
+This table is the single list of spikes; the roadmap and the feature specifications refer to it.
 
 Spikes S1 to S3 ran as platform tests and were retired once the tests of §12 covered the same ground: the provider tests cover S2, `OutlineIntegrationTest` covers S1 (local-change, VCS-history and "Compare with" diffs in Java and Kotlin, and CRLF revisions), and S3 remains as the opt-in `LimitsBenchmarkTest` (§9.3). Later spikes follow the same pattern.
 

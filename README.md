@@ -51,7 +51,6 @@ CI runs both on every pull request (`.github/workflows/build.yml`).
 
 ## Documentation
 
-- [Product specification](docs/SPECIFICATION.md)
 - [Technical specification](docs/TECHNICAL-SPECIFICATION.md)
 - [Writing specifications](docs/SPEC-GUIDE.md)
 - [Feature specifications](docs/specs/README.md)
