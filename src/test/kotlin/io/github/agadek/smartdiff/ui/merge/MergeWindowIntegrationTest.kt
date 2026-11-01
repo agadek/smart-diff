@@ -26,6 +26,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import io.github.agadek.smartdiff.engine.lines.LineEngineFactory
 import io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory
 import io.github.agadek.smartdiff.merge.MergeGroup
+import io.github.agadek.smartdiff.ui.ChangeType
 import io.github.agadek.smartdiff.ui.DiffContents
 import io.github.agadek.smartdiff.ui.SmartDiffSettings
 import io.github.agadek.smartdiff.ui.ToggleOutlineAction
@@ -283,13 +284,30 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test changing the layout after an edit keeps the marker`() {
-        // merge/04-merge-window R9, R23
+        // merge/04-merge-window R9, R24
         val (viewer, outline, output) = openWithOutput()
         try {
             select(outline, "method total(int)")
             val inserted = "// an edit\n"
             WriteCommandAction.runWriteCommandAction(project) { output.insertString(0, inserted) }
             outline.setLayout(MergeOutlineLayout.CONTAINER_TREE)
+            select(outline, "method total(int)")
+
+            assertEquals("", outline.panel.absence.text)
+            assertHighlightedAt(resultEditor(output), BASE.indexOf("int total") + inserted.length)
+        } finally {
+            Disposer.dispose(viewer)
+        }
+    }
+
+    fun `test changing the filter after an edit keeps the marker`() {
+        // merge/04-merge-window R9, R23
+        val (viewer, outline, output) = openWithOutput()
+        try {
+            select(outline, "method total(int)")
+            val inserted = "// an edit\n"
+            WriteCommandAction.runWriteCommandAction(project) { output.insertString(0, inserted) }
+            outline.setHidden(ChangeType.ADDED, true)
             select(outline, "method total(int)")
 
             assertEquals("", outline.panel.absence.text)
@@ -348,7 +366,7 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test the merge window keeps the engine dropdown`() {
-        // merge/04-merge-window R24; merge/02-merge-outline R18
+        // merge/04-merge-window R25; merge/02-merge-outline R18
         ExtensionTestUtil.addExtensions(ComparisonEngineFactory.EP_NAME, listOf(LineEngineFactory()), testRootDisposable)
         val (viewer, outline) = open()
         try {
@@ -381,7 +399,7 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test a late viewer rediff remaps an early mapping`() {
-        // merge/04-merge-window R7, R11, R25; plan §6.3
+        // merge/04-merge-window R7, R11, R26; plan §6.3
         val left = EditorFactory.getInstance().createDocument(LEFT)
         val base = EditorFactory.getInstance().createDocument(BASE)
         val right = EditorFactory.getInstance().createDocument(RIGHT)

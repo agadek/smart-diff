@@ -30,10 +30,12 @@ Status: implemented, 2026-10-31
 - **R20** Accepting a side's change over a declaration keeps the declaration framed over the accepted code.
 - **R21** When one edit replaces several declarations, each one whose lines the edit left unchanged stays framed.
 - **R22** Code inserted right before or after a declaration is not part of its frame.
-- **R23** Changing the change type filter or the layout keeps every frame where the edits left it.
-- **R24** The merge window keeps the [engine dropdown](../../GLOSSARY.md#engine-dropdown).
-- **R25** The frames are right even when the merge window fills the result pane after the outline is computed.
-- **R26** Selecting a row scrolls the result pane to the declaration, and the side panes follow it through the window's synchronized scrolling.
+- **R23** Changing the [change type filter](../../GLOSSARY.md#change-type-filter) keeps every frame where the edits left it.
+- **R24** Changing the layout keeps every frame where the edits left it.
+- **R25** The merge window keeps the [engine dropdown](../../GLOSSARY.md#engine-dropdown).
+- **R26** The frames are right even when the merge window fills the result pane after the outline is computed.
+- **R27** Selecting a row scrolls the result pane to the declaration.
+- **R28** The side panes follow the result pane through the window's synchronized scrolling.
 
 ## Out of scope
 
