@@ -58,3 +58,5 @@ One file per feature, in one folder per context, written as described in the [sp
 | [02 Merge outline](merge/02-merge-outline.md) | implemented, 2026-10-31 |
 | [03 Merge outline in three-sided diffs](merge/03-three-sided-diffs.md) | implemented, 2026-10-31 |
 | [04 Merge outline in the merge window](merge/04-merge-window.md) | implemented, 2026-10-31 |
+| [05 Scala merges and merge fixtures](merge/05-scala-merges.md) | proposed, 2026-10-31 |
+| [06 Merge validation](merge/06-merge-validation.md) | proposed, 2026-10-31 |
