@@ -26,6 +26,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import io.github.agadek.smartdiff.engine.lines.LineEngineFactory
 import io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory
 import io.github.agadek.smartdiff.merge.MergeGroup
+import io.github.agadek.smartdiff.ui.ChangeType
 import io.github.agadek.smartdiff.ui.DiffContents
 import io.github.agadek.smartdiff.ui.SmartDiffSettings
 import io.github.agadek.smartdiff.ui.ToggleOutlineAction
@@ -235,7 +236,7 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test selecting a row frames the left, base, right and result panes`() {
-        // merge/04-merge-window R8; merge/02-merge-outline R16
+        // merge/04-merge-window R8, R18; merge/02-merge-outline R16
         val output = EditorFactory.getInstance().createDocument(CONFLICTED)
         val request = request(output, titles = listOf("feature/rates", "Base", "main"))
         val (viewer, outline) = open(request)
@@ -250,7 +251,7 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test an added row names the panes where it is absent`() {
-        // merge/02-merge-outline R17
+        // merge/04-merge-window R19; merge/02-merge-outline R17
         val output = EditorFactory.getInstance().createDocument(CONFLICTED)
         val request = request(output, titles = listOf("feature/rates", "Base", "main"), right = RIGHT_ADDED)
         val (viewer, outline) = open(request)
@@ -264,7 +265,7 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test accepting a side over a declaration keeps it tracked`() {
-        // merge/04-merge-window R9, R10
+        // merge/04-merge-window R9, R10, R20
         val (viewer, outline, output) = openWithOutput()
         try {
             select(outline, "method total(int)")
@@ -283,7 +284,7 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test changing the layout after an edit keeps the marker`() {
-        // merge/04-merge-window R9
+        // merge/04-merge-window R9, R24
         val (viewer, outline, output) = openWithOutput()
         try {
             select(outline, "method total(int)")
@@ -299,8 +300,25 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test changing the filter after an edit keeps the marker`() {
+        // merge/04-merge-window R9, R23
+        val (viewer, outline, output) = openWithOutput()
+        try {
+            select(outline, "method total(int)")
+            val inserted = "// an edit\n"
+            WriteCommandAction.runWriteCommandAction(project) { output.insertString(0, inserted) }
+            outline.setHidden(ChangeType.ADDED, true)
+            select(outline, "method total(int)")
+
+            assertEquals("", outline.panel.absence.text)
+            assertHighlightedAt(resultEditor(output), BASE.indexOf("int total") + inserted.length)
+        } finally {
+            Disposer.dispose(viewer)
+        }
+    }
+
     fun `test an insertion after a declaration is not pulled into its frame`() {
-        // merge/04-merge-window R9
+        // merge/04-merge-window R9, R22
         val (viewer, outline, output) = openWithOutput()
         try {
             select(outline, "method calc(int)")
@@ -320,7 +338,7 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test a replacement over two declarations keeps the unchanged one`() {
-        // merge/04-merge-window R9
+        // merge/04-merge-window R9, R21
         val left = EditorFactory.getInstance().createDocument(LEFT)
         val base = EditorFactory.getInstance().createDocument(BASE)
         val right = EditorFactory.getInstance().createDocument(RIGHT)
@@ -348,7 +366,7 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test the merge window keeps the engine dropdown`() {
-        // merge/02-merge-outline R18
+        // merge/04-merge-window R25; merge/02-merge-outline R18
         ExtensionTestUtil.addExtensions(ComparisonEngineFactory.EP_NAME, listOf(LineEngineFactory()), testRootDisposable)
         val (viewer, outline) = open()
         try {
@@ -381,7 +399,7 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test a late viewer rediff remaps an early mapping`() {
-        // merge/04-merge-window R7, R11; plan §6.3
+        // merge/04-merge-window R7, R11, R26; plan §6.3
         val left = EditorFactory.getInstance().createDocument(LEFT)
         val base = EditorFactory.getInstance().createDocument(BASE)
         val right = EditorFactory.getInstance().createDocument(RIGHT)
