@@ -30,6 +30,8 @@ Status: implemented, 2026-10-31
 
 - Conflicted files in the Changes tree.
 - Comparing the result with the base or the sides.
+- Following a declaration added on one side after the reviewer accepts it into the result.
+- Re-mapping declarations after the reviewer chooses another engine once the result has been edited.
 
 ## References
 

@@ -44,7 +44,7 @@ internal class MergeResultPane(
     private var prepared = false
     private var mappingReady = false
     private var released = false
-    private var coveredByChange = emptyList<TextRange>()
+    private var coveredByChange = emptyMap<TextRange, TextRange>()
     private val listenerParent = Disposer.newDisposable("smartdiff.merge.result.listener")
 
     /** Lets the panel update its note when an edit changes whether the selected row is still tracked. */
@@ -56,30 +56,27 @@ internal class MergeResultPane(
             val end = event.offset + event.oldLength
             coveredByChange = markers.filterValues {
                 it.isValid && it.startOffset >= event.offset && it.endOffset <= end
-            }.keys.toList()
+            }.mapValues { (_, marker) -> TextRange(marker.startOffset, marker.endOffset) }
         }
 
         override fun documentChanged(event: DocumentEvent) {
             if (!prepared) return
             // The viewer's first comparison sets the result back to the base; an earlier map would be against markers.
             if (resultIsBase() || isWholeDocumentReplacement(event)) {
-                coveredByChange = emptyList()
+                coveredByChange = emptyMap()
                 resetMapping()
                 return
             }
             if (mappingReady) {
                 // A replace over one declaration (an accepted side) keeps its frame; a delete leaves it untracked.
-                if (event.oldLength > 0 && event.newLength > 0 && coveredByChange.size == 1) {
-                    coveredByChange.single().let { key ->
-                        markers.remove(key)?.dispose()
-                        markers[key] = resultDocument.createRangeMarker(event.offset, event.offset + event.newLength)
-                    }
+                if (event.oldLength > 0 && event.newLength > 0) {
+                    remapAfterReplace(event, coveredByChange)
                 }
-                coveredByChange = emptyList()
+                coveredByChange = emptyMap()
                 renderResultOnly()
                 onSelectionChanged?.invoke()
             } else {
-                coveredByChange = emptyList()
+                coveredByChange = emptyMap()
                 debounce.restart()
             }
         }
@@ -136,7 +133,8 @@ internal class MergeResultPane(
     /** The panel's note for [item] when the result no longer tracks its declaration (merge window spec R10, R11). */
     fun note(item: MergeOutlineItem?): String {
         if (item == null || item.isGroup || !mappingReady) return ""
-        val range = item.baseRange ?: return "Not present in the result pane"
+        // A row with no base declaration is handled by the panel's pane note, which can say which panes lack it.
+        val range = item.baseRange ?: return ""
         return if (markers[range]?.let(::tracked) == true) "" else "not tracked"
     }
 
@@ -170,6 +168,29 @@ internal class MergeResultPane(
         if (prepared) debounce.restart()
     }
 
+    /**
+     * A replacement covering several declarations keeps the ones whose lines stayed the same. One declaration maps to
+     * the whole replacement; a delete leaves every covered marker untracked.
+     */
+    private fun remapAfterReplace(event: DocumentEvent, covered: Map<TextRange, TextRange>) {
+        if (covered.isEmpty()) return
+        covered.keys.forEach { markers.remove(it)?.dispose() }
+        if (covered.size == 1) {
+            markers[covered.keys.single()] = resultDocument.createRangeMarker(event.offset, event.offset + event.newLength)
+            return
+        }
+        val old = EditorFactory.getInstance().createDocument(event.oldFragment.toString())
+        val newText = event.document.immutableCharSequence.subSequence(event.offset, event.offset + event.newLength).toString()
+        val new = EditorFactory.getInstance().createDocument(newText)
+        val mapping = MergeResultMapping.create(old, new) ?: return
+        covered.forEach { (key, oldRange) ->
+            val relative = TextRange(oldRange.start - event.offset, oldRange.end - event.offset)
+            mapping.map(relative)?.let { mapped ->
+                markers[key] = resultDocument.createRangeMarker(event.offset + mapped.start, event.offset + mapped.end)
+            }
+        }
+    }
+
     private fun resultIsBase(): Boolean =
         resultDocument.textLength == baseDocument.textLength && resultDocument.text == baseDocument.text
 
@@ -183,9 +204,10 @@ internal class MergeResultPane(
         clearSideHighlighters()
         val item = selected ?: return
         renderResult(item, scroll)
-        renderSide(leftDocument, item.leftRange, scroll)
-        renderSide(baseDocument, item.baseRange, scroll)
-        renderSide(rightDocument, item.rightRange, scroll)
+        // The merge viewer's synchronized scrolling moves the sides; scrolling them here can pull the result away.
+        renderSide(leftDocument, item.leftRange)
+        renderSide(baseDocument, item.baseRange)
+        renderSide(rightDocument, item.rightRange)
     }
 
     /** Redraws only the changing result pane; the sides never change while the result is edited. */
@@ -203,13 +225,12 @@ internal class MergeResultPane(
         if (scroll) DiffUtil.scrollEditor(editor, editor.document.getLineNumber(start), false)
     }
 
-    private fun renderSide(document: Document, range: TextRange?, scroll: Boolean) {
+    private fun renderSide(document: Document, range: TextRange?) {
         if (range == null) return
         val editor = editor(document) ?: return
         val start = range.start.coerceIn(0, editor.document.textLength)
         val end = range.end.coerceIn(start, editor.document.textLength)
         frame(editor, start, end, sideHighlighters)
-        if (scroll) DiffUtil.scrollEditor(editor, editor.document.getLineNumber(start), false)
     }
 
     private fun frame(editor: Editor, start: Int, end: Int, into: MutableList<RangeHighlighter>) {

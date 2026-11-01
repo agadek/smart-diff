@@ -257,8 +257,7 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
         try {
             select(outline, "method extra()")
             val note = outline.panel.absence.text
-            assertTrue(note, note.contains("Not present in the left pane"))
-            assertTrue(note, note.contains("Not present in the result pane"))
+            assertTrue(note, note.contains("Not present in the left, result pane"))
         } finally {
             Disposer.dispose(viewer)
         }
@@ -317,6 +316,34 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
             assertEquals(end, highlighter.endOffset)
         } finally {
             Disposer.dispose(viewer)
+        }
+    }
+
+    fun `test a replacement over two declarations keeps the unchanged one`() {
+        // merge/04-merge-window R9
+        val left = EditorFactory.getInstance().createDocument(LEFT)
+        val base = EditorFactory.getInstance().createDocument(BASE)
+        val right = EditorFactory.getInstance().createDocument(RIGHT)
+        val result = EditorFactory.getInstance().createDocument(BASE)
+        val total = range(BASE.indexOf("    int total"), BASE.indexOf("\n    int calc"))
+        val calc = range(BASE.indexOf("    int calc"), BASE.indexOf("\n    boolean validate"))
+        val totalItem = MergeOutlineItem(MergeOutlineItem.Kind.CHANGE, "total", baseRange = total)
+        val calcItem = MergeOutlineItem(MergeOutlineItem.Kind.CHANGE, "calc", baseRange = calc)
+        val pane = MergeResultPane(project, left, base, right, result)
+        try {
+            pane.prepare(listOf(total, calc))
+            PlatformTestUtil.waitWithEventsDispatching({ "the result is not mapped" }, { pane.isMapped }, 60)
+
+            val old = BASE.substring(total.start, calc.end)
+            // Differ at both ends of the chunk so the document reports one replacement over both declarations.
+            val changed = "\t" + old.removePrefix("    ")
+                .replace("return a;", "return a + 1;") + "\n    // after"
+            WriteCommandAction.runWriteCommandAction(project) { result.replaceString(total.start, calc.end, changed) }
+
+            assertEquals("not tracked", pane.note(totalItem))
+            assertEquals("", pane.note(calcItem))
+        } finally {
+            pane.dispose()
         }
     }
 
