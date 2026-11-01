@@ -77,6 +77,7 @@ object RelationshipBenchmark {
         val ambiguous: List<Endpoint>,
         val notes: String?,
         val category: String = case.substringBeforeLast('-', case),
+        val corpus: String = language.lowercase(),
     )
 
     data class ActualRelationship(
@@ -131,6 +132,7 @@ object RelationshipBenchmark {
         val gateFailures: List<String>,
         val corpusRevision: String,
         val reportDirectory: File,
+        val skippedCommitLines: Int = 0,
     ) {
         val ready: Boolean get() = gateFailures.isEmpty()
     }
@@ -165,6 +167,8 @@ object RelationshipBenchmark {
             changes = list(expected["changes"]).map { change(it, file) },
             ambiguous = list(expected["ambiguous"]).map { endpoint(it, file) },
             notes = root["notes"] as? String,
+            category = root["category"] as? String ?: (root["case"] as String).substringBeforeLast('-'),
+            corpus = root["corpus"] as? String ?: (root["language"] as String).lowercase(),
         )
     }
 
@@ -262,21 +266,19 @@ object RelationshipBenchmark {
             val label = result.label
             val matched = BooleanArray(result.actualRelationships.size)
             for (expected in label.relationships) {
-                val index = result.actualRelationships.indexOfFirst { actual ->
-                    actual.kind in expected.kinds && endpointsMatch(expected.old, actual.old) && endpointsMatch(expected.new, actual.new)
+                var any = false
+                result.actualRelationships.forEachIndexed { index, actual ->
+                    if (actual.kind in expected.kinds && endpointsMatch(expected.old, actual.old) && endpointsMatch(expected.new, actual.new)) {
+                        matched[index] = true
+                        any = true
+                        perKind.getOrPut(actual.kind.name) { PairCounts() }.tp++
+                    }
                 }
-                val kind = expected.kinds.first().name
-                val counts = perKind.getOrPut(kind) { PairCounts() }
-                if (index >= 0) {
-                    matched[index] = true
-                    counts.tp++
-                } else {
-                    counts.fn++
-                }
+                if (!any) expected.kinds.forEach { perKind.getOrPut(it.name) { PairCounts() }.fn++ }
             }
             result.actualRelationships.forEachIndexed { index, actual ->
-                if (!matched[index]) perKind.getOrPut(actual.kind.name) { PairCounts() }.fp++
-                if (label.ambiguous.any { endpointsMatch(it, actual.old) || endpointsMatch(it, actual.new) }) forced++
+                val forcedPair = label.ambiguous.any { endpointsMatch(it, actual.old) || endpointsMatch(it, actual.new) }
+                if (forcedPair) forced++ else if (!matched[index]) perKind.getOrPut(actual.kind.name) { PairCounts() }.fp++
             }
             for (expected in label.changes) {
                 total++
@@ -351,16 +353,22 @@ object RelationshipBenchmark {
             val hidden = (result.status == Status.ANALYZED || result.status == Status.PARTIAL) && NothingHidden.violation(old, new, result) != null
             cases += CaseResult(label, result, actualRelationships(result), actualNodes(result), millis, hidden)
         }
-        val byLanguage = cases.groupBy { it.label.language }.mapValues { evaluate(it.value.map { row -> row.label }, it.value) }
+        val byLanguage = cases.groupBy { it.label.corpus }.mapValues { evaluate(it.value.map { row -> row.label }, it.value) }
         val bySplit = cases.groupBy { it.label.split }.mapValues { evaluate(it.value.map { row -> row.label }, it.value) }
         val overall = evaluate(cases.map { it.label }, cases)
         val gateMode = System.getProperty(GATE_PROPERTY)?.takeIf { it.isNotBlank() } ?: DEFAULT_GATE
         val tolerance = System.getProperty(TOLERANCE_PROPERTY)?.toDoubleOrNull() ?: 0.0
         val baseline = System.getProperty(BASELINE_PROPERTY)?.takeIf { it.isNotBlank() }?.let(::File)
         val failures = gateFailures(gateMode, overall, byLanguage, baseline, tolerance, cases)
-        val report = Report(cases, byLanguage, bySplit, overall, gateMode, failures, revision(corpus), output)
+        val report = Report(cases, byLanguage, bySplit, overall, gateMode, failures, revision(corpus), output, entries.count { it.path == null })
         write(report)
         return report
+    }
+
+    fun gateCounts(byLanguage: Map<String, Metrics>): Map<String, PairCounts> = buildMap {
+        for ((language, metrics) in byLanguage) {
+            for ((kind, counts) in metrics.perKind) put("$language|$kind", counts)
+        }
     }
 
     fun gateFailures(
@@ -374,27 +382,31 @@ object RelationshipBenchmark {
         if (cases.any { it.hidden }) add("nothing-hidden violation")
         if (cases.any { it.millis > TIME_LIMIT_MILLIS }) add("file over the ${TIME_LIMIT_MILLIS} ms limit")
         if (cases.any { it.exception != null }) add("case threw")
-        val baseline = baselineFile?.takeIf { it.isFile }?.let { readBaseline(it) } ?: return@buildList
+        if (baselineFile != null && !baselineFile.isFile) {
+            add("baseline not found: ${baselineFile.path}")
+            return@buildList
+        }
+        val baseline = baselineFile?.let { readBaseline(it) } ?: return@buildList
         when (mode) {
             "no-new-wrong-pairs" -> {
-                val currentWrong = wrongPairs(cases)
+                val currentWrong = wrongPairs(cases) + forcedPairs(cases)
                 val new = currentWrong - baseline.wrongPairs
                 if (new.isNotEmpty()) add("new wrong or forced pairs: ${new.joinToString(", ")}")
             }
             "precision" -> {
-                for ((key, metrics) in byLanguage) {
+                for ((key, counts) in gateCounts(byLanguage)) {
                     val before = baseline.precision[key] ?: continue
-                    if (metrics.precision < before) add("precision fell for $key: ${metrics.precision} < $before")
+                    if (counts.precision < before) add("precision fell for $key: ${counts.precision} < $before")
                 }
             }
             "tolerance" -> {
-                for ((key, metrics) in byLanguage) {
+                for ((key, counts) in gateCounts(byLanguage)) {
                     val before = baseline.precision[key] ?: continue
-                    if (before - metrics.precision > tolerance / 100.0) add("precision fell for $key")
+                    if (before - counts.precision > tolerance / 100.0) add("precision fell for $key")
                 }
-                for ((key, metrics) in byLanguage) {
+                for ((key, counts) in gateCounts(byLanguage)) {
                     val before = baseline.recall[key] ?: continue
-                    if (before - metrics.recall > tolerance / 100.0) add("recall fell for $key")
+                    if (before - counts.recall > tolerance / 100.0) add("recall fell for $key")
                 }
             }
             else -> add("unknown gate mode: $mode")
@@ -422,9 +434,39 @@ object RelationshipBenchmark {
                 if (index >= 0) matched[index] = true
             }
             case.actualRelationships.forEachIndexed { index, actual ->
-                if (!matched[index]) add("${label.case}|${actual.kind}|${actual.old.path}|${actual.old.name}|${actual.new.path}|${actual.new.name}")
-                if (label.ambiguous.any { endpointsMatch(it, actual.old) || endpointsMatch(it, actual.new) }) {
-                    add("${label.case}|forced|${actual.old.name}|${actual.new.name}")
+                val forced = label.ambiguous.any { endpointsMatch(it, actual.old) || endpointsMatch(it, actual.new) }
+                if (!matched[index] && !forced) add("${label.case}|${actual.kind}|${actual.old.path}|${actual.old.name}|${actual.new.path}|${actual.new.name}")
+            }
+        }
+    }
+
+    fun forcedPairs(cases: List<CaseResult>): Set<String> = buildSet {
+        for (case in cases) {
+            for (actual in case.actualRelationships) {
+                if (case.label.ambiguous.any { endpointsMatch(it, actual.old) || endpointsMatch(it, actual.new) }) {
+                    add("${case.label.case}|forced|${actual.old.name}|${actual.new.name}")
+                }
+            }
+        }
+    }
+
+    fun missedRelationships(cases: List<CaseResult>): List<String> = buildList {
+        for (case in cases) {
+            for (expected in case.label.relationships) {
+                val found = case.actualRelationships.any { actual ->
+                    actual.kind in expected.kinds && endpointsMatch(expected.old, actual.old) && endpointsMatch(expected.new, actual.new)
+                }
+                if (!found) add("${case.label.case}|missed|${expected.kinds.first()}|${expected.old.name}|${expected.new.name}")
+            }
+        }
+    }
+
+    fun classificationMismatches(cases: List<CaseResult>): List<String> = buildList {
+        for (case in cases) {
+            for (expected in case.label.changes) {
+                val actual = case.actualNodes.firstOrNull { (endpoint, _) -> endpointsMatch(expected.subject, endpoint) }?.second
+                if (actual == null || actual.presence != expected.presence || actual.content != expected.content) {
+                    add("${case.label.case}|${expected.subject.name}|expected ${expected.presence}/${expected.content}, actual ${actual?.presence ?: "missing"}/${actual?.content ?: "-"}")
                 }
             }
         }
@@ -445,6 +487,7 @@ object RelationshipBenchmark {
             appendLine()
             appendLine("Engine: ${DeclarationEngine.ID} ${DeclarationEngine.VERSION}; IDE: ${ApplicationInfo.getInstance().build.asStringWithoutProductCode()}")
             appendLine("Scala plugin: ${scalaVersion()}; corpus revision: ${report.corpusRevision}; gate: ${report.gateMode}")
+            appendLine("Skipped real-commit lines without labels: ${report.skippedCommitLines}")
             appendLine()
             appendLine("Cases: ${report.cases.size}; hidden: ${report.overall.hidden}; fallback: ${report.overall.fallback}; forced pairs: ${report.overall.forcedPairs}")
             appendLine()
@@ -459,24 +502,66 @@ object RelationshipBenchmark {
             }
             appendLine()
             appendLine("## Wrong and missed relationships")
-            for (pair in wrongPairs(report.cases).sorted()) appendLine("- $pair")
+            val wrong = (wrongPairs(report.cases) + forcedPairs(report.cases)).sorted()
+            if (wrong.isEmpty()) appendLine("- none") else wrong.forEach { appendLine("- $it") }
+            appendLine()
+            appendLine("## Missed relationships")
+            val missed = missedRelationships(report.cases).sorted()
+            if (missed.isEmpty()) appendLine("- none") else missed.forEach { appendLine("- $it") }
+            appendLine()
+            appendLine("## Classification mismatches")
+            val mismatches = classificationMismatches(report.cases).sorted()
+            if (mismatches.isEmpty()) appendLine("- none") else mismatches.forEach { appendLine("- $it") }
             appendLine()
             appendLine("## Gate")
             if (report.gateFailures.isEmpty()) appendLine("Passed") else report.gateFailures.forEach { appendLine("- $it") }
         })
+        val precision = gateCounts(report.metricsByLanguage).mapValues { it.value.precision }
+        val recall = gateCounts(report.metricsByLanguage).mapValues { it.value.recall }
         val json = mapOf(
-            "wrongPairs" to wrongPairs(report.cases).toList(),
-            "precision" to report.metricsByLanguage.mapValues { it.value.precision },
-            "recall" to report.metricsByLanguage.mapValues { it.value.recall },
+            "engine" to mapOf("id" to DeclarationEngine.ID.toString(), "version" to DeclarationEngine.VERSION),
+            "ide" to ApplicationInfo.getInstance().build.asStringWithoutProductCode(),
+            "scalaPlugin" to scalaVersion(),
+            "wrongPairs" to (wrongPairs(report.cases) + forcedPairs(report.cases)).toList(),
+            "missed" to missedRelationships(report.cases),
+            "classificationMismatches" to classificationMismatches(report.cases),
+            "precision" to precision,
+            "recall" to recall,
+            "overall" to metricsJson(report.overall),
+            "perLanguage" to report.metricsByLanguage.mapValues { metricsJson(it.value) },
+            "perSplit" to report.metricsBySplit.mapKeys { it.key.name.lowercase() }.mapValues { metricsJson(it.value) },
             "gate" to report.gateMode,
             "corpusRevision" to report.corpusRevision,
+            "skippedCommitLines" to report.skippedCommitLines,
         )
         File(report.reportDirectory, "report.json").writeText(GsonBuilder().setPrettyPrinting().create().toJson(json))
         println("RELATIONSHIPS ${report.cases.size} cases, precision ${format(report.overall.precision)}, recall ${format(report.overall.recall)}; report in ${report.reportDirectory.absolutePath}")
     }
 
-    private fun revision(file: File): String =
-        MessageDigest.getInstance("SHA-256").digest(file.readText().toByteArray()).joinToString("") { "%02x".format(it) }.take(12)
+    private fun metricsJson(metrics: Metrics): Map<String, Any> = mapOf(
+        "precision" to metrics.precision,
+        "recall" to metrics.recall,
+        "wrongShare" to metrics.wrongShare,
+        "forcedPairs" to metrics.forcedPairs,
+        "classificationAccuracy" to metrics.classificationAccuracy,
+        "hidden" to metrics.hidden,
+        "fallback" to metrics.fallback,
+        "medianMillis" to metrics.medianMillis,
+        "p95Millis" to metrics.p95Millis,
+        "slowestMillis" to metrics.slowestMillis,
+        "perKind" to metrics.perKind.mapValues { mapOf("tp" to it.value.tp, "fp" to it.value.fp, "fn" to it.value.fn, "precision" to it.value.precision, "recall" to it.value.recall) },
+    )
+
+    private fun revision(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        digest.update(file.readText().toByteArray())
+        val root = file.parentFile
+        file.readLines().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("#") }.forEach { line ->
+            val directory = if (File(line).isAbsolute) File(line) else File(root, line)
+            if (directory.isDirectory) directory.listFiles().orEmpty().sortedBy { it.name }.forEach { digest.update(it.readBytes()) }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }.take(12)
+    }
 
     private fun scalaVersion(): String = try {
         com.intellij.ide.plugins.PluginManagerCore.getPlugin(com.intellij.openapi.extensions.PluginId.getId("org.intellij.scala"))?.version ?: "absent"

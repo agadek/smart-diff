@@ -1,6 +1,8 @@
 case: move-method
 language: kotlin
 split: tuning
+category: move
+corpus: kotlin
 expected:
   relationships:
     - kinds: [MOVE]
