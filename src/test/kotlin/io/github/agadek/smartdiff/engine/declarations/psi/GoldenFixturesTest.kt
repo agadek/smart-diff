@@ -26,7 +26,7 @@ class GoldenFixturesTest : BasePlatformTestCase() {
 
     private fun checkFixtures(directory: String, languageId: String, extension: String) {
         val cases = File(TEST_DATA, directory)
-            .listFiles { file -> file.isDirectory && file.name != "merge" }
+            .listFiles { file -> file.isDirectory && file.name != "merge" && file.name != "relationships" }
             .orEmpty()
             .sortedBy { it.name }
         assertTrue("no fixtures in ${File(TEST_DATA, directory).absolutePath}", cases.isNotEmpty())

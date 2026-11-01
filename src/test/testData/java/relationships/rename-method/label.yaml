@@ -1,0 +1,17 @@
+case: rename-method
+language: JAVA
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Order", kind: METHOD, name: total, signature: "()" }
+      new: { path: "class Order", kind: METHOD, name: sum, signature: "()" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: Order, signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: METHOD, name: sum, signature: "()" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A one-method rename."

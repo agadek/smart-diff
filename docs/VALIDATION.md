@@ -19,6 +19,17 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-01: relationship benchmark
+
+**Corpus:** the four labelled cases in `src/test/testData/{java,kotlin,scala2,scala3}/relationships/`:
+Java method rename, Kotlin method move, Scala 2 formatting-only and Scala 3 kind change.
+
+**Result:** precision 1.000 and recall 1.000 over the three relationship kinds; declaration classification
+5 of 7 (0.714); no forced pair, no nothing-hidden violation and no fallback. Median 23 ms, p95 and slowest
+72 ms. The gate was `no-new-wrong-pairs`; this run is the baseline because no earlier report exists.
+
+The report is written to `build/reports/smartdiff-relationships/`.
+
 ## 2026-11-01: merge validation
 
 **Corpus:** merge commits from the Java and Kotlin clones and from the Scala clones added for this run, selected with

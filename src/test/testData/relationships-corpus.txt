@@ -1,0 +1,4 @@
+src/test/testData/java/relationships/rename-method
+src/test/testData/kotlin/relationships/move-method
+src/test/testData/scala2/relationships/formatting-only
+src/test/testData/scala3/relationships/kind-change
