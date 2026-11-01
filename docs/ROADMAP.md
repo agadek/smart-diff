@@ -1,6 +1,6 @@
 # SMART Diff Roadmap
 
-Status: 2026-11-01. Items after the first release are candidates, not commitments; their order is a proposal. Scope details live in the [product specification](SPECIFICATION.md) and [technical specification](TECHNICAL-SPECIFICATION.md).
+Status: 2026-11-01. Items after the first release are candidates, not commitments; their order is a proposal. Scope details live in the [feature specifications](specs/README.md) and the [technical specification](TECHNICAL-SPECIFICATION.md).
 
 ## First release
 
@@ -10,9 +10,18 @@ Status: 2026-11-01. Items after the first release are candidates, not commitment
 - Conservative classification: added, removed, changed, moved, formatting-only, uncertain, unanalyzed ([ADR 0003](adr/0003-conservative-classification.md)). Renamed declarations, including classes, stay literal (removed + added).
 - IntelliJ Platform 2025.1 and newer, checked by Plugin Verifier on 2025.1 and the latest release.
 
+Specified in [outline/01](specs/outline/01-structural-outline.md), [outline/02](specs/outline/02-outline-toggle.md), [engines/01](specs/engines/01-comparison-engines.md) to [engines/03](specs/engines/03-analysis-limits.md), [declarations/01](specs/declarations/01-declaration-matching.md), [declarations/02](specs/declarations/02-change-classification.md), [languages/01](specs/languages/01-java.md) and [languages/02](specs/languages/02-kotlin.md).
+
 ## 0.1.1: noise pass
 
 Decided 2026-10-22, from the validation on real commits before 0.1.0 ([VALIDATION.md](VALIDATION.md)). It comes before everything under [Later](#later). Implemented; the rerun is in [VALIDATION.md](VALIDATION.md#2026-10-22-011-noise-pass).
+
+| Item | Spec |
+| --- | --- |
+| [Rename candidates](#rename-candidates) | [declarations/03](specs/declarations/03-rename-candidates.md) |
+| [Overload pairing by similarity](#overload-pairing-by-similarity) | [declarations/01](specs/declarations/01-declaration-matching.md) R5 |
+| [Readable labels](#readable-labels) | [outline/01](specs/outline/01-structural-outline.md), [languages/02](specs/languages/02-kotlin.md) |
+| [Full nothing-hidden coverage in the validation](#full-nothing-hidden-coverage-in-the-validation) | [engines/02](specs/engines/02-engine-contract.md) |
 
 ### Rename candidates
 
@@ -53,13 +62,27 @@ Proposed 2026-11-01 as the next item after 0.2.0. Relationships between declarat
 | --- | --- | --- |
 | Benchmark and today's baseline | [relationships/01](specs/relationships/01-relationship-benchmark.md) | The baseline report of today's engine is in VALIDATION.md |
 | Relationship model, with today's fields computed from it | [relationships/02](specs/relationships/02-relationship-model.md) | The outline, Changes tree and merge outline are unchanged, and the contract checks relationships |
-| Better pairing, references, inlining, refactorings view | Not specified yet | Each step passes the benchmark gate |
+| Better pairing over the whole file | [relationships/03](specs/relationships/03-relationship-matching.md) | The benchmark shows no new wrong pairs and no lower held-out precision |
+| Rename grouped with its usages | [relationships/04](specs/relationships/04-rename-grouping.md) | The labelled usage cases pass, and unresolved usages stay ordinary changes |
+| Inlining detection | [relationships/05](specs/relationships/05-inlining-detection.md) | The inlining cases pass, and every linked declaration stays visible |
+| Refactorings view | [relationships/06](specs/relationships/06-refactorings-view.md) | The view shows every change the container tree shows |
+| Validation and release | [relationships/07](specs/relationships/07-relationship-validation.md) | The results are in VALIDATION.md and the release checks pass |
+| Relationships across files | Not specified; only if the product scope is extended | A separate design and benchmark exist |
 
 It also covers the later [rename grouping across usages](#rename-grouping-across-usages) item, through a separate reference pass.
 
 ## Later
 
 Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.md#semanticdiff) on 2026-10-22: features it has that SMART Diff lacks. Their order among the other items is still open.
+
+| Item | Spec |
+| --- | --- |
+| [Multi-file summary in the Changes tree](#multi-file-summary-in-the-changes-tree) | [changes-tree/01](specs/changes-tree/01-changes-tree-summary.md), [changes-tree/02](specs/changes-tree/02-changes-tree-declarations.md) |
+| [Scala](#scala) | [languages/03](specs/languages/03-scala.md) |
+| [Structural outline for three-way merges](#structural-outline-for-three-way-merges) | [merge/01](specs/merge/01-merge-join.md) to [merge/06](specs/merge/06-merge-validation.md) |
+| [Extraction detection](#extraction-detection) | [declarations/05](specs/declarations/05-extraction-detection.md); inlining in [relationships/05](specs/relationships/05-inlining-detection.md) |
+| [Rename grouping across usages](#rename-grouping-across-usages) | [relationships/04](specs/relationships/04-rename-grouping.md) |
+| Every other item below | Not specified yet |
 
 ### Multi-file summary in the Changes tree
 

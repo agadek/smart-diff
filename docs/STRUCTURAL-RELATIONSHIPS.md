@@ -1,8 +1,8 @@
 # Structural Relationships and Refactoring Awareness
 
-Status: proposal, 2026-10-30; phases 0 to 2 are specified in [docs/specs/relationships/](specs/README.md#relationships) and [ADR 0008](adr/0008-relationships-are-the-source-of-truth-for-pairing.md) (2026-11-01). This is a program of work, not one release item. It expands the roadmap's [rename grouping across usages](ROADMAP.md#rename-grouping-across-usages), [moves inside declarations](ROADMAP.md#moves-inside-declarations), [fine-grained differencing](ROADMAP.md#fine-grained-differencing), [extraction detection](ROADMAP.md#extraction-detection) and [three-way merge](ROADMAP.md#structural-outline-for-three-way-merges) entries. The benchmark is specified in [RELATIONSHIP-BENCHMARK.md](RELATIONSHIP-BENCHMARK.md); terms follow the [glossary](GLOSSARY.md).
+Status: proposal, 2026-10-30; phases 0 to 6 and 8 are specified in [docs/specs/relationships/](specs/README.md#relationships) and [ADR 0008](adr/0008-relationships-are-the-source-of-truth-for-pairing.md) (2026-11-01). This is a program of work, not one release item. It expands the roadmap's [rename grouping across usages](ROADMAP.md#rename-grouping-across-usages), [moves inside declarations](ROADMAP.md#moves-inside-declarations), [fine-grained differencing](ROADMAP.md#fine-grained-differencing), [extraction detection](ROADMAP.md#extraction-detection) and [three-way merge](ROADMAP.md#structural-outline-for-three-way-merges) entries. The benchmark is specified in [RELATIONSHIP-BENCHMARK.md](RELATIONSHIP-BENCHMARK.md); terms follow the [glossary](GLOSSARY.md).
 
-Related: [product specification](SPECIFICATION.md), [technical specification](TECHNICAL-SPECIFICATION.md), [ADR 0001](adr/0001-declaration-level-first-release.md), [ADR 0002](adr/0002-parser-neutral-model-with-psi-first.md), [ADR 0003](adr/0003-conservative-classification.md), [ADR 0004](adr/0004-pluggable-comparison-engines.md), [ADR 0006](adr/0006-changes-tree-summary-through-changes-view-modifier.md), [extraction detection](EXTRACTION-DETECTION.md), [three-way merge](THREE-WAY-MERGE.md).
+Related: [product scope](specs/README.md#product-scope), [technical specification](TECHNICAL-SPECIFICATION.md), [ADR 0001](adr/0001-declaration-level-first-release.md), [ADR 0002](adr/0002-parser-neutral-model-with-psi-first.md), [ADR 0003](adr/0003-conservative-classification.md), [ADR 0004](adr/0004-pluggable-comparison-engines.md), [ADR 0006](adr/0006-changes-tree-summary-through-changes-view-modifier.md), [extraction detection](EXTRACTION-DETECTION.md), [three-way merge](THREE-WAY-MERGE.md).
 
 ## 1. Problem
 
@@ -362,7 +362,7 @@ The visible acceptance criteria should be measurable after phase 1:
 ## 16. Related documents
 
 - [RELATIONSHIP-BENCHMARK.md](RELATIONSHIP-BENCHMARK.md)
-- [Product specification](SPECIFICATION.md)
+- [Product scope](specs/README.md#product-scope)
 - [Technical specification](TECHNICAL-SPECIFICATION.md)
 - [Roadmap](ROADMAP.md)
 - [Extraction detection](EXTRACTION-DETECTION.md)

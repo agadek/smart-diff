@@ -2,7 +2,7 @@
 
 Status: proposal, 2026-10-30; specified in [relationships/01](specs/relationships/01-relationship-benchmark.md) (2026-11-01), which also settles Q1, Q3, Q5 and Q7 as proposed there. This benchmark supports the [structural relationships and refactoring-awareness program](STRUCTURAL-RELATIONSHIPS.md). It measures matching quality before and after every matcher change; it does not define the matcher itself.
 
-Related: [product specification](SPECIFICATION.md), [technical specification](TECHNICAL-SPECIFICATION.md), [roadmap](ROADMAP.md), [extraction detection](EXTRACTION-DETECTION.md), [validation](VALIDATION.md), [structural relationships](STRUCTURAL-RELATIONSHIPS.md).
+Related: [product scope](specs/README.md#product-scope), [technical specification](TECHNICAL-SPECIFICATION.md), [roadmap](ROADMAP.md), [extraction detection](EXTRACTION-DETECTION.md), [validation](VALIDATION.md), [structural relationships](STRUCTURAL-RELATIONSHIPS.md).
 
 ## 1. Problem
 
