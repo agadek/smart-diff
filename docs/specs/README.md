@@ -60,3 +60,15 @@ One file per feature, in one folder per context, written as described in the [sp
 | [04 Merge outline in the merge window](merge/04-merge-window.md) | implemented, 2026-10-31 |
 | [05 Scala merges and merge fixtures](merge/05-scala-merges.md) | implemented, 2026-11-01 |
 | [06 Merge validation](merge/06-merge-validation.md) | proposed, 2026-10-31 |
+
+## Relationships
+
+| Feature | Status |
+| --- | --- |
+| [01 Relationship benchmark](relationships/01-relationship-benchmark.md) | proposed, 2026-11-01 |
+| [02 Relationship model](relationships/02-relationship-model.md) | proposed, 2026-11-01 |
+| [03 Relationship matching](relationships/03-relationship-matching.md) | proposed, 2026-11-01 |
+| [04 Rename grouping](relationships/04-rename-grouping.md) | proposed, 2026-11-01 |
+| [05 Inlining detection](relationships/05-inlining-detection.md) | proposed, 2026-11-01 |
+| [06 Refactorings view](relationships/06-refactorings-view.md) | proposed, 2026-11-01 |
+| [07 Relationship validation](relationships/07-relationship-validation.md) | proposed, 2026-11-01 |
