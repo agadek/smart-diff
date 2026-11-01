@@ -219,17 +219,9 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
             if (sameSource && sameIndentation) Content.FORMATTING_ONLY else Content.CHANGED
         }
 
-        /** The tokens of [declaration]'s leading whitespace, a prefix of its own tokens. */
-        private fun leadingTokens(declaration: Declaration): List<Token> {
-            val length = declaration.leadingWhitespace?.length ?: 0
-            var end = 0
-            var count = 0
-            while (count < declaration.ownTokens.size && end < length) {
-                end += declaration.ownTokens[count].text.length
-                count++
-            }
-            return declaration.ownTokens.subList(0, count)
-        }
+        /** The whitespace tokens at the start of [declaration]'s own tokens, its leading whitespace (§6.1). */
+        private fun leadingTokens(declaration: Declaration): List<Token> =
+            declaration.ownTokens.takeWhile { it.kind == TokenKind.WHITESPACE }
 
         /** The text after the last line break of [tokens], as the indentation policy compares it. */
         private fun indentation(tokens: List<Token>): String {

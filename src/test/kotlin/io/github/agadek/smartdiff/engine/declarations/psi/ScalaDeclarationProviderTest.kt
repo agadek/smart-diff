@@ -544,12 +544,14 @@ class ScalaDeclarationProviderTest : ProviderTestCase() {
         // declarations/02-change-classification R14
         val old = "object Plain {\n  def f() = 1\n}\n"
         val additions = listOf(
-            "given Ordering[Int] = Ordering.Int\n", // Scala 3
-            "object Legacy {\n  val enum = 1\n}\n", // Scala 2
+            "given Ordering[Int] = Ordering.Int\n" to "Scala 3",
+            SCALA_2_ONLY to "Scala",
         )
 
-        for (addition in additions) {
-            val result = compare(old, addition + old)
+        for ((addition, expectedDialect) in additions) {
+            val new = addition + old
+            assertEquals("the addition is read as $expectedDialect", expectedDialect, dialect(old, new))
+            val result = compare(old, new)
 
             assertEquals(Status.ANALYZED, result.status)
             val plain = result.changes.single { (it.subject as? Subject.Declaration)?.name == "Plain" }
