@@ -134,7 +134,7 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
 
         val rename = metrics.perKind.getValue("RENAME")
         assertEquals(1, rename.tp)
-        assertEquals(2, rename.fp)
+        assertEquals(1, rename.fp)
         assertEquals(0, rename.fn)
         assertEquals(1, metrics.forcedPairs)
         assertEquals(1, metrics.classificationCorrect)
@@ -152,7 +152,7 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
             val result = caseResult(label("rename-1", "JAVA", "rename"), relationships(), nodes())
             val metrics = RelationshipBenchmark.evaluate(listOf(result.label), listOf(result))
             val report = RelationshipBenchmark.Report(
-                listOf(result), mapOf("JAVA" to metrics), mapOf(RelationshipBenchmark.Split.TUNING to metrics), metrics,
+                listOf(result), mapOf("java" to metrics), mapOf(RelationshipBenchmark.Split.TUNING to metrics), metrics,
                 "no-new-wrong-pairs", emptyList(), "abc123", directory,
             )
             RelationshipBenchmark.write(report)
@@ -173,36 +173,46 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         val directory = Files.createTempDirectory("relationship-gate").toFile()
         try {
             val baseline = File(directory, "baseline.json").apply {
-                writeText("""{"wrongPairs":[],"precision":{"JAVA":0.9},"recall":{"JAVA":0.9}}""")
+                writeText("""{"wrongPairs":[],"precision":{"java|RENAME":0.9},"recall":{"java|RENAME":0.9}}""")
             }
             val result = caseResult(label("rename-1", "JAVA", "rename"), listOf(actual(RelationshipBenchmark.Kind.RENAME, old("total"), new("other"))), nodes())
             val metrics = RelationshipBenchmark.evaluate(listOf(result.label), listOf(result))
             val cases = listOf(result)
-            assertTrue(RelationshipBenchmark.gateFailures("no-new-wrong-pairs", metrics, mapOf("JAVA" to metrics), baseline, 0.0, cases).isNotEmpty())
-            assertTrue(RelationshipBenchmark.gateFailures("precision", metrics, mapOf("JAVA" to metrics), baseline, 0.0, cases).isNotEmpty())
-            assertTrue(RelationshipBenchmark.gateFailures("tolerance", metrics, mapOf("JAVA" to metrics), baseline, 5.0, cases).isNotEmpty())
-            assertTrue(RelationshipBenchmark.gateFailures("unknown", metrics, mapOf("JAVA" to metrics), baseline, 0.0, cases).isNotEmpty())
+            assertTrue(RelationshipBenchmark.gateFailures("no-new-wrong-pairs", metrics, mapOf("java" to metrics), baseline, 0.0, cases).isNotEmpty())
+            assertTrue(RelationshipBenchmark.gateFailures("precision", metrics, mapOf("java" to metrics), baseline, 0.0, cases).isNotEmpty())
+            assertTrue(RelationshipBenchmark.gateFailures("tolerance", metrics, mapOf("java" to metrics), baseline, 5.0, cases).isNotEmpty())
+            assertTrue(RelationshipBenchmark.gateFailures("unknown", metrics, mapOf("java" to metrics), baseline, 0.0, cases).isNotEmpty())
 
             val clean = caseResult(result.label, emptyList(), nodes())
             val cleanMetrics = RelationshipBenchmark.evaluate(listOf(clean.label), listOf(clean))
-            assertTrue(RelationshipBenchmark.gateFailures("no-new-wrong-pairs", cleanMetrics, mapOf("JAVA" to cleanMetrics), baseline, 0.0, listOf(clean)).isEmpty())
+            assertTrue(RelationshipBenchmark.gateFailures("no-new-wrong-pairs", cleanMetrics, mapOf("java" to cleanMetrics), baseline, 0.0, listOf(clean)).isEmpty())
 
             val hidden = clean.copy(hidden = true)
-            assertTrue(RelationshipBenchmark.gateFailures("no-new-wrong-pairs", cleanMetrics, mapOf("JAVA" to cleanMetrics), null, 0.0, listOf(hidden)).isNotEmpty())
+            assertTrue(RelationshipBenchmark.gateFailures("no-new-wrong-pairs", cleanMetrics, mapOf("java" to cleanMetrics), null, 0.0, listOf(hidden)).isNotEmpty())
             val slow = clean.copy(millis = 5_001)
-            assertTrue(RelationshipBenchmark.gateFailures("no-new-wrong-pairs", cleanMetrics, mapOf("JAVA" to cleanMetrics), null, 0.0, listOf(slow)).isNotEmpty())
+            assertTrue(RelationshipBenchmark.gateFailures("no-new-wrong-pairs", cleanMetrics, mapOf("java" to cleanMetrics), null, 0.0, listOf(slow)).isNotEmpty())
             val thrown = clean.copy(exception = "boom")
-            assertTrue(RelationshipBenchmark.gateFailures("no-new-wrong-pairs", cleanMetrics, mapOf("JAVA" to cleanMetrics), null, 0.0, listOf(thrown)).isNotEmpty())
+            assertTrue(RelationshipBenchmark.gateFailures("no-new-wrong-pairs", cleanMetrics, mapOf("java" to cleanMetrics), null, 0.0, listOf(thrown)).isNotEmpty())
         } finally {
             directory.deleteRecursively()
         }
     }
 
-    fun `test the same cases give the same metrics`() {
+    fun `test two runs give the same report apart from times`() {
         // relationships/01-relationship-benchmark R28
-        val label = label("rename-1", "JAVA", "rename")
-        val result = caseResult(label, relationships(), nodes())
-        assertEquals(RelationshipBenchmark.evaluate(listOf(label), listOf(result)), RelationshipBenchmark.evaluate(listOf(label), listOf(result)))
+        val first = Files.createTempDirectory("relationship-run-1").toFile()
+        val second = Files.createTempDirectory("relationship-run-2").toFile()
+        try {
+            RelationshipBenchmark.run(File("src/test/testData/relationships-corpus.txt"), first)
+            RelationshipBenchmark.run(File("src/test/testData/relationships-corpus.txt"), second)
+            val time = Regex("\"(medianMillis|p95Millis|slowestMillis)\"\\s*:\\s*\\d+")
+            val a = File(first, "report.json").readText().replace(time, "")
+            val b = File(second, "report.json").readText().replace(time, "")
+            assertEquals(a, b)
+        } finally {
+            first.deleteRecursively()
+            second.deleteRecursively()
+        }
     }
 
     fun `test the checked-in labelled corpus runs and writes the report`() {
@@ -214,8 +224,79 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
             assertTrue(File(output, "summary.tsv").isFile)
             assertTrue(File(output, "report.md").isFile)
             assertTrue(File(output, "report.json").isFile)
+
         } finally {
             output.deleteRecursively()
+        }
+    }
+
+    fun `test the benchmark runs the corpus named by the property`() {
+        // relationships/01-relationship-benchmark R1, R22-R27
+        val list = RelationshipBenchmark.listFile(System.getProperty(RelationshipBenchmark.CORPUS_PROPERTY))
+        if (list == null) {
+            println("RELATIONSHIPS skipped: no corpus (run with -P${RelationshipBenchmark.CORPUS_PROPERTY}=<list>)")
+            return
+        }
+        val output = Files.createTempDirectory("relationship-property").toFile()
+        try {
+            val report = RelationshipBenchmark.run(list, output)
+            assertTrue(report.gateFailures.toString(), report.gateFailures.isEmpty())
+        } finally {
+            output.deleteRecursively()
+        }
+    }
+
+    fun `test a multi-kind relationship matches every actual kind`() {
+        // relationships/01-relationship-benchmark R12
+        val label = label("move-rename", "JAVA", "move-rename").copy(
+            relationships = listOf(
+                RelationshipBenchmark.LabelledRelationship(
+                    setOf(RelationshipBenchmark.Kind.RENAME, RelationshipBenchmark.Kind.MOVE),
+                    old("total"), new("sum"), null,
+                ),
+            ),
+        )
+        val actuals = listOf(
+            actual(RelationshipBenchmark.Kind.RENAME, old("total"), new("sum")),
+            actual(RelationshipBenchmark.Kind.MOVE, old("total"), new("sum")),
+        )
+        val metrics = RelationshipBenchmark.evaluate(listOf(label), listOf(caseResult(label, actuals, nodes())))
+        assertEquals(1, metrics.perKind.getValue("RENAME").tp)
+        assertEquals(1, metrics.perKind.getValue("MOVE").tp)
+        assertEquals(0, metrics.perKind.values.sumOf { it.fp })
+    }
+
+    fun `test a missing baseline file is a gate failure`() {
+        // relationships/01-relationship-benchmark R21, R22
+        val result = caseResult(label("rename-1", "JAVA", "rename"), relationships(), nodes())
+        val metrics = RelationshipBenchmark.evaluate(listOf(result.label), listOf(result))
+        val failures = RelationshipBenchmark.gateFailures(
+            "no-new-wrong-pairs", metrics, mapOf("java" to metrics),
+            File("/tmp/no-such-relationship-baseline.json"), 0.0, listOf(result),
+        )
+        assertTrue(failures.any { it.contains("baseline not found") })
+    }
+
+    fun `test the report lists missed relationships and classification mismatches`() {
+        // relationships/01-relationship-benchmark R18
+        val directory = Files.createTempDirectory("relationship-missed").toFile()
+        try {
+            val label = label("rename-1", "JAVA", "rename").copy(changes = listOf(
+                RelationshipBenchmark.ExpectedChange(endpoint("missing"), Presence.MATCHED, Content.UNCHANGED),
+            ))
+            val result = caseResult(label, emptyList(), nodes())
+            val metrics = RelationshipBenchmark.evaluate(listOf(label), listOf(result))
+            RelationshipBenchmark.write(
+                RelationshipBenchmark.Report(
+                    listOf(result), mapOf("java" to metrics), mapOf(RelationshipBenchmark.Split.TUNING to metrics), metrics,
+                    "no-new-wrong-pairs", emptyList(), "abc", directory,
+                ),
+            )
+            val markdown = File(directory, "report.md").readText()
+            assertTrue(markdown.contains("## Missed relationships"))
+            assertTrue(markdown.contains("## Classification mismatches"))
+        } finally {
+            directory.deleteRecursively()
         }
     }
 

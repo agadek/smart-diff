@@ -1,6 +1,8 @@
 case: kind-change
 language: Scala
 split: held-out
+category: kind-change
+corpus: scala3
 expected:
   relationships:
     - kinds: [KIND_CHANGE]
@@ -9,7 +11,7 @@ expected:
   changes:
     - subject: { path: "", kind: TRAIT, name: Receipt, signature: null }
       presence: MATCHED
-      content: UNCHANGED
+      content: CHANGED
       kindChangedFrom: CLASS
   ambiguous: []
 notes: "The class becomes a trait."

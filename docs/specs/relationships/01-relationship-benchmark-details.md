@@ -1,6 +1,6 @@
 # Relationship benchmark: details
 
-Status: proposed, 2026-11-01
+Status: accepted, 2026-11-01
 
 Feature: [Relationship benchmark](01-relationship-benchmark.md)
 

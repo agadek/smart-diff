@@ -1,6 +1,8 @@
 case: rename-method
 language: JAVA
 split: tuning
+category: method-rename
+corpus: java
 expected:
   relationships:
     - kinds: [RENAME]
