@@ -25,7 +25,10 @@ class GoldenFixturesTest : BasePlatformTestCase() {
     fun `test Scala 3 fixtures`() = checkFixtures("scala3", "Scala", "scala")
 
     private fun checkFixtures(directory: String, languageId: String, extension: String) {
-        val cases = File(TEST_DATA, directory).listFiles { file -> file.isDirectory }.orEmpty().sortedBy { it.name }
+        val cases = File(TEST_DATA, directory)
+            .listFiles { file -> file.isDirectory && File(file, "old.$extension").isFile }
+            .orEmpty()
+            .sortedBy { it.name }
         assertTrue("no fixtures in ${File(TEST_DATA, directory).absolutePath}", cases.isNotEmpty())
         val engine = DeclarationEngine(null)
         val failures = mutableListOf<String>()

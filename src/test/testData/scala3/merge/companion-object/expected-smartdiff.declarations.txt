@@ -1,0 +1,5 @@
+left: ANALYZED  right: ANALYZED
+class Cart  UNCHANGED  base 3-4  left 3-4  right 3-4
+  function total()  RIGHT_ONLY  right: changed  base 4  left 4  right 4
+object Cart  UNCHANGED  base 6-7  left 6-7  right 6-7
+  property Limit  LEFT_ONLY  left: changed  base 7  left 7  right 7

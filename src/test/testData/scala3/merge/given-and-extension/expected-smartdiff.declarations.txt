@@ -1,0 +1,5 @@
+left: ANALYZED  right: ANALYZED
+given intOrdering  CHANGED_ON_BOTH_SIDES  left: changed  right: changed  base 6-7  left 6-7  right 6-7
+  function compare(Int,Int)  CHANGED_ON_BOTH_SIDES  left: changed  right: changed  base 7  left 7  right 7
+extension Cart  UNCHANGED  base 9-10  left 9-10  right 9-10
+  function isFull  CHANGED_ON_BOTH_SIDES  left: changed  right: changed  base 10  left 10  right 10

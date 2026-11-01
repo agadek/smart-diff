@@ -1,0 +1,4 @@
+left: ANALYZED  right: ANALYZED
+class OrderService  UNCHANGED  base 5-13  left 5-13  right 5-13
+  method total(int)  LEFT_ONLY  left: formatting-only  base 6-8  left 10-12  right 6-8
+  method label()  CHANGED_ON_BOTH_SIDES  left: moved, formatting-only  right: changed  base 10-12  left 6-8  right 10-12

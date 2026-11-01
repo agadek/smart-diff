@@ -1,6 +1,6 @@
 # Scala merges and merge fixtures
 
-Status: proposed, 2026-10-31
+Status: accepted, 2026-11-01
 
 **Description:** Makes the [merge outline](02-merge-outline.md) correct for Scala 2 and Scala 3 merges, and checks every language's merge outline against golden merge fixtures.
 

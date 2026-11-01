@@ -1,0 +1,4 @@
+left: ANALYZED  right: ANALYZED
+class OrderService  UNCHANGED  base 3-8  left 3-8  right 3-8
+  function total(Int)  LEFT_ONLY  left: formatting-only  base 4-5  left 7-8  right 4-5
+  function label()  CHANGED_ON_BOTH_SIDES  left: moved, formatting-only  right: changed  base 7-8  left 4-5  right 7-8
