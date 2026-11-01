@@ -191,7 +191,8 @@ class MergeFixturesTest : BasePlatformTestCase() {
         // merge/05-scala-merges R14
         val joined = joinFixture("scala3", "given-and-extension", "Scala", "scala")
         val extension = outline(joined, "scala3", "given-and-extension").first { it.title.startsWith("extension ") }
-        assertTrue(extension.children.any { it.title.contains("isFull") })
+        val isFull = extension.children.first { it.title.contains("isFull") }
+        assertEquals(MergeGroup.CHANGED_ON_BOTH_SIDES, isFull.group)
     }
 
     fun `test Scala kind change on one side is covered`() {
