@@ -1,0 +1,8 @@
+left: ANALYZED  right: ANALYZED
+given Ordering[Int]  LEFT_ONLY  left: added  base -  left 5  right -
+enum Color  LEFT_ONLY  left: added  base -  left 6  right -
+  enum constant Red  LEFT_ONLY  left: added  base -  left 6  right -
+  enum constant Green  LEFT_ONLY  left: added  base -  left 6  right -
+extension String  LEFT_ONLY  left: added  base -  left 7  right -
+  function shout  LEFT_ONLY  left: added  base -  left 7  right -
+object Legacy  RIGHT_ONLY  right: added  base -  left -  right 5-7

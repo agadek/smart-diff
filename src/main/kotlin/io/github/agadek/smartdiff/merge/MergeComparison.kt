@@ -40,10 +40,10 @@ object MergeComparison {
             if (canceled.get()) throw CancellationException("the other side of the merge was canceled")
             cancellation.checkCanceled()
         }
-        val rightRequest = sideRequest(request, request.right, request.left)
+        val (leftRequest, rightRequest) = sideRequests(request)
         val rightRun = CompletableFuture.supplyAsync({ run(engine, rightRequest, shared, canceled) }, executor)
         val left = try {
-            run(engine, sideRequest(request, request.left, request.right), shared, canceled)
+            run(engine, leftRequest, shared, canceled)
         } catch (e: Throwable) {
             canceled.set(true)
             throw e
@@ -55,6 +55,10 @@ object MergeComparison {
         }
         return MergeJoin.join(left, right, request.left, request.right)
     }
+
+    /** The two requests one merge runs, each with the other side as a related text (plan §5.3). */
+    internal fun sideRequests(request: MergeTexts): Pair<ComparisonRequest, ComparisonRequest> =
+        sideRequest(request, request.left, request.right) to sideRequest(request, request.right, request.left)
 
     private fun sideRequest(request: MergeTexts, side: CharSequence, other: CharSequence) =
         ComparisonRequest(request.base, side, request.languageId, request.fileName, request.limits, relatedTexts = listOf(other))

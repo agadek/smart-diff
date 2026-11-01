@@ -1,0 +1,5 @@
+left: PARTIAL  right: ANALYZED
+File region  LEFT_ONLY  left: unanalyzed  base 3  left 3-5  right -
+object Legacy  RIGHT_ONLY  right: added  base -  left -  right 5-8
+  property enum  RIGHT_ONLY  right: added  base -  left -  right 6
+  property given  RIGHT_ONLY  right: added  base -  left -  right 7
