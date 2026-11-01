@@ -1,6 +1,6 @@
 # Feature specifications
 
-One file per feature, in one folder per context, written as described in the [specification guide](../SPEC-GUIDE.md). Key words link to the [glossary](../GLOSSARY.md).
+One file per feature, in one folder per context, plus a details file for each new feature, written as described in the [specification guide](../SPEC-GUIDE.md). Key words link to the [glossary](../GLOSSARY.md).
 
 ## Engines
 

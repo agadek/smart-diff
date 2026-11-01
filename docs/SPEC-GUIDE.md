@@ -1,6 +1,6 @@
 # Writing SMART Diff Specifications
 
-Status: 2026-10-31. How to write feature specifications, for anyone adding or changing one, coding agents included.
+Status: 2026-11-01. How to write feature specifications and their details files, for anyone adding or changing one, coding agents included.
 
 ## 1. Spec first
 
@@ -47,6 +47,17 @@ docs/specs/declarations/05-extraction-detection.md
 - One file describes one feature. If a file needs two use cases that a reviewer would ask for separately, split it.
 - Every feature file is listed in [docs/specs/README.md](specs/README.md), by folder and in order, with its status.
 
+A new feature also has a details file, next to its feature file, with the same number and name and `-details` at the end:
+
+```text
+docs/specs/relationships/03-relationship-matching.md
+docs/specs/relationships/03-relationship-matching-details.md
+```
+
+- The feature file says what the feature does. The details file says how it is built.
+- A feature added before 2026-11-01 may keep its details in the [technical specification](TECHNICAL-SPECIFICATION.md) or a design document instead. When such a feature changes a lot, move its details into a details file.
+- Write the details file in the same pull request as the feature file, or before the code that depends on it.
+
 ## 4. What a feature file contains
 
 Every feature file has these parts, in this order:
@@ -62,9 +73,30 @@ A feature can end with two optional parts:
 - **Out of scope:** short bullets on nearby work the feature does not do.
 - **References:** links to the decision records, technical sections and validation results behind it.
 
-Nothing else goes in a feature file. How the feature is built (algorithms, classes, thresholds and their reasons) goes in the [technical specification](TECHNICAL-SPECIFICATION.md) or a [decision record](adr/), linked from References.
+Nothing else goes in a feature file. How the feature is built goes in its details file (section 5), and choices that affect several features go in a [decision record](adr/). Link both from References.
 
-## 5. Writing requirements
+## 5. What a details file contains
+
+A details file describes one feature's design, in enough depth that someone can build it without asking. It has these parts, in this order:
+
+1. **Title:** the feature name followed by `: details`, as a heading.
+2. **Status:** the same status and date as the feature file. Update both together.
+3. **Feature:** a link to the feature file.
+4. **Design:** how the feature works, in sections. Cover what applies:
+   - the data it reads and produces, and where it plugs into the existing code
+   - the algorithm, step by step
+   - thresholds and limits, each with its value and its reason
+   - edge cases and how each is handled
+   - how it fails, and what the user sees then
+5. **Tests:** the fixtures and test classes, and which requirements each one checks, by ID.
+6. **Open questions:** decisions not made yet, each with the options. Leave the section out when there are none.
+
+- Refer to requirements by ID, such as R3, instead of restating them.
+- Link key words to the dictionary, as in feature files.
+- Class and method names are allowed here, unlike in feature files.
+- A choice that affects other features goes in a decision record, linked from the details file.
+
+## 6. Writing requirements
 
 - Write one short sentence per requirement, with one thing to check.
 - Use simple words and the present tense: "The outline shows …", not "The outline should show …".
@@ -74,7 +106,7 @@ Nothing else goes in a feature file. How the feature is built (algorithms, class
 - Give each requirement an ID, R1, R2, …, in the order of the list. Never renumber or reuse an ID. Mark a dropped requirement as *(retired)* instead of deleting it.
 - Leave out reasons and examples. If a requirement needs a reason, put it in a decision record and link it.
 
-## 6. Key words and the dictionary
+## 7. Key words and the dictionary
 
 The dictionary is [GLOSSARY.md](GLOSSARY.md). It defines the words the specs and the UI use.
 
@@ -84,7 +116,7 @@ The dictionary is [GLOSSARY.md](GLOSSARY.md). It defines the words the specs and
 - When a feature needs a new key word, add its entry to the dictionary in the same change.
 - Each dictionary entry is a `###` heading with the term, so it can be linked, followed by a one-sentence definition and the words to avoid.
 
-## 7. Example
+## 8. Example
 
 ```markdown
 # Extraction detection
@@ -120,7 +152,7 @@ that the helper's code was moved unchanged, without searching for it on the old 
 - [Validation, 2026-10-23](../../VALIDATION.md#2026-10-23-extraction-detection)
 ```
 
-## 8. Checklist
+## 9. Checklist
 
 Before opening a pull request that adds or changes a feature spec:
 
@@ -129,5 +161,6 @@ Before opening a pull request that adds or changes a feature spec:
 - It has a title, a status with a date, a description, a use case and requirements.
 - Each requirement is one short, simple sentence with an ID, and can be checked.
 - Each key word links to the dictionary the first time it appears, and new key words are added there.
-- How it is built is in the technical specification or a decision record, not in the feature file.
+- A new feature has a details file next to it, named `NN-feature-name-details.md`, with a link to the feature file, the design and the tests.
+- How it is built is in the details file or a decision record, not in the feature file.
 - No person is named in the file, the commit message or the pull request.
