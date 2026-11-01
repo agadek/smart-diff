@@ -1,10 +1,12 @@
 package io.github.agadek.smartdiff.ui.merge
 
+import io.github.agadek.smartdiff.engine.api.Candidate
 import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.Origin
 import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
@@ -22,16 +24,43 @@ import org.junit.Test
 class MergeOutlineModelTest {
 
     @Test
-    fun `side names use the branch or revision and cut unknown titles`() {
+    fun `side names use the branch or revision`() {
+        // merge/02-merge-outline R8, R9
         assertEquals("feature/rates", MergeSideNames.fromTitle("<html>Your version, branch <b>feature/rates</b></html>", "Left").display)
         assertEquals("main", MergeSideNames.fromTitle("Changes from branch main, revision 1a2b3c4d", "Left").display)
         assertEquals("feature/rates", MergeSideNames.fromTitle("Changes from origin/feature/rates", "Left").display)
         assertEquals("1a2b3c4", MergeSideNames.fromTitle("Changes from server (revision 1a2b3c4d)", "Left").display)
         assertEquals("a-very-long-branch-name", MergeSideNames.fromTitle("Changes from branch a-very-long-branch-name", "Left").display)
-        assertEquals("a very long side tit", MergeSideNames.fromTitle("a very long side title that is over twenty", "Left").display)
-        assertEquals("a very long side title that is over twenty", MergeSideNames.fromTitle("a very long side title that is over twenty", "Left").fullTitle)
         assertFalse(MergeSideNames.fromTitle("Your version, branch feature/rates", "Left").display.contains("ours", ignoreCase = true))
         assertFalse(MergeSideNames.fromTitle("Changes from branch main, revision 1a2b3c4d", "Left").display.contains("theirs", ignoreCase = true))
+    }
+
+    @Test
+    fun `an unknown side title is shown as written and cut at twenty characters`() {
+        // merge/02-merge-outline R10
+        val name = MergeSideNames.fromTitle("a very long side title that is over twenty", "Left")
+
+        assertEquals("a very long side tit", name.display)
+        assertEquals("a very long side title that is over twenty", name.fullTitle)
+    }
+
+    @Test
+    fun `the full side title is the tooltip and part of the accessible name`() {
+        // merge/02-merge-outline R11
+        val f = decl("f")
+        val left = MergeSideName("a very long side tit", "a very long side title that is over twenty")
+        val right = MergeSideName("merge-request-1234", "merge-request-1234")
+        val node = row(f, MergeGroup.CHANGED_ON_BOTH_SIDES, left = changed(f), right = changed(f))
+        val joined = JoinedResult(result(changed(f)), result(changed(f)), nodes = listOf(node))
+
+        val row = MergeOutlineModel.build(
+            joined, "base", "left", "right", left, right, MergeOutlineLayout.GROUPED_BY_SIDE,
+        ).items.single().children.single()
+
+        assertTrue(row.tooltip.toString(), row.tooltip.orEmpty().contains(left.fullTitle))
+        assertTrue(row.tooltip.toString(), row.tooltip.orEmpty().contains(right.fullTitle))
+        assertTrue(row.accessibleName, row.accessibleName.contains(left.fullTitle))
+        assertTrue(row.accessibleName, row.accessibleName.contains(right.fullTitle))
     }
 
     @Test
@@ -148,7 +177,7 @@ class MergeOutlineModelTest {
         val f = decl("f")
         val uncertain = ChangeNode(
             f, range(0, 5), null, Presence.UNCERTAIN,
-            candidates = listOf(io.github.agadek.smartdiff.engine.api.Candidate(f, range(0, 5))),
+            candidates = listOf(Candidate(f, range(0, 5))),
         )
         val node = row(f, MergeGroup.UNCERTAIN, left = uncertain, right = changed(f))
         val joined = JoinedResult(result(uncertain), result(changed(f)), nodes = listOf(node))
@@ -157,6 +186,70 @@ class MergeOutlineModelTest {
 
         val row = model.items.single().children.single()
         assertEquals("candidate: method f()", row.children.single().title)
+    }
+
+    @Test
+    fun `candidate rows name the side they come from`() {
+        // merge/02-merge-outline R7, R27
+        val f = decl("f")
+        val leftCandidate = decl("leftCandidate")
+        val rightCandidate = decl("rightCandidate")
+        val left = ChangeNode(
+            f, null, range(0, 5), Presence.UNCERTAIN,
+            candidates = listOf(Candidate(leftCandidate, range(10, 15))),
+        )
+        val right = ChangeNode(
+            f, null, range(0, 5), Presence.UNCERTAIN,
+            candidates = listOf(Candidate(rightCandidate, range(20, 25))),
+        )
+        val joined = JoinedResult(result(left), result(right), nodes = listOf(row(f, MergeGroup.UNCERTAIN, left = left, right = right)))
+
+        val candidates = build(joined, MergeOutlineLayout.GROUPED_BY_SIDE).items.single().children.single().children
+
+        assertEquals(
+            listOf("candidate: method leftCandidate()", "candidate: method rightCandidate()"),
+            candidates.map { it.title },
+        )
+        assertEquals(listOf("from main", "from feature"), candidates.map { it.note })
+    }
+
+    @Test
+    fun `the container tree lists candidates under an uncertain row`() {
+        // merge/02-merge-outline R29
+        val container = decl("A", DeclarationKind.CLASS)
+        val f = decl("f")
+        val left = ChangeNode(
+            f, null, range(0, 5), Presence.UNCERTAIN,
+            candidates = listOf(Candidate(f, range(2, 4))),
+        )
+        val child = row(f, MergeGroup.UNCERTAIN, left = left)
+        val node = MergeNode(
+            container, range(0, 10), matched(container), matched(container), MergeGroup.UNCHANGED,
+            children = listOf(child),
+        )
+        val joined = JoinedResult(result(left), result(matched(f)), nodes = listOf(node))
+
+        val row = build(joined, MergeOutlineLayout.CONTAINER_TREE).items.single().children.single()
+
+        assertEquals("candidate: method f()", row.children.single().title)
+        assertEquals("from main", row.children.single().note)
+    }
+
+    @Test
+    fun `a side's labels include its extraction notes`() {
+        // merge/02-merge-outline R30
+        val helper = decl("helper")
+        val source = decl("source")
+        val added = ChangeNode(
+            helper, null, range(0, 5), Presence.ADDED,
+            extractedFrom = listOf(Origin(source, range(20, 40), range(22, 30))),
+        )
+        val node = row(helper, MergeGroup.LEFT_ONLY, left = added, right = matched(helper))
+        val joined = JoinedResult(result(added), result(matched(helper)), nodes = listOf(node))
+
+        val row = build(joined, MergeOutlineLayout.GROUPED_BY_SIDE).items.single().children.single()
+
+        assertEquals("added, extracted from source()", row.left?.value)
     }
 
     @Test
@@ -178,7 +271,7 @@ class MergeOutlineModelTest {
 
     @Test
     fun `an unanalyzed side does not claim the other side changed alone`() {
-        // merge/02-merge-outline R22
+        // merge/02-merge-outline R22, R25
         val f = decl("f")
         val node = row(f, MergeGroup.RIGHT_ONLY, left = null, right = changed(f))
         val left = ComparisonResult(EngineId("test"), "1", Status.FAILED, fallbackReason = "parse failed")
