@@ -51,6 +51,10 @@ class MergeValidationTest : BasePlatformTestCase() {
         val node = MergeNode(decl(), baseRange(), changed(), changed(), MergeGroup.CHANGED_ON_BOTH_SIDES)
         val joined = JoinedResult(result(node), result(node), nodes = listOf(node))
         assertTrue("both-sides-clean" in flags(row(joined = joined, conflicts = emptyList())))
+
+        val added = MergeNode(decl(), null, changed(), changed(), MergeGroup.CHANGED_ON_BOTH_SIDES)
+        val addBoth = JoinedResult(result(added), result(added), nodes = listOf(added))
+        assertFalse("an add/add row is not a base declaration", "both-sides-clean" in flags(row(joined = addBoth, conflicts = emptyList())))
     }
 
     fun `test a conflict inside a one-side content change is conflict-one-side`() {
@@ -67,6 +71,12 @@ class MergeValidationTest : BasePlatformTestCase() {
         val removedOneSide = MergeNode(decl(), baseRange(), removed, changed(), MergeGroup.CHANGED_ON_BOTH_SIDES)
         assertFalse("a removed side is not a content change", "conflict-one-side" in flags(
             row(joined = JoinedResult(result(removedOneSide), result(removedOneSide), nodes = listOf(removedOneSide)), conflicts = listOf(baseRange())),
+        ))
+
+        val formatting = ChangeNode(decl(), baseRange(), baseRange(), Presence.MATCHED, content = Content.FORMATTING_ONLY)
+        val formattingOneSide = MergeNode(decl(), baseRange(), changed(), formatting, MergeGroup.CHANGED_ON_BOTH_SIDES)
+        assertTrue("a formatting-only other side is not a content change", "conflict-one-side" in flags(
+            row(joined = JoinedResult(result(formattingOneSide), result(formattingOneSide), nodes = listOf(formattingOneSide)), conflicts = listOf(baseRange())),
         ))
     }
 
@@ -121,7 +131,7 @@ class MergeValidationTest : BasePlatformTestCase() {
     fun `test coverage counts each language and needs thirty files`() {
         // merge/06-merge-validation R14, R24
         val rows = mutableListOf<MergeValidation.Row>()
-        for ((languageId, dialect) in listOf("JAVA" to null, "kotlin" to null, "Scala" to "Scala", "Scala" to "Scala 3")) {
+        for ((languageId, dialect) in listOf("JAVA" to null, "kotlin" to null, "Scala" to "Scala 2", "Scala" to "Scala 3")) {
             repeat(30) { rows += row(languageId = languageId, dialect = dialect) }
         }
         val coverage = MergeValidation.coverage(rows)
@@ -158,7 +168,7 @@ class MergeValidationTest : BasePlatformTestCase() {
 
     fun `test Scala files record the dialect in the language`() {
         // merge/06-merge-validation R21
-        assertEquals("Scala 2", row(languageId = "Scala", dialect = "Scala").language)
+        assertEquals("Scala 2", row(languageId = "Scala", dialect = "Scala 2").language)
         assertEquals("Scala 3", row(languageId = "Scala", dialect = "Scala 3").language)
         assertEquals("Scala", row(languageId = "Scala", dialect = null).language)
         assertEquals("Java", row(languageId = "JAVA").language)

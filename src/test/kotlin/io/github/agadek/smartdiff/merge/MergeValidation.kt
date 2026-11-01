@@ -7,6 +7,7 @@ import com.intellij.openapi.util.ThrowableComputable
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.Content
+import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.api.compareSafely
@@ -55,7 +56,7 @@ object MergeValidation {
                 "kotlin" -> "Kotlin"
                 "Scala" -> when (dialect) {
                     "Scala 3" -> "Scala 3"
-                    "Scala" -> "Scala 2"
+                    "Scala 2" -> "Scala 2"
                     else -> "Scala"
                 }
                 else -> languageId
@@ -268,7 +269,7 @@ object MergeValidation {
 
     private fun changedOnBoth(joined: JoinedResult): Boolean {
         fun visit(nodes: List<MergeNode>): Boolean =
-            nodes.any { it.group == MergeGroup.CHANGED_ON_BOTH_SIDES || visit(it.children) }
+            nodes.any { (it.baseRange != null && it.group == MergeGroup.CHANGED_ON_BOTH_SIDES) || visit(it.children) }
         return visit(joined.nodes)
     }
 
@@ -277,8 +278,8 @@ object MergeValidation {
             val range = node.baseRange
             val changedLeft = node.left?.content == Content.CHANGED
             val changedRight = node.right?.content == Content.CHANGED
-            val otherLeft = node.left == null || !node.left.isChangedItself
-            val otherRight = node.right == null || !node.right.isChangedItself
+            val otherLeft = node.left != null && node.left.presence == Presence.MATCHED && node.left.content != Content.CHANGED
+            val otherRight = node.right != null && node.right.presence == Presence.MATCHED && node.right.content != Content.CHANGED
             (range != null && conflicts.any { it.intersects(range) } &&
                 changedLeft != changedRight && (if (changedLeft) otherRight else otherLeft)) || visit(node.children)
         }
@@ -319,7 +320,10 @@ object MergeValidation {
         if (languageId != "Scala") return null
         val provider = DeclarationProvider.EP_NAME.extensionList.firstOrNull { it.supports(languageId) } ?: return null
         return ReadAction.compute(ThrowableComputable<String?, RuntimeException> {
-            provider.dialect(ProjectManager.getInstance().defaultProject, listOf(base, left, right), null)?.id
+            when (val id = provider.dialect(ProjectManager.getInstance().defaultProject, listOf(base, left, right), null)?.id) {
+                "Scala" -> "Scala 2"
+                else -> id
+            }
         })
     }
 

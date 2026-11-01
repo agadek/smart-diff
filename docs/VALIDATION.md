@@ -21,7 +21,8 @@ Its report is written to `build/reports/smartdiff-validation/merge/`.
 ## 2026-11-01: merge validation
 
 **Corpus:** merge commits from the Java and Kotlin clones and from the Scala clones added for this run, selected with
-`git rev-list` arguments:
+`git rev-list` arguments. The `/src/...` paths stand for the local clone location; use the clone paths on the machine
+running the validation.
 
 ```text
 /src/commons-lang --max-count=240 HEAD -- *.java
@@ -35,7 +36,7 @@ Its report is written to `build/reports/smartdiff-validation/merge/`.
 
 **Result:** 275 files from 121 merge commits; 2 files were skipped because they were missing from the base or a parent,
 and no merge commit had more than two parents or lacked a merge base. No file had a `join-mismatch`. The flags were
-48 `both-sides-clean`, 12 `conflict-one-side` and 6 `status`; the report lists the conflicts and outline of every
+48 `both-sides-clean`, 17 `conflict-one-side` and 6 `status`; the report lists the conflicts and outline of every
 flagged file.
 
 | Language | Files | Minimum |
@@ -45,10 +46,10 @@ flagged file.
 | Scala 2 | 117 | 30 |
 | Scala 3 | 41 | 30 |
 
-**Time:** the median was 29 ms for both comparisons together and 21 ms for one base-side comparison, so the merge
+**Time:** the median was 28 ms for both comparisons together and 19 ms for one base-side comparison, so the merge
 outline is within the twice-the-side limit.
 
-**Ready to ship:** no `join-mismatch` and the time ratio pass. The 60 `both-sides-clean`/`conflict-one-side` files still
+**Ready to ship:** no `join-mismatch` and the time ratio pass. The 65 `both-sides-clean`/`conflict-one-side` files still
 need review or an explanation, so the merge outline is not ready to ship from this run yet.
 
 ## 2026-10-23: extraction detection
