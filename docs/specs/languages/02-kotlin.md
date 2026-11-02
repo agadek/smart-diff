@@ -17,7 +17,7 @@ Status: implemented, 2026-10-21
 - **R7** A function's [signature](../../GLOSSARY.md#signature) starts with its receiver type, then its parameter types.
 - **R8** A `vararg` parameter and a plain parameter of the same type give different signatures.
 - **R9** An extension's receiver is shown before its name: `function Date.formatIsoDate()`.
-- **R10** Adding or removing a line break between tokens is a change, since line breaks can change how Kotlin code is read.
+- **R10** Adding or removing a line break between tokens inside a declaration is a change, since line breaks can change how Kotlin code is read; the line break before a declaration is layout ([declarations/02-change-classification](../declarations/02-change-classification.md) R14).
 - **R11** Other whitespace changes are [formatting-only](../../GLOSSARY.md#formatting-only).
 
 ## References
