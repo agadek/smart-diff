@@ -223,6 +223,43 @@ class MergeValidationTest : BasePlatformTestCase() {
         )
     }
 
+    fun `test a formatting-only side does not make a declaration both-sides-clean`() {
+        // merge/06-merge-validation R8, R29
+        val formatting = ChangeNode(decl(), baseRange(), baseRange(), Presence.MATCHED, content = Content.FORMATTING_ONLY)
+        val formattingThenChanged = MergeNode(decl(), baseRange(), formatting, changed(), MergeGroup.CHANGED_ON_BOTH_SIDES)
+        assertFalse(
+            "a side that only changed layout is not changed",
+            "both-sides-clean" in flags(
+                row(joined = JoinedResult(result(), result(), nodes = listOf(formattingThenChanged)), conflicts = emptyList()),
+            ),
+        )
+
+        val moved = ChangeNode(decl(), baseRange(), baseRange(), Presence.MATCHED, moved = true)
+        val movedThenChanged = MergeNode(decl(), baseRange(), moved, changed(), MergeGroup.CHANGED_ON_BOTH_SIDES)
+        assertTrue(
+            "a moved side still counts as a change",
+            "both-sides-clean" in flags(
+                row(joined = JoinedResult(result(), result(), nodes = listOf(movedThenChanged)), conflicts = emptyList()),
+            ),
+        )
+    }
+
+    fun `test a conflict spanning a container's own lines and a child flags the container`() {
+        // merge/06-merge-validation R9, R29
+        val child = MergeNode(decl(), TextRange(10, 15), changed(), changed(), MergeGroup.CHANGED_ON_BOTH_SIDES)
+        val container = MergeNode(decl(), TextRange(0, 20), changed(), matched(), MergeGroup.LEFT_ONLY, children = listOf(child))
+        val joined = JoinedResult(result(), result(), nodes = listOf(container))
+
+        assertTrue(
+            "the hunk covers the container's own header and the child",
+            "conflict-one-side" in flags(row(joined = joined, conflicts = listOf(TextRange(8, 12)))),
+        )
+        assertFalse(
+            "a hunk only in the child that both sides changed is not the container's",
+            "conflict-one-side" in flags(row(joined = joined, conflicts = listOf(TextRange(11, 13)))),
+        )
+    }
+
     fun `test a status file lists its fallback reason`() {
         // merge/06-merge-validation R31
         val directory = Files.createTempDirectory("merge-validation-fallbacks").toFile()
@@ -246,12 +283,13 @@ class MergeValidationTest : BasePlatformTestCase() {
         // merge/06-merge-validation R32
         val directory = Files.createTempDirectory("merge-validation-threw").toFile()
         try {
-            val threw = failed(ComparisonResult.THREW_REASON + ": boom")
+            val threw = failed("engine test failed: boom", engineThrew = true)
             val row = row(joined = JoinedResult(threw, result())).let { it.copy(flags = flags(it)) }
             val readiness = MergeValidation.readiness(listOf(row), 10, 6)
             assertFalse(readiness.noThrownComparison)
             assertFalse(readiness.ready)
             assertEquals(listOf("A.java"), readiness.threwFiles)
+            assertEquals("the reason keeps the engine id", "engine test failed: boom", MergeValidation.fallbacks(row).single().reason)
 
             val report = report(listOf(row), directory)
             assertEquals("not ready: comparison threw in A.java", MergeValidation.summary(report))
@@ -261,6 +299,10 @@ class MergeValidationTest : BasePlatformTestCase() {
             val timeout = row(joined = JoinedResult(failed(ComparisonResult.TIMEOUT_REASON + " after 5000 ms"), result()))
                 .let { it.copy(flags = flags(it)) }
             assertTrue("a timeout is a specified fallback", MergeValidation.readiness(listOf(timeout), 10, 6).noThrownComparison)
+
+            val ownReason = row(joined = JoinedResult(failed("engine test failed: boom"), result()))
+                .let { it.copy(flags = flags(it)) }
+            assertTrue("an engine's own reason is not a thrown comparison", MergeValidation.readiness(listOf(ownReason), 10, 6).noThrownComparison)
         } finally {
             directory.deleteRecursively()
         }
@@ -299,8 +341,8 @@ class MergeValidationTest : BasePlatformTestCase() {
 
     private fun result(node: MergeNode): ComparisonResult = result(Status.ANALYZED, node)
 
-    private fun failed(reason: String): ComparisonResult =
-        ComparisonResult(EngineId("test"), "1", Status.FAILED, fallbackReason = reason)
+    private fun failed(reason: String, engineThrew: Boolean = false): ComparisonResult =
+        ComparisonResult(EngineId("test"), "1", Status.FAILED, fallbackReason = reason, engineThrew = engineThrew)
 
     private fun changed() = ChangeNode(decl(), baseRange(), baseRange(), Presence.MATCHED, content = Content.CHANGED)
 

@@ -5,6 +5,7 @@ import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.ThrowableComputable
 import io.github.agadek.smartdiff.engine.api.Cancellation
+import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.Presence
@@ -131,7 +132,7 @@ object MergeValidation {
     fun flags(row: Row): List<String> = buildList {
         if (row.joined.baseMismatch) add("join-mismatch")
         if (row.conflicts != null && changedOnBothWithoutConflict(row.joined, row.conflicts)) add("both-sides-clean")
-        if (row.conflicts != null && conflictInsideOneSidedChange(row.joined, row.conflicts)) add("conflict-one-side")
+        if (row.conflicts != null && conflictInsideOneSidedChange(row.joined, row.conflicts, row.base)) add("conflict-one-side")
         if (row.joined.left.status != Status.ANALYZED || row.joined.right.status != Status.ANALYZED) add("status")
         if (leftHidden(row.base, row.left, row.joined) || rightHidden(row.base, row.right, row.joined)) add("hidden")
         if (row.nanos > SLOW_NANOS) add("slow")
@@ -149,7 +150,7 @@ object MergeValidation {
     fun fallbacks(row: Row): List<Fallback> = listOf("left" to row.joined.left, "right" to row.joined.right)
         .filter { (_, result) -> result.status != Status.ANALYZED }
         .map { (side, result) ->
-            Fallback(side, result.status, result.fallbackReason ?: result.status.name.lowercase(), result.threw)
+            Fallback(side, result.status, result.fallbackReason ?: result.status.name.lowercase(), result.engineThrew)
         }
 
     /** The report's one-line readiness; a thrown comparison names its files (R32). */
@@ -311,16 +312,20 @@ object MergeValidation {
     }
 
     private fun changedOnBothWithoutConflict(joined: JoinedResult, conflicts: List<TextRange>): Boolean {
+        // R8 counts a declaration changed beyond formatting: a side that is only formatting-only is not changed, so a
+        // formatting-only side next to a changed one is not a both-sides-clean case.
+        fun formattingOnly(node: ChangeNode?): Boolean = node?.content == Content.FORMATTING_ONLY
+
         fun visit(nodes: List<MergeNode>): Boolean = nodes.any { node ->
             val range = node.baseRange
-            (range != null && node.group == MergeGroup.CHANGED_ON_BOTH_SIDES && conflicts.none { it.intersects(range) }) || visit(node.children)
+            (range != null && node.group == MergeGroup.CHANGED_ON_BOTH_SIDES &&
+                !formattingOnly(node.left) && !formattingOnly(node.right) &&
+                conflicts.none { it.intersects(range) }) || visit(node.children)
         }
         return visit(joined.nodes)
     }
 
-    private fun conflictInsideOneSidedChange(joined: JoinedResult, conflicts: List<TextRange>): Boolean {
-        fun intersects(range: TextRange?): Boolean = range != null && conflicts.any { it.intersects(range) }
-
+    private fun conflictInsideOneSidedChange(joined: JoinedResult, conflicts: List<TextRange>, base: String): Boolean {
         fun oneSided(node: MergeNode): Boolean {
             val changedLeft = node.left?.content == Content.CHANGED
             val changedRight = node.right?.content == Content.CHANGED
@@ -329,11 +334,34 @@ object MergeValidation {
             return changedLeft != changedRight && (if (changedLeft) otherRight else otherLeft)
         }
 
-        // R9 judges the declaration that holds the conflict, not a container whose own layout changed because a
-        // declaration inside it was added or removed: when a child holds the conflict, the child's change decides.
+        // R9 judges the part of the conflict that lies in the declaration's own source: the base range outside every
+        // child, and not a blank run between children. A container whose own header is in the hunk is flagged even when
+        // a child in the hunk changed too; a hunk that only starts in the blank line above a child is the child's.
+        fun hasToken(part: TextRange): Boolean {
+            val end = minOf(part.end, base.length)
+            for (offset in part.start until end) if (!base[offset].isWhitespace()) return true
+            return false
+        }
+
+        fun ownParts(node: MergeNode): List<TextRange> {
+            val range = node.baseRange ?: return emptyList()
+            val parts = mutableListOf<TextRange>()
+            var start = range.start
+            for (child in node.children.mapNotNull { it.baseRange }.sortedBy { it.start }) {
+                val childStart = child.start.coerceIn(start, range.end)
+                if (childStart > start) parts += TextRange(start, childStart)
+                start = maxOf(start, child.end.coerceIn(start, range.end))
+            }
+            if (start < range.end) parts += TextRange(start, range.end)
+            return parts.filter(::hasToken)
+        }
+
+        fun holds(conflict: TextRange, part: TextRange): Boolean =
+            if (conflict.start == conflict.end) conflict.start >= part.start && conflict.start < part.end
+            else conflict.start < part.end && conflict.end > part.start
+
         fun visit(nodes: List<MergeNode>): Boolean = nodes.any { node ->
-            val childHolds = node.children.any { intersects(it.baseRange) }
-            (intersects(node.baseRange) && !childHolds && oneSided(node)) || visit(node.children)
+            (ownParts(node).any { part -> conflicts.any { holds(it, part) } } && oneSided(node)) || visit(node.children)
         }
         return visit(joined.nodes)
     }

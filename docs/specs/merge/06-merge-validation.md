@@ -15,8 +15,8 @@ Status: implemented, 2026-11-02
 - **R5** A file is joined from the base and the two parents, as the [merge join](01-merge-join.md) does in the IDE.
 - **R6** The report goes to `build/reports/smartdiff-validation/merge/`, with one row per file and its flags, and the outline of each flagged file.
 - **R7** The flag `join-mismatch` marks a file where the two results did not agree on the base.
-- **R8** The flag `both-sides-clean` marks a declaration [changed on both sides](../../GLOSSARY.md#changed-on-both-sides) in a file that merges without a conflict.
-- **R9** The flag `conflict-one-side` marks a conflict inside a declaration that only one side changed in content.
+- **R8** The flag `both-sides-clean` marks a declaration [changed on both sides](../../GLOSSARY.md#changed-on-both-sides) in a file that merges without a conflict, and not [formatting-only](../../GLOSSARY.md#formatting-only) on either side.
+- **R9** The flag `conflict-one-side` marks a conflict inside a declaration's own source that only one side changed in content.
 - **R10** Conflicts are computed from the three texts as the merge window computes them.
 - **R11** The flag `slow` marks a file where both comparisons together took more than 1 s.
 - **R12** The flags `status` and `hidden` mark a side that fell back or hid a difference, as in the two-sided mode.

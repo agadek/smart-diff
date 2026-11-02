@@ -188,9 +188,9 @@ and records the verdicts.
 
 ## 2026-11-02: merge validation rerun
 
-The [2026-11-01 run](#2026-11-01-merge-validation) left 67 files to review. This run replays the same merge commits on the engine that will ship in 0.2.0, gives each flagged file one verdict, and records the one validation fix the review needed.
+The [2026-11-01 run](#2026-11-01-merge-validation) left 67 files to review. This run replays the same merge commits on the engine that will ship in 0.2.0, gives each flagged file one verdict, and records the validation fixes the review needed.
 
-**Corpus:** the 2026-11-01 list with each clone's `HEAD` replaced by the commit below. The 2026-11-01 run did not record its clone commits, so the two commit lists may differ; the counts match exactly, and the clones had not moved between the runs. The `/src/...` paths stand for the local clones; use the clone paths on the machine running the validation.
+**Corpus:** the 2026-11-01 list with each clone's `HEAD` replaced by the commit below. The 2026-11-01 run did not record its clone commits, so the commit lists of the two runs cannot be compared; the file and merge commit counts match exactly. The `/src/...` paths stand for the local clones; use the clone paths on the machine running the validation.
 
 ```text
 /src/commons-lang --max-count=240 b9b30efb01e861a16503232bb96b684107e73199 -- *.java
@@ -216,24 +216,25 @@ The [2026-11-01 run](#2026-11-01-merge-validation) left 67 files to review. This
 
 | Flag | 2026-11-01 | 2026-11-02 | Change |
 | --- | --- | --- | --- |
-| `both-sides-clean` | 50 | 50 | none |
-| `conflict-one-side` | 17 | 12 | −5, the R29 fix below |
+| `both-sides-clean` | 50 | 49 | −1, the R8 fix below |
+| `conflict-one-side` | 17 | 12 | −5, the R29 fixes below |
 | `status` | 6 | 6 | none |
 | `join-mismatch` | 0 | 0 | none |
 
-The 2026-11-01 run predates the #50 fix that shipped in 0.2.0. Replaying the same commits with it changed none of these counts, so none of the flagged files was that pattern.
+The 2026-11-01 run predates the #50 fix (#58). Replaying the same commits with it changed none of these counts, so none of the flagged files was that pattern.
 
-**R29 fix:** the first 2026-11-02 run had 17 `conflict-one-side` flags. Five of them came from a container whose own layout changed because a declaration inside it was added or removed, while the conflicting declaration under it was changed on both sides; the flag judged the container and not the declaration that holds the conflict. The check now judges the innermost declaration, and `MergeValidationTest` has a case for it. The rerun after the fix has 12.
+**R29 fix, `conflict-one-side`:** the first 2026-11-02 run had 17 `conflict-one-side` flags. Five of them came from a container whose own source changed for a real reason while the conflicting declaration under it was changed on both sides; the flag judged the container and not the declaration that holds the conflict. Each of the five containers had changed its own non-whitespace source, so declarations/02 R8 held: `class StrLookup` gained a `//----` separator comment, `class StringUtils` lost the javadoc's `@version` line, `class SpringTransactionManager` changed its constructor to `private val _dataSource`, `class Entity` changed its type parameter bound to `Comparable<ID>`, and `trait SetInstances` gained `import SetInstances._`. The check now judges the part of the conflict in the declaration's own source outside its children, so a hunk that only starts in the blank line above a child belongs to the child, and a hunk that covers a container's own header is the container's (#69). `MergeValidationTest` has a case for each. The rerun after the fixes still has 12: the five are no longer flagged, and the #69 case is already inside a file flagged for another declaration.
+
+**R29 fix, `both-sides-clean`:** `StringEscapeUtilsTest` was flagged with a formatting-only left side. R8 counts a declaration changed beyond formatting, so the check now ignores a side that is only formatting-only. The file is no longer flagged (50 → 49), and `MergeValidationTest` has a case for it (#67).
 
 **Time:** the median was 29 ms for both comparisons together and 23 ms for one base-side comparison, a ratio of 1.26, against 33 ms and 23 ms in the first run. Within the twice-the-side limit (R17).
 
-**Flagged files:** 61 files. Every `both-sides-clean` and `conflict-one-side` file gets one row, and a file with both flags gets one row per flag (DMLTests).
+**Flagged files:** 59 files, 61 flag rows. Every `both-sides-clean` and `conflict-one-side` file gets one row, and a file with both flags gets one row per flag (`Entity.kt` and `DMLTests.kt`).
 
 ### Expected
 
 | File | Merge commit | Flag | Verdict | Reason |
 | --- | --- | --- | --- | --- |
-| `commons-lang` `src/test/java/org/apache/commons/lang3/StringEscapeUtilsTest.java` | `1a256d3e74` | `both-sides-clean` | expected | left removed blank lines inside the test, right added a CSV assertion |
 | `commons-lang` `src/main/java/org/apache/commons/lang3/ClassUtils.java` | `bd7956949e` | `both-sides-clean` | expected | left renamed a caught exception, right added the method's `@throws` javadoc |
 | `commons-lang` `src/main/java/org/apache/commons/lang3/reflect/MethodUtils.java` | `494dfc9e6b` | `both-sides-clean` | expected | left replaced `Validate.notNull`, right added the method's `@throws` javadoc |
 | `commons-lang` `src/main/java/org/apache/commons/lang3/text/WordUtils.java` | `9604c85306` | `both-sides-clean` | expected | left removed the class javadoc's `@version` line, right added `containsAllWords` with its javadoc |
@@ -298,15 +299,16 @@ The 2026-11-01 run predates the #50 fix that shipped in 0.2.0. Replaying the sam
 
 ### Wrong flag
 
-These five files were reviewed on the first 2026-11-02 run, before the R29 fix. In the rerun four are no longer flagged; `Entity.kt` keeps only `both-sides-clean`. No issue was opened: a wrong flag is fixed in the validation (R29), not explained as a known limit.
+These six files were reviewed on the first 2026-11-02 run, before the R29 fixes. In the final rerun none of the five `conflict-one-side` flags is raised; `Entity.kt` keeps only `both-sides-clean`. No issue was opened: a wrong flag is fixed in the validation (R29), not explained as a known limit.
 
 | File | Merge commit | Flag | Verdict | Reason |
 | --- | --- | --- | --- | --- |
-| `commons-lang` `src/main/java/org/apache/commons/lang3/text/StrLookup.java` | `80644cdab9` | `conflict-one-side` | wrong flag | the conflict is in `systemPropertiesLookup`, changed on both sides; the flag came from `class StrLookup`, whose layout changed when the left moved members |
-| `commons-lang` `src/main/java/org/apache/commons/lang3/StringUtils.java` | `9604c85306` | `conflict-one-side` | wrong flag | the conflict is in `containsAny(CharSequence, CharSequence...)`, changed on both sides; the flag came from `class StringUtils`, whose layout changed on the left |
-| `Exposed` `spring-transaction/src/main/kotlin/org/jetbrains/exposed/spring/SpringTransactionManager.kt` | `7ca1c6bf39` | `conflict-one-side` | wrong flag | the conflicts are in `newTransaction` and `initTransaction`, changed on both sides; the flag came from `class SpringTransactionManager`, whose layout changed on the left |
-| `Exposed` `src/main/kotlin/org/jetbrains/exposed/dao/Entity.kt` | `e179d32bf1` | `conflict-one-side` | wrong flag | the conflicts are in the two `setValue` overrides, changed on both sides; the flag came from `class Entity`, whose layout changed on the right |
-| `cats` `alleycats-core/src/main/scala/alleycats/std/set.scala` | `78af8a7d66` | `conflict-one-side` | wrong flag | the conflict is in `alleyCatsStdSetMonad`, changed on both sides; the flag came from `trait SetInstances`, whose layout changed on the left |
+| `commons-lang` `src/main/java/org/apache/commons/lang3/text/StrLookup.java` | `80644cdab9` | `conflict-one-side` | wrong flag | the conflict is in `systemPropertiesLookup`, changed on both sides; the flag came from `class StrLookup`, which gained a `//----` separator comment on the left (R6) |
+| `commons-lang` `src/main/java/org/apache/commons/lang3/StringUtils.java` | `9604c85306` | `conflict-one-side` | wrong flag | the conflict is in `containsAny(CharSequence, CharSequence...)`, changed on both sides; the flag came from `class StringUtils`, whose javadoc lost the `@version $Id$` line on the left (R6) |
+| `Exposed` `spring-transaction/src/main/kotlin/org/jetbrains/exposed/spring/SpringTransactionManager.kt` | `7ca1c6bf39` | `conflict-one-side` | wrong flag | the conflicts are in `newTransaction` and `initTransaction`, changed on both sides; the flag came from `class SpringTransactionManager`, whose own header changed the constructor from `dataSource: DataSource` to `private val _dataSource: DataSource` on the left |
+| `Exposed` `src/main/kotlin/org/jetbrains/exposed/dao/Entity.kt` | `e179d32bf1` | `conflict-one-side` | wrong flag | the conflicts are in the two `setValue` overrides, changed on both sides; the flag came from `class Entity`, whose own header changed the type parameter bound from `Entity<ID:Any>` to `Entity<ID:Comparable<ID>>` on the right |
+| `cats` `alleycats-core/src/main/scala/alleycats/std/set.scala` | `78af8a7d66` | `conflict-one-side` | wrong flag | the conflict is in `alleyCatsStdSetMonad`, changed on both sides; the flag came from `trait SetInstances`, which gained `import SetInstances._` on the left |
+| `commons-lang` `src/test/java/org/apache/commons/lang3/StringEscapeUtilsTest.java` | `1a256d3e74` | `both-sides-clean` | wrong flag | the left only removed blank lines, so the outline's `formatting-only` is right; the flag counted that side as changed (R8). The check now ignores it and the file is no longer flagged (#67) |
 
 ### Fixed and known limit
 
