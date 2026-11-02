@@ -41,6 +41,11 @@ data class MergeNode(
     /** Only for [MergeGroup.CHANGED_ON_BOTH_SIDES]: both sides end with the same text, or both removed it. */
     val sameChange: Boolean = false,
     val children: List<MergeNode> = emptyList(),
+    /**
+     * The base ranges of all direct children in the base tree, including children that neither side changed and that
+     * [children] therefore leaves out (merge/01 R17). Empty for an added declaration.
+     */
+    val baseChildRanges: List<TextRange> = emptyList(),
 ) {
     fun node(side: MergeSide): ChangeNode? = if (side == MergeSide.LEFT) left else right
 }
@@ -259,11 +264,14 @@ object MergeJoin {
 
         /** The finished row, or null when neither it nor any row under it is a change. */
         private fun freeze(row: Row): MergeNode? {
+            // Every direct child's base range is kept, including the rows left out below, so a reader can tell a
+            // container's own base source from its children's (merge/06 R9).
+            val baseChildRanges = row.children.mapNotNull { it.baseRange }
             val children = row.children.mapNotNull { freeze(it) }
             val group = group(row.left, row.right)
             if (group == MergeGroup.UNCHANGED && children.isEmpty()) return null
             val sameChange = row.sameChange && group == MergeGroup.CHANGED_ON_BOTH_SIDES
-            return MergeNode(row.subject, row.baseRange, row.left, row.right, group, sameChange, children)
+            return MergeNode(row.subject, row.baseRange, row.left, row.right, group, sameChange, children, baseChildRanges)
         }
 
         private fun baseSubject(node: ChangeNode): Subject {
