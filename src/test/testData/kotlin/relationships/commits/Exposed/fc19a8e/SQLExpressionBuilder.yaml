@@ -1,0 +1,18 @@
+case: Exposed-fc19a8e-SQLExpressionBuilder
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "Exposed"
+  commit: fc19a8eb4eb0429536497ab82014b88e6f495f82
+  path: "exposed-core/src/main/kotlin/org/jetbrains/exposed/sql/SQLExpressionBuilder.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "SqlExpressionBuilderClass", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

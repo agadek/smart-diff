@@ -1,0 +1,55 @@
+case: Exposed-c2a43a4-InListOps
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "Exposed"
+  commit: c2a43a49f47d693e06711c56f5f7e691b6a068af
+  path: "exposed-core/src/main/kotlin/org/jetbrains/exposed/sql/ops/InListOps.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "InListOrNotInListBaseOp", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class InListOrNotInListBaseOp", kind: FUNCTION, name: "extractValues", signature: "V" }
+      presence: REMOVED
+      content: UNCHANGED
+    - subject: { path: "class InListOrNotInListBaseOp", kind: FUNCTION, name: "toQueryBuilder", signature: "QueryBuilder" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class InListOrNotInListBaseOp", kind: FUNCTION, name: "registerValues", signature: "V" }
+      presence: MATCHED
+      content: CHANGED
+      signatureChanged: true
+    - subject: { path: "", kind: CLASS, name: "SingleValueInListOp", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class SingleValueInListOp", kind: FUNCTION, name: "extractValues", signature: "T" }
+      presence: REMOVED
+      content: UNCHANGED
+    - subject: { path: "class SingleValueInListOp", kind: FUNCTION, name: "registerValues", signature: "T" }
+      presence: ADDED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "PairInListOp", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class PairInListOp", kind: FUNCTION, name: "extractValues", signature: "Pair<T1,T2>" }
+      presence: REMOVED
+      content: UNCHANGED
+    - subject: { path: "class PairInListOp", kind: FUNCTION, name: "registerValues", signature: "Pair<T1,T2>" }
+      presence: ADDED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "TripleInListOp", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class TripleInListOp", kind: FUNCTION, name: "extractValues", signature: "Triple<T1,T2,T3>" }
+      presence: REMOVED
+      content: UNCHANGED
+    - subject: { path: "class TripleInListOp", kind: FUNCTION, name: "registerValues", signature: "Triple<T1,T2,T3>" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

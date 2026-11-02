@@ -1,0 +1,18 @@
+case: moshi-75658a1-DualKotlinTest
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "moshi"
+  commit: 75658a1162521142befdc3a9ad0441ba116b8890
+  path: "moshi-kotlin-tests/src/test/kotlin/com/squareup/moshi/kotlin/DualKotlinTest.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "DualKotlinTest", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "The removed TODO comment is in the class body, so the class changes and the test does not."

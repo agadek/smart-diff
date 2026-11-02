@@ -1,0 +1,18 @@
+case: spring-petclinic-f2d9c9b-PetClinicRuntimeHints
+language: JAVA
+corpus: java
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "spring-petclinic"
+  commit: f2d9c9b63fadb913b3087c1a7a19db769d731be0
+  path: "src/main/java/org/springframework/samples/petclinic/PetClinicRuntimeHints.java"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class PetClinicRuntimeHints", kind: METHOD, name: "registerHints", signature: "RuntimeHints,ClassLoader" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

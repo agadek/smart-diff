@@ -1,0 +1,28 @@
+case: extraction-many-sources-3
+language: JAVA
+corpus: java
+category: extraction-many-sources
+split: tuning
+expected:
+  relationships:
+    - kinds: [EXTRACT]
+      old: { path: "class Basket", kind: METHOD, name: "first", signature: "(int)" }
+      new: { path: "class Basket", kind: METHOD, name: "doubled", signature: "(int)" }
+    - kinds: [EXTRACT]
+      old: { path: "class Basket", kind: METHOD, name: "second", signature: "(int)" }
+      new: { path: "class Basket", kind: METHOD, name: "doubled", signature: "(int)" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Basket", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Basket", kind: METHOD, name: "first", signature: "(int)" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Basket", kind: METHOD, name: "second", signature: "(int)" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Basket", kind: METHOD, name: "doubled", signature: "(int)" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "One helper is extracted from the shared block of two methods."

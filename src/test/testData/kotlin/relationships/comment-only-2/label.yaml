@@ -1,0 +1,16 @@
+case: comment-only-2
+language: kotlin
+corpus: kotlin
+category: comment-only
+split: held-out
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Invoice", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Invoice", kind: FUNCTION, name: "total", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "A comment is added inside the function."

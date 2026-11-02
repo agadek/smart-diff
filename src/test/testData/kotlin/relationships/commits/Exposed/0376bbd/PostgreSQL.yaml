@@ -1,0 +1,18 @@
+case: Exposed-0376bbd-PostgreSQL
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "Exposed"
+  commit: 0376bbd700d3400455d6da1b3359cc9424fb4230
+  path: "exposed-core/src/main/kotlin/org/jetbrains/exposed/v1/core/vendors/PostgreSQL.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class PostgreSQLDialect", kind: PROPERTY, name: "supportsSelectForUpdate", signature: null }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

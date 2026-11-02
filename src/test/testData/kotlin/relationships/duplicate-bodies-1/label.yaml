@@ -1,0 +1,16 @@
+case: duplicate-bodies-1
+language: kotlin
+corpus: kotlin
+category: duplicate-bodies
+split: tuning
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "copyOne", signature: "()" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "An added function repeats the body of an existing function; it is still added."

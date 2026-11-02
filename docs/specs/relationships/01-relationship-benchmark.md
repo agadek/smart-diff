@@ -1,6 +1,6 @@
 # Relationship benchmark
 
-Status: accepted, 2026-11-01
+Status: implemented, 2026-11-02
 
 **Description:** Measures how well the declaration engine pairs declarations across two versions, against labelled ground truth, so a matcher change is accepted or rejected by its numbers.
 

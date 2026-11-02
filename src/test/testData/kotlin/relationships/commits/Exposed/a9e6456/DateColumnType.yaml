@@ -1,0 +1,45 @@
+case: Exposed-a9e6456-DateColumnType
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "Exposed"
+  commit: a9e64567baeaffc85d18727384cb9fd90a0baf64
+  path: "exposed-jodatime/src/main/kotlin/org/jetbrains/exposed/sql/jodatime/DateColumnType.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: FUNCTION, name: "formatterForDateTimeString", signature: "String" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class DateColumnType", kind: FUNCTION, name: "valueFromDB", signature: "Any" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class DateColumnType", kind: FUNCTION, name: "readObject", signature: "ResultSet,Int" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class DateColumnType", kind: OBJECT, name: "Companion", signature: null }
+      presence: REMOVED
+      content: UNCHANGED
+    - subject: { path: "class DateColumnType / object Companion", kind: PROPERTY, name: "localDateTimeClass", signature: null }
+      presence: REMOVED
+      content: UNCHANGED
+    - subject: { path: "class DateTimeWithTimeZoneColumnType", kind: FUNCTION, name: "valueFromDB", signature: "Any" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class DateTimeWithTimeZoneColumnType", kind: FUNCTION, name: "readObject", signature: "ResultSet,Int" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class DateTimeWithTimeZoneColumnType", kind: OBJECT, name: "Companion", signature: null }
+      presence: REMOVED
+      content: UNCHANGED
+    - subject: { path: "class DateTimeWithTimeZoneColumnType / object Companion", kind: PROPERTY, name: "offsetDateTimeClass", signature: null }
+      presence: REMOVED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

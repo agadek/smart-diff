@@ -1,0 +1,21 @@
+case: cats-af45152-apply
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: af45152a53e8331fbe5216adfbd422b9f9be83e8
+  path: "core/src/main/scala/cats/syntax/apply.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "trait ApplySyntax", kind: FUNCTION, name: "catsSyntaxApply", signature: "F[A];implicit Apply[F]" }
+      presence: ADDED
+      content: UNCHANGED
+    - subject: { path: "trait ApplySyntax", kind: FUNCTION, name: "applySyntaxBinCompat1", signature: "F[A]" }
+      presence: MATCHED
+      content: FORMATTING_ONLY
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

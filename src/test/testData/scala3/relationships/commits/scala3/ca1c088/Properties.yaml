@@ -1,0 +1,18 @@
+case: scala3-ca1c088-Properties
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: ca1c0888ea09c536fc305c56435c525fa538db74
+  path: "compiler/test/dotty/Properties.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "object Properties", kind: PROPERTY, name: "isRunByCI", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

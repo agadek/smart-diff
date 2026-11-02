@@ -1,0 +1,30 @@
+case: okhttp-2c93710--CacheControlCommon
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "okhttp"
+  commit: 2c93710d8eb1ad73cefddec3d6d4f5c5f6fc75e2
+  path: "okhttp/src/commonMain/kotlin/okhttp3/internal/-CacheControlCommon.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: FUNCTION, name: "commonMaxAge", signature: "Int,DurationUnit" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: FUNCTION, name: "commonMaxStale", signature: "Int,DurationUnit" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: FUNCTION, name: "commonMinFresh", signature: "Int,DurationUnit" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: FUNCTION, name: "commonClampToInt", signature: "" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

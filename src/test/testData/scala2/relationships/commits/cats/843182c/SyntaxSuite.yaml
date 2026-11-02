@@ -1,0 +1,18 @@
+case: cats-843182c-SyntaxSuite
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: 843182c127bff0b892c5d74a7a95df9a121f71b2
+  path: "alleycats-core/src/test/scala/alleycats/SyntaxSuite.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

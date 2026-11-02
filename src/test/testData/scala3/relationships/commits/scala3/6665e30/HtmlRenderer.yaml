@@ -1,0 +1,18 @@
+case: scala3-6665e30-HtmlRenderer
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: 6665e30cb1d4fb09f182cedf10cba56962c57c10
+  path: "scaladoc/src/dotty/tools/scaladoc/renderers/HtmlRenderer.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class HtmlRenderer", kind: FUNCTION, name: "mkFrame", signature: "Link,Vector[Link],AppliedTag,Seq[TocEntry]" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

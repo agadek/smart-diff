@@ -1,0 +1,18 @@
+case: cats-c18c981-InvariantSemigroupalLaws
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: c18c981f241efd3f9d86bc87af71e363785f197c
+  path: "laws/src/main/scala/cats/laws/InvariantSemigroupalLaws.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "trait InvariantSemigroupalLaws", kind: FUNCTION, name: "aa", signature: "F[A],F[B],F[C]" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

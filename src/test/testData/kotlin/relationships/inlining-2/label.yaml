@@ -1,0 +1,22 @@
+case: inlining-2
+language: kotlin
+corpus: kotlin
+category: inlining
+split: held-out
+expected:
+  relationships:
+    - kinds: [INLINE]
+      old: { path: "class Invoice", kind: FUNCTION, name: "heading", signature: "(String)" }
+      new: { path: "class Invoice", kind: FUNCTION, name: "render", signature: "(String)" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Invoice", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Invoice", kind: FUNCTION, name: "render", signature: "(String)" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Invoice", kind: FUNCTION, name: "heading", signature: "(String)" }
+      presence: REMOVED
+      content: UNCHANGED
+  ambiguous: []
+notes: "The helper is inlined into its caller; inlining detection is not implemented yet."

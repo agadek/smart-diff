@@ -1,0 +1,19 @@
+case: class-rename-3
+language: Scala
+corpus: scala3
+category: class-rename
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "", kind: CLASS, name: "Basket", signature: null }
+      new: { path: "", kind: CLASS, name: "Ticket", signature: null }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Ticket", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Ticket", kind: FUNCTION, name: "price", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "One class renamed, members follow."

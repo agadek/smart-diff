@@ -1,0 +1,18 @@
+case: cats-ab9e480-package
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: ab9e4806dac3e6a9da03c1c20c87050ed1983897
+  path: "core/src/main/scala/cats/package.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: OBJECT, name: "cats", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

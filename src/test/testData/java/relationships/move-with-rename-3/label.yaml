@@ -1,0 +1,20 @@
+case: move-with-rename-3
+language: JAVA
+corpus: java
+category: move-with-rename
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME, MOVE]
+      old: { path: "class Basket", kind: METHOD, name: "price", signature: "()" }
+      new: { path: "class Basket", kind: METHOD, name: "cost", signature: "()" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Basket", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Basket", kind: METHOD, name: "cost", signature: "()" }
+      presence: MATCHED
+      content: UNCHANGED
+      moved: true
+  ambiguous: []
+notes: "The second method is renamed and moves above the first."

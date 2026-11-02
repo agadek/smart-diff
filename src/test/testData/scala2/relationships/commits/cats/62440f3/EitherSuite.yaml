@@ -1,0 +1,18 @@
+case: cats-62440f3-EitherSuite
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: 62440f38ea3f6f3dedd409d11d186ea3e7f705fb
+  path: "tests/shared/src/test/scala/cats/tests/EitherSuite.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "EitherSuite", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

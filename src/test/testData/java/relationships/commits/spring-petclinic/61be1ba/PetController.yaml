@@ -1,0 +1,18 @@
+case: spring-petclinic-61be1ba-PetController
+language: JAVA
+corpus: java
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "spring-petclinic"
+  commit: 61be1bac41293482506215d879da2b95961f582d
+  path: "src/main/java/org/springframework/samples/petclinic/owner/PetController.java"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class PetController", kind: METHOD, name: "processUpdateForm", signature: "Pet,BindingResult,Owner,ModelMap" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

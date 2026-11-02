@@ -1,0 +1,24 @@
+case: move-in-file-1
+language: Scala
+corpus: scala3
+category: move-in-file
+split: tuning
+expected:
+  relationships:
+    - kinds: [MOVE]
+      old: { path: "class Order", kind: FUNCTION, name: "second", signature: null }
+      new: { path: "class Order", kind: FUNCTION, name: "second", signature: null }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "second", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+      moved: true
+    - subject: { path: "class Order", kind: FUNCTION, name: "first", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+      moved: false
+  ambiguous: []
+notes: "The second def moves above the first."

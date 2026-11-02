@@ -1,0 +1,18 @@
+case: Exposed-4f594d4-DatabaseMigrationTests
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "Exposed"
+  commit: 4f594d45ee08503ec2c8db729355f34bf673f5e3
+  path: "exposed-tests/src/test/kotlin/org/jetbrains/exposed/sql/tests/shared/ddl/DatabaseMigrationTests.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class DatabaseMigrationTests", kind: FUNCTION, name: "testMigrationScriptDirectoryAndContent", signature: "" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

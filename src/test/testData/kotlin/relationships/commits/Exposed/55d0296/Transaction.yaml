@@ -1,0 +1,25 @@
+case: Exposed-55d0296-Transaction
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "Exposed"
+  commit: 55d029696a1c0aba254f18f70c1877647512dc24
+  path: "exposed-core/src/main/kotlin/org/jetbrains/exposed/sql/Transaction.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Transaction", kind: FUNCTION, name: "describeStatement", signature: "Duration,String" }
+      presence: MATCHED
+      content: CHANGED
+      signatureChanged: true
+    - subject: { path: "class Transaction", kind: FUNCTION, name: "exec", signature: "Statement<T>,Statement<T>.(T)->R" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

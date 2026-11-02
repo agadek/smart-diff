@@ -1,0 +1,20 @@
+case: move-with-body-change-2
+language: kotlin
+corpus: kotlin
+category: move-with-body-change
+split: held-out
+expected:
+  relationships:
+    - kinds: [MOVE]
+      old: { path: "class Invoice", kind: FUNCTION, name: "second", signature: "()" }
+      new: { path: "class Invoice", kind: FUNCTION, name: "second", signature: "()" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Invoice", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Invoice", kind: FUNCTION, name: "second", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+      moved: true
+  ambiguous: []
+notes: "The second function moves and its body changes."

@@ -1,0 +1,18 @@
+case: spring-petclinic-5accc40-VetTests
+language: JAVA
+corpus: java
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "spring-petclinic"
+  commit: 5accc40c77e51cb15eb87a480e679a5012d1423e
+  path: "src/test/java/org/springframework/samples/petclinic/vet/VetTests.java"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class VetTests", kind: METHOD, name: "testSerialization", signature: "" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

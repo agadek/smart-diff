@@ -6,6 +6,7 @@ import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.Origin
 import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
@@ -225,13 +226,56 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         val output = Files.createTempDirectory("relationship-corpus-report").toFile()
         try {
             val report = RelationshipBenchmark.run(File("src/test/testData/relationships-corpus.txt"), output)
-            assertEquals(4, report.cases.size)
+            assertEquals(304, report.cases.size)
+            assertTrue("the case-only list is a smoke run because it has no real commits", report.smoke)
             assertTrue(File(output, "summary.tsv").isFile)
             assertTrue(File(output, "report.md").isFile)
             assertTrue(File(output, "report.json").isFile)
 
         } finally {
             output.deleteRecursively()
+        }
+    }
+
+    fun `test the checked-in case matrix meets every minimum`() {
+        // relationships/01-relationship-benchmark R8, R9, R30
+        val entries = RelationshipBenchmark.parseCorpus(File("src/test/testData/relationships-corpus.txt"))
+        val labels = entries.mapNotNull { it.path }.map { RelationshipBenchmark.parseLabel(File(it, "label.yaml")) }
+        assertEquals("every checked-in case folder is in the list", 304, labels.size)
+        assertTrue("every case is reviewed", labels.all { it.reviewed })
+        val failures = RelationshipBenchmark.matrixFailures(labels, labelledCommits = emptyMap(), commitMinimum = 0)
+        assertTrue("shortfalls: $failures", failures.isEmpty())
+        for ((corpus, categories) in RelationshipBenchmark.NOT_APPLICABLE) {
+            for ((category, reason) in categories) {
+                assertTrue("$corpus $category needs a reason", reason.isNotBlank())
+            }
+        }
+    }
+
+    fun `test the full corpus list names the real commits without absolute paths`() {
+        // relationships/01-relationship-benchmark R10, R30
+        val file = File("src/test/testData/relationships-corpus-full.txt")
+        val text = file.readText()
+        assertFalse("no absolute path names a user", text.contains("/Users/"))
+        val entries = RelationshipBenchmark.parseCorpus(file)
+        assertEquals("all checked-in cases are listed", 304, entries.count { it.path != null })
+        val commits = entries.filter { it.repository != null }
+        assertTrue("the full list names the real-commit clones", commits.size >= 4)
+        assertEquals(120, commits.sumOf { line -> Regex("[0-9a-f]{40}").findAll(line.line).count() })
+    }
+
+    fun `test the checked-in real commit labels meet the commit minimum`() {
+        // relationships/01-relationship-benchmark R10, R35, R36, R37
+        for (corpus in RelationshipBenchmark.CORPORA) {
+            val directory = File("src/test/testData/$corpus/relationships/commits")
+            val labels = directory.walkTopDown().filter { it.isFile && it.name.endsWith(".yaml") }.toList()
+            assertTrue("$corpus has ${labels.size} real-commit labels", labels.size >= RelationshipBenchmark.MINIMUM_COMMITS)
+            for (file in labels) {
+                val label = RelationshipBenchmark.parseLabel(file)
+                assertTrue("${file.path} is reviewed", label.reviewed)
+                assertNotNull("${file.path} names its commit", label.source)
+                assertEquals(corpus, label.corpus)
+            }
         }
     }
 
@@ -277,6 +321,53 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         assertTrue(RelationshipBenchmark.missedRelationships(listOf(oneKind)).any { it.contains("MOVE") })
     }
 
+    fun `test a renamed move names its old subject and an extraction link is counted once`() {
+        // relationships/01-relationship-benchmark R38, R39
+        val oldSubject = Subject.Declaration(DeclarationKind.METHOD, "total", "()")
+        val newSubject = Subject.Declaration(DeclarationKind.METHOD, "sum", "()")
+        val moved = ChangeNode(
+            newSubject, TextRange(0, 5), TextRange(6, 11), Presence.MATCHED,
+            moved = true, renamedFrom = oldSubject,
+        )
+        val relationship = RelationshipBenchmark.actualRelationships(
+            ComparisonResult(EngineId("test"), "1", Status.ANALYZED, changes = listOf(moved)),
+        )
+        assertEquals(setOf(RelationshipBenchmark.Kind.RENAME, RelationshipBenchmark.Kind.MOVE), relationship.map { it.kind }.toSet())
+        assertEquals("total", relationship.single { it.kind == RelationshipBenchmark.Kind.MOVE }.old.name)
+
+        val source = Subject.Declaration(DeclarationKind.METHOD, "render", "(String)")
+        val target = Subject.Declaration(DeclarationKind.METHOD, "renderLines", "(String)")
+        val sourceNode = ChangeNode(source, TextRange(0, 5), TextRange(6, 11), Presence.MATCHED, extractedTo = listOf(target))
+        val targetNode = ChangeNode(
+            target, null, TextRange(12, 20), Presence.ADDED,
+            extractedFrom = listOf(Origin(source, TextRange(0, 5), TextRange(2, 4))),
+        )
+        val extraction = RelationshipBenchmark.actualRelationships(
+            ComparisonResult(EngineId("test"), "1", Status.ANALYZED, changes = listOf(sourceNode, targetNode)),
+        )
+        assertEquals(1, extraction.count { it.kind == RelationshipBenchmark.Kind.EXTRACT })
+    }
+
+    fun `test an added overload is found by presence not identity alone`() {
+        // relationships/01-relationship-benchmark R42
+        val subject = Subject.Declaration(DeclarationKind.METHOD, "read", "()")
+        val changed = ChangeNode(subject, TextRange(0, 5), TextRange(6, 11), Presence.MATCHED)
+        val added = ChangeNode(subject, null, TextRange(12, 18), Presence.ADDED)
+        val label = label("overload-1", "JAVA", "overloads-same-body").copy(
+            relationships = emptyList(),
+            changes = listOf(RelationshipBenchmark.ExpectedChange(endpoint("read"), Presence.ADDED, Content.UNCHANGED)),
+            ambiguous = emptyList(),
+        )
+        val result = RelationshipBenchmark.CaseResult(
+            label, ComparisonResult(EngineId("test"), "1", Status.ANALYZED),
+            emptyList(), listOf(endpoint("read") to changed, endpoint("read") to added),
+            1, false,
+        )
+        val metrics = RelationshipBenchmark.evaluate(listOf(label), listOf(result))
+        assertEquals(1, metrics.presenceCorrect)
+        assertTrue(RelationshipBenchmark.classificationMismatches(listOf(result)).isEmpty())
+    }
+
     fun `test a missing baseline file is a gate failure`() {
         // relationships/01-relationship-benchmark R21, R22
         val result = caseResult(label("rename-1", "JAVA", "rename"), relationships(), nodes())
@@ -318,6 +409,16 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         assertTrue("the corpus is recorded", validation.contains("**Corpus:**"))
         assertTrue("the section calls itself a smoke run", validation.contains("**smoke run**"))
         assertTrue("the section says it is not the R29 baseline", validation.contains("not the R29 baseline"))
+    }
+
+    fun `test the validation section records the R29 baseline`() {
+        // relationships/01-relationship-benchmark R29
+        val validation = File("docs/VALIDATION.md").readText()
+        assertTrue("the baseline section", validation.contains("## 2026-11-02: relationship benchmark baseline"))
+        assertTrue("the run has no shortfall", validation.contains("no shortfall"))
+        assertTrue("the corpus list is named", validation.contains("relationships-corpus-full.txt"))
+        assertTrue("the report paths are named", validation.contains("build/reports/smartdiff-relationships/summary.tsv"))
+        assertTrue("the old smoke run is linked", validation.contains("(#2026-11-01-relationship-benchmark)"))
     }
 
     fun `test every run checks the case matrix minimums`() {

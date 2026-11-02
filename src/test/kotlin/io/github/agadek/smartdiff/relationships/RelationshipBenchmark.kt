@@ -109,10 +109,13 @@ object RelationshipBenchmark {
         val range: TextRange? = null,
     ) {
         fun sameIdentity(other: Endpoint): Boolean =
-            path == other.path && kind == other.kind && name == other.name && displaySignature() == other.displaySignature()
+            path == other.path && kind == other.kind && name == other.name && signatureKey() == other.signatureKey()
 
         /** The outline shows a method's signature in parentheses; accept either the raw or displayed form in labels. */
         private fun displaySignature(): String? = signature?.let { if (it.startsWith("(")) it else "($it)" }
+
+        /** No-argument declarations come back as null, "" or "()" depending on the language; they are the same identity. */
+        private fun signatureKey(): String? = displaySignature()?.takeUnless { it == "()" }
 
         /** A stable key for the baseline and report lists, including what tells duplicates apart. */
         fun key(): String =
@@ -384,7 +387,8 @@ object RelationshipBenchmark {
             val old = { subject: Subject, range: TextRange? -> endpoint(subject, path, range) }
             val new = { range: TextRange? -> endpoint(node.subject, path, range) }
             node.renamedFrom?.let { relationships += ActualRelationship(Kind.RENAME, old(it, node.oldRange), new(node.newRange), Confidence.MEDIUM) }
-            if (node.moved) relationships += ActualRelationship(Kind.MOVE, old(node.subject, node.oldRange), new(node.newRange), Confidence.HIGH)
+            // A renamed declaration that also moved is old-named by its old subject, so the move names the old declaration.
+            if (node.moved) relationships += ActualRelationship(Kind.MOVE, old(node.renamedFrom ?: node.subject, node.oldRange), new(node.newRange), Confidence.HIGH)
             node.kindChangedFrom?.let {
                 val before = Subject.Declaration(it, (node.renamedFrom as? Subject.Declaration)?.name ?: (node.subject as Subject.Declaration).name, (node.subject as Subject.Declaration).signature)
                 relationships += ActualRelationship(Kind.KIND_CHANGE, old(before, node.oldRange), new(node.newRange), Confidence.HIGH)
@@ -395,7 +399,21 @@ object RelationshipBenchmark {
         }
         result.fileRegion?.let { visit(it, emptyList()) }
         result.changes.forEach { visit(it, emptyList()) }
-        return relationships
+        // An extraction is linked from the source's extractedTo and the target's extractedFrom; it is one link, listed twice.
+        // Its two sides carry different ranges (the declaration and the extracted code), so compare its identity without them.
+        val seen = mutableSetOf<String>()
+        return relationships.filter { relationship ->
+            val key = if (relationship.kind == Kind.EXTRACT) {
+                listOf(
+                    relationship.kind,
+                    Endpoint(relationship.old.path, relationship.old.kind, relationship.old.name, relationship.old.signature).key(),
+                    Endpoint(relationship.new.path, relationship.new.kind, relationship.new.name, relationship.new.signature).key(),
+                ).joinToString("|")
+            } else {
+                listOf(relationship.kind, relationship.old.key(), relationship.new.key()).joinToString("|")
+            }
+            seen.add(key)
+        }
     }
 
     fun actualNodes(result: ComparisonResult): List<Pair<Endpoint, ChangeNode>> {
@@ -452,7 +470,7 @@ object RelationshipBenchmark {
             }
             for (expected in label.changes) {
                 total++
-                val actual = result.actualNodes.firstOrNull { (endpoint, _) -> endpointsMatch(expected.subject, endpoint) }?.second
+                val actual = matchingNode(result, expected)
                 presenceTotal++
                 if (actual?.presence == expected.presence) presenceCorrect++
                 contentTotal++
@@ -529,6 +547,15 @@ object RelationshipBenchmark {
 
     fun endpointsMatch(expected: Endpoint, actual: Endpoint): Boolean =
         expected.sameIdentity(actual) && (expected.range == null || expected.range == actual.range)
+
+    /**
+     * The node a label's change describes. Overloads can share path, kind, name and signature; the node with the
+     * expected presence wins, so an added overload is not confused with an unchanged one of the same identity.
+     */
+    private fun matchingNode(case: CaseResult, expected: ExpectedChange): ChangeNode? {
+        val candidates = case.actualNodes.filter { (endpoint, _) -> endpointsMatch(expected.subject, endpoint) }
+        return (candidates.firstOrNull { it.second.presence == expected.presence } ?: candidates.firstOrNull())?.second
+    }
 
     fun aggregate(counts: Collection<PairCounts>): PairCounts =
         counts.fold(PairCounts()) { all, next -> PairCounts(all.tp + next.tp, all.fp + next.fp, all.fn + next.fn) }
@@ -1041,7 +1068,7 @@ object RelationshipBenchmark {
     fun classificationMismatches(cases: List<CaseResult>): List<String> = buildList {
         for (case in cases) {
             for (expected in case.label.changes) {
-                val actual = case.actualNodes.firstOrNull { (endpoint, _) -> endpointsMatch(expected.subject, endpoint) }?.second
+                val actual = matchingNode(case, expected)
                 val mismatch = actual == null || actual.presence != expected.presence || actual.content != expected.content ||
                     (expected.moved != null && actual.moved != expected.moved) ||
                     (expected.signatureChanged != null && actual.signatureChanged != expected.signatureChanged) ||

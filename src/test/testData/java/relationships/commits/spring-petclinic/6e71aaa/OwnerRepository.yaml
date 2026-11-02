@@ -1,0 +1,18 @@
+case: spring-petclinic-6e71aaa-OwnerRepository
+language: JAVA
+corpus: java
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "spring-petclinic"
+  commit: 6e71aaa44cbd147a000d3a7b4bd5db55244948bf
+  path: "src/main/java/org/springframework/samples/petclinic/owner/OwnerRepository.java"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "interface OwnerRepository", kind: METHOD, name: "findAll", signature: "Pageable" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

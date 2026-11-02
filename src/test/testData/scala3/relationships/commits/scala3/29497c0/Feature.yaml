@@ -1,0 +1,18 @@
+case: scala3-29497c0-Feature
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: 29497c036206d8cf4882b9b8374b2375c031adbc
+  path: "compiler/src/dotty/tools/dotc/config/Feature.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "object Feature", kind: PROPERTY, name: "values", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

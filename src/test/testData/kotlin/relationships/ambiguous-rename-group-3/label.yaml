@@ -1,0 +1,14 @@
+case: ambiguous-rename-group-3
+language: kotlin
+corpus: kotlin
+category: ambiguous-rename-group
+split: tuning
+expected:
+  relationships: []
+  changes: []
+  ambiguous:
+    - { path: "class Basket", kind: FUNCTION, name: "alpha", signature: "()" }
+    - { path: "class Basket", kind: FUNCTION, name: "beta", signature: "()" }
+    - { path: "class Basket", kind: FUNCTION, name: "gamma", signature: "()" }
+    - { path: "class Basket", kind: FUNCTION, name: "delta", signature: "()" }
+notes: "Two equally plausible pairings; no pair is correct."

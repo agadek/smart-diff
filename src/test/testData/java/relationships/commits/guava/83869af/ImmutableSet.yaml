@@ -1,0 +1,18 @@
+case: guava-83869af-ImmutableSet
+language: JAVA
+corpus: java
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "guava"
+  commit: 83869af96382246da6ff99cb029ef59ba684f592
+  path: "guava/src/com/google/common/collect/ImmutableSet.java"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class ImmutableSet", kind: METHOD, name: "copyOfEnumSet", signature: "EnumSet<?>" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

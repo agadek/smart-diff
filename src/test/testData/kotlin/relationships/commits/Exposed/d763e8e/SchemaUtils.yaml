@@ -1,0 +1,21 @@
+case: Exposed-d763e8e-SchemaUtils
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "Exposed"
+  commit: d763e8e6e180ac2e614d68b9021625d2ae4f74af
+  path: "exposed-core/src/main/kotlin/org/jetbrains/exposed/sql/SchemaUtils.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "object SchemaUtils", kind: FUNCTION, name: "createMissingTablesAndColumns", signature: "vararg Table,Boolean,Boolean" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "object SchemaUtils", kind: FUNCTION, name: "statementsRequiredToActualizeScheme", signature: "vararg Table,Boolean" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

@@ -1,0 +1,16 @@
+case: parse-error-one-side-3
+language: kotlin
+corpus: kotlin
+category: parse-error-one-side
+split: tuning
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Basket", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Basket", kind: FUNCTION, name: "total", signature: "()" }
+      presence: MATCHED
+      content: UNANALYZED
+  ambiguous: []
+notes: "The new side is incomplete; the function is unanalyzed, not the whole file."

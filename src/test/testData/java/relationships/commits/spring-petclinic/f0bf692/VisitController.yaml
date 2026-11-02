@@ -1,0 +1,38 @@
+case: spring-petclinic-f0bf692-VisitController
+language: JAVA
+corpus: java
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "spring-petclinic"
+  commit: f0bf6927674a8c4fdf5a74352749ca5be326b5d3
+  path: "src/main/java/org/springframework/samples/petclinic/web/VisitController.java"
+expected:
+  relationships:
+    - kinds: [EXTRACT]
+      old: { path: "class VisitController", kind: METHOD, name: "initNewVisitForm", signature: "int,Map<String,Object>" }
+      new: { path: "class VisitController", kind: METHOD, name: "loadPetWithVisit", signature: "int" }
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: CLASS, name: "VisitController", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class VisitController", kind: METHOD, name: "loadPetWithVisit", signature: "int" }
+      presence: ADDED
+      content: UNCHANGED
+    - subject: { path: "class VisitController", kind: METHOD, name: "initNewVisitForm", signature: "int,Map<String,Object>" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class VisitController", kind: METHOD, name: "processNewVisitForm", signature: "Visit,BindingResult" }
+      presence: MATCHED
+      content: CHANGED
+      signatureChanged: true
+    - subject: { path: "class VisitController", kind: METHOD, name: "showVisits", signature: "int,Map<String,Object>" }
+      presence: MATCHED
+      content: CHANGED
+      signatureChanged: true
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

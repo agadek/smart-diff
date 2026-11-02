@@ -1,0 +1,16 @@
+case: duplicate-bodies-3
+language: Scala
+corpus: scala2
+category: duplicate-bodies
+split: tuning
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Basket", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Basket", kind: FUNCTION, name: "copyOne", signature: null }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "An added def repeats the body of an existing def; it is still added."

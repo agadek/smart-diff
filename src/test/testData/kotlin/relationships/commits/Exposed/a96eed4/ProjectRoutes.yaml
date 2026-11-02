@@ -1,0 +1,18 @@
+case: Exposed-a96eed4-ProjectRoutes
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "Exposed"
+  commit: a96eed4f7bc357951636f6cb68a5bfefd0cbb3c9
+  path: "samples/exposed-ktor-r2dbc/src/main/kotlin/domain/project/ProjectRoutes.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

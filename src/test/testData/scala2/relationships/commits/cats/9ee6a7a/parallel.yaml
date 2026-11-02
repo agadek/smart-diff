@@ -1,0 +1,18 @@
+case: cats-9ee6a7a-parallel
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: 9ee6a7add6cb883e1cabc0f229895af2ffe810c4
+  path: "core/src/main/scala/cats/syntax/parallel.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "trait ParallelSyntax", kind: FUNCTION, name: "catsSyntaxParallelAp", signature: "M[A]" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

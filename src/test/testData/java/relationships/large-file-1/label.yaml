@@ -1,0 +1,19 @@
+case: large-file-1
+language: JAVA
+corpus: java
+category: large-file
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Big", kind: METHOD, name: "total", signature: "()" }
+      new: { path: "class Big", kind: METHOD, name: "sum", signature: "()" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Big", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Big", kind: METHOD, name: "sum", signature: "()" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A 300-method file with one rename; keeps the case under the time limit."

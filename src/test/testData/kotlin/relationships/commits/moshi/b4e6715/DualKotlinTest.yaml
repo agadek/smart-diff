@@ -1,0 +1,27 @@
+case: moshi-b4e6715-DualKotlinTest
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "moshi"
+  commit: b4e671524846a20d32859c1e5b4b0644579d504e
+  path: "kotlin/tests/src/test/kotlin/com/squareup/moshi/kotlin/DualKotlinTest.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class DualKotlinTest", kind: FUNCTION, name: "inlineClass", signature: "" }
+      presence: ADDED
+      content: UNCHANGED
+    - subject: { path: "class DualKotlinTest", kind: CLASS, name: "InlineConsumer", signature: null }
+      presence: ADDED
+      content: UNCHANGED
+    - subject: { path: "class DualKotlinTest", kind: FUNCTION, name: "inlineClassConsumer", signature: "" }
+      presence: ADDED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "InlineClass", signature: null }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Adds two tests, a nested data class and a top-level inline class; the container is unchanged, not formatting-only."

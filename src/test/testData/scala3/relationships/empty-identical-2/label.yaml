@@ -1,0 +1,10 @@
+case: empty-identical-2
+language: Scala
+corpus: scala3
+category: empty-identical
+split: held-out
+expected:
+  relationships: []
+  changes: []
+  ambiguous: []
+notes: "Identical files report no change."

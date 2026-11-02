@@ -1,0 +1,22 @@
+case: cats-b9b7e20-extract
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: b9b7e201ac10d3b7a164c57ee0bb511ea45b3ec9
+  path: "alleycats-core/src/main/scala/alleycats/syntax/extract.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "trait ExtractSyntax", kind: CLASS, name: "ExtractOps", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "trait ExtractSyntax / class ExtractOps", kind: FUNCTION, name: "extract", signature: "implicit Extract[F]" }
+      presence: MATCHED
+      content: CHANGED
+      signatureChanged: true
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

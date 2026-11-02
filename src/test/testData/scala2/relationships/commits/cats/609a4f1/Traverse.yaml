@@ -1,0 +1,18 @@
+case: cats-609a4f1-Traverse
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: 609a4f1958db09ca1781042d95a09dbc78d9e08b
+  path: "core/src/main/scala/cats/Traverse.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "trait Traverse", kind: FUNCTION, name: "zipWithLongIndex", signature: "F[A]" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

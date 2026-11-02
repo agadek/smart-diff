@@ -1,0 +1,19 @@
+case: method-rename-3
+language: Scala
+corpus: scala3
+category: method-rename
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Basket", kind: FUNCTION, name: "price", signature: null }
+      new: { path: "class Basket", kind: FUNCTION, name: "cost", signature: null }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Basket", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Basket", kind: FUNCTION, name: "cost", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "One def renamed, body unchanged."

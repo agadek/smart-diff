@@ -1,0 +1,19 @@
+case: cats-0ba479b-apply
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: 0ba479bcc6cb4c24f5a173bc9f729fd2b0e9eb8a
+  path: "core/src/main/scala/cats/syntax/apply.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "trait ApplySyntax", kind: FUNCTION, name: "catsSyntaxApply", signature: "F[A];Apply[F]" }
+      presence: MATCHED
+      content: CHANGED
+      signatureChanged: true
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

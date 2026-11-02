@@ -1,0 +1,14 @@
+case: ambiguous-rename-group-2
+language: JAVA
+corpus: java
+category: ambiguous-rename-group
+split: held-out
+expected:
+  relationships: []
+  changes: []
+  ambiguous:
+    - { path: "class Invoice", kind: METHOD, name: "alpha", signature: "()" }
+    - { path: "class Invoice", kind: METHOD, name: "beta", signature: "()" }
+    - { path: "class Invoice", kind: METHOD, name: "gamma", signature: "()" }
+    - { path: "class Invoice", kind: METHOD, name: "delta", signature: "()" }
+notes: "Two equally plausible pairings; no pair is correct."

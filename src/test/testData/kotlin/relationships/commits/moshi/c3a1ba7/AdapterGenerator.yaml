@@ -1,0 +1,18 @@
+case: moshi-c3a1ba7-AdapterGenerator
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "moshi"
+  commit: c3a1ba711cfb7202f64cc1cde57ce963e012d65d
+  path: "kotlin/codegen/src/main/java/com/squareup/moshi/kotlin/codegen/api/AdapterGenerator.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class AdapterGenerator", kind: FUNCTION, name: "generateFromJsonFun", signature: "TypeSpec.Builder" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

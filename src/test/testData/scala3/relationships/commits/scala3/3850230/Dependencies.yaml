@@ -1,0 +1,18 @@
+case: scala3-3850230-Dependencies
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: 3850230ddf1b7c634457b531cf7fdf6d6744de96
+  path: "project/Dependencies.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "object Dependencies", kind: PROPERTY, name: "scalaCliLauncherVersion", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

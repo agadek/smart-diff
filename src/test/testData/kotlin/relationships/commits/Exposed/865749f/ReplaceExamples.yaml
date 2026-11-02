@@ -1,0 +1,24 @@
+case: Exposed-865749f-ReplaceExamples
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "Exposed"
+  commit: 865749f35a9f6ce16b50afef5bc3706f82e8eff4
+  path: "documentation-website/Writerside/snippets/exposed-dsl/src/main/kotlin/org/example/examples/ReplaceExamples.kt"
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "", kind: PROPERTY, name: "LOW_RAITING_THRESHOLD", signature: null }
+      new: { path: "", kind: PROPERTY, name: "LOW_RATING_THRESHOLD", signature: null }
+  changes:
+    - subject: { path: "", kind: PROPERTY, name: "LOW_RATING_THRESHOLD", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ReplaceExamples", kind: FUNCTION, name: "replaceWithQuery", signature: "" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "The misspelled constant is renamed and its use follows; the draft reported a removal and an addition."

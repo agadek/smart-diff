@@ -1,0 +1,14 @@
+case: ambiguous-rename-group-2
+language: Scala
+corpus: scala2
+category: ambiguous-rename-group
+split: held-out
+expected:
+  relationships: []
+  changes: []
+  ambiguous:
+    - { path: "class Invoice", kind: FUNCTION, name: "alpha", signature: null }
+    - { path: "class Invoice", kind: FUNCTION, name: "beta", signature: null }
+    - { path: "class Invoice", kind: FUNCTION, name: "gamma", signature: null }
+    - { path: "class Invoice", kind: FUNCTION, name: "delta", signature: null }
+notes: "Two equally plausible pairings; no pair is correct."

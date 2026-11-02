@@ -1,0 +1,24 @@
+case: scala3-7720153-BCodeSkelBuilder
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: 772015327da39f4f4760f9fc1ff0c2dbba80a7cf
+  path: "compiler/src/dotty/tools/backend/jvm/BCodeSkelBuilder.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "trait BCodeSkelBuilder / class PlainSkelBuilder", kind: PROPERTY, name: "isMethSymStaticCtor", signature: null }
+      presence: REMOVED
+      content: UNCHANGED
+    - subject: { path: "trait BCodeSkelBuilder / class PlainSkelBuilder", kind: FUNCTION, name: "initJMethod", signature: "Int,List[Symbol];using Context" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "trait BCodeSkelBuilder / class PlainSkelBuilder", kind: FUNCTION, name: "genDefDef", signature: "DefDef;using Context" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

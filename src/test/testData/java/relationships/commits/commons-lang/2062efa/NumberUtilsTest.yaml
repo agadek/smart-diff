@@ -1,0 +1,21 @@
+case: commons-lang-2062efa-NumberUtilsTest
+language: JAVA
+corpus: java
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "commons-lang"
+  commit: 2062efa81db088015280fb837fde8c127f18c9bf
+  path: "src/test/java/org/apache/commons/lang3/math/NumberUtilsTest.java"
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class NumberUtilsTest", kind: METHOD, name: "TestLang747", signature: "" }
+      new: { path: "class NumberUtilsTest", kind: METHOD, name: "testLang747", signature: "" }
+  changes:
+    - subject: { path: "class NumberUtilsTest", kind: METHOD, name: "testLang747", signature: "" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

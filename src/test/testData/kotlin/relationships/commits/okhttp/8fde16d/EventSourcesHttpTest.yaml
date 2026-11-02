@@ -1,0 +1,18 @@
+case: okhttp-8fde16d-EventSourcesHttpTest
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "okhttp"
+  commit: 8fde16d0b7c04673d0b359db541227ba231e03be
+  path: "okhttp-sse/src/test/java/okhttp3/sse/internal/EventSourcesHttpTest.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class EventSourcesHttpTest", kind: FUNCTION, name: "failureWith401IsReadable", signature: "" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

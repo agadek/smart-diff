@@ -1,0 +1,20 @@
+case: move-with-body-change-2
+language: JAVA
+corpus: java
+category: move-with-body-change
+split: held-out
+expected:
+  relationships:
+    - kinds: [MOVE]
+      old: { path: "class Invoice", kind: METHOD, name: "second", signature: "()" }
+      new: { path: "class Invoice", kind: METHOD, name: "second", signature: "()" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Invoice", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Invoice", kind: METHOD, name: "second", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+      moved: true
+  ambiguous: []
+notes: "The second method moves and its body changes."

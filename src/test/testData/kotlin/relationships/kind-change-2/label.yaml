@@ -1,0 +1,17 @@
+case: kind-change-2
+language: kotlin
+corpus: kotlin
+category: kind-change
+split: held-out
+expected:
+  relationships:
+    - kinds: [KIND_CHANGE]
+      old: { path: "", kind: CLASS, name: "Invoice", signature: null }
+      new: { path: "", kind: INTERFACE, name: "Invoice", signature: null }
+  changes:
+    - subject: { path: "", kind: INTERFACE, name: "Invoice", signature: null }
+      presence: MATCHED
+      content: CHANGED
+      kindChangedFrom: CLASS
+  ambiguous: []
+notes: "An empty class becomes an interface."

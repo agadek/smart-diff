@@ -1,0 +1,19 @@
+case: rename-with-body-change-2
+language: JAVA
+corpus: java
+category: rename-with-body-change
+split: held-out
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Invoice", kind: METHOD, name: "computeTotal", signature: "()" }
+      new: { path: "class Invoice", kind: METHOD, name: "total", signature: "()" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Invoice", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Invoice", kind: METHOD, name: "total", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "A method renamed with a small body change."

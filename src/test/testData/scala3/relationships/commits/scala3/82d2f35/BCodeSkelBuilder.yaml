@@ -1,0 +1,18 @@
+case: scala3-82d2f35-BCodeSkelBuilder
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: 82d2f3577fda7a5415d41c8b8ba73f9c1adca623
+  path: "compiler/src/dotty/tools/backend/jvm/BCodeSkelBuilder.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

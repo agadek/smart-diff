@@ -1,0 +1,18 @@
+case: cats-1f77f0e-all
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: 1f77f0e1bd43d96f6a84266fdda6b6c28e61b69c
+  path: "alleycats-core/src/main/scala/alleycats/std/all.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

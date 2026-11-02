@@ -1,0 +1,18 @@
+case: scala3-b62d70c-Predef
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: b62d70cffe4d4b6d0a595a1ee7f4860ac05fc92d
+  path: "library/src/scala/Predef.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "object Predef / extension A", kind: FUNCTION, name: "->", signature: "B" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

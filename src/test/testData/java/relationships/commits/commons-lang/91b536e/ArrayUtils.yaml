@@ -1,0 +1,18 @@
+case: commons-lang-91b536e-ArrayUtils
+language: JAVA
+corpus: java
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "commons-lang"
+  commit: 91b536e4f502f940c6c64399737a1f129c2e0374
+  path: "src/main/java/org/apache/commons/lang3/ArrayUtils.java"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class ArrayUtils", kind: METHOD, name: "getLength", signature: "Object" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

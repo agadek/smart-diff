@@ -1,0 +1,16 @@
+case: string-literal-change-3
+language: Scala
+corpus: scala2
+category: string-literal-change
+split: tuning
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Basket", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Basket", kind: FUNCTION, name: "describe", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "A string literal changes."

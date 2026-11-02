@@ -1,0 +1,18 @@
+case: scala3-270f3f2-HashSet
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: 270f3f274b9afdb2ff362bcc05f6997380b15872
+  path: "library/src/scala/collection/immutable/HashSet.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class HashSet", kind: FUNCTION, name: "diff", signature: "collection.Set[A]" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

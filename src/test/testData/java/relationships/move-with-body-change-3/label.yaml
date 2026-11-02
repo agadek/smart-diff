@@ -1,0 +1,20 @@
+case: move-with-body-change-3
+language: JAVA
+corpus: java
+category: move-with-body-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [MOVE]
+      old: { path: "class Basket", kind: METHOD, name: "second", signature: "()" }
+      new: { path: "class Basket", kind: METHOD, name: "second", signature: "()" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Basket", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Basket", kind: METHOD, name: "second", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+      moved: true
+  ambiguous: []
+notes: "The second method moves and its body changes."

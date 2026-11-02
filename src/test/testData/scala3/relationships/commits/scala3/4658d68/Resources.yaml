@@ -1,0 +1,18 @@
+case: scala3-4658d68-Resources
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: 4658d688e9783e986c84b5e0b1b83ab367508a27
+  path: "scaladoc/src/dotty/tools/scaladoc/renderers/Resources.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "trait Resources", kind: PROPERTY, name: "commonResources", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

@@ -1,0 +1,18 @@
+case: cats-f62d98b-Boilerplate
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: f62d98b181caeea721062ea2e0b12355d4644631
+  path: "project/Boilerplate.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "object Boilerplate / object GenParallelArityFunctions", kind: FUNCTION, name: "content", signature: "TemplateVals" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

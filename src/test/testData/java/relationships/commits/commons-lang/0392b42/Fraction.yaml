@@ -1,0 +1,18 @@
+case: commons-lang-0392b42-Fraction
+language: JAVA
+corpus: java
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "commons-lang"
+  commit: 0392b4204dbeb894a44c209b982fbc959d53cc86
+  path: "src/main/java/org/apache/commons/lang3/math/Fraction.java"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class Fraction", kind: METHOD, name: "compareTo", signature: "Fraction" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

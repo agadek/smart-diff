@@ -1,0 +1,42 @@
+case: commons-lang-4161d60-CharSetUtils
+language: JAVA
+corpus: java
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "commons-lang"
+  commit: 4161d6019a1f68d0a3dc819702d90ad4044e4c05
+  path: "src/main/java/org/apache/commons/lang3/CharSetUtils.java"
+expected:
+  relationships:
+    - kinds: [EXTRACT]
+      old: { path: "class CharSetUtils", kind: METHOD, name: "containsAny", signature: "String,String..." }
+      new: { path: "class CharSetUtils", kind: METHOD, name: "isEmpty", signature: "String,String..." }
+    - kinds: [EXTRACT]
+      old: { path: "class CharSetUtils", kind: METHOD, name: "count", signature: "String,String..." }
+      new: { path: "class CharSetUtils", kind: METHOD, name: "isEmpty", signature: "String,String..." }
+    - kinds: [EXTRACT]
+      old: { path: "class CharSetUtils", kind: METHOD, name: "delete", signature: "String,String..." }
+      new: { path: "class CharSetUtils", kind: METHOD, name: "isEmpty", signature: "String,String..." }
+    - kinds: [EXTRACT]
+      old: { path: "class CharSetUtils", kind: METHOD, name: "squeeze", signature: "String,String..." }
+      new: { path: "class CharSetUtils", kind: METHOD, name: "isEmpty", signature: "String,String..." }
+  changes:
+    - subject: { path: "class CharSetUtils", kind: METHOD, name: "containsAny", signature: "String,String..." }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class CharSetUtils", kind: METHOD, name: "count", signature: "String,String..." }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class CharSetUtils", kind: METHOD, name: "delete", signature: "String,String..." }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class CharSetUtils", kind: METHOD, name: "isEmpty", signature: "String,String..." }
+      presence: ADDED
+      content: UNCHANGED
+    - subject: { path: "class CharSetUtils", kind: METHOD, name: "squeeze", signature: "String,String..." }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "The new isEmpty helper is extracted from the same guard in four methods; the draft missed all four links."

@@ -1,0 +1,10 @@
+case: empty-identical-3
+language: kotlin
+corpus: kotlin
+category: empty-identical
+split: tuning
+expected:
+  relationships: []
+  changes: []
+  ambiguous: []
+notes: "Identical files report no change."

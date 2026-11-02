@@ -1,0 +1,18 @@
+case: scala3-a7a28f5-ClassPathFactory
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: a7a28f5a2a4df060b08c67238f0a77e1b5061b9b
+  path: "compiler/src/dotty/tools/dotc/classpath/ClassPathFactory.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "object ClassPathFactory", kind: FUNCTION, name: "classesInPath", signature: "String,Boolean;using Context" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

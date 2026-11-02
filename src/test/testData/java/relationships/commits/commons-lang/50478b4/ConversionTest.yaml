@@ -1,0 +1,24 @@
+case: commons-lang-50478b4-ConversionTest
+language: JAVA
+corpus: java
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "commons-lang"
+  commit: 50478b4a5a0a78a0d7c328da7afd73505cfe413c
+  path: "src/test/java/org/apache/commons/lang3/ConversionTest.java"
+expected:
+  relationships:
+    - kinds: [EXTRACT]
+      old: { path: "class ConversionTest", kind: METHOD, name: "testHexDigitToInt", signature: "" }
+      new: { path: "class ConversionTest", kind: METHOD, name: "testHexDigitToIntIllegalArgumentException", signature: "" }
+  changes:
+    - subject: { path: "class ConversionTest", kind: METHOD, name: "testHexDigitToInt", signature: "" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class ConversionTest", kind: METHOD, name: "testHexDigitToIntIllegalArgumentException", signature: "" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

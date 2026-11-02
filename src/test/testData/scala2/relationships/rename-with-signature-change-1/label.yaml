@@ -1,0 +1,20 @@
+case: rename-with-signature-change-1
+language: Scala
+corpus: scala2
+category: rename-with-signature-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Order", kind: FUNCTION, name: "total", signature: "Int" }
+      new: { path: "class Order", kind: FUNCTION, name: "sum", signature: "Long" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "sum", signature: "Long" }
+      presence: MATCHED
+      content: CHANGED
+      signatureChanged: true
+  ambiguous: []
+notes: "A def renamed and its parameter type changed."

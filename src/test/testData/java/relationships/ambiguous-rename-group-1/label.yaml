@@ -1,0 +1,14 @@
+case: ambiguous-rename-group-1
+language: JAVA
+corpus: java
+category: ambiguous-rename-group
+split: tuning
+expected:
+  relationships: []
+  changes: []
+  ambiguous:
+    - { path: "class Order", kind: METHOD, name: "alpha", signature: "()" }
+    - { path: "class Order", kind: METHOD, name: "beta", signature: "()" }
+    - { path: "class Order", kind: METHOD, name: "gamma", signature: "()" }
+    - { path: "class Order", kind: METHOD, name: "delta", signature: "()" }
+notes: "Two equally plausible pairings; no pair is correct."

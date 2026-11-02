@@ -1,0 +1,19 @@
+case: field-rename-2
+language: Scala
+corpus: scala3
+category: field-rename
+split: held-out
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Invoice", kind: PROPERTY, name: "maxSize", signature: null }
+      new: { path: "class Invoice", kind: PROPERTY, name: "maxLength", signature: null }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Invoice", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Invoice", kind: PROPERTY, name: "maxLength", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A val renamed, initializer unchanged."

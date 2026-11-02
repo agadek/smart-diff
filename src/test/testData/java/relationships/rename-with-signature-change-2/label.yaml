@@ -1,0 +1,20 @@
+case: rename-with-signature-change-2
+language: JAVA
+corpus: java
+category: rename-with-signature-change
+split: held-out
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Invoice", kind: METHOD, name: "computeTotal", signature: "(int)" }
+      new: { path: "class Invoice", kind: METHOD, name: "total", signature: "(long)" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Invoice", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Invoice", kind: METHOD, name: "total", signature: "(long)" }
+      presence: MATCHED
+      content: CHANGED
+      signatureChanged: true
+  ambiguous: []
+notes: "A method renamed and its parameter type changed."

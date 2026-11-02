@@ -1,0 +1,18 @@
+case: scala3-1196ae3-ScaladocConfigs0
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: 1196ae3f00600115ce5bc4bf5d3cc8df62436efd
+  path: "project/ScaladocConfigs0.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "object ScaladocConfigs0", kind: FUNCTION, name: "captureCheckingSnippetTestTargets", signature: "String" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

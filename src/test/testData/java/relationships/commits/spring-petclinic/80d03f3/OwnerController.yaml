@@ -1,0 +1,22 @@
+case: spring-petclinic-80d03f3-OwnerController
+language: JAVA
+corpus: java
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "spring-petclinic"
+  commit: 80d03f3cefadd64488fb60ce5bcd9f6ab3d44000
+  path: "src/main/java/org/springframework/samples/petclinic/owner/OwnerController.java"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class OwnerController", kind: METHOD, name: "processFindForm", signature: "int,Owner,BindingResult,Model" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class OwnerController", kind: METHOD, name: "addPaginationModel", signature: "int,Model,Page<Owner>" }
+      presence: MATCHED
+      content: CHANGED
+      signatureChanged: true
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

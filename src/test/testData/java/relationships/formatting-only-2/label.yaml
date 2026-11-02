@@ -1,0 +1,16 @@
+case: formatting-only-2
+language: JAVA
+corpus: java
+category: formatting-only
+split: held-out
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Invoice", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Invoice", kind: METHOD, name: "total", signature: "()" }
+      presence: MATCHED
+      content: FORMATTING_ONLY
+  ambiguous: []
+notes: "Whitespace only."
