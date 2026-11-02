@@ -79,7 +79,7 @@ and records the verdicts.
 
 The [2026-11-01 run](#2026-11-01-merge-validation) left 67 files to review. This run replays the same merge commits on the engine that will ship in 0.2.0, gives each flagged file one verdict, and records the one validation fix the review needed.
 
-**Corpus:** the 2026-11-01 list with each clone's `HEAD` replaced by the commit below, so both runs select the same merge commits. The `/src/...` paths stand for the local clones; use the clone paths on the machine running the validation.
+**Corpus:** the 2026-11-01 list with each clone's `HEAD` replaced by the commit below. The 2026-11-01 run did not record its clone commits, so the two commit lists may differ; the counts match exactly, and the clones had not moved between the runs. The `/src/...` paths stand for the local clones; use the clone paths on the machine running the validation.
 
 ```text
 /src/commons-lang --max-count=240 b9b30efb01e861a16503232bb96b684107e73199 -- *.java
