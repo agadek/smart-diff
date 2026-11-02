@@ -1,0 +1,21 @@
+case: cats-cdc49db-TraverseFilter
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: cdc49db43323df12d0d473fede1b54c6ae6ef6b7
+  path: "core/src/main/scala/cats/TraverseFilter.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "trait TraverseFilter", kind: FUNCTION, name: "traverseCollect", signature: "F[A];PartialFunction[A,G[B]];implicit Applicative[G]" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

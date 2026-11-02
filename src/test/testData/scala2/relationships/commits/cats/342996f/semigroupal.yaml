@@ -1,0 +1,19 @@
+case: cats-342996f-semigroupal
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: 342996fbed56fb96b47b5e65a7af1297bba90144
+  path: "core/src/main/scala/cats/syntax/semigroupal.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "trait SemigroupalSyntax", kind: FUNCTION, name: "catsSyntaxSemigroupal", signature: "F[A];Semigroupal[F]" }
+      presence: MATCHED
+      content: CHANGED
+      signatureChanged: true
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

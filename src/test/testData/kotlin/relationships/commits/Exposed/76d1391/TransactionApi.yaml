@@ -1,0 +1,18 @@
+case: Exposed-76d1391-TransactionApi
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "Exposed"
+  commit: 76d1391ba789c24dfe9035a91c4dd599d99b9546
+  path: "exposed-core/src/main/kotlin/org/jetbrains/exposed/sql/transactions/TransactionApi.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: PROPERTY, name: "DEFAULT_ISOLATION_LEVEL", signature: null }
+      presence: REMOVED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

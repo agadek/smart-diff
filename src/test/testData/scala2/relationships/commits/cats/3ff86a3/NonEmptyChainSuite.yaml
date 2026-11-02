@@ -1,0 +1,18 @@
+case: cats-3ff86a3-NonEmptyChainSuite
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: 3ff86a36618bbf5711b192d0bd0b75c487ab9136
+  path: "tests/src/test/scala/cats/tests/NonEmptyChainSuite.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "NonEmptyChainSuite", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

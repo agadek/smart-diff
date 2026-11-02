@@ -1,0 +1,18 @@
+case: cats-76c737f-NonEmptySeq
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: 76c737f902c0870d41daacfe60c3dd89cb780082
+  path: "core/src/main/scala/cats/data/NonEmptySeq.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class NonEmptySeq", kind: FUNCTION, name: "appendSeq", signature: "Seq[AA]" }
+      presence: MATCHED
+      content: FORMATTING_ONLY
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

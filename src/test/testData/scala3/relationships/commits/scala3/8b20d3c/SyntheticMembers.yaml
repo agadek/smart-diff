@@ -1,0 +1,18 @@
+case: scala3-8b20d3c-SyntheticMembers
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: 8b20d3c27a57001d80ac24388d053c802bab7b87
+  path: "compiler/src/dotty/tools/dotc/transform/SyntheticMembers.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class SyntheticMembers", kind: FUNCTION, name: "caseAndValueMethods", signature: "ClassSymbol;using Context" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

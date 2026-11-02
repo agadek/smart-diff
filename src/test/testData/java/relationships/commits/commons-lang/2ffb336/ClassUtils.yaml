@@ -1,0 +1,24 @@
+case: commons-lang-2ffb336-ClassUtils
+language: JAVA
+corpus: java
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "commons-lang"
+  commit: 2ffb336343b1a8ee7ac8a4bf35433331da17c98b
+  path: "src/main/java/org/apache/commons/lang3/ClassUtils.java"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class ClassUtils", kind: FIELD, name: "ARRAY_TAIL_PATTERN", signature: null }
+      presence: ADDED
+      content: UNCHANGED
+    - subject: { path: "class ClassUtils", kind: METHOD, name: "toCleanName", signature: "String" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

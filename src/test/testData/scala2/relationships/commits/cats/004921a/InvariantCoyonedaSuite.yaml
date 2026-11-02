@@ -1,0 +1,27 @@
+case: cats-004921a-InvariantCoyonedaSuite
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: 004921a372359da4212815d6aa3d0698b4315fc9
+  path: "free/src/test/scala/cats/free/InvariantCoyonedaSuite.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class InvariantCoyonedaSuite", kind: FUNCTION, name: "stringMagma", signature: null }
+      presence: REMOVED
+      content: UNCHANGED
+    - subject: { path: "class InvariantCoyonedaSuite", kind: FUNCTION, name: "listMagma", signature: null }
+      presence: REMOVED
+      content: UNCHANGED
+    - subject: { path: "class InvariantCoyonedaSuite", kind: FUNCTION, name: "semigroupIsMagma", signature: null }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

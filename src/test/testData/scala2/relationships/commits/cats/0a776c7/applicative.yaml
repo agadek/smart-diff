@@ -1,0 +1,22 @@
+case: cats-0a776c7-applicative
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: 0a776c72d567caa9078721519888a6803ab0da6f
+  path: "core/src/main/scala/cats/syntax/applicative.scala"
+expected:
+  relationships:
+    - kinds: [MOVE]
+      old: { path: "class ApplicativeOps", kind: FUNCTION, name: "replicateA_", signature: "Int;implicit Applicative[F]" }
+      new: { path: "class ApplicativeByValueOps", kind: FUNCTION, name: "replicateA_", signature: "Int;implicit Applicative[F]" }
+  changes:
+    - subject: { path: "class ApplicativeByValueOps", kind: FUNCTION, name: "replicateA_", signature: "Int;implicit Applicative[F]" }
+      presence: MATCHED
+      content: UNCHANGED
+      moved: true
+  ambiguous: []
+notes: "replicateA_ moves from ApplicativeOps to ApplicativeByValueOps; the old path is the old container."

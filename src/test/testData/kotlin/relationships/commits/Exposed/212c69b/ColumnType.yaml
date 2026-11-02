@@ -1,0 +1,18 @@
+case: Exposed-212c69b-ColumnType
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "Exposed"
+  commit: 212c69bc7ba597ce2c99fde361dbd7f9750cf5d1
+  path: "exposed-core/src/main/kotlin/org/jetbrains/exposed/sql/ColumnType.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "ArrayColumnType", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

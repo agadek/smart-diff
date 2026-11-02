@@ -1,0 +1,18 @@
+case: scala3-f7cd829-Versions
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: f7cd8292039ca541d9ef04cdcb8fc8c2c2ae6c62
+  path: "project/Versions.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "object Versions", kind: PROPERTY, name: "referenceVersion", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

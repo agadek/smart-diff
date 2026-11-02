@@ -1,0 +1,27 @@
+case: commons-lang-3d576e2-SystemUtils
+language: JAVA
+corpus: java
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "commons-lang"
+  commit: 3d576e2e0efed2e3639a70c247edb7a89ffb5645
+  path: "src/main/java/org/apache/commons/lang3/SystemUtils.java"
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class SystemUtils", kind: FIELD, name: "JAVA_SPECIFICATION_VERSION_AS_ENUM", signature: null }
+      new: { path: "class SystemUtils", kind: FIELD, name: "JAVA_SPECIFICATION_VERSION_ENUM", signature: null }
+  changes:
+    - subject: { path: "class SystemUtils", kind: FIELD, name: "JAVA_SPECIFICATION_VERSION_ENUM", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SystemUtils", kind: METHOD, name: "isJavaVersionAtLeast", signature: "JavaVersion" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class SystemUtils", kind: METHOD, name: "isJavaVersionAtMost", signature: "JavaVersion" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

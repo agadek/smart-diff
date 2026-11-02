@@ -1,0 +1,18 @@
+case: moshi-9ca9ce0-LinkedHashTreeMap
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "moshi"
+  commit: 9ca9ce0428e7efe9cb3888f0f40b125444afcc13
+  path: "moshi/src/main/java/com/squareup/moshi/LinkedHashTreeMap.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class LinkedHashTreeMap", kind: FUNCTION, name: "rotateLeft", signature: "Node<K,V>" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

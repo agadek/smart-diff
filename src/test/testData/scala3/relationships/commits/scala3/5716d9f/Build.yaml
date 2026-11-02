@@ -1,0 +1,18 @@
+case: scala3-5716d9f-Build
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: 5716d9f6337b217e3a4bbdea54d0ba5b53fc2eac
+  path: "project/Build.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "object Build", kind: PROPERTY, name: "thisBuildSettings", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

@@ -21,6 +21,110 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-02: relationship benchmark baseline
+
+This is the R29 baseline: the first run with no shortfall. It covers the full case matrix and 30 labelled real
+commits per corpus, so it is a complete run, not the [2026-11-01 smoke run](#2026-11-01-relationship-benchmark)
+below.
+
+**Corpus:** `src/test/testData/relationships-corpus-full.txt` lists all 304 checked-in cases and the real commits.
+The cases are 25 categories with 3 cases for each of Java, Kotlin, Scala 2 and Scala 3, plus the four starter cases
+(300 + 4); Scala 2 and Scala 3 stay separate rows. The real-commit lines name the clones by relative path, so the list
+contains no user name; on another machine the `/src/...` prefix stands for the clone location, as in the older
+validations:
+
+```text
+/src/commons-lang --no-walk <30 commit hashes>
+/src/guava --no-walk <3 commit hashes>
+/src/moshi --no-walk <8 commit hashes>
+/src/okhttp --no-walk <5 commit hashes>
+/src/spring-petclinic --no-walk <9 commit hashes>
+/src/Exposed --no-walk <18 commit hashes>
+/src/cats --no-walk <30 commit hashes>
+/src/scala3 --no-walk <30 commit hashes>
+```
+
+The hashes are pinned with `--no-walk`, so the run does not depend on each clone's current branch tip. Every selected
+commit changes one Java, Kotlin or Scala file, and every one of its files has a reviewed label. The clones were at:
+
+| Clone | HEAD |
+| --- | --- |
+| commons-lang | `b9b30efb01e861a16503232bb96b684107e73199` |
+| guava | `b157643c41f9ee6a38732b4fa1a590ba187912d9` |
+| moshi | `889013ec2edb8d8034902662a1dc8c4f3b3f8111` |
+| okhttp | `2b6399483639405e9277d33a3a1d355d5fabda1c` |
+| spring-petclinic | `500158f732419217507c7656904b8e6aa1bcc0d6` |
+| Exposed | `09f814c61c22851b76840ccb65c1ac2c4db97452` |
+| cats | `e28985fe2a0d7123a8fb84cbb70c72b5e3d935ca` |
+| scala3 | `3e003afbf3854d9b3189a51a47258d0b9e31e792` |
+
+**Versions:** engine `smartdiff.declarations` 6; IDE 2025.1.3, build `251.26927.53`; Scala plugin 2025.1.32; JVM
+21.0.9; macOS 15.7.7 on arm64. Corpus revision `87588c7829c5`; gate `no-new-wrong-pairs`, with no earlier baseline
+because this is the first complete run. The gate passed. The corpus revision hashes the list and every case, label and
+clone HEAD it reaches, so it changes when a label changes.
+
+**Result:** 424 cases (304 checked-in cases and 120 real commits); 30 labelled commits per corpus. No case was
+unlabelled or skipped, none broke the nothing-hidden rule, 6 fell back to the native diff (the malformed pairs), and
+no pair was forced. Precision is 0.995 and recall 0.822 overall. The one wrong pair and the 43 missed relationships
+are listed in `report.md`; they are the known limitations below, not a shortfall.
+
+### Per corpus
+
+| Corpus | Cases | Precision | Recall | Wrong share | Presence | Content | Moved | Signature | Kind | Median | p95 | Slowest |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Java | 106 | 1.000 | 0.757 | 0.000 | 0.995 | 0.995 | 1.000 | 1.000 | 1.000 | 1 ms | 33 ms | 135 ms |
+| Kotlin | 106 | 1.000 | 0.836 | 0.000 | 0.986 | 0.986 | 1.000 | 1.000 | 1.000 | 0 ms | 32 ms | 248 ms |
+| Scala 2 | 106 | 0.980 | 0.831 | 0.020 | 1.000 | 0.986 | 0.824 | 1.000 | 1.000 | 1 ms | 56 ms | 207 ms |
+| Scala 3 | 106 | 1.000 | 0.887 | 0.000 | 1.000 | 0.970 | 1.000 | 1.000 | 1.000 | 0 ms | 145 ms | 234 ms |
+| tuning | 153 | 1.000 | 0.884 | 0.000 | 1.000 | 0.990 | 1.000 | 1.000 | 1.000 | 0 ms | 2 ms | 102 ms |
+| held-out | 271 | 0.987 | 0.738 | 0.013 | 0.991 | 0.980 | 0.864 | 1.000 | 1.000 | 3 ms | 110 ms | 248 ms |
+
+### Per kind
+
+| Corpus | Kind | TP | FP | FN | Precision | Recall |
+| --- | --- | --- | --- | --- | --- | --- |
+| Java | RENAME | 24 | 0 | 1 | 1.000 | 0.960 |
+| Java | MOVE | 9 | 0 | 0 | 1.000 | 1.000 |
+| Java | KIND_CHANGE | 3 | 0 | 0 | 1.000 | 1.000 |
+| Java | EXTRACT | 20 | 0 | 14 | 1.000 | 0.588 |
+| Java | INLINE | 0 | 0 | 3 | 1.000 | 0.000 |
+| Kotlin | RENAME | 21 | 0 | 2 | 1.000 | 0.913 |
+| Kotlin | MOVE | 10 | 0 | 0 | 1.000 | 1.000 |
+| Kotlin | KIND_CHANGE | 3 | 0 | 0 | 1.000 | 1.000 |
+| Kotlin | EXTRACT | 12 | 0 | 4 | 1.000 | 0.750 |
+| Kotlin | INLINE | 0 | 0 | 3 | 1.000 | 0.000 |
+| Scala 2 | RENAME | 23 | 0 | 0 | 1.000 | 1.000 |
+| Scala 2 | MOVE | 10 | 1 | 4 | 0.909 | 0.714 |
+| Scala 2 | KIND_CHANGE | 4 | 0 | 0 | 1.000 | 1.000 |
+| Scala 2 | EXTRACT | 12 | 0 | 3 | 1.000 | 0.800 |
+| Scala 2 | INLINE | 0 | 0 | 3 | 1.000 | 0.000 |
+| Scala 3 | RENAME | 21 | 0 | 0 | 1.000 | 1.000 |
+| Scala 3 | MOVE | 10 | 0 | 0 | 1.000 | 1.000 |
+| Scala 3 | KIND_CHANGE | 4 | 0 | 0 | 1.000 | 1.000 |
+| Scala 3 | EXTRACT | 12 | 0 | 3 | 1.000 | 0.800 |
+| Scala 3 | INLINE | 0 | 0 | 3 | 1.000 | 0.000 |
+
+**Wrong and forced pairs:** 1 wrong pair, 0 forced. The wrong pair is the Scala 2
+`cats-0a776c7-applicative` move of `replicateA_`: the label names its old container `class ApplicativeOps`, while
+today's `ChangeNode` adapter can only name the new container for a move. This is the known cross-container move
+limitation of the baseline adapter.
+
+**Known limitations:** inlining detection is not implemented, so every INLINE label is missed and its recall starts
+at zero (relationships/05). Extraction to several sources links only one source in the synthetic case (24 misses over
+four corpora), and the Scala parser marks the two capture-checking real-commit files and the incomplete Scala
+parse-error cases differently from the hand labels (UNANALYZED versus CHANGED); those are listed in `report.md`, not
+counted as shortfalls. The Scala 2 row has the one wrong move above.
+
+**Report:** `build/reports/smartdiff-relationships/summary.tsv`, `report.md` and `report.json`. Run it with:
+
+```shell
+./gradlew test --tests '*RelationshipBenchmarkTest*' \
+  -Psmartdiff.relationships.corpus=src/test/testData/relationships-corpus-full.txt
+```
+
+The [2026-11-01 smoke run](#2026-11-01-relationship-benchmark) below is kept as the harness check; it is not this
+baseline.
+
 ## 2026-11-01: relationship benchmark
 
 **Corpus:** the four starter cases in `src/test/testData/{java,kotlin,scala2,scala3}/relationships/`:
@@ -35,8 +139,9 @@ the baseline is the first run with no shortfall.
 7 of 7; no forced pair, no nothing-hidden violation and no fallback. Median 23 ms, p95 and slowest 72 ms.
 The gate was `no-new-wrong-pairs`; this is the first recorded run because no earlier report exists.
 
-The report is written to `build/reports/smartdiff-relationships/`. The checked-in corpus still needs the full
-category matrix and real-commit labels; relationships/01 is accepted rather than implemented.
+The report is written to `build/reports/smartdiff-relationships/`. The checked-in corpus still needed the full
+category matrix and real-commit labels at the time of this run; the [2026-11-02 baseline](#2026-11-02-relationship-benchmark-baseline)
+above adds them and is the R29 baseline, so relationships/01 is implemented from that run.
 
 ## 2026-11-01: merge validation
 

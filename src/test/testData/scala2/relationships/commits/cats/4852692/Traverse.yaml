@@ -1,0 +1,21 @@
+case: cats-4852692-Traverse
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: 48526923b73f1ba31e8777390c4a7df6278a80b7
+  path: "core/src/main/scala/cats/Traverse.scala"
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "object Traverse", kind: FUNCTION, name: "traverse_Directly", signature: "IterableOnce[A];A => G[B];implicit StackSafeMonad[G]" }
+      new: { path: "object Traverse", kind: FUNCTION, name: "traverseVoidDirectly", signature: "IterableOnce[A];A => G[B];implicit StackSafeMonad[G]" }
+  changes:
+    - subject: { path: "object Traverse", kind: FUNCTION, name: "traverseVoidDirectly", signature: "IterableOnce[A];A => G[B];implicit StackSafeMonad[G]" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

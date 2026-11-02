@@ -1,0 +1,27 @@
+case: Exposed-deb65b9-H2
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "Exposed"
+  commit: deb65b962611c3dc459969adec2e0266c3521569
+  path: "exposed-core/src/main/kotlin/org/jetbrains/exposed/sql/vendors/H2.kt"
+expected:
+  relationships:
+    - kinds: [EXTRACT]
+      old: { path: "object H2FunctionProvider", kind: FUNCTION, name: "update", signature: "Join,List<Pair<Column<*>,Any?>>,Int?,Op<Boolean>?,Transaction" }
+      new: { path: "object H2FunctionProvider", kind: PROPERTY, name: "isH2Oracle", signature: null }
+  changes:
+    - subject: { path: "object H2FunctionProvider", kind: PROPERTY, name: "isH2Oracle", signature: null }
+      presence: ADDED
+      content: UNCHANGED
+    - subject: { path: "object H2FunctionProvider", kind: FUNCTION, name: "nextVal", signature: "Sequence,QueryBuilder" }
+      presence: MATCHED
+      content: FORMATTING_ONLY
+    - subject: { path: "object H2FunctionProvider", kind: FUNCTION, name: "update", signature: "Join,List<Pair<Column<*>,Any?>>,Int?,Op<Boolean>?,Transaction" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "The H2 Oracle mode condition is extracted into the isH2Oracle property; the draft missed the link."

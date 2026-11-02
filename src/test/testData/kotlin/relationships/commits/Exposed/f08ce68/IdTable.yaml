@@ -1,0 +1,18 @@
+case: Exposed-f08ce68-IdTable
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "Exposed"
+  commit: f08ce6868ffb3ef08a73a2f1272fd381479b6c8f
+  path: "exposed-core/src/main/kotlin/org/jetbrains/exposed/v1/core/dao/id/IdTable.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "UuidTable", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

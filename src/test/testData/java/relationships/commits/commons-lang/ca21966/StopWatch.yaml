@@ -1,0 +1,42 @@
+case: commons-lang-ca21966-StopWatch
+language: JAVA
+corpus: java
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "commons-lang"
+  commit: ca21966b93b6cc43ce2ec3a37018921d66251ac2
+  path: "src/main/java/org/apache/commons/lang3/time/StopWatch.java"
+expected:
+  relationships:
+    - kinds: [EXTRACT]
+      old: { path: "class StopWatch", kind: METHOD, name: "split", signature: "" }
+      new: { path: "class StopWatch", kind: METHOD, name: "stopSet", signature: "" }
+    - kinds: [EXTRACT]
+      old: { path: "class StopWatch", kind: METHOD, name: "split", signature: "String" }
+      new: { path: "class StopWatch", kind: METHOD, name: "stopSet", signature: "" }
+    - kinds: [EXTRACT]
+      old: { path: "class StopWatch", kind: METHOD, name: "stop", signature: "" }
+      new: { path: "class StopWatch", kind: METHOD, name: "stopSet", signature: "" }
+    - kinds: [EXTRACT]
+      old: { path: "class StopWatch", kind: METHOD, name: "suspend", signature: "" }
+      new: { path: "class StopWatch", kind: METHOD, name: "stopSet", signature: "" }
+  changes:
+    - subject: { path: "class StopWatch", kind: METHOD, name: "split", signature: "" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class StopWatch", kind: METHOD, name: "split", signature: "String" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class StopWatch", kind: METHOD, name: "stop", signature: "" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class StopWatch", kind: METHOD, name: "stopSet", signature: "" }
+      presence: ADDED
+      content: UNCHANGED
+    - subject: { path: "class StopWatch", kind: METHOD, name: "suspend", signature: "" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

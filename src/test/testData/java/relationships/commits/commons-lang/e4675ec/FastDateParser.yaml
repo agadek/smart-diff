@@ -1,0 +1,18 @@
+case: commons-lang-e4675ec-FastDateParser
+language: JAVA
+corpus: java
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "commons-lang"
+  commit: e4675ec1c0366f34b61bf7156bef60c5678513eb
+  path: "src/main/java/org/apache/commons/lang3/time/FastDateParser.java"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "FastDateParser", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "The removed comment is in the class body, so the class changes and readObject does not."

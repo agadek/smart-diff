@@ -1,0 +1,38 @@
+case: scala3-060db95-ProtectedAccessors
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: 060db95f584ffa5130b90eb0aa1528cebc35395b
+  path: "compiler/src/dotty/tools/dotc/transform/ProtectedAccessors.scala"
+expected:
+  relationships:
+    - kinds: [MOVE]
+      old: { path: "object ProtectedAccessors", kind: FUNCTION, name: "needsAccessorIsSubclass", signature: "Symbol;using Context" }
+      new: { path: "object ProtectedAccessors", kind: FUNCTION, name: "needsAccessorIsSubclass", signature: "Symbol;using Context" }
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "object ProtectedAccessors", kind: FUNCTION, name: "needsAccessorIfNotInSubclass", signature: "Symbol;using Context" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "object ProtectedAccessors", kind: FUNCTION, name: "needsAccessorIsSubclass", signature: "Symbol;using Context" }
+      presence: MATCHED
+      content: UNCHANGED
+      moved: true
+    - subject: { path: "object ProtectedAccessors", kind: FUNCTION, name: "needsAccessor", signature: "Tree;using Context" }
+      presence: MATCHED
+      content: CHANGED
+      signatureChanged: true
+    - subject: { path: "", kind: CLASS, name: "ProtectedAccessors", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class ProtectedAccessors / class Accessors", kind: PROPERTY, name: "insert", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

@@ -1,0 +1,18 @@
+case: Exposed-1742b95-SQLExpressionBuilder
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "Exposed"
+  commit: 1742b95351c94bb7086c7eb9e354bc0ec847ac56
+  path: "exposed-core/src/main/kotlin/org/jetbrains/exposed/sql/SQLExpressionBuilder.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: FUNCTION, name: "slice", signature: "Int?,Int?" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

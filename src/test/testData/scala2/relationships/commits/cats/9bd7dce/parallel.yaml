@@ -1,0 +1,55 @@
+case: cats-9bd7dce-parallel
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: 9bd7dce35ff0b86f490b2dbd24f5210f9459fab7
+  path: "core/src/main/scala/cats/syntax/parallel.scala"
+expected:
+  relationships:
+    - kinds: [MOVE]
+      old: { path: "class ParallelApOps1", kind: FUNCTION, name: "parReplicateA", signature: "Int;implicit Parallel[M]" }
+      new: { path: "class ParallelApOps", kind: FUNCTION, name: "parReplicateA", signature: "Int;implicit Parallel[M]" }
+  changes:
+    - subject: { path: "trait ParallelSyntax", kind: FUNCTION, name: "catsSyntaxParallelAp1", signature: "M[A]" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: CLASS, name: "ParallelApOps", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class ParallelApOps", kind: FUNCTION, name: "&>", signature: "M[B];implicit Parallel[M]" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class ParallelApOps", kind: FUNCTION, name: "<&", signature: "M[B];implicit Parallel[M]" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class ParallelApOps", kind: FUNCTION, name: "parProductL", signature: "M[B];implicit Parallel[M]" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class ParallelApOps", kind: FUNCTION, name: "parProductR", signature: "M[B];implicit Parallel[M]" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class ParallelApOps", kind: FUNCTION, name: "parProduct", signature: "M[B];implicit Parallel[M]" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class ParallelApOps", kind: FUNCTION, name: "parReplicateA", signature: "Int;implicit Parallel[M]" }
+      presence: MATCHED
+      content: UNCHANGED
+      moved: true
+    - subject: { path: "", kind: CLASS, name: "ParallelApOps1", signature: null }
+      presence: REMOVED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "NonEmptyParallelApOps", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: CLASS, name: "ParallelApplyOps", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: CLASS, name: "NonEmptyParallelApplyOps", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "parReplicateA moves from ParallelApOps1 into ParallelApOps; the draft reported it removed."

@@ -1,0 +1,21 @@
+case: okhttp-e81e7a2-RealInterceptorChain
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "okhttp"
+  commit: e81e7a2472241d14d654fb8f031ecab34f99b35a
+  path: "okhttp/src/commonJvmAndroid/kotlin/okhttp3/internal/http/RealInterceptorChain.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class RealInterceptorChain", kind: CONSTRUCTOR, name: "", signature: "RealCall,List<Interceptor>,Int,Nothing?,Request,OkHttpClient" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class RealInterceptorChain", kind: FUNCTION, name: "copy", signature: "Int,Exchange?,Request,Int,Int,Int,Authenticator,Cache?,CertificatePinner,ConnectionPool,CookieJar,Dns,HostnameVerifier,Proxy?,Authenticator,ProxySelector,Boolean,SocketFactory,SSLSocketFactory?,X509TrustManager?,CertificateChainCleaner?" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

@@ -1,0 +1,18 @@
+case: scala3-ddd6514-Boolean
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: ddd651425943a4a23fae479dfea072903b31d433
+  path: "library/src/scala/Boolean.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Boolean", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

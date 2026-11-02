@@ -1,0 +1,41 @@
+case: cats-41d24a8-set
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: 41d24a863d32d89ff8fafb9fc6b3ddd680ab5e74
+  path: "alleycats-core/src/main/scala/alleycats/std/set.scala"
+expected:
+  relationships:
+    - kinds: [KIND_CHANGE]
+      old: { path: "trait SetInstances", kind: PROPERTY, name: "alleycatsStdInstancesForSet", signature: null }
+      new: { path: "trait SetInstances", kind: FUNCTION, name: "alleycatsStdInstancesForSet", signature: null }
+  changes:
+    - subject: { path: "", kind: TRAIT, name: "SetInstances", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "trait SetInstances", kind: FUNCTION, name: "alleycatsStdInstancesForSet", signature: null }
+      presence: MATCHED
+      content: CHANGED
+      signatureChanged: true
+      kindChangedFrom: PROPERTY
+    - subject: { path: "trait SetInstances", kind: PROPERTY, name: "alleyCatsSetTraverse", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "trait SetInstances", kind: PROPERTY, name: "alleyCatsStdSetMonad", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "trait SetInstances", kind: PROPERTY, name: "alleyCatsSetTraverseFilter", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: OBJECT, name: "SetInstances", signature: null }
+      presence: ADDED
+      content: UNCHANGED
+    - subject: { path: "object SetInstances", kind: PROPERTY, name: "alleycatsStdInstancesForSet_", signature: null }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

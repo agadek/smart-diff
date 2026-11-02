@@ -1,0 +1,18 @@
+case: scala3-3213b88-Build
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: 3213b8832b2b950ebb87d2396793eb538815502f
+  path: "project/Build.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "object Build", kind: PROPERTY, name: "scaladoc", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

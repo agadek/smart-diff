@@ -1,0 +1,18 @@
+case: cats-0b7a2d5-NonEmptyList
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: 0b7a2d5f13b7bdaf0a6f9f7b16d9b73a21389ac5
+  path: "core/src/main/scala/cats/data/NonEmptyList.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class NonEmptyList", kind: FUNCTION, name: "exists", signature: "A => Boolean" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

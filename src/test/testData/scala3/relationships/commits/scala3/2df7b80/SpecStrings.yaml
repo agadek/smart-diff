@@ -1,0 +1,18 @@
+case: scala3-2df7b80-SpecStrings
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: 2df7b80a7801e729adc1242eec519bdf46769160
+  path: "compiler/src/dotty/tools/dotc/typer/SpecStrings.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: TRAIT, name: "SpecStrings", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

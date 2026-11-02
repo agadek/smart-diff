@@ -1,0 +1,18 @@
+case: spring-petclinic-c4dbb1f-ClinicServiceImpl
+language: JAVA
+corpus: java
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "spring-petclinic"
+  commit: c4dbb1f6485d55009417bc029966cd2434dcb079
+  path: "src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "ClinicServiceImpl", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

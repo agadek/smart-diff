@@ -1,0 +1,27 @@
+case: okhttp-7ef4fb4-CallTest
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "okhttp"
+  commit: 7ef4fb4bfdcd6b2567cc7aff5ec3e7b45a7d13af
+  path: "okhttp/src/test/java/okhttp3/CallTest.kt"
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class CallTest", kind: FUNCTION, name: "httpWithExcessiveHeaders", signature: "" }
+      new: { path: "class CallTest", kind: FUNCTION, name: "httpWithExcessiveStatusLine", signature: "" }
+  changes:
+    - subject: { path: "class CallTest", kind: FUNCTION, name: "httpWithExcessiveStatusLine", signature: "" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class CallTest", kind: FUNCTION, name: "httpWithExcessiveHeaders", signature: "" }
+      presence: ADDED
+      content: UNCHANGED
+    - subject: { path: "class CallTest", kind: FUNCTION, name: "stringFill", signature: "Char,Int" }
+      presence: REMOVED
+      content: UNCHANGED
+  ambiguous: []
+notes: "The old headers test is renamed to httpWithExcessiveStatusLine, and a new headers test takes the old name."

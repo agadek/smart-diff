@@ -1,0 +1,18 @@
+case: scala3-0b4d1a2-CheckCaptures
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: 0b4d1a2c69363fd82e5062799577a9eeebae3b48
+  path: "compiler/src/dotty/tools/dotc/cc/CheckCaptures.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class CheckCaptures / class CaptureChecker", kind: FUNCTION, name: "testAdapted", signature: "Type,Type,Tree,List[Note];(Tree,Type,List[Note]) => Unit;using Context" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

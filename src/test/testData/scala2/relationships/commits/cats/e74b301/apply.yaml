@@ -1,0 +1,48 @@
+case: cats-e74b301-apply
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: e74b3016ac1b350f5daf0e2e6abb2ca19bf33c46
+  path: "core/src/main/scala/cats/syntax/apply.scala"
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "", kind: CLASS, name: "Apply2Ops", signature: null }
+      new: { path: "", kind: CLASS, name: "ApplyFABCOps", signature: null }
+    - kinds: [MOVE]
+      old: { path: "", kind: CLASS, name: "ApplyOps2", signature: null }
+      new: { path: "", kind: CLASS, name: "ApplyOps2", signature: null }
+    - kinds: [MOVE]
+      old: { path: "", kind: CLASS, name: "IfApplyOps", signature: null }
+      new: { path: "", kind: CLASS, name: "IfApplyOps", signature: null }
+    - kinds: [MOVE]
+      old: { path: "", kind: CLASS, name: "ApplyOps", signature: null }
+      new: { path: "", kind: CLASS, name: "ApplyOps", signature: null }
+  changes:
+    - subject: { path: "trait ApplySyntax", kind: FUNCTION, name: "catsSyntaxApply2Ops", signature: "F[(A,B) => C]" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "trait ApplySyntax", kind: FUNCTION, name: "catsSyntaxApplyFABOps", signature: "F[A => B]" }
+      presence: MATCHED
+      content: FORMATTING_ONLY
+    - subject: { path: "", kind: CLASS, name: "ApplyFABCOps", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "ApplyOps2", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+      moved: true
+    - subject: { path: "", kind: CLASS, name: "IfApplyOps", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+      moved: true
+    - subject: { path: "", kind: CLASS, name: "ApplyOps", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+      moved: true
+  ambiguous: []
+notes: "Apply2Ops is renamed and three classes move; the draft missed the IfApplyOps and ApplyOps moves."

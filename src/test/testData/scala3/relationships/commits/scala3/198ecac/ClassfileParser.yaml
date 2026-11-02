@@ -1,0 +1,18 @@
+case: scala3-198ecac-ClassfileParser
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: 198ecac41588b68e08ca40cf04a458d11265c69f
+  path: "compiler/src/dotty/tools/dotc/core/classfile/ClassfileParser.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class ClassfileParser / class AttributeCompleter", kind: FUNCTION, name: "complete", signature: "Type,Boolean;using Context" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

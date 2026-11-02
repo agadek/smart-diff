@@ -1,0 +1,18 @@
+case: spring-petclinic-706c6fc-CacheConfig
+language: JAVA
+corpus: java
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "spring-petclinic"
+  commit: 706c6fc647ea1746ba043418810323611c98eb2e
+  path: "src/main/java/org/springframework/samples/petclinic/system/CacheConfig.java"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class CacheConfig", kind: METHOD, name: "cacheManagerCustomizer", signature: "" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

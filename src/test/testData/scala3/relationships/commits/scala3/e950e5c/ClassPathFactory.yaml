@@ -1,0 +1,24 @@
+case: scala3-e950e5c-ClassPathFactory
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: e950e5c1bf2aa0fbf6e68868df09b9047042387e
+  path: "compiler/src/dotty/tools/dotc/classpath/ClassPathFactory.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class ClassPathFactory", kind: FUNCTION, name: "classesInPathImpl", signature: "String,Boolean;using Context" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class ClassPathFactory", kind: FUNCTION, name: "expandManifestPath", signature: "String" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

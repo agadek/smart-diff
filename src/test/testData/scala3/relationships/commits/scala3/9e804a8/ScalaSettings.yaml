@@ -1,0 +1,30 @@
+case: scala3-9e804a8-ScalaSettings
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: 9e804a8f6292a464be99b9f6ebc0ee59fb9d53df
+  path: "compiler/src/dotty/tools/dotc/config/ScalaSettings.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "trait AllScalaSettings", kind: PROPERTY, name: "printLines", signature: null }
+      presence: REMOVED
+      content: UNCHANGED
+    - subject: { path: "trait VerboseSettings", kind: PROPERTY, name: "VreplMaxPrintElements", signature: null }
+      presence: REMOVED
+      content: UNCHANGED
+    - subject: { path: "trait VerboseSettings", kind: PROPERTY, name: "VreplMaxPrintCharacters", signature: null }
+      presence: REMOVED
+      content: UNCHANGED
+    - subject: { path: "trait YSettings", kind: PROPERTY, name: "YnoKindPolymorphism", signature: null }
+      presence: REMOVED
+      content: UNCHANGED
+    - subject: { path: "trait YSettings", kind: PROPERTY, name: "YexplicitNulls", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

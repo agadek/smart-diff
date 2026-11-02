@@ -1,0 +1,27 @@
+case: moshi-5a46cd6-JsonUtf8Reader
+language: JAVA
+corpus: java
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "moshi"
+  commit: 5a46cd6bd588425bf77b74a6d295a6dfcc7f8baf
+  path: "moshi/src/main/java/com/squareup/moshi/JsonUtf8Reader.java"
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class JsonUtf8Reader", kind: METHOD, name: "skipTo", signature: "String" }
+      new: { path: "class JsonUtf8Reader", kind: METHOD, name: "skipToEndOfBlockComment", signature: "" }
+  changes:
+    - subject: { path: "class JsonUtf8Reader", kind: FIELD, name: "CLOSING_BLOCK_COMMENT", signature: null }
+      presence: ADDED
+      content: UNCHANGED
+    - subject: { path: "class JsonUtf8Reader", kind: METHOD, name: "nextNonWhitespace", signature: "boolean" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class JsonUtf8Reader", kind: METHOD, name: "skipToEndOfBlockComment", signature: "" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "skipTo is renamed to skipToEndOfBlockComment and rewritten; the draft reported a removal and an addition."

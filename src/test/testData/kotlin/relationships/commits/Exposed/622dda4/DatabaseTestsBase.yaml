@@ -1,0 +1,21 @@
+case: Exposed-622dda4-DatabaseTestsBase
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "Exposed"
+  commit: 622dda462ecd041a0d10c02b1e3465a66deff0a5
+  path: "exposed-tests/src/main/kotlin/org/jetbrains/exposed/sql/tests/DatabaseTestsBase.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "SpecifiedMySQLContainer", signature: null }
+      presence: REMOVED
+      content: UNCHANGED
+    - subject: { path: "", kind: PROPERTY, name: "mySQLProcess", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

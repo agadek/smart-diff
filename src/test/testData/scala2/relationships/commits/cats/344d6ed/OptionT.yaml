@@ -1,0 +1,18 @@
+case: cats-344d6ed-OptionT
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: 344d6ed38a4ff8f420faadd786b7268d87a8505a
+  path: "core/src/main/scala/cats/data/OptionT.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "OptionT", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

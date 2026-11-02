@@ -1,0 +1,18 @@
+case: spring-petclinic-a4fcf04-PetClinicIntegrationTests
+language: JAVA
+corpus: java
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "spring-petclinic"
+  commit: a4fcf04c932031463dc7eb1ed9f1e05b402c13c0
+  path: "src/test/java/org/springframework/samples/petclinic/PetClinicIntegrationTests.java"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class PetClinicIntegrationTests", kind: METHOD, name: "main", signature: "String[]" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

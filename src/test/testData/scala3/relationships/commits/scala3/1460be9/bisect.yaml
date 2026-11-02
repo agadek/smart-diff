@@ -1,0 +1,18 @@
+case: scala3-1460be9-bisect
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: 1460be941da224c3c6cbe794f5409c62c73a0efc
+  path: "project/scripts/bisect.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

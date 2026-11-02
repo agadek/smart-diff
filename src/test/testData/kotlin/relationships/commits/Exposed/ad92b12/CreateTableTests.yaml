@@ -1,0 +1,18 @@
+case: Exposed-ad92b12-CreateTableTests
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "Exposed"
+  commit: ad92b1216cdaec07583e9d12d9b30a9f439409a3
+  path: "exposed-tests/src/test/kotlin/org/jetbrains/exposed/sql/tests/shared/ddl/CreateTableTests.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class CreateTableTests", kind: FUNCTION, name: "create table with quoted name with camel case", signature: "" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

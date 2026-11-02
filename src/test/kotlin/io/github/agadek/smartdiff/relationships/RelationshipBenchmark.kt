@@ -470,7 +470,7 @@ object RelationshipBenchmark {
             }
             for (expected in label.changes) {
                 total++
-                val actual = result.actualNodes.firstOrNull { (endpoint, _) -> endpointsMatch(expected.subject, endpoint) }?.second
+                val actual = matchingNode(result, expected)
                 presenceTotal++
                 if (actual?.presence == expected.presence) presenceCorrect++
                 contentTotal++
@@ -547,6 +547,15 @@ object RelationshipBenchmark {
 
     fun endpointsMatch(expected: Endpoint, actual: Endpoint): Boolean =
         expected.sameIdentity(actual) && (expected.range == null || expected.range == actual.range)
+
+    /**
+     * The node a label's change describes. Overloads can share path, kind, name and signature; the node with the
+     * expected presence wins, so an added overload is not confused with an unchanged one of the same identity.
+     */
+    private fun matchingNode(case: CaseResult, expected: ExpectedChange): ChangeNode? {
+        val candidates = case.actualNodes.filter { (endpoint, _) -> endpointsMatch(expected.subject, endpoint) }
+        return (candidates.firstOrNull { it.second.presence == expected.presence } ?: candidates.firstOrNull())?.second
+    }
 
     fun aggregate(counts: Collection<PairCounts>): PairCounts =
         counts.fold(PairCounts()) { all, next -> PairCounts(all.tp + next.tp, all.fp + next.fp, all.fn + next.fn) }
@@ -1059,7 +1068,7 @@ object RelationshipBenchmark {
     fun classificationMismatches(cases: List<CaseResult>): List<String> = buildList {
         for (case in cases) {
             for (expected in case.label.changes) {
-                val actual = case.actualNodes.firstOrNull { (endpoint, _) -> endpointsMatch(expected.subject, endpoint) }?.second
+                val actual = matchingNode(case, expected)
                 val mismatch = actual == null || actual.presence != expected.presence || actual.content != expected.content ||
                     (expected.moved != null && actual.moved != expected.moved) ||
                     (expected.signatureChanged != null && actual.signatureChanged != expected.signatureChanged) ||

@@ -1,0 +1,18 @@
+case: scala3-d7a99af-Dependencies
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: d7a99af526976fcd670ddb43652d7ed16423a82e
+  path: "project/Dependencies.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "object Dependencies", kind: PROPERTY, name: "coursierInterface", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

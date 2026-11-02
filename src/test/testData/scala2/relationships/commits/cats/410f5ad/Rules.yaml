@@ -1,0 +1,18 @@
+case: cats-410f5ad-Rules
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: 410f5adefbb24c8e1bb3c98cb3f1ff24331f5ae7
+  path: "algebra-laws/shared/src/main/scala/algebra/laws/Rules.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "object Rules", kind: FUNCTION, name: "collect0", signature: "String,String,A;Seq[A] => A" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

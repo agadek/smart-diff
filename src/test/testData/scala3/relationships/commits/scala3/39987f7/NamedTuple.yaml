@@ -1,0 +1,24 @@
+case: scala3-39987f7-NamedTuple
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: 39987f7faa7f1fc78283d1e56cefc5d04d015746
+  path: "library/src/scala/NamedTuple.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: OBJECT, name: "NamedTuple", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "object NamedTuple", kind: GIVEN, name: "namedTupleCanEqual", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "The given instance changed; the Scala parser cannot analyze capture-checking syntax, so the engine reports UNANALYZED."

@@ -1,0 +1,18 @@
+case: scala3-8ac251d-CheckUnused
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: 8ac251da9797c34826e87a42ed665985137abf42
+  path: "compiler/src/dotty/tools/dotc/transform/CheckUnused.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class CheckUnused", kind: FUNCTION, name: "isUnobservedUpdate", signature: "Symbol,SrcPos;using Context" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

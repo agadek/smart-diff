@@ -1,0 +1,42 @@
+case: cats-09972d8-KernelBoiler
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: 09972d809febf19fc97aad4015bfe087bd3c503d
+  path: "project/KernelBoiler.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "object KernelBoiler / class TemplatedBlock", kind: FUNCTION, name: "constraints", signature: "String" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "object KernelBoiler / class TemplatedBlock", kind: FUNCTION, name: "tuple", signature: "TraversableOnce[String]" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "object KernelBoiler / class TemplatedBlock", kind: FUNCTION, name: "binMethod", signature: "String" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "object KernelBoiler / class TemplatedBlock", kind: FUNCTION, name: "binTuple", signature: "String" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "object KernelBoiler / class TemplatedBlock", kind: FUNCTION, name: "unaryTuple", signature: "String" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "object KernelBoiler / class TemplatedBlock", kind: FUNCTION, name: "unaryMethod", signature: "String" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "object KernelBoiler / class TemplatedBlock", kind: FUNCTION, name: "nullaryTuple", signature: "String" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "object KernelBoiler / object GenTupleInstances", kind: FUNCTION, name: "instances", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

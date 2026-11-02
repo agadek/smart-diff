@@ -1,0 +1,18 @@
+case: moshi-6b09dc4-AdapterGenerator
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "moshi"
+  commit: 6b09dc443d3ede848eb5d4ecbcd26041b8276955
+  path: "kotlin/codegen/src/main/java/com/squareup/moshi/kotlin/codegen/api/AdapterGenerator.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class AdapterGenerator / object Companion", kind: PROPERTY, name: "COMMON_SUPPRESS", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

@@ -1,0 +1,21 @@
+case: cats-e6493b0-FunctionKLiftSuite
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: e6493b0cd6f8f4f2ec1b018d4748e2d9e0c88000
+  path: "tests/src/test/scala-3.x/cats/tests/FunctionKLiftSuite.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class FunctionKLiftSuite", kind: TYPE_ALIAS, name: "OptionOfNel", signature: null }
+      presence: REMOVED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

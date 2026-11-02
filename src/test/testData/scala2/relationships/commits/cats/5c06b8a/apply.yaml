@@ -1,0 +1,18 @@
+case: cats-5c06b8a-apply
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: 5c06b8a074b315f6ed3f13f9759f68e6f297fe51
+  path: "core/src/main/scala/cats/syntax/apply.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "ApplyFABOps", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

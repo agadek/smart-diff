@@ -1,0 +1,21 @@
+case: cats-fe40b32-TraverseSuite
+language: Scala
+corpus: scala2
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "cats"
+  commit: fe40b32fa9558fbf7478355de4bad43ae7d94730
+  path: "tests/shared/src/test/scala/cats/tests/TraverseSuite.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: CLASS, name: "TraverseChainSuite", signature: null }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

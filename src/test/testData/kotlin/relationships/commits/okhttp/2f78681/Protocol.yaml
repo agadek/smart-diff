@@ -1,0 +1,18 @@
+case: okhttp-2f78681-Protocol
+language: kotlin
+corpus: kotlin
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "okhttp"
+  commit: 2f78681a1f5ef5d9cc4f7bce48b9975f79c06978
+  path: "okhttp/src/commonJvmAndroid/kotlin/okhttp3/Protocol.kt"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "enum Protocol", kind: ENUM_CONSTANT, name: "H2_PRIOR_KNOWLEDGE", signature: null }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Hand-checked against the commit's first parent."

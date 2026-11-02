@@ -1,0 +1,51 @@
+case: commons-lang-e66ad3d-CharRange
+language: JAVA
+corpus: java
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "commons-lang"
+  commit: e66ad3dd2e8538e24940d97179c960a60dd25495
+  path: "src/main/java/org/apache/commons/lang3/CharRange.java"
+expected:
+  relationships:
+    - kinds: [EXTRACT]
+      old: { path: "class CharRange / class CharacterIterator", kind: CONSTRUCTOR, name: "CharacterIterator", signature: "CharRange" }
+      new: { path: "class CharRange", kind: METHOD, name: "isStartMin", signature: "" }
+    - kinds: [EXTRACT]
+      old: { path: "class CharRange", kind: METHOD, name: "contains", signature: "CharRange" }
+      new: { path: "class CharRange", kind: METHOD, name: "isStartMin", signature: "" }
+    - kinds: [EXTRACT]
+      old: { path: "class CharRange", kind: METHOD, name: "isEmpty", signature: "" }
+      new: { path: "class CharRange", kind: METHOD, name: "isStartMin", signature: "" }
+    - kinds: [EXTRACT]
+      old: { path: "class CharRange / class CharacterIterator", kind: METHOD, name: "prepareNext", signature: "" }
+      new: { path: "class CharRange", kind: METHOD, name: "isEndMax", signature: "" }
+    - kinds: [EXTRACT]
+      old: { path: "class CharRange", kind: METHOD, name: "contains", signature: "CharRange" }
+      new: { path: "class CharRange", kind: METHOD, name: "isEndMax", signature: "" }
+    - kinds: [EXTRACT]
+      old: { path: "class CharRange", kind: METHOD, name: "isEmpty", signature: "" }
+      new: { path: "class CharRange", kind: METHOD, name: "isEndMax", signature: "" }
+  changes:
+    - subject: { path: "class CharRange / class CharacterIterator", kind: CONSTRUCTOR, name: "CharacterIterator", signature: "CharRange" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class CharRange / class CharacterIterator", kind: METHOD, name: "prepareNext", signature: "" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class CharRange", kind: METHOD, name: "contains", signature: "CharRange" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class CharRange", kind: METHOD, name: "isEmpty", signature: "" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class CharRange", kind: METHOD, name: "isEndMax", signature: "" }
+      presence: ADDED
+      content: UNCHANGED
+    - subject: { path: "class CharRange", kind: METHOD, name: "isStartMin", signature: "" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "isStartMin and isEndMax are extracted from the inline MIN_VALUE and MAX_VALUE comparisons; the draft missed the links."

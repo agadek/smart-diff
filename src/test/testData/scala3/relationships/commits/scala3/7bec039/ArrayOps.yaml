@@ -1,0 +1,18 @@
+case: scala3-7bec039-ArrayOps
+language: Scala
+corpus: scala3
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "scala3"
+  commit: 7bec039ff4e0d8501301d2bbe25ead1e2e3d27ec
+  path: "library/src/scala/collection/ArrayOps.scala"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "object ArrayOps / class WithFilter", kind: FUNCTION, name: "flatMap", signature: "A => IterableOnce[B]^" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "The flatMap body changes; the Scala parser cannot analyze the capture annotation, so the engine reports UNANALYZED."
