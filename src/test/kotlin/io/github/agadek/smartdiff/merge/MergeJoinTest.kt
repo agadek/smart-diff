@@ -62,6 +62,24 @@ class MergeJoinTest {
     }
 
     @Test
+    fun `a container keeps every direct base child range, including rows it leaves out`() {
+        val left = base.replace("{ 1 }", "{ 10 }").replace("{ 3 }", "{ 33 }")
+        val joined = join(
+            result(inA(base, left, changed(f, base, left, "void f() { 10 }"), same(g, base, left), changed(h, base, left, "void h() { 33 }"))),
+            result(unchanged(base)),
+            left,
+            base,
+        )
+
+        val row = joined.nodes.single()
+        assertEquals(listOf("f LEFT_ONLY", "h LEFT_ONLY"), rows(row.children))
+        assertEquals(
+            listOf(rangeOfLine(base, "void f() {"), rangeOfLine(base, "void g() {"), rangeOfLine(base, "void h() {")),
+            row.baseChildRanges,
+        )
+    }
+
+    @Test
     fun `the same change on both sides is marked`() {
         val side = base.replace("{ 1 }", "{ 10 }")
         val joined = join(

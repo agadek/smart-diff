@@ -313,8 +313,11 @@ object MergeValidation {
 
     private fun changedOnBothWithoutConflict(joined: JoinedResult, conflicts: List<TextRange>): Boolean {
         // R8 counts a declaration changed beyond formatting: a side that is only formatting-only is not changed, so a
-        // formatting-only side next to a changed one is not a both-sides-clean case.
-        fun formattingOnly(node: ChangeNode?): Boolean = node?.content == Content.FORMATTING_ONLY
+        // formatting-only side next to a changed one is not a both-sides-clean case. A side that also moved, was
+        // renamed, or had its signature or kind changed is a real change even with formatting-only content.
+        fun formattingOnly(node: ChangeNode?): Boolean =
+            node != null && node.presence == Presence.MATCHED && !node.moved && !node.signatureChanged &&
+                node.renamedFrom == null && node.kindChangedFrom == null && node.content == Content.FORMATTING_ONLY
 
         fun visit(nodes: List<MergeNode>): Boolean = nodes.any { node ->
             val range = node.baseRange
@@ -347,7 +350,9 @@ object MergeValidation {
             val range = node.baseRange ?: return emptyList()
             val parts = mutableListOf<TextRange>()
             var start = range.start
-            for (child in node.children.mapNotNull { it.baseRange }.sortedBy { it.start }) {
+            // The base children, not the reported rows: a child that neither side changed is left out of the outline
+            // but its text is still the child's own source, not the container's (R9).
+            for (child in node.baseChildRanges.sortedBy { it.start }) {
                 val childStart = child.start.coerceIn(start, range.end)
                 if (childStart > start) parts += TextRange(start, childStart)
                 start = maxOf(start, child.end.coerceIn(start, range.end))

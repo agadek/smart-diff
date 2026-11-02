@@ -210,7 +210,10 @@ class MergeValidationTest : BasePlatformTestCase() {
     fun `test a conflict inside a child both sides changed is not conflict-one-side`() {
         // merge/06-merge-validation R9, R29
         val child = MergeNode(decl(), TextRange(10, 15), changed(), changed(), MergeGroup.CHANGED_ON_BOTH_SIDES)
-        val container = MergeNode(decl(), TextRange(0, 20), changed(), matched(), MergeGroup.LEFT_ONLY, children = listOf(child))
+        val container = MergeNode(
+            decl(), TextRange(0, 20), changed(), matched(), MergeGroup.LEFT_ONLY,
+            children = listOf(child), baseChildRanges = listOf(TextRange(10, 15)),
+        )
         val joined = JoinedResult(result(), result(), nodes = listOf(container))
 
         assertFalse(
@@ -242,12 +245,24 @@ class MergeValidationTest : BasePlatformTestCase() {
                 row(joined = JoinedResult(result(), result(), nodes = listOf(movedThenChanged)), conflicts = emptyList()),
             ),
         )
+
+        val movedFormatting = ChangeNode(decl(), baseRange(), baseRange(), Presence.MATCHED, moved = true, content = Content.FORMATTING_ONLY)
+        val movedFormattingThenChanged = MergeNode(decl(), baseRange(), movedFormatting, changed(), MergeGroup.CHANGED_ON_BOTH_SIDES)
+        assertTrue(
+            "a side that moved and only reflowed its text is still a change",
+            "both-sides-clean" in flags(
+                row(joined = JoinedResult(result(), result(), nodes = listOf(movedFormattingThenChanged)), conflicts = emptyList()),
+            ),
+        )
     }
 
     fun `test a conflict spanning a container's own lines and a child flags the container`() {
         // merge/06-merge-validation R9, R29
         val child = MergeNode(decl(), TextRange(10, 15), changed(), changed(), MergeGroup.CHANGED_ON_BOTH_SIDES)
-        val container = MergeNode(decl(), TextRange(0, 20), changed(), matched(), MergeGroup.LEFT_ONLY, children = listOf(child))
+        val container = MergeNode(
+            decl(), TextRange(0, 20), changed(), matched(), MergeGroup.LEFT_ONLY,
+            children = listOf(child), baseChildRanges = listOf(TextRange(10, 15)),
+        )
         val joined = JoinedResult(result(), result(), nodes = listOf(container))
 
         assertTrue(
@@ -257,6 +272,30 @@ class MergeValidationTest : BasePlatformTestCase() {
         assertFalse(
             "a hunk only in the child that both sides changed is not the container's",
             "conflict-one-side" in flags(row(joined = joined, conflicts = listOf(TextRange(11, 13)))),
+        )
+    }
+
+    fun `test a conflict in an unchanged member between changed children is not conflict-one-side`() {
+        // merge/06-merge-validation R9, R29
+        val before = MergeNode(decl(), TextRange(2, 5), changed(), changed(), MergeGroup.CHANGED_ON_BOTH_SIDES)
+        val unchanged = TextRange(5, 8)
+        val after = MergeNode(decl(), TextRange(8, 11), changed(), changed(), MergeGroup.CHANGED_ON_BOTH_SIDES)
+        // The middle member is in no row because neither side changed it, but it is still the container's child.
+        val container = MergeNode(
+            decl(), TextRange(0, 20), changed(), matched(), MergeGroup.LEFT_ONLY,
+            children = listOf(before, after),
+            baseChildRanges = listOf(before.baseRange!!, unchanged, after.baseRange!!),
+        )
+        val joined = JoinedResult(result(), result(), nodes = listOf(container))
+        val base = "abcdefghijklmnopqrst"
+
+        assertFalse(
+            "the hunk lies only in the member that neither side changed",
+            "conflict-one-side" in flags(row(joined = joined, conflicts = listOf(unchanged), base = base)),
+        )
+        assertTrue(
+            "a hunk in the container's own lines is still flagged",
+            "conflict-one-side" in flags(row(joined = joined, conflicts = listOf(TextRange(0, 2)), base = base)),
         )
     }
 
