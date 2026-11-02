@@ -207,6 +207,65 @@ class MergeValidationTest : BasePlatformTestCase() {
         assertTrue("the merge corpus is recorded", validation.contains("**Corpus:**"))
     }
 
+    fun `test a conflict inside a child both sides changed is not conflict-one-side`() {
+        // merge/06-merge-validation R9, R29
+        val child = MergeNode(decl(), TextRange(10, 15), changed(), changed(), MergeGroup.CHANGED_ON_BOTH_SIDES)
+        val container = MergeNode(decl(), TextRange(0, 20), changed(), matched(), MergeGroup.LEFT_ONLY, children = listOf(child))
+        val joined = JoinedResult(result(), result(), nodes = listOf(container))
+
+        assertFalse(
+            "the conflict is inside the child, which both sides changed",
+            "conflict-one-side" in flags(row(joined = joined, conflicts = listOf(TextRange(12, 14)))),
+        )
+        assertTrue(
+            "a conflict in the container's own lines is still flagged",
+            "conflict-one-side" in flags(row(joined = joined, conflicts = listOf(TextRange(1, 3)))),
+        )
+    }
+
+    fun `test a status file lists its fallback reason`() {
+        // merge/06-merge-validation R31
+        val directory = Files.createTempDirectory("merge-validation-fallbacks").toFile()
+        try {
+            val row = row(joined = JoinedResult(failed(ComparisonResult.TIMEOUT_REASON + " after 5000 ms"), result()))
+                .let { it.copy(flags = flags(it)) }
+            assertTrue("status" in row.flags)
+            assertEquals(listOf("timed out after 5000 ms"), MergeValidation.fallbacks(row).map { it.reason })
+
+            MergeValidation.write(report(listOf(row), directory))
+            val markdown = File(directory, "report.md").readText()
+            assertTrue(markdown, markdown.contains("## Fallbacks"))
+            assertTrue(markdown, markdown.contains("repo 0123456789 A.java: left failed: timed out after 5000 ms"))
+            assertTrue(markdown, markdown.contains("Fallbacks: left failed: timed out after 5000 ms"))
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
+    fun `test a thrown comparison blocks readiness and names the file`() {
+        // merge/06-merge-validation R32
+        val directory = Files.createTempDirectory("merge-validation-threw").toFile()
+        try {
+            val threw = failed(ComparisonResult.THREW_REASON + ": boom")
+            val row = row(joined = JoinedResult(threw, result())).let { it.copy(flags = flags(it)) }
+            val readiness = MergeValidation.readiness(listOf(row), 10, 6)
+            assertFalse(readiness.noThrownComparison)
+            assertFalse(readiness.ready)
+            assertEquals(listOf("A.java"), readiness.threwFiles)
+
+            val report = report(listOf(row), directory)
+            assertEquals("not ready: comparison threw in A.java", MergeValidation.summary(report))
+            MergeValidation.write(report)
+            assertTrue(File(directory, "report.md").readText().contains("not ready: comparison threw in A.java"))
+
+            val timeout = row(joined = JoinedResult(failed(ComparisonResult.TIMEOUT_REASON + " after 5000 ms"), result()))
+                .let { it.copy(flags = flags(it)) }
+            assertTrue("a timeout is a specified fallback", MergeValidation.readiness(listOf(timeout), 10, 6).noThrownComparison)
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
     private fun flags(row: MergeValidation.Row): List<String> = MergeValidation.flags(row)
 
     private fun row(
@@ -239,6 +298,9 @@ class MergeValidationTest : BasePlatformTestCase() {
         ComparisonResult(EngineId("test"), "1", status, changes = nodes.map { ChangeNode(it.subject, it.baseRange, it.baseRange, Presence.MATCHED) })
 
     private fun result(node: MergeNode): ComparisonResult = result(Status.ANALYZED, node)
+
+    private fun failed(reason: String): ComparisonResult =
+        ComparisonResult(EngineId("test"), "1", Status.FAILED, fallbackReason = reason)
 
     private fun changed() = ChangeNode(decl(), baseRange(), baseRange(), Presence.MATCHED, content = Content.CHANGED)
 

@@ -1,6 +1,6 @@
 # Merge validation: details
 
-Status: accepted, 2026-11-02
+Status: implemented, 2026-11-02
 
 Feature: [Merge validation](06-merge-validation.md)
 
@@ -42,7 +42,9 @@ For each flagged file in `report.md`:
 4. For `conflict-one-side`, check where Git's conflict hunk lies. A hunk that starts or ends inside the declaration because the other side changed a neighbouring line is `expected`; a hunk inside a declaration whose content the other side did change means the outline missed a change.
 5. Pick the verdict, write a one-line reason, and open an issue for each wrong outline that is not fixed in the same pull request.
 
-Wrong outlines with the same cause share one issue and one fix. The #50 pattern, a declaration reported as changed because a declaration was added above it at the start of the file, is fixed by PR #58; files of that pattern that are still flagged after the rerun are a new bug.
+A `conflict-one-side` flag is judged on the declaration that holds the conflict. A container's own tokens change when a declaration inside it is added or removed, so a container can intersect a conflict that lies in a child; the child decides then, and a container alone does not flag a file (R9).
+
+Wrong outlines with the same cause share one issue and one fix. The #50 pattern, a declaration reported as changed because a declaration was added above it at the start of the file, is fixed in the 0.2.0 release; files of that pattern that are still flagged after the rerun are a new bug.
 
 ### Recording the results
 

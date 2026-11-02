@@ -54,7 +54,7 @@ Decided 2026-10-30. It comes before everything else under [Later](#later), and s
 | Merge outline and three-sided diffs | [merge/02](specs/merge/02-merge-outline.md), [merge/03](specs/merge/03-three-sided-diffs.md) | Implemented, PRs #42 to #44 |
 | Merge window | [merge/04](specs/merge/04-merge-window.md) | Implemented, PRs #46 and #47 |
 | Scala merges and golden merge fixtures | [merge/05](specs/merge/05-scala-merges.md) | Implemented, PR #49 |
-| Validation on real merge commits | [merge/06](specs/merge/06-merge-validation.md) | Implemented, PR #48; results in [VALIDATION.md](VALIDATION.md); flagged files still under review |
+| Validation on real merge commits | [merge/06](specs/merge/06-merge-validation.md) | Implemented, PR #48; results and review in [VALIDATION.md](VALIDATION.md) |
 | Outline for languages without an engine, and the "not analyzed" reason in the Changes tree | [outline/01](specs/outline/01-structural-outline.md), [changes-tree/01](specs/changes-tree/01-changes-tree-summary.md) | Implemented, PR #37 |
 
 0.2.0 is released once the merge validation meets its criteria (merge/06 R15 to R17), the flagged files are reviewed, and its results are in [VALIDATION.md](VALIDATION.md), following [RELEASING.md](RELEASING.md).

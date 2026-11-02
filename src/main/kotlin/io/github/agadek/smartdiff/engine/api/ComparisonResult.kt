@@ -13,6 +13,10 @@ data class ComparisonResult(
     /** Why the outline falls back to the native diff, or why some source was not analyzed. */
     val fallbackReason: String? = null,
 ) {
+    /** Whether the engine threw, rather than reporting one of the specified fallbacks (rule 4 in [ComparisonEngine]). */
+    val threw: Boolean
+        get() = fallbackReason?.startsWith(THREW_REASON) == true
+
     /** Whether any change, the file region or an unanalyzed range would show in the outline. */
     val hasReportedChanges: Boolean
         get() = fileRegion?.isReported == true || changes.any { it.isReported } || unanalyzed.isNotEmpty()
@@ -21,9 +25,16 @@ data class ComparisonResult(
         /** Prefix of the reason a comparison carries when it exceeded its time limit (§9.2 step 5). */
         const val TIMEOUT_REASON = "timed out"
 
+        /** Prefix of the reason a comparison carries when its engine threw, instead of a specified fallback. */
+        const val THREW_REASON = "comparison threw"
+
         /** A failed result for a comparison over its time limit, with the reason the outline and Changes tree show. */
         fun timedOut(engine: ComparisonEngine, timeoutMillis: Long): ComparisonResult =
             failed(engine, "$TIMEOUT_REASON after $timeoutMillis ms")
+
+        /** A failed result for a comparison whose engine threw; [detail] is the exception's message or error. */
+        fun threw(engine: ComparisonEngine, detail: String): ComparisonResult =
+            failed(engine, "$THREW_REASON: $detail")
 
         fun failed(engine: ComparisonEngine, reason: String): ComparisonResult =
             ComparisonResult(engine.id, engine.version, Status.FAILED, fallbackReason = reason)

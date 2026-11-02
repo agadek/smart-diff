@@ -68,7 +68,157 @@ is wall time, not their sum.
 
 **Ready to ship:** no `join-mismatch` and the time ratio pass. The 67 `both-sides-clean`/`conflict-one-side` files still
 need review or an explanation ([review issue #54](https://github.com/agadek/smart-diff/issues/54)), so the merge outline
-is not ready to ship from this run yet.
+is not ready to ship from this run yet. The [2026-11-02 rerun](#2026-11-02-merge-validation-rerun) reviews these flags
+and records the verdicts.
+
+## 2026-11-02: merge validation rerun
+
+The [2026-11-01 run](#2026-11-01-merge-validation) left 67 files to review. This run replays the same merge commits on the engine that will ship in 0.2.0, gives each flagged file one verdict, and records the one validation fix the review needed.
+
+**Corpus:** the 2026-11-01 list with each clone's `HEAD` replaced by the commit below, so both runs select the same merge commits. The `/src/...` paths stand for the local clones; use the clone paths on the machine running the validation.
+
+```text
+/src/commons-lang --max-count=240 b9b30efb01e861a16503232bb96b684107e73199 -- *.java
+/src/moshi --max-count=80 889013ec2edb8d8034902662a1dc8c4f3b3f8111 -- *.java *.kt
+/src/spring-petclinic --max-count=85 500158f732419217507c7656904b8e6aa1bcc0d6 -- *.java
+/src/guava --max-count=1 b157643c41f9ee6a38732b4fa1a590ba187912d9 -- *.java
+/src/Exposed --max-count=15 09f814c61c22851b76840ccb65c1ac2c4db97452 -- *.kt
+/src/cats --max-count=100 e28985fe2a0d7123a8fb84cbb70c72b5e3d935ca -- *.scala
+/src/scala3 --max-count=100 3e003afbf3854d9b3189a51a47258d0b9e31e792 -- *.scala
+```
+
+| Clone | Commit on 2026-11-02 |
+| --- | --- |
+| commons-lang | `b9b30efb01e861a16503232bb96b684107e73199` |
+| moshi | `889013ec2edb8d8034902662a1dc8c4f3b3f8111` |
+| spring-petclinic | `500158f732419217507c7656904b8e6aa1bcc0d6` |
+| guava | `b157643c41f9ee6a38732b4fa1a590ba187912d9` |
+| Exposed | `09f814c61c22851b76840ccb65c1ac2c4db97452` |
+| cats | `e28985fe2a0d7123a8fb84cbb70c72b5e3d935ca` |
+| scala3 | `3e003afbf3854d9b3189a51a47258d0b9e31e792` |
+
+**Result:** 275 files from 121 merge commits, as in the first run; no merge commit had more than two parents or lacked a merge base, and 2 files were skipped for a missing side. No file had `join-mismatch` or `hidden`.
+
+| Flag | 2026-11-01 | 2026-11-02 | Change |
+| --- | --- | --- | --- |
+| `both-sides-clean` | 50 | 50 | none |
+| `conflict-one-side` | 17 | 12 | −5, the R29 fix below |
+| `status` | 6 | 6 | none |
+| `join-mismatch` | 0 | 0 | none |
+
+The 2026-11-01 run predates the #50 fix that shipped in 0.2.0. Replaying the same commits with it changed none of these counts, so none of the flagged files was that pattern.
+
+**R29 fix:** the first 2026-11-02 run had 17 `conflict-one-side` flags. Five of them came from a container whose own layout changed because a declaration inside it was added or removed, while the conflicting declaration under it was changed on both sides; the flag judged the container and not the declaration that holds the conflict. The check now judges the innermost declaration, and `MergeValidationTest` has a case for it. The rerun after the fix has 12.
+
+**Time:** the median was 29 ms for both comparisons together and 23 ms for one base-side comparison, a ratio of 1.26, against 33 ms and 23 ms in the first run. Within the twice-the-side limit (R17).
+
+**Flagged files:** 61 files. Every `both-sides-clean` and `conflict-one-side` file gets one row, and a file with both flags gets one row per flag (DMLTests).
+
+### Expected
+
+| File | Merge commit | Flag | Verdict | Reason |
+| --- | --- | --- | --- | --- |
+| `commons-lang` `src/test/java/org/apache/commons/lang3/StringEscapeUtilsTest.java` | `1a256d3e74` | `both-sides-clean` | expected | left removed blank lines inside the test, right added a CSV assertion |
+| `commons-lang` `src/main/java/org/apache/commons/lang3/ClassUtils.java` | `bd7956949e` | `both-sides-clean` | expected | left renamed a caught exception, right added the method's `@throws` javadoc |
+| `commons-lang` `src/main/java/org/apache/commons/lang3/reflect/MethodUtils.java` | `494dfc9e6b` | `both-sides-clean` | expected | left replaced `Validate.notNull`, right added the method's `@throws` javadoc |
+| `commons-lang` `src/main/java/org/apache/commons/lang3/text/WordUtils.java` | `9604c85306` | `both-sides-clean` | expected | left removed the class javadoc's `@version` line, right added `containsAllWords` with its javadoc |
+| `moshi` `moshi/src/main/java/com/squareup/moshi/ClassJsonAdapter.java` | `afb82cb3e8` | `both-sides-clean` | expected | both sides changed the `FACTORY` adapter body in different places |
+| `moshi` `kotlin/codegen/src/main/java/com/squareup/moshi/kotlin/codegen/TypeRenderer.kt` | `a8102bccd2` | `both-sides-clean` | expected | both sides changed `render(TypeName)` in different places |
+| `moshi` `adapters/src/main/java/com/squareup/moshi/adapters/RuntimeJsonAdapterFactory.java` | `1896e0f118` | `both-sides-clean` | expected | left rewrote the class javadoc, right made the class public |
+| `moshi` `kotlin/src/main/java/com/squareup/moshi/kotlin/KotlinJsonAdapter.kt` | `98c4358615` | `both-sides-clean` | expected | left changed the name handling, right moved the null check |
+| `moshi` `moshi/src/main/java/com/squareup/moshi/JsonWriter.java` | `707f33226c` | `both-sides-clean` | expected | both sides changed `name(String)` in different places |
+| `Exposed` `src/main/kotlin/org/jetbrains/exposed/sql/vendors/SQLiteDialect.kt` | `b71568b295` | `both-sides-clean` | expected | left moved the function, right changed its signature |
+| `Exposed` `src/main/kotlin/org/jetbrains/exposed/dao/Entity.kt` | `e179d32bf1` | `both-sides-clean` | expected | both sides changed the two `setValue` overrides and `flushInserts` |
+| `Exposed` `src/main/kotlin/org/jetbrains/exposed/sql/Queries.kt` | `e179d32bf1` | `both-sides-clean` | expected | both sides changed `insertAndGetId` in different places |
+| `Exposed` `src/main/kotlin/org/jetbrains/exposed/sql/Table.kt` | `e179d32bf1` | `both-sides-clean` | expected | both sides changed `nullable()` in different places |
+| `Exposed` `src/test/kotlin/org/jetbrains/exposed/sql/tests/shared/DMLTests.kt` | `e179d32bf1` | `both-sides-clean` | expected | both sides changed `testGroupBy03`, `testGroupBy06` and `testInsert03` |
+| `cats` `core/src/main/scala/cats/data/Ior.scala` | `bc21eb0484` | `both-sides-clean` | expected | left added the `as`, `tuple`, `fproduct` and `unzip` overrides, right changed the mixin list |
+| `cats` `core/src/main/scala/cats/data/Validated.scala` | `bc21eb0484` | `both-sides-clean` | expected | left added the `as`, `tuple`, `fproduct` and `unzip` overrides, right changed the mixin list |
+| `cats` `core/src/main/scala/cats/instances/either.scala` | `bc21eb0484` | `both-sides-clean` | expected | left added the `as`, `tuple`, `fproduct` and `unzip` overrides, right changed the mixin list |
+| `cats` `core/src/main/scala/cats/instances/list.scala` | `bc21eb0484` | `both-sides-clean` | expected | left added the `as`, `tuple`, `fproduct` and `unzip` overrides, right changed the mixin list |
+| `cats` `core/src/main/scala/cats/instances/map.scala` | `bc21eb0484` | `both-sides-clean` | expected | left added the `as`, `tuple`, `fproduct` and `unzip` overrides, right changed the mixin list |
+| `cats` `core/src/main/scala/cats/instances/option.scala` | `bc21eb0484` | `both-sides-clean` | expected | left added the `as`, `tuple`, `fproduct` and `unzip` overrides, right changed the mixin list |
+| `cats` `core/src/main/scala/cats/instances/queue.scala` | `bc21eb0484` | `both-sides-clean` | expected | left added the `as`, `tuple`, `fproduct` and `unzip` overrides, right changed the mixin list |
+| `cats` `core/src/main/scala/cats/instances/seq.scala` | `bc21eb0484` | `both-sides-clean` | expected | left added the `as`, `tuple`, `fproduct` and `unzip` overrides, right changed the mixin list |
+| `cats` `core/src/main/scala/cats/instances/sortedMap.scala` | `bc21eb0484` | `both-sides-clean` | expected | left added the `as`, `tuple`, `fproduct` and `unzip` overrides, right changed the mixin list |
+| `cats` `core/src/main/scala/cats/instances/try.scala` | `bc21eb0484` | `both-sides-clean` | expected | left added the `as`, `tuple`, `fproduct` and `unzip` overrides, right changed the mixin list |
+| `cats` `core/src/main/scala/cats/instances/vector.scala` | `bc21eb0484` | `both-sides-clean` | expected | left added the `as`, `tuple`, `fproduct` and `unzip` overrides, right changed the mixin list |
+| `cats` `core/src/main/scala/cats/package.scala` | `bc21eb0484` | `both-sides-clean` | expected | left added the `as`, `tuple`, `fproduct` and `unzip` overrides, right changed the mixin list |
+| `cats` `free/src/test/scala/cats/free/FreeSuite.scala` | `e4086ed60e` | `both-sides-clean` | expected | left changed the class-level imports to `*`, right changed code in the class body |
+| `cats` `kernel-laws/shared/src/test/scala/cats/kernel/laws/LawTests.scala` | `e4086ed60e` | `both-sides-clean` | expected | left changed the class-level imports to `*`, right changed code in the class body |
+| `cats` `tests/shared/src/test/scala/cats/tests/EitherSuite.scala` | `e4086ed60e` | `both-sides-clean` | expected | left changed the class-level imports to `*`, right changed code in the class body |
+| `cats` `tests/shared/src/test/scala/cats/tests/FunctionSuite.scala` | `e4086ed60e` | `both-sides-clean` | expected | left changed the class-level imports to `*`, right changed code in the class body |
+| `cats` `tests/shared/src/test/scala/cats/tests/IndexedReaderWriterStateTSuite.scala` | `e4086ed60e` | `both-sides-clean` | expected | left changed the class-level imports to `*`, right changed code in the class body |
+| `cats` `tests/shared/src/test/scala/cats/tests/IndexedStateTSuite.scala` | `e4086ed60e` | `both-sides-clean` | expected | left changed the class-level imports to `*`, right changed code in the class body |
+| `cats` `tests/shared/src/test/scala/cats/tests/NestedSuite.scala` | `e4086ed60e` | `both-sides-clean` | expected | left changed the class-level imports to `*`, right changed code in the class body |
+| `cats` `tests/shared/src/test/scala/cats/tests/AsSuite.scala` | `6bf8d456b0` | `both-sides-clean` | expected | left changed the class-level imports to `*`, right changed code in the class body |
+| `cats` `tests/shared/src/test/scala/cats/tests/IndexedStateTSuite.scala` | `6bf8d456b0` | `both-sides-clean` | expected | left changed the class-level imports to `*`, right changed code in the class body |
+| `cats` `tests/shared/src/test/scala/cats/tests/NestedSuite.scala` | `6bf8d456b0` | `both-sides-clean` | expected | left changed the class-level imports to `*`, right changed code in the class body |
+| `cats` `core/src/main/scala-2.13+/cats/instances/arraySeq.scala` | `bfda65b225` | `both-sides-clean` | expected | left changed `with` to `&` in the mixin lists, right renamed `traverse_` to `traverseVoid` |
+| `cats` `core/src/main/scala/cats/data/Chain.scala` | `bfda65b225` | `both-sides-clean` | expected | left changed `with` to `&` in the mixin lists, right renamed `traverse_` to `traverseVoid` |
+| `cats` `core/src/main/scala/cats/instances/list.scala` | `bfda65b225` | `both-sides-clean` | expected | left changed `with` to `&` in the mixin lists, right renamed `traverse_` to `traverseVoid` |
+| `cats` `core/src/main/scala/cats/instances/queue.scala` | `bfda65b225` | `both-sides-clean` | expected | left changed `with` to `&` in the mixin lists, right renamed `traverse_` to `traverseVoid` |
+| `cats` `core/src/main/scala/cats/instances/seq.scala` | `bfda65b225` | `both-sides-clean` | expected | left changed `with` to `&` in the mixin lists, right renamed `traverse_` to `traverseVoid` |
+| `cats` `core/src/main/scala/cats/instances/vector.scala` | `bfda65b225` | `both-sides-clean` | expected | left changed `with` to `&` in the mixin lists, right renamed `traverse_` to `traverseVoid` |
+| `cats` `tests/shared/src/test/scala/cats/tests/ApplicativeSuite.scala` | `a7c5ee9afe` | `both-sides-clean` | expected | left added the `replicateA_` test, right added the by-name ops test |
+| `scala3` `compiler/src/dotty/tools/dotc/typer/Typer.scala` | `b873e5a76c` | `both-sides-clean` | expected | both sides changed the same methods in different places |
+| `scala3` `compiler/src/dotty/tools/dotc/transform/PostTyper.scala` | `b6a95b255f` | `both-sides-clean` | expected | left changed the GADT constraint handling, right added the inline-trait and specialized checks |
+| `scala3` `compiler/src/dotty/tools/dotc/typer/Typer.scala` | `980d135836` | `both-sides-clean` | expected | both sides changed the same methods in different places |
+| `scala3` `tests/run-tasty-inspector/stdlibExperimentalDefinitions.scala` | `9521ae1b0b` | `both-sides-clean` | expected | each side added and removed different list entries |
+| `scala3` `tests/run-tasty-inspector/stdlibExperimentalDefinitions.scala` | `1adb568dbb` | `both-sides-clean` | expected | each side added and removed different list entries |
+| `scala3` `compiler/src/dotty/tools/dotc/core/SymDenotations.scala` | `0de561343f` | `both-sides-clean` | expected | left rewrote the exception handling, right added the `BadSymbolicReference` handling |
+| `scala3` `compiler/src/dotty/tools/dotc/cc/Setup.scala` | `54bf0412cb` | `both-sides-clean` | expected | left added `initialVariance` and `addVar`, right added `copyAnnots` |
+| `commons-lang` `src/test/java/org/apache/commons/lang3/StreamsTest.java` | `ee87df8472` | `conflict-one-side` | expected | left added `testToArray` above `asIntConsumer`, right changed its signature; the hunk starts at the method's first line |
+| `Exposed` `exposed/src/main/kotlin/org/jetbrains/exposed/sql/Database.kt` | `a93cb8443c` | `conflict-one-side` | expected | right added `useNestedTransactions` above `metadata`, left changed its signature |
+| `Exposed` `exposed/src/main/kotlin/org/jetbrains/exposed/sql/transactions/ThreadLocalTransactionManager.kt` | `7ca1c6bf39` | `conflict-one-side` | expected | left removed the two logging-exception functions, right reformatted them |
+| `Exposed` `src/main/kotlin/org/jetbrains/exposed/sql/statements/DeleteStatement.kt` | `b71568b295` | `conflict-one-side` | expected | left removed the blank line above `where`, right changed its signature |
+| `Exposed` `src/main/kotlin/org/jetbrains/exposed/sql/vendors/Default.kt` | `b71568b295` | `conflict-one-side` | expected | left removed `insert` and `replace`, right changed `delete` next to them; the hunk covers the three adjacent declarations |
+| `Exposed` `src/main/kotlin/org/jetbrains/exposed/sql/vendors/Mysql.kt` | `b71568b295` | `conflict-one-side` | expected | left moved `replace`, `insert` and `delete` to `MysqlFunctionProvider`, right changed `delete` in place |
+| `Exposed` `src/main/kotlin/org/jetbrains/exposed/sql/Op.kt` | `e179d32bf1` | `conflict-one-side` | expected | left reformatted the declarations, right changed them |
+| `Exposed` `src/test/kotlin/org/jetbrains/exposed/sql/tests/shared/DMLTests.kt` | `e179d32bf1` | `conflict-one-side` | expected | left changed `testInsert03`, right reformatted it |
+| `cats` `core/src/main/scala/cats/syntax/apply.scala` | `1889e48805` | `conflict-one-side` | expected | left changed the trait's supertype, right changed its first member |
+| `cats` `project/TupleBifunctorInstancesBoiler.scala` | `531b51a386` | `conflict-one-side` | expected | left rewrote the `content` template, right re-indented the same lines |
+| `cats` `project/TupleBitraverseInstancesBoiler.scala` | `531b51a386` | `conflict-one-side` | expected | left rewrote the `content` template, right re-indented the same lines |
+| `cats` `project/TupleMonadInstancesBoiler.scala` | `531b51a386` | `conflict-one-side` | expected | left rewrote the `content` template, right re-indented the same lines |
+
+### Wrong flag
+
+These five files were reviewed on the first 2026-11-02 run, before the R29 fix. In the rerun four are no longer flagged; `Entity.kt` keeps only `both-sides-clean`. No issue was opened: a wrong flag is fixed in the validation (R29), not explained as a known limit.
+
+| File | Merge commit | Flag | Verdict | Reason |
+| --- | --- | --- | --- | --- |
+| `commons-lang` `src/main/java/org/apache/commons/lang3/text/StrLookup.java` | `80644cdab9` | `conflict-one-side` | wrong flag | the conflict is in `systemPropertiesLookup`, changed on both sides; the flag came from `class StrLookup`, whose layout changed when the left moved members |
+| `commons-lang` `src/main/java/org/apache/commons/lang3/StringUtils.java` | `9604c85306` | `conflict-one-side` | wrong flag | the conflict is in `containsAny(CharSequence, CharSequence...)`, changed on both sides; the flag came from `class StringUtils`, whose layout changed on the left |
+| `Exposed` `spring-transaction/src/main/kotlin/org/jetbrains/exposed/spring/SpringTransactionManager.kt` | `7ca1c6bf39` | `conflict-one-side` | wrong flag | the conflicts are in `newTransaction` and `initTransaction`, changed on both sides; the flag came from `class SpringTransactionManager`, whose layout changed on the left |
+| `Exposed` `src/main/kotlin/org/jetbrains/exposed/dao/Entity.kt` | `e179d32bf1` | `conflict-one-side` | wrong flag | the conflicts are in the two `setValue` overrides, changed on both sides; the flag came from `class Entity`, whose layout changed on the right |
+| `cats` `alleycats-core/src/main/scala/alleycats/std/set.scala` | `78af8a7d66` | `conflict-one-side` | wrong flag | the conflict is in `alleyCatsStdSetMonad`, changed on both sides; the flag came from `trait SetInstances`, whose layout changed on the left |
+
+### Fixed and known limit
+
+No file has the verdict `fixed`: the review found no wrong outline. No file has the verdict `known limit`, and no issue is open for this run.
+
+### Fallbacks
+
+The six `status` files are all `PARTIAL`: some source in a Scala 3 file could not be parsed and was left unanalyzed, which is the specified fallback. No comparison threw, so the report says only `not ready` for the review and not `not ready: comparison threw in <file>` (R32).
+
+| File | Merge commit | Side | Status | Reason |
+| --- | --- | --- | --- | --- |
+| `scala3` `compiler/src/dotty/tools/dotc/cc/Capability.scala` | `7744b8720d` | right | partial | some source could not be parsed and was not analyzed |
+| `scala3` `library/src/scala/collection/mutable/LongMap.scala` | `14f423944c` | right | partial | some source could not be parsed and was not analyzed |
+| `scala3` `library/src/scala/caps/package.scala` | `9521ae1b0b` | left | partial | some source could not be parsed and was not analyzed |
+| `scala3` `library/src/scala/collection/Iterator.scala` | `9521ae1b0b` | left | partial | some source could not be parsed and was not analyzed |
+| `scala3` `library/src/scala/collection/Iterator.scala` | `9521ae1b0b` | right | partial | some source could not be parsed and was not analyzed |
+| `scala3` `library/src/scala/NamedTuple.scala` | `955de873ba` | right | partial | some source could not be parsed and was not analyzed |
+| `scala3` `compiler/src/dotty/tools/dotc/typer/Implicits.scala` | `7c845272aa` | left | partial | some source could not be parsed and was not analyzed |
+
+### Ready to ship
+
+| Check | Result |
+| --- | --- |
+| R15: no file has `join-mismatch` | yes |
+| R16: every `both-sides-clean` and `conflict-one-side` file is reviewed and fixed or explained | yes |
+| R17: the median is at most twice the side comparison | yes, 29 ms against 23 ms |
+| R32: no `status` file fell back because a comparison threw | yes |
 
 ## 2026-10-23: extraction detection
 

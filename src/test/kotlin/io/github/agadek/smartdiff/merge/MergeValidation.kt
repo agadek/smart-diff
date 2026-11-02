@@ -85,10 +85,23 @@ object MergeValidation {
         val noJoinMismatch: Boolean,
         val filesToReview: Int,
         val fastEnough: Boolean,
+        /** The files where a comparison threw; a thrown comparison blocks the release (R32). */
+        val threwFiles: List<String> = emptyList(),
     ) {
         val reviewed: Boolean get() = filesToReview == 0
-        val ready: Boolean get() = hasFiles && noJoinMismatch && reviewed && fastEnough
+        val noThrownComparison: Boolean get() = threwFiles.isEmpty()
+        val ready: Boolean get() = hasFiles && noJoinMismatch && reviewed && fastEnough && noThrownComparison
     }
+
+    /** A side of a file that fell back, with the reason the outline shows instead (R31). */
+    data class Fallback(
+        /** `left` or `right`, as the merge outline names its sides. */
+        val side: String,
+        val status: Status,
+        val reason: String,
+        /** Whether the comparison threw rather than reporting one of the specified fallbacks (R32). */
+        val threw: Boolean,
+    )
 
     /** The corpus list, or null when the property is absent or blank (R3). */
     fun listFile(value: String?): File? = value?.trim()?.takeIf { it.isNotEmpty() }?.let(::File)
@@ -129,7 +142,23 @@ object MergeValidation {
         noJoinMismatch = rows.none { "join-mismatch" in it.flags },
         filesToReview = rows.count { row -> row.flags.any { it == "both-sides-clean" || it == "conflict-one-side" } },
         fastEnough = if (sideMedian <= 0) mergeMedian <= 0 else mergeMedian <= sideMedian * 2,
+        threwFiles = rows.filter { row -> fallbacks(row).any { it.threw } }.map { it.path }.distinct().sorted(),
     )
+
+    /** The sides of [row] that fell back, each with its reason (R31). */
+    fun fallbacks(row: Row): List<Fallback> = listOf("left" to row.joined.left, "right" to row.joined.right)
+        .filter { (_, result) -> result.status != Status.ANALYZED }
+        .map { (side, result) ->
+            Fallback(side, result.status, result.fallbackReason ?: result.status.name.lowercase(), result.threw)
+        }
+
+    /** The report's one-line readiness; a thrown comparison names its files (R32). */
+    fun summary(report: Report): String = when {
+        report.readiness.threwFiles.isNotEmpty() ->
+            "not ready: comparison threw in ${report.readiness.threwFiles.joinToString(", ")}"
+        report.readiness.ready -> "ready to ship"
+        else -> "not ready"
+    }
 
     fun coverage(rows: List<Row>): Map<String, Int> = LANGUAGE_KEYS.associateWith { key -> rows.count { it.language == key } }
 
@@ -232,10 +261,20 @@ object MergeValidation {
             appendLine()
             appendLine("${report.rows.size} files from ${report.rows.map { it.repository to it.commit }.distinct().size} merge commits.")
             appendLine("Skipped ${report.skippedCommits} commits with other than two parents, ${report.skippedNoBase} without a merge base, and ${report.skippedFiles} files missing from a parent or the base.")
+            appendLine(summary(report))
             appendLine()
             appendLine("## Flags")
             for (flag in report.flagCounts) appendLine("- ${flag.key}: ${flag.value}")
             if (report.flagCounts.isEmpty()) appendLine("- none")
+            appendLine()
+            appendLine("## Fallbacks")
+            val fallbackRows = report.rows.filter { row -> fallbacks(row).isNotEmpty() }
+            if (fallbackRows.isEmpty()) appendLine("- none")
+            for (row in fallbackRows) {
+                for (fallback in fallbacks(row)) {
+                    appendLine("- ${row.id}: ${fallback.side} ${fallback.status.name.lowercase()}: ${fallback.reason}")
+                }
+            }
             appendLine()
             appendLine("## Coverage")
             for (key in LANGUAGE_KEYS) appendLine("- $key: ${report.coverage[key] ?: 0} files (minimum $MIN_FILES_PER_LANGUAGE)")
@@ -244,15 +283,22 @@ object MergeValidation {
             appendLine("Merge median: ${report.mergeMedianMillis} ms; one base-side comparison median: ${report.sideMedianMillis} ms.")
             appendLine()
             appendLine("## Readiness")
+            appendLine("- ready: ${report.readiness.ready}")
             appendLine("- has files: ${report.readiness.hasFiles}")
             appendLine("- no join mismatch: ${report.readiness.noJoinMismatch}")
             appendLine("- files needing review: ${report.readiness.filesToReview}")
             appendLine("- median within twice the side comparison: ${report.readiness.fastEnough}")
+            appendLine("- no thrown comparison: ${report.readiness.noThrownComparison}")
             for (row in report.rows.filter { it.flagged }) {
                 appendLine()
                 appendLine("## ${row.repository} ${row.commit.take(10)} ${row.path}")
                 appendLine()
                 appendLine("Flags: ${row.flags.joinToString(", ")}; ${row.millis} ms, side ${row.sideMillis} ms" + (row.dialect?.let { "; $it" } ?: ""))
+                val fallbacks = fallbacks(row)
+                if (fallbacks.isNotEmpty()) {
+                    appendLine()
+                    appendLine("Fallbacks: " + fallbacks.joinToString("; ") { "${it.side} ${it.status.name.lowercase()}: ${it.reason}" })
+                }
                 appendLine()
                 appendLine("Conflicts: ${conflictLines(row.conflicts, row.base)}")
                 appendLine()
@@ -273,14 +319,21 @@ object MergeValidation {
     }
 
     private fun conflictInsideOneSidedChange(joined: JoinedResult, conflicts: List<TextRange>): Boolean {
-        fun visit(nodes: List<MergeNode>): Boolean = nodes.any { node ->
-            val range = node.baseRange
+        fun intersects(range: TextRange?): Boolean = range != null && conflicts.any { it.intersects(range) }
+
+        fun oneSided(node: MergeNode): Boolean {
             val changedLeft = node.left?.content == Content.CHANGED
             val changedRight = node.right?.content == Content.CHANGED
             val otherLeft = node.left != null && node.left.presence == Presence.MATCHED && node.left.content != Content.CHANGED
             val otherRight = node.right != null && node.right.presence == Presence.MATCHED && node.right.content != Content.CHANGED
-            (range != null && conflicts.any { it.intersects(range) } &&
-                changedLeft != changedRight && (if (changedLeft) otherRight else otherLeft)) || visit(node.children)
+            return changedLeft != changedRight && (if (changedLeft) otherRight else otherLeft)
+        }
+
+        // R9 judges the declaration that holds the conflict, not a container whose own layout changed because a
+        // declaration inside it was added or removed: when a child holds the conflict, the child's change decides.
+        fun visit(nodes: List<MergeNode>): Boolean = nodes.any { node ->
+            val childHolds = node.children.any { intersects(it.baseRange) }
+            (intersects(node.baseRange) && !childHolds && oneSided(node)) || visit(node.children)
         }
         return visit(joined.nodes)
     }

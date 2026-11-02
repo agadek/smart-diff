@@ -17,8 +17,8 @@ fun compareSafely(engine: ComparisonEngine, request: ComparisonRequest, cancella
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
-        ComparisonResult.failed(engine, "engine ${engine.id} failed: ${e.message ?: e.javaClass.simpleName}")
+        ComparisonResult.threw(engine, e.message ?: e.javaClass.simpleName)
     } catch (e: StackOverflowError) {
-        ComparisonResult.failed(engine, "engine ${engine.id} failed: stack overflow")
+        ComparisonResult.threw(engine, "stack overflow")
     }
 }

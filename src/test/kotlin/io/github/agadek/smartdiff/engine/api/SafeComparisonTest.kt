@@ -45,13 +45,24 @@ class SafeComparisonTest {
         val engine = FixedEngine { throw IllegalStateException("boom") }
         val result = compareSafely(engine, request(), Cancellation.NONE)
         assertEquals(Status.FAILED, result.status)
-        assertTrue(result.fallbackReason!!.contains("boom"))
+        assertTrue(result.threw)
+        assertEquals("comparison threw: boom", result.fallbackReason)
     }
 
     @Test
     fun `a stack overflow becomes a failed result`() {
         val engine = FixedEngine { throw StackOverflowError() }
-        assertEquals(Status.FAILED, compareSafely(engine, request(), Cancellation.NONE).status)
+        val result = compareSafely(engine, request(), Cancellation.NONE)
+        assertEquals(Status.FAILED, result.status)
+        assertTrue(result.threw)
+    }
+
+    @Test
+    fun `a specified fallback is not a thrown comparison`() {
+        val engine = FixedEngine { error("not called") }
+        val tooLarge = compareSafely(engine, request(new = "x".repeat(11)), Cancellation.NONE)
+        assertFalse(tooLarge.threw)
+        assertFalse(ComparisonResult.timedOut(engine, 1_000).threw)
     }
 
     @Test
