@@ -1,0 +1,20 @@
+case: move-with-rename-2
+language: JAVA
+corpus: java
+category: move-with-rename
+split: held-out
+expected:
+  relationships:
+    - kinds: [RENAME, MOVE]
+      old: { path: "class Invoice", kind: METHOD, name: "computeTotal", signature: "()" }
+      new: { path: "class Invoice", kind: METHOD, name: "total", signature: "()" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Invoice", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Invoice", kind: METHOD, name: "total", signature: "()" }
+      presence: MATCHED
+      content: UNCHANGED
+      moved: true
+  ambiguous: []
+notes: "The second method is renamed and moves above the first."

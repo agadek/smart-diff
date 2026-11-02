@@ -1,0 +1,19 @@
+case: field-rename-2
+language: JAVA
+corpus: java
+category: field-rename
+split: held-out
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Invoice", kind: FIELD, name: "MAX_SIZE", signature: null }
+      new: { path: "class Invoice", kind: FIELD, name: "MAX_LENGTH", signature: null }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Invoice", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Invoice", kind: FIELD, name: "MAX_LENGTH", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A static final field renamed, initializer unchanged."

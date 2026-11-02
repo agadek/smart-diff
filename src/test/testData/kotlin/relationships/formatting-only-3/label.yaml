@@ -1,0 +1,16 @@
+case: formatting-only-3
+language: kotlin
+corpus: kotlin
+category: formatting-only
+split: tuning
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Basket", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Basket", kind: FUNCTION, name: "total", signature: "()" }
+      presence: MATCHED
+      content: FORMATTING_ONLY
+  ambiguous: []
+notes: "Whitespace only."

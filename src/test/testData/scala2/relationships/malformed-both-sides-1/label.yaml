@@ -1,0 +1,10 @@
+case: malformed-both-sides-1
+language: Scala
+corpus: scala2
+category: malformed-both-sides
+split: tuning
+expected:
+  relationships: []
+  changes: []
+  ambiguous: []
+notes: "Neither side parses to a declaration, so the result falls back."

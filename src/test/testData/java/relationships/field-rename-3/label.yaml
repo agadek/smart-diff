@@ -1,0 +1,19 @@
+case: field-rename-3
+language: JAVA
+corpus: java
+category: field-rename
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Basket", kind: FIELD, name: "MIN_COUNT", signature: null }
+      new: { path: "class Basket", kind: FIELD, name: "MIN_ITEMS", signature: null }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Basket", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Basket", kind: FIELD, name: "MIN_ITEMS", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A static final field renamed, initializer unchanged."

@@ -1,0 +1,10 @@
+case: empty-identical-1
+language: JAVA
+corpus: java
+category: empty-identical
+split: tuning
+expected:
+  relationships: []
+  changes: []
+  ambiguous: []
+notes: "Identical files report no change."

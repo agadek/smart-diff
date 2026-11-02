@@ -1,0 +1,20 @@
+case: move-with-rename-3
+language: kotlin
+corpus: kotlin
+category: move-with-rename
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME, MOVE]
+      old: { path: "class Basket", kind: FUNCTION, name: "price", signature: "()" }
+      new: { path: "class Basket", kind: FUNCTION, name: "cost", signature: "()" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Basket", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Basket", kind: FUNCTION, name: "cost", signature: "()" }
+      presence: MATCHED
+      content: UNCHANGED
+      moved: true
+  ambiguous: []
+notes: "The second function is renamed and moves above the first."

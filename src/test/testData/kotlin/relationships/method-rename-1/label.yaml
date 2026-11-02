@@ -1,0 +1,19 @@
+case: method-rename-1
+language: kotlin
+corpus: kotlin
+category: method-rename
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Order", kind: FUNCTION, name: "total", signature: "()" }
+      new: { path: "class Order", kind: FUNCTION, name: "sum", signature: "()" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "sum", signature: "()" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "One function renamed, body unchanged."

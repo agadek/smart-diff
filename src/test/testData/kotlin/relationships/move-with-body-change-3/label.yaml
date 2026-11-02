@@ -1,0 +1,20 @@
+case: move-with-body-change-3
+language: kotlin
+corpus: kotlin
+category: move-with-body-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [MOVE]
+      old: { path: "class Basket", kind: FUNCTION, name: "second", signature: "()" }
+      new: { path: "class Basket", kind: FUNCTION, name: "second", signature: "()" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Basket", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Basket", kind: FUNCTION, name: "second", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+      moved: true
+  ambiguous: []
+notes: "The second function moves and its body changes."

@@ -1,0 +1,17 @@
+case: signature-change-1
+language: Scala
+corpus: scala2
+category: signature-change
+split: tuning
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "total", signature: "Int" }
+      presence: MATCHED
+      content: CHANGED
+      signatureChanged: true
+  ambiguous: []
+notes: "A def gains a parameter."

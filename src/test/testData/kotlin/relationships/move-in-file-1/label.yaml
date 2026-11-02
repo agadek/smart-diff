@@ -1,0 +1,24 @@
+case: move-in-file-1
+language: kotlin
+corpus: kotlin
+category: move-in-file
+split: tuning
+expected:
+  relationships:
+    - kinds: [MOVE]
+      old: { path: "class Order", kind: FUNCTION, name: "second", signature: "()" }
+      new: { path: "class Order", kind: FUNCTION, name: "second", signature: "()" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "second", signature: "()" }
+      presence: MATCHED
+      content: UNCHANGED
+      moved: true
+    - subject: { path: "class Order", kind: FUNCTION, name: "first", signature: "()" }
+      presence: MATCHED
+      content: UNCHANGED
+      moved: false
+  ambiguous: []
+notes: "The second function moves above the first."

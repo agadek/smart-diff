@@ -1,0 +1,17 @@
+case: signature-change-2
+language: kotlin
+corpus: kotlin
+category: signature-change
+split: held-out
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Invoice", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Invoice", kind: FUNCTION, name: "computeTotal", signature: "(Int)" }
+      presence: MATCHED
+      content: CHANGED
+      signatureChanged: true
+  ambiguous: []
+notes: "A function gains a parameter."

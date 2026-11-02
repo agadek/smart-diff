@@ -1,0 +1,19 @@
+case: rename-with-body-change-3
+language: kotlin
+corpus: kotlin
+category: rename-with-body-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Basket", kind: FUNCTION, name: "price", signature: "()" }
+      new: { path: "class Basket", kind: FUNCTION, name: "cost", signature: "()" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Basket", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Basket", kind: FUNCTION, name: "cost", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "A function renamed with a small body change."

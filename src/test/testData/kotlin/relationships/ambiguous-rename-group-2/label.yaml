@@ -1,0 +1,14 @@
+case: ambiguous-rename-group-2
+language: kotlin
+corpus: kotlin
+category: ambiguous-rename-group
+split: held-out
+expected:
+  relationships: []
+  changes: []
+  ambiguous:
+    - { path: "class Invoice", kind: FUNCTION, name: "alpha", signature: "()" }
+    - { path: "class Invoice", kind: FUNCTION, name: "beta", signature: "()" }
+    - { path: "class Invoice", kind: FUNCTION, name: "gamma", signature: "()" }
+    - { path: "class Invoice", kind: FUNCTION, name: "delta", signature: "()" }
+notes: "Two equally plausible pairings; no pair is correct."

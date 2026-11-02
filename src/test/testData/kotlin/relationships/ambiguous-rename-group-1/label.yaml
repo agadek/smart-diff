@@ -1,0 +1,14 @@
+case: ambiguous-rename-group-1
+language: kotlin
+corpus: kotlin
+category: ambiguous-rename-group
+split: tuning
+expected:
+  relationships: []
+  changes: []
+  ambiguous:
+    - { path: "class Order", kind: FUNCTION, name: "alpha", signature: "()" }
+    - { path: "class Order", kind: FUNCTION, name: "beta", signature: "()" }
+    - { path: "class Order", kind: FUNCTION, name: "gamma", signature: "()" }
+    - { path: "class Order", kind: FUNCTION, name: "delta", signature: "()" }
+notes: "Two equally plausible pairings; no pair is correct."

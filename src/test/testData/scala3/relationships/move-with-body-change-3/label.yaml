@@ -1,0 +1,20 @@
+case: move-with-body-change-3
+language: Scala
+corpus: scala3
+category: move-with-body-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [MOVE]
+      old: { path: "class Basket", kind: FUNCTION, name: "second", signature: null }
+      new: { path: "class Basket", kind: FUNCTION, name: "second", signature: null }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Basket", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Basket", kind: FUNCTION, name: "second", signature: null }
+      presence: MATCHED
+      content: CHANGED
+      moved: true
+  ambiguous: []
+notes: "The second def moves and its body changes."

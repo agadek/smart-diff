@@ -1,0 +1,10 @@
+case: malformed-both-sides-3
+language: JAVA
+corpus: java
+category: malformed-both-sides
+split: tuning
+expected:
+  relationships: []
+  changes: []
+  ambiguous: []
+notes: "Neither side parses to a declaration, so the result falls back."

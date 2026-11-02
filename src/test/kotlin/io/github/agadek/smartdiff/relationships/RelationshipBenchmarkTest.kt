@@ -6,6 +6,7 @@ import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.Origin
 import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
@@ -275,6 +276,33 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         val oneKind = caseResult(label, listOf(actuals.first()), nodes())
         assertEquals(1, RelationshipBenchmark.evaluate(listOf(label), listOf(oneKind)).perKind.getValue("MOVE").fn)
         assertTrue(RelationshipBenchmark.missedRelationships(listOf(oneKind)).any { it.contains("MOVE") })
+    }
+
+    fun `test a renamed move names its old subject and an extraction link is counted once`() {
+        // relationships/01-relationship-benchmark R38, R39
+        val oldSubject = Subject.Declaration(DeclarationKind.METHOD, "total", "()")
+        val newSubject = Subject.Declaration(DeclarationKind.METHOD, "sum", "()")
+        val moved = ChangeNode(
+            newSubject, TextRange(0, 5), TextRange(6, 11), Presence.MATCHED,
+            moved = true, renamedFrom = oldSubject,
+        )
+        val relationship = RelationshipBenchmark.actualRelationships(
+            ComparisonResult(EngineId("test"), "1", Status.ANALYZED, changes = listOf(moved)),
+        )
+        assertEquals(setOf(RelationshipBenchmark.Kind.RENAME, RelationshipBenchmark.Kind.MOVE), relationship.map { it.kind }.toSet())
+        assertEquals("total", relationship.single { it.kind == RelationshipBenchmark.Kind.MOVE }.old.name)
+
+        val source = Subject.Declaration(DeclarationKind.METHOD, "render", "(String)")
+        val target = Subject.Declaration(DeclarationKind.METHOD, "renderLines", "(String)")
+        val sourceNode = ChangeNode(source, TextRange(0, 5), TextRange(6, 11), Presence.MATCHED, extractedTo = listOf(target))
+        val targetNode = ChangeNode(
+            target, null, TextRange(12, 20), Presence.ADDED,
+            extractedFrom = listOf(Origin(source, TextRange(0, 5), TextRange(2, 4))),
+        )
+        val extraction = RelationshipBenchmark.actualRelationships(
+            ComparisonResult(EngineId("test"), "1", Status.ANALYZED, changes = listOf(sourceNode, targetNode)),
+        )
+        assertEquals(1, extraction.count { it.kind == RelationshipBenchmark.Kind.EXTRACT })
     }
 
     fun `test a missing baseline file is a gate failure`() {

@@ -1,0 +1,28 @@
+case: extraction-many-targets-1
+language: kotlin
+corpus: kotlin
+category: extraction-many-targets
+split: tuning
+expected:
+  relationships:
+    - kinds: [EXTRACT]
+      old: { path: "class Order", kind: FUNCTION, name: "compute", signature: "(Int)" }
+      new: { path: "class Order", kind: FUNCTION, name: "doubled", signature: "(Int)" }
+    - kinds: [EXTRACT]
+      old: { path: "class Order", kind: FUNCTION, name: "compute", signature: "(Int)" }
+      new: { path: "class Order", kind: FUNCTION, name: "trimmed", signature: "(Int)" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "compute", signature: "(Int)" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "doubled", signature: "(Int)" }
+      presence: ADDED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "trimmed", signature: "(Int)" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "One function is split into two extracted helpers."

@@ -1,0 +1,28 @@
+case: extraction-many-sources-1
+language: Scala
+corpus: scala3
+category: extraction-many-sources
+split: tuning
+expected:
+  relationships:
+    - kinds: [EXTRACT]
+      old: { path: "class Order", kind: FUNCTION, name: "first", signature: "Int" }
+      new: { path: "class Order", kind: FUNCTION, name: "doubled", signature: "Int" }
+    - kinds: [EXTRACT]
+      old: { path: "class Order", kind: FUNCTION, name: "second", signature: "Int" }
+      new: { path: "class Order", kind: FUNCTION, name: "doubled", signature: "Int" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "first", signature: "Int" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "second", signature: "Int" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "doubled", signature: "Int" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "One helper is extracted from the shared block of two defs."

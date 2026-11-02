@@ -1,0 +1,17 @@
+case: signature-change-1
+language: JAVA
+corpus: java
+category: signature-change
+split: tuning
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: METHOD, name: "total", signature: "(int)" }
+      presence: MATCHED
+      content: CHANGED
+      signatureChanged: true
+  ambiguous: []
+notes: "A method gains a parameter."

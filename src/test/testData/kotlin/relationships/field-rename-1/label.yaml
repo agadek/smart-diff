@@ -1,0 +1,19 @@
+case: field-rename-1
+language: kotlin
+corpus: kotlin
+category: field-rename
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Order", kind: PROPERTY, name: "defaultTotal", signature: null }
+      new: { path: "class Order", kind: PROPERTY, name: "defaultSum", signature: null }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: PROPERTY, name: "defaultSum", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A property renamed, initializer unchanged."

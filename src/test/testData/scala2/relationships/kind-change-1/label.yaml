@@ -1,0 +1,17 @@
+case: kind-change-1
+language: Scala
+corpus: scala2
+category: kind-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [KIND_CHANGE]
+      old: { path: "", kind: CLASS, name: "Order", signature: null }
+      new: { path: "", kind: TRAIT, name: "Order", signature: null }
+  changes:
+    - subject: { path: "", kind: TRAIT, name: "Order", signature: null }
+      presence: MATCHED
+      content: CHANGED
+      kindChangedFrom: CLASS
+  ambiguous: []
+notes: "An empty class becomes a trait."

@@ -1,0 +1,22 @@
+case: inlining-3
+language: JAVA
+corpus: java
+category: inlining
+split: tuning
+expected:
+  relationships:
+    - kinds: [INLINE]
+      old: { path: "class Basket", kind: METHOD, name: "heading", signature: "(String)" }
+      new: { path: "class Basket", kind: METHOD, name: "render", signature: "(String)" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Basket", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Basket", kind: METHOD, name: "render", signature: "(String)" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Basket", kind: METHOD, name: "heading", signature: "(String)" }
+      presence: REMOVED
+      content: UNCHANGED
+  ambiguous: []
+notes: "The helper is inlined into its caller; inlining detection is not implemented yet."

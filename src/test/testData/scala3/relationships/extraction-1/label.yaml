@@ -1,0 +1,22 @@
+case: extraction-1
+language: Scala
+corpus: scala3
+category: extraction
+split: tuning
+expected:
+  relationships:
+    - kinds: [EXTRACT]
+      old: { path: "class Order", kind: FUNCTION, name: "render", signature: "List[String]" }
+      new: { path: "class Order", kind: FUNCTION, name: "renderLines", signature: "List[String]" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "render", signature: "List[String]" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "renderLines", signature: "List[String]" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "The body of render is extracted to a new helper."

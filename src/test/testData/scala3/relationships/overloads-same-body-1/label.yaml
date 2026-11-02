@@ -1,0 +1,16 @@
+case: overloads-same-body-1
+language: Scala
+corpus: scala3
+category: overloads-same-body
+split: tuning
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "read", signature: "(Short)" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Two overloads share a body; a third overload with the same body is added and must stay added."

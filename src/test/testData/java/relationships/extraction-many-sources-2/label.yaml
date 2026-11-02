@@ -1,0 +1,28 @@
+case: extraction-many-sources-2
+language: JAVA
+corpus: java
+category: extraction-many-sources
+split: held-out
+expected:
+  relationships:
+    - kinds: [EXTRACT]
+      old: { path: "class Invoice", kind: METHOD, name: "first", signature: "(int)" }
+      new: { path: "class Invoice", kind: METHOD, name: "doubled", signature: "(int)" }
+    - kinds: [EXTRACT]
+      old: { path: "class Invoice", kind: METHOD, name: "second", signature: "(int)" }
+      new: { path: "class Invoice", kind: METHOD, name: "doubled", signature: "(int)" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Invoice", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Invoice", kind: METHOD, name: "first", signature: "(int)" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Invoice", kind: METHOD, name: "second", signature: "(int)" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Invoice", kind: METHOD, name: "doubled", signature: "(int)" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "One helper is extracted from the shared block of two methods."

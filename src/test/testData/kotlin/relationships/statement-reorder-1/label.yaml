@@ -1,0 +1,16 @@
+case: statement-reorder-1
+language: kotlin
+corpus: kotlin
+category: statement-reorder
+split: tuning
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "total", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Two statements swap; statement moves are out of scope."

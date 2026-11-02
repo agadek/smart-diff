@@ -1,0 +1,20 @@
+case: rename-with-signature-change-2
+language: kotlin
+corpus: kotlin
+category: rename-with-signature-change
+split: held-out
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Invoice", kind: FUNCTION, name: "computeTotal", signature: "(Int)" }
+      new: { path: "class Invoice", kind: FUNCTION, name: "total", signature: "(Long)" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Invoice", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Invoice", kind: FUNCTION, name: "total", signature: "(Long)" }
+      presence: MATCHED
+      content: CHANGED
+      signatureChanged: true
+  ambiguous: []
+notes: "A function renamed and its parameter type changed."

@@ -1,0 +1,14 @@
+case: ambiguous-rename-group-3
+language: Scala
+corpus: scala2
+category: ambiguous-rename-group
+split: tuning
+expected:
+  relationships: []
+  changes: []
+  ambiguous:
+    - { path: "class Basket", kind: FUNCTION, name: "alpha", signature: null }
+    - { path: "class Basket", kind: FUNCTION, name: "beta", signature: null }
+    - { path: "class Basket", kind: FUNCTION, name: "gamma", signature: null }
+    - { path: "class Basket", kind: FUNCTION, name: "delta", signature: null }
+notes: "Two equally plausible pairings; no pair is correct."

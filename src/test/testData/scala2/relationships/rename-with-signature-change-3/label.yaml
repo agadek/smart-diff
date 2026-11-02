@@ -1,0 +1,20 @@
+case: rename-with-signature-change-3
+language: Scala
+corpus: scala2
+category: rename-with-signature-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Basket", kind: FUNCTION, name: "price", signature: "Int" }
+      new: { path: "class Basket", kind: FUNCTION, name: "cost", signature: "Long" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Basket", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Basket", kind: FUNCTION, name: "cost", signature: "Long" }
+      presence: MATCHED
+      content: CHANGED
+      signatureChanged: true
+  ambiguous: []
+notes: "A def renamed and its parameter type changed."

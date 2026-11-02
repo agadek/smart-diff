@@ -1,0 +1,14 @@
+case: ambiguous-rename-group-1
+language: Scala
+corpus: scala2
+category: ambiguous-rename-group
+split: tuning
+expected:
+  relationships: []
+  changes: []
+  ambiguous:
+    - { path: "class Order", kind: FUNCTION, name: "alpha", signature: null }
+    - { path: "class Order", kind: FUNCTION, name: "beta", signature: null }
+    - { path: "class Order", kind: FUNCTION, name: "gamma", signature: null }
+    - { path: "class Order", kind: FUNCTION, name: "delta", signature: null }
+notes: "Two equally plausible pairings; no pair is correct."

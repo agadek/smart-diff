@@ -1,0 +1,8 @@
+class Order {
+    int read(int x) {
+        return 1;
+    }
+    int read(long x) {
+        return 1;
+    }
+}

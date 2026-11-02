@@ -1,0 +1,19 @@
+case: large-file-1
+language: Scala
+corpus: scala3
+category: large-file
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Big", kind: FUNCTION, name: "total", signature: null }
+      new: { path: "class Big", kind: FUNCTION, name: "sum", signature: null }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Big", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Big", kind: FUNCTION, name: "sum", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A 40-def file with one rename; keeps the case under the time limit."

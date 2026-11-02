@@ -1,0 +1,16 @@
+case: formatting-only-1
+language: Scala
+corpus: scala2
+category: formatting-only
+split: tuning
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "total", signature: null }
+      presence: MATCHED
+      content: FORMATTING_ONLY
+  ambiguous: []
+notes: "Whitespace only."

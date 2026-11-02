@@ -1,0 +1,16 @@
+case: duplicate-bodies-3
+language: JAVA
+corpus: java
+category: duplicate-bodies
+split: tuning
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Basket", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Basket", kind: METHOD, name: "copyOne", signature: "()" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "An added method repeats the body of an existing method; it is still added."
