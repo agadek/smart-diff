@@ -34,7 +34,7 @@ contains no user name; on another machine the `/src/...` prefix stands for the c
 validations:
 
 ```text
-/src/commons-lang --no-walk <30 commit hashes>
+/src/commons-lang --no-walk <17 commit hashes>
 /src/guava --no-walk <3 commit hashes>
 /src/moshi --no-walk <8 commit hashes>
 /src/okhttp --no-walk <5 commit hashes>
@@ -65,61 +65,67 @@ clone HEAD it reaches, so it changes when a label changes.
 
 **Result:** 424 cases (304 checked-in cases and 120 real commits); 30 labelled commits per corpus. No case was
 unlabelled or skipped, none broke the nothing-hidden rule, 6 fell back to the native diff (the malformed pairs), and
-no pair was forced. Precision is 0.995 and recall 0.822 overall. The one wrong pair and the 43 missed relationships
-are listed in `report.md`; they are the known limitations below, not a shortfall.
+no pair was wrong or forced. Precision is 1.000 and recall 0.826 overall. The 42 missed relationships are listed in
+`report.md`; they are the known limitations below, not a shortfall.
 
 ### Per corpus
 
 | Corpus | Cases | Precision | Recall | Wrong share | Presence | Content | Moved | Signature | Kind | Median | p95 | Slowest |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Java | 106 | 1.000 | 0.757 | 0.000 | 0.995 | 0.995 | 1.000 | 1.000 | 1.000 | 1 ms | 33 ms | 135 ms |
-| Kotlin | 106 | 1.000 | 0.836 | 0.000 | 0.986 | 0.986 | 1.000 | 1.000 | 1.000 | 0 ms | 32 ms | 248 ms |
-| Scala 2 | 106 | 0.980 | 0.831 | 0.020 | 1.000 | 0.986 | 0.824 | 1.000 | 1.000 | 1 ms | 56 ms | 207 ms |
-| Scala 3 | 106 | 1.000 | 0.887 | 0.000 | 1.000 | 0.970 | 1.000 | 1.000 | 1.000 | 0 ms | 145 ms | 234 ms |
-| tuning | 153 | 1.000 | 0.884 | 0.000 | 1.000 | 0.990 | 1.000 | 1.000 | 1.000 | 0 ms | 2 ms | 102 ms |
-| held-out | 271 | 0.987 | 0.738 | 0.013 | 0.991 | 0.980 | 0.864 | 1.000 | 1.000 | 3 ms | 110 ms | 248 ms |
+| Java | 106 | 1.000 | 0.757 | 0.000 | 0.995 | 0.995 | 1.000 | 1.000 | 1.000 | 1 ms | 34 ms | 122 ms |
+| Kotlin | 106 | 1.000 | 0.836 | 0.000 | 0.986 | 0.986 | 1.000 | 1.000 | 1.000 | 0 ms | 29 ms | 85 ms |
+| Scala 2 | 106 | 1.000 | 0.847 | 0.000 | 1.000 | 0.986 | 0.824 | 1.000 | 1.000 | 0 ms | 55 ms | 209 ms |
+| Scala 3 | 106 | 1.000 | 0.887 | 0.000 | 1.000 | 0.970 | 1.000 | 1.000 | 1.000 | 0 ms | 146 ms | 273 ms |
+| tuning | 153 | 1.000 | 0.884 | 0.000 | 1.000 | 0.990 | 1.000 | 1.000 | 1.000 | 0 ms | 1 ms | 70 ms |
+| held-out | 271 | 1.000 | 0.748 | 0.000 | 0.991 | 0.980 | 0.864 | 1.000 | 1.000 | 2 ms | 91 ms | 273 ms |
 
 ### Per kind
 
-| Corpus | Kind | TP | FP | FN | Precision | Recall |
-| --- | --- | --- | --- | --- | --- | --- |
-| Java | RENAME | 24 | 0 | 1 | 1.000 | 0.960 |
-| Java | MOVE | 9 | 0 | 0 | 1.000 | 1.000 |
-| Java | KIND_CHANGE | 3 | 0 | 0 | 1.000 | 1.000 |
-| Java | EXTRACT | 20 | 0 | 14 | 1.000 | 0.588 |
-| Java | INLINE | 0 | 0 | 3 | 1.000 | 0.000 |
-| Kotlin | RENAME | 21 | 0 | 2 | 1.000 | 0.913 |
-| Kotlin | MOVE | 10 | 0 | 0 | 1.000 | 1.000 |
-| Kotlin | KIND_CHANGE | 3 | 0 | 0 | 1.000 | 1.000 |
-| Kotlin | EXTRACT | 12 | 0 | 4 | 1.000 | 0.750 |
-| Kotlin | INLINE | 0 | 0 | 3 | 1.000 | 0.000 |
-| Scala 2 | RENAME | 23 | 0 | 0 | 1.000 | 1.000 |
-| Scala 2 | MOVE | 10 | 1 | 4 | 0.909 | 0.714 |
-| Scala 2 | KIND_CHANGE | 4 | 0 | 0 | 1.000 | 1.000 |
-| Scala 2 | EXTRACT | 12 | 0 | 3 | 1.000 | 0.800 |
-| Scala 2 | INLINE | 0 | 0 | 3 | 1.000 | 0.000 |
-| Scala 3 | RENAME | 21 | 0 | 0 | 1.000 | 1.000 |
-| Scala 3 | MOVE | 10 | 0 | 0 | 1.000 | 1.000 |
-| Scala 3 | KIND_CHANGE | 4 | 0 | 0 | 1.000 | 1.000 |
-| Scala 3 | EXTRACT | 12 | 0 | 3 | 1.000 | 0.800 |
-| Scala 3 | INLINE | 0 | 0 | 3 | 1.000 | 0.000 |
+A precision or recall with nothing to divide is `n/a`, not `1.000`; it means the engine reported no pair of that kind,
+not a measured perfect score.
 
-**Wrong and forced pairs:** 1 wrong pair, 0 forced. The wrong pair is the Scala 2
-`cats-0a776c7-applicative` move of `replicateA_`: the label names its old container `class ApplicativeOps`, while
-today's `ChangeNode` adapter can only name the new container for a move. This is the known cross-container move
-limitation of the baseline adapter.
+| Corpus | Kind | TP | FP | FN | Reported | Precision | Recall |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Java | RENAME | 24 | 0 | 1 | 24 | 1.000 | 0.960 |
+| Java | MOVE | 9 | 0 | 0 | 9 | 1.000 | 1.000 |
+| Java | KIND_CHANGE | 3 | 0 | 0 | 3 | 1.000 | 1.000 |
+| Java | EXTRACT | 20 | 0 | 14 | 20 | 1.000 | 0.588 |
+| Java | INLINE | 0 | 0 | 3 | 0 | n/a | 0.000 |
+| Kotlin | RENAME | 21 | 0 | 2 | 21 | 1.000 | 0.913 |
+| Kotlin | MOVE | 10 | 0 | 0 | 10 | 1.000 | 1.000 |
+| Kotlin | KIND_CHANGE | 3 | 0 | 0 | 3 | 1.000 | 1.000 |
+| Kotlin | EXTRACT | 12 | 0 | 4 | 12 | 1.000 | 0.750 |
+| Kotlin | INLINE | 0 | 0 | 3 | 0 | n/a | 0.000 |
+| Scala 2 | RENAME | 23 | 0 | 0 | 23 | 1.000 | 1.000 |
+| Scala 2 | MOVE | 11 | 0 | 3 | 11 | 1.000 | 0.786 |
+| Scala 2 | KIND_CHANGE | 4 | 0 | 0 | 4 | 1.000 | 1.000 |
+| Scala 2 | EXTRACT | 12 | 0 | 3 | 12 | 1.000 | 0.800 |
+| Scala 2 | INLINE | 0 | 0 | 3 | 0 | n/a | 0.000 |
+| Scala 3 | RENAME | 21 | 0 | 0 | 21 | 1.000 | 1.000 |
+| Scala 3 | MOVE | 10 | 0 | 0 | 10 | 1.000 | 1.000 |
+| Scala 3 | KIND_CHANGE | 4 | 0 | 0 | 4 | 1.000 | 1.000 |
+| Scala 3 | EXTRACT | 12 | 0 | 3 | 12 | 1.000 | 0.800 |
+| Scala 3 | INLINE | 0 | 0 | 3 | 0 | n/a | 0.000 |
+
+**Wrong and forced pairs:** none. The adapter now names a move's old container from the old side's declaration tree,
+so the Scala 2 `cats-0a776c7-applicative` move of `replicateA_` matches its label and the former cross-container move
+limitation is fixed.
 
 **Known limitations:** inlining detection is not implemented, so every INLINE label is missed and its recall starts
 at zero (relationships/05). Extraction to several sources links only one source in the synthetic case (24 misses over
 four corpora), and the Scala parser marks the two capture-checking real-commit files and the incomplete Scala
 parse-error cases differently from the hand labels (UNANALYZED versus CHANGED); those are listed in `report.md`, not
-counted as shortfalls. The Scala 2 row has the one wrong move above.
+counted as shortfalls.
+
+**Baseline report:** `src/test/testData/relationships-baseline/report.json` is this run's `report.json`, checked in so
+later gates compare against a file (relationships/01 R21, R29, R40). Its corpus revision is `87588c7829c5`.
 
 **Report:** `build/reports/smartdiff-relationships/summary.tsv`, `report.md` and `report.json`. Run it with:
 
 ```shell
 ./gradlew test --tests '*RelationshipBenchmarkTest*' \
-  -Psmartdiff.relationships.corpus=src/test/testData/relationships-corpus-full.txt
+  -Psmartdiff.relationships.corpus=src/test/testData/relationships-corpus-full.txt \
+  -Psmartdiff.relationships.baseline=src/test/testData/relationships-baseline/report.json
 ```
 
 The [2026-11-01 smoke run](#2026-11-01-relationship-benchmark) below is kept as the harness check; it is not this

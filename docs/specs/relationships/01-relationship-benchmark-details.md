@@ -19,7 +19,7 @@ Feature: [Relationship benchmark](01-relationship-benchmark.md)
 ./gradlew test --tests '*RelationshipBenchmarkTest*' \
   -Psmartdiff.relationships.corpus=<list> \
   -Psmartdiff.relationships.gate=no-new-wrong-pairs \
-  -Psmartdiff.relationships.baseline=<report.json> \
+  -Psmartdiff.relationships.baseline=src/test/testData/relationships-baseline/report.json \
   -Psmartdiff.relationships.drafts=<dir>
 ```
 
@@ -38,7 +38,15 @@ The baseline runs on today's engine, which has no relationship list ([relationsh
 | `kindChangedFrom` | kind change |
 | `extractedFrom` / `extractedTo` | extraction |
 
-Today's results have no confidence, so the adapter gives a rename candidate medium confidence and every other link high confidence. Once relationships/02 ships, the benchmark reads the result's list directly and the adapter is removed.
+Today's results have no confidence, so the adapter gives a rename candidate medium confidence and every other link high confidence. Those values are for later: a label may carry `confidence`, but the benchmark does not compare it until the engine reports one (relationships/02, R4). A label's confidence is therefore kept as labeller intent, not as a scored value.
+
+A move's endpoint is named by its container on each side, and a cross-container move changes the container. The adapter builds an old endpoint's path from the old side's declaration tree, matched by the node's old range, and falls back to the new-side path when the old tree has no such range. The extraction source path comes from the origin's declaration range the same way. Without the old tree, as in a unit test that builds only a result, the new-side path is used.
+
+An extraction is listed from both ends: the source's `extractedTo` and the target's `extractedFrom`. The adapter counts the two listings as one link when kind, both identities and the source's declaration range agree; the copy kept is the one that carries declaration ranges on both sides, so a label that gives a range still matches. Two extractions whose source declaration ranges differ stay two links (R6).
+
+`null`, `""` and `"()"` are the same signature identity in every language. In Scala, `def size` and `def size()` are distinct declarations, so a label for one can match the other. This is a deliberate adapter simplification until relationships/02 gives each endpoint its declaration's own signature; the current labels do not rely on the difference.
+
+Once relationships/02 ships, the benchmark reads the result's list directly and the adapter is removed.
 
 ### Label format
 
@@ -68,7 +76,7 @@ notes: "A second method with the same body exists on purpose."
 - `category` is the case matrix category, such as `method-rename` or `kind-change`; the matrix check uses it rather than
   the case name.
 - An endpoint is path, kind, name and signature, as the outline names it. A `range` (`start..end` offsets) is added only when two declarations would have the same identity.
-- Confidence is optional in a label; it is compared only when given.
+- Confidence is optional in a label and is recorded for later; it is not compared until the engine reports a confidence value.
 - The label set is closed: every relationship the engine reports that is not listed is wrong, unless the case lists it under `ambiguous`.
 - `ambiguous` lists the declarations for which no pair is correct; any pair reported for them is a forced pair.
 
@@ -104,11 +112,12 @@ expected:
 ```
 
 - The repository is matched by the clone folder's name, so a label works on any machine with that clone (R35).
-- The old and new texts are read with `git show <commit>^1:<path>` and `git show <commit>:<path>`; a file added or deleted by the commit is skipped and counted, like a missing file in the corpus validation.
+- The old and new texts are read with `git show <commit>^1:<path>` and `git show <commit>:<path>`; a file added or deleted by the commit is skipped and counted, like a missing file in the corpus validation. The changed-file listing passes `--no-renames`, so a rename is a delete plus an add, both listed as skipped, and the result does not depend on each machine's `diff.renames` setting (R28, R34, R35). Git path output passes `-c core.quotePath=false`, so a non-ASCII path is not quoted and `git show` reads it unchanged.
 - A selected file with no label, or with `reviewed: false`, is listed under `unlabelled` in the report and in `report.json`, and is not scored (R36). A label without `reviewed` is not scored, so forgetting the flag cannot make a draft a result.
 - A label whose commit is not in the clone, whose path is not in the commit, whose commit has no first parent, or whose repository or corpus does not match its folder, fails the run with the label's path.
 - Every selected file is compared with its first parent, labelled or not (R34). A nothing-hidden violation, a file over the 5 s limit or an exception in an unlabelled file still fails the run (R26).
-- A labelled commit counts toward R10 when every Java, Kotlin or Scala file it changed has a reviewed label.
+- An unlabelled Scala file is counted under the dialect it parses in (R33). If no Scala provider is loaded, or reading the dialect throws, the file is listed with the reason `unknown dialect` and is not counted under Scala 2 or Scala 3, so a sandbox without the Scala plugin cannot file a Scala 3 file as Scala 2 or let the commit count toward R10.
+- A labelled commit counts toward R10 when every Java, Kotlin or Scala file it *modified* has a reviewed label. Added and deleted files are listed as skipped and do not block the count, so a commit that extracts a class into a new file can still be one of the 30. A commit that modifies no Java, Kotlin or Scala file, or has a file with `unknown dialect`, does not count.
 
 ### Draft labels
 
@@ -123,7 +132,7 @@ A draft is a starting point only. The labeller checks every relationship and cla
 - Constructs a language does not have are listed in `RelationshipBenchmark.NOT_APPLICABLE`, with a reason for each; no category is left out without one.
 - When any minimum is missed, the report header says `smoke run`, lists every shortfall, and `report.json` has `"smoke": true` (R31).
 - A baseline whose `report.json` has `"smoke": true` fails the run with `baseline is a smoke run` (R32).
-- The VALIDATION.md baseline of R29 is the first run with no shortfall.
+- The VALIDATION.md baseline of R29 is the first run with no shortfall, and its `report.json` is checked in.
 
 ### Case categories
 
@@ -138,8 +147,10 @@ Expected classifications follow the current model: a comment-only change is `CHA
 - A pair reported for a declaration listed under `ambiguous` is counted as forced only (R14, R39). It is not a false positive, so it does not lower precision, and the `no-new-wrong-pairs` gate still fails on it.
 - Every count and metric is grouped by corpus (`java`, `kotlin`, `scala2`, `scala3`), never by language alone, so Scala 2 and Scala 3 get separate rows (R33).
 - Extraction and inlining links are counted per link, so a target with three sources counts three.
-- Results are micro-averaged over links per language, and also given per category.
+- Results are micro-averaged over links per language, and also given per category, with the category rows in `report.md` and `report.json`.
+- A precision or recall with nothing to divide is shown as `n/a`, not as `1.000`, in `report.md`, `summary.tsv` and the baseline table; `report.json` keeps the number for the gate and adds the reported-pair count beside it.
 - Presence and content accuracy, and the accuracy of `moved`, signature change and kind change.
+- Each expected change claims at most one node, and each node is claimed at most once. Candidates are walked in label order, a presence match is preferred among the nodes left, and a claimed node is removed, so two same-identity overloads cannot both score against one reported node (R15, R42).
 - Forced pairs in ambiguous cases, which should be zero.
 - Nothing-hidden violations, as a safety count rather than a coverage ratio.
 - Files that returned `UNSUPPORTED`, `TOO_LARGE` or `FAILED`.
@@ -161,9 +172,11 @@ In every mode a nothing-hidden violation, a file over the 5 s limit or an except
 
 ### Report contents
 
-- `report.md` lists every wrong pair, forced pair, missed relationship and misclassified declaration, each with its case, both endpoints or both classifications, and the label's path (R18, R42).
-- `report.json` has the engine version, IDE build, Scala plugin version, corpus revision, gate mode, smoke flag and shortfalls, the metrics per corpus, per split and overall, the skipped and unlabelled files, and every list of `report.md` (R19, R20).
-- The corpus revision is a hash of the corpus list and of every case and label file it reaches, in path order, plus the commit hash of each real-commit line's clone (R43).
+- `report.md` lists every wrong pair, forced pair, missed relationship and misclassified declaration, each with its case, both endpoints or both classifications, and the label's path (R18, R42). Its wrong and forced pairs are under the heading `Wrong and forced relationships`; missed relationships have their own section.
+- `report.md` and `report.json` give the metrics per corpus, per split, per category and overall.
+- `report.json` has the engine version, IDE build, Scala plugin version, corpus revision, gate mode, smoke flag and shortfalls, the metrics per corpus, per split, per category and overall, the skipped and unlabelled files, and every list of `report.md` (R19, R20).
+- The corpus revision is a hash of the corpus list and of every case and label file it reaches, in path order, plus the commit hash of each real-commit line's clone (R43). Editing a checked-in real-commit label or moving a clone's HEAD changes it.
+- The R29 baseline's `report.json` is checked in at `src/test/testData/relationships-baseline/report.json`, so a later gate compares against a file rather than a rerun (R21, R29, R40).
 
 ### Labelling
 
@@ -184,24 +197,24 @@ In every mode a nothing-hidden violation, a file over the 5 s limit or an except
 | R2–R7 | A label parser test with one valid label per rule and invalid labels that fail with a clear message |
 | R8–R10 | A check that lists the cases per category and language and fails when a minimum is not met |
 | R11 | A test that tuning and held-out cases are reported apart |
-| R12–R18 | Report tests over a small fixed corpus with known true and false positives |
+| R12–R18 | Report tests over a small fixed corpus with known true and false positives, including a per-category row and `n/a` for a kind with no reported pairs |
 | R19–R21 | The report header test, and a comparison with a saved baseline |
 | R22–R27 | One test per gate mode with a baseline that should pass and one that should fail |
 | R28 | Two runs on the same cases give equal reports apart from times |
-| R29 | Manual: the baseline section in VALIDATION.md comes from a run with no shortfall |
-| R30–R32 | `matrixFailures` on a corpus one case short of a minimum gives a smoke report, and that report is refused as a baseline |
-| R33 | A corpus with one Scala 2 and one Scala 3 case gives two rows and two sets of minimums |
-| R34–R36 | A test Git repository built in the test, with one labelled and one unlabelled file in a commit, scores the first and lists the second |
+| R29 | Manual: the baseline section in VALIDATION.md comes from a run with no shortfall; a test checks that `src/test/testData/relationships-baseline/report.json` exists, is not a smoke run and carries the revision VALIDATION.md records |
+| R30–R32 | `matrixFailures` on a corpus one case short of a minimum gives a smoke report, and the run's own `report.json` is refused as a baseline |
+| R33 | A corpus with one Scala 2 and one Scala 3 case gives two rows and two sets of minimums; an unlabelled Scala file is counted under the dialect it parses in, and an unknown dialect is listed rather than filed as Scala 2 |
+| R34–R36 | A test Git repository built in the test, with one labelled and one unlabelled file in a commit, scores the first and lists the second; a renamed file is a delete plus an add; a non-ASCII path is read (R10: a fully labelled commit counts once, and a commit that only adds a file still counts when its modified file is labelled) |
 | R37 | Drafts for the test repository have `reviewed: false` and are not scored until the flag is changed |
-| R38 | A rename and move against labels listing both kinds, one kind, and the other kind |
+| R38 | A rename and move against labels listing both kinds, one kind, and the other kind; an extraction link is counted once |
 | R39 | A forced pair is counted as forced and leaves precision unchanged |
 | R40 | A missing baseline path fails the run |
 | R41 | A baseline missing one `(corpus, kind)` pair passes and lists it as new; a lower precision in one pair fails |
-| R42 | A case with a wrong classification is listed with both values |
-| R43 | Editing a label changes the corpus revision |
+| R42 | A case with a wrong classification is listed with both values; two same-identity changes cannot claim one node |
+| R43 | Editing a case label, editing a real-commit label, or moving a clone's HEAD changes the corpus revision |
+| Adapter (not a requirement) | A cross-container move names its old container from the old tree; two extractions that differ only by range stay two links; the signature simplification is pinned by a test |
 
 ## Open questions
 
-- Does the benchmark label an expected confidence, or only the expected evidence?
 - When, if ever, does the corpus include relationships across files?
 - Which commits are labelled first: those the corpus validation flagged with a rename, move or extraction, or a random sample of each repository? A mix of both, about half each, is proposed, so precision is measured on likely refactorings and recall on ordinary commits.
