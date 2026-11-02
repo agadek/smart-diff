@@ -221,6 +221,16 @@ _Avoid_: reason, proof
 A place in the compared file that refers to a declaration by name, such as a call or a type reference.
 _Avoid_: call site, reference, occurrence
 
+### Forced pair
+
+A relationship the engine reports for a declaration that a benchmark label marks as ambiguous, where no pair is correct.
+_Avoid_: false match, guess
+
+### Smoke run
+
+A relationship benchmark run on fewer cases than its minimums require. It shows that the benchmark works, and its numbers are never a baseline.
+_Avoid_: partial baseline, quick run
+
 ### Inlining
 
 A removed method or function whose body is mostly code that a changed declaration on the new side has and did not have. It stays removed and is linked to that declaration, its inlining target. Specified in [inlining detection](specs/relationships/05-inlining-detection.md).
