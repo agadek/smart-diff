@@ -42,7 +42,7 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
         } catch (e: ProcessCanceledException) {
             throw e
         } catch (e: Exception) {
-            ComparisonResult.failed(this, "declaration engine failed: ${e.message ?: e.javaClass.simpleName}")
+            ComparisonResult.threw(this, e.message ?: e.javaClass.simpleName)
         }
     }
 

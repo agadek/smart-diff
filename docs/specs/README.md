@@ -101,7 +101,7 @@ The accepted features added on 2026-11-01 (outline/05, declarations/06 and chang
 | [03 Merge outline in three-sided diffs](merge/03-three-sided-diffs.md) | implemented, 2026-10-31 |
 | [04 Merge outline in the merge window](merge/04-merge-window.md) | implemented, 2026-10-31 |
 | [05 Scala merges and merge fixtures](merge/05-scala-merges.md) | implemented, 2026-11-01 |
-| [06 Merge validation](merge/06-merge-validation.md) | accepted, 2026-11-02 |
+| [06 Merge validation](merge/06-merge-validation.md) | implemented, 2026-11-02 |
 
 ## Relationships
 
