@@ -60,7 +60,7 @@ _Avoid_: parent node, owner, scope
 
 ### Signature
 
-The parameter types of a declaration as written in the source, used to tell overloads apart.
+The parameter types of a declaration as written in the source, used to tell overloads apart. The matching signature removes whitespace; the display signature keeps one space where the source separates words, for labels.
 _Avoid_: descriptor, type signature
 
 ### File region
@@ -147,9 +147,14 @@ _Avoid_: refactored, moved code, split
 The changed declaration that an extraction's code came from. It is labelled `code extracted to <declaration>`.
 _Avoid_: origin, original method
 
+### Extraction target
+
+The added declaration that code was extracted into. It stays added and is labelled `extracted from <source>`.
+_Avoid_: destination, helper
+
 ### Unanalyzed
 
-Source that could not be parsed reliably, shown without any classification.
+Source whose content could not be classified because it could not be parsed reliably. Its presence and kind are still known.
 _Avoid_: broken, error region, unknown
 
 ## Merges
@@ -225,6 +230,16 @@ _Avoid_: merged method, moved code
 
 The changed declaration that an inlining's code went into. It is labelled `code inlined from <declaration>`.
 _Avoid_: destination, caller
+
+### Refactoring group
+
+A set of related changes that one refactoring made, such as a rename, its declaration and the usages it changed.
+_Avoid_: refactoring set, change group
+
+### Source coverage
+
+The share of analyzed source that the nothing-hidden check covers, reported with each validation run.
+_Avoid_: coverage score, hidden share
 
 ## Presentation
 
