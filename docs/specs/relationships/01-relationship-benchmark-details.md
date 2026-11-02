@@ -19,7 +19,8 @@ Feature: [Relationship benchmark](01-relationship-benchmark.md)
 ./gradlew test --tests '*RelationshipBenchmarkTest*' \
   -Psmartdiff.relationships.corpus=<list> \
   -Psmartdiff.relationships.gate=no-new-wrong-pairs \
-  -Psmartdiff.relationships.baseline=<report.json>
+  -Psmartdiff.relationships.baseline=<report.json> \
+  -Psmartdiff.relationships.drafts=<dir>
 ```
 
 The corpus list names case folders and real-commit lines; a real-commit line has the same format as the corpus validation list.
@@ -81,6 +82,10 @@ Labels for real commits are checked in, so the scores do not depend on the machi
 src/test/testData/<language>/relationships/commits/<repository>/<short-sha>/<file-name>.yaml
 ```
 
+`<language>` is the corpus folder (`java`, `kotlin`, `scala2` or `scala3`) and `<file-name>` is the changed file's name
+without its extension, so `src/main/java/org/example/Order.java` has the label `Order.yaml`. A folder name that is a
+prefix of the commit works as the short SHA.
+
 ```yaml
 case: commons-lang-3f2a9c1-StringUtils
 language: JAVA
@@ -100,8 +105,9 @@ expected:
 
 - The repository is matched by the clone folder's name, so a label works on any machine with that clone (R35).
 - The old and new texts are read with `git show <commit>^1:<path>` and `git show <commit>:<path>`; a file added or deleted by the commit is skipped and counted, like a missing file in the corpus validation.
-- A selected file with no label, or with `reviewed: false`, is listed under `unlabelled` in the report and in `report.json`, and is not scored (R36).
-- A label whose commit is not in the clone, or whose path is not in the commit, fails the run with the label's path.
+- A selected file with no label, or with `reviewed: false`, is listed under `unlabelled` in the report and in `report.json`, and is not scored (R36). A label without `reviewed` is not scored, so forgetting the flag cannot make a draft a result.
+- A label whose commit is not in the clone, whose path is not in the commit, whose commit has no first parent, or whose repository or corpus does not match its folder, fails the run with the label's path.
+- Every selected file is compared with its first parent, labelled or not (R34). A nothing-hidden violation, a file over the 5 s limit or an exception in an unlabelled file still fails the run (R26).
 - A labelled commit counts toward R10 when every Java, Kotlin or Scala file it changed has a reviewed label.
 
 ### Draft labels
@@ -150,6 +156,7 @@ Expected classifications follow the current model: a comment-only change is `CHA
 In every mode a nothing-hidden violation, a file over the 5 s limit or an exception fails the run. Inlining's recall starts at zero, so its gate applies from [relationships/05](05-inlining-detection.md).
 
 - A `-Psmartdiff.relationships.baseline` path that is not a file fails the run with `baseline not found: <path>` (R40).
+- A baseline whose `report.json` has `"smoke": true` fails the run with `baseline is a smoke run: <path>` (R32); a smoke run is not the R29 baseline.
 - `precision` and `tolerance` compare each `(corpus, kind)` pair on its own (R41). A pair the baseline lacks does not fail the run; the report lists it under `new in this run`, so a new category or language is visible without blocking.
 
 ### Report contents
