@@ -107,7 +107,8 @@ tasks.test {
     // -Psmartdiff.updateGolden=true rewrites the golden fixtures' expected files; -Psmartdiff.limits.corpus=<list> runs the limits
     // benchmark; -Psmartdiff.validation.corpus=<list> runs the corpus validation over real commits;
     // -Psmartdiff.validation.merges=<list> runs the merge corpus validation;
-    // -Psmartdiff.relationships.corpus=<list> runs the relationship benchmark.
+    // -Psmartdiff.relationships.corpus=<list> runs the relationship benchmark; -Psmartdiff.relationships.drafts=<dir>
+    // writes unreviewed draft labels for its unlabelled real-commit files.
     systemProperty("smartdiff.updateGolden", providers.gradleProperty("smartdiff.updateGolden").getOrElse("false"))
     systemProperty("smartdiff.limits.corpus", providers.gradleProperty("smartdiff.limits.corpus").getOrElse(""))
     systemProperty("smartdiff.validation.corpus", providers.gradleProperty("smartdiff.validation.corpus").getOrElse(""))
@@ -116,6 +117,7 @@ tasks.test {
     systemProperty("smartdiff.relationships.gate", providers.gradleProperty("smartdiff.relationships.gate").getOrElse("no-new-wrong-pairs"))
     systemProperty("smartdiff.relationships.baseline", providers.gradleProperty("smartdiff.relationships.baseline").getOrElse(""))
     systemProperty("smartdiff.relationships.tolerance", providers.gradleProperty("smartdiff.relationships.tolerance").getOrElse("0"))
+    systemProperty("smartdiff.relationships.drafts", providers.gradleProperty("smartdiff.relationships.drafts").getOrElse(""))
     // The golden fixtures, the limits benchmark and the corpus validation print "GOLDEN ...", "BENCHMARK ..." and
     // "VALIDATION ..." lines; copy them into the build log.
     addTestOutputListener(TestOutputListener { _, event ->

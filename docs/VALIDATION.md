@@ -24,8 +24,12 @@ Its report is written to `build/reports/smartdiff-validation/merge/`.
 ## 2026-11-01: relationship benchmark
 
 **Corpus:** the four starter cases in `src/test/testData/{java,kotlin,scala2,scala3}/relationships/`:
-Java method rename, Kotlin method move, Scala 2 formatting-only and Scala 3 kind change. This is a smoke run of
+Java method rename, Kotlin method move, Scala 2 formatting-only and Scala 3 kind change. This is a **smoke run** of
 the harness, not the full labelled matrix or real-commit baseline that relationships/03 needs.
+
+The run reports `"smoke": true` because it is below the R30 minimums (3 cases per category and corpus, 30 labelled
+commits per corpus). It is therefore not the R29 baseline: a later run refuses it with `baseline is a smoke run`, and
+the baseline is the first run with no shortfall.
 
 **Result:** precision 1.000 and recall 1.000 over the three relationship kinds; declaration classification
 7 of 7; no forced pair, no nothing-hidden violation and no fallback. Median 23 ms, p95 and slowest 72 ms.
