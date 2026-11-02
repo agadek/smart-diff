@@ -16,7 +16,7 @@ The first run, on 2026-11-01, used an engine that still reported a declaration a
 
 - Rerun after every merged change to matching, classification or the merge join, and after the last such change before the release.
 - Use the corpus list of the previous run. Its lines select commits from `HEAD`, so record each clone's `HEAD` commit in the dated section and replace `HEAD` with that commit in later runs. Without it, a clone that was pulled since gives other merge commits, and the two runs cannot be compared.
-- When the previous run did not record the commits, record them in the rerun, and say in the dated section that the commit lists of the two runs may differ.
+- When the previous run did not record the commits, record them in the rerun, and say in the dated section that the commit lists of the two runs cannot be compared.
 - Keep the reports of both runs, so each file's flags can be compared.
 
 ### Verdicts
@@ -28,7 +28,7 @@ Every `both-sides-clean` and `conflict-one-side` file in the run that will ship 
 | `expected` | The outline is right and the flag is the signal it is meant to be: both sides changed different parts of the declaration and Git merged them, or a conflict lies inside a declaration that only one side changed because the other side changed the lines next to it | Not blocked |
 | `fixed` | The outline was wrong, and a merged fix makes it right; the rerun shows the file as `expected` or no longer flags it | Not blocked |
 | `known limit` | The outline is wrong and is not fixed for this release; an issue describes it (R28) | Not blocked; see the open question |
-| `wrong flag` | The outline is right, but the flag does not fit its own definition in R8 or R9, for example conflicts computed differently from the merge window (R10) | Blocked until the validation is fixed and rerun (R29) |
+| `wrong flag` | The outline is right, but the flag does not fit its own definition in R8 or R9, for example conflicts computed differently from the merge window (R10), or a formatting-only side counted as changed (R8) | Blocked until the validation is fixed and rerun (R29) |
 
 A file with several flagged declarations gets the verdict of its worst declaration, in the order `wrong flag`, `known limit`, `fixed`, `expected`, and the reason names the declarations.
 
@@ -38,13 +38,13 @@ For each flagged file in `report.md`:
 
 1. Read the file's outline and conflicts in the report.
 2. Compare each side with the base for the flagged declaration: `git diff <base> <parent> -- <path>` for both parents, in the clone.
-3. For `both-sides-clean`, check that both sides changed the declaration's own content. If one side only added or removed a sibling next to it, or only changed layout, the outline is wrong.
+3. For `both-sides-clean`, check that both sides changed the declaration's own content. If one side only added or removed a sibling next to it, the outline is wrong. If one side is only [formatting-only](../../GLOSSARY.md#formatting-only), the outline is right and the flag is wrong (R8).
 4. For `conflict-one-side`, check where Git's conflict hunk lies. A hunk that starts or ends inside the declaration because the other side changed a neighbouring line is `expected`; a hunk inside a declaration whose content the other side did change means the outline missed a change.
 5. Pick the verdict, write a one-line reason, and open an issue for each wrong outline that is not fixed in the same pull request.
 
-A `conflict-one-side` flag is judged on the declaration that holds the conflict. A container's own tokens change when a declaration inside it is added or removed, so a container can intersect a conflict that lies in a child; the child decides then, and a container alone does not flag a file (R9).
+A `conflict-one-side` flag is judged on the part of the conflict that lies in the declaration's own source, outside its children. A container is flagged when the hunk covers its own lines, even if the hunk also covers a child; when the hunk lies only in a child, the child decides (R9). Adding, removing or reordering a member leaves its container unchanged (declarations/02 R8), so a container whose own source is unchanged does not flag a file.
 
-Wrong outlines with the same cause share one issue and one fix. The #50 pattern, a declaration reported as changed because a declaration was added above it at the start of the file, is fixed in the 0.2.0 release; files of that pattern that are still flagged after the rerun are a new bug.
+Wrong outlines with the same cause share one issue and one fix. The #50 pattern, a declaration reported as changed because a declaration was added above it at the start of the file, is fixed by PR #58; files of that pattern that are still flagged after the rerun are a new bug.
 
 ### Recording the results
 
