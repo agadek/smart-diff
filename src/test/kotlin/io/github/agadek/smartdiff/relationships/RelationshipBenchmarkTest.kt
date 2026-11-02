@@ -1,6 +1,11 @@
 package io.github.agadek.smartdiff.relationships
 
+import com.intellij.lang.Language
+import com.intellij.openapi.project.Project
+import com.intellij.psi.PsiFile
+import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.Content
@@ -15,6 +20,8 @@ import io.github.agadek.smartdiff.engine.declarations.model.Declaration
 import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
 import io.github.agadek.smartdiff.engine.declarations.model.FileRegion
 import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy
+import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationProvider
+import io.github.agadek.smartdiff.engine.declarations.psi.java.JavaDeclarationProvider
 import java.io.File
 import java.nio.file.Files
 
@@ -862,6 +869,25 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         assertEquals("class ApplicativeByValueOps", relationship.new.path)
     }
 
+    fun `test a throwing second parse falls back to the new side path`() {
+        // relationships/01-relationship-benchmark R26; details: Before the relationship model exists (the adapter)
+        ExtensionTestUtil.addExtensions(DeclarationProvider.EP_NAME, listOf(ThrowingTreeProvider()), testRootDisposable)
+        val directory = Files.createTempDirectory("relationship-old-tree").toFile()
+        try {
+            File(directory, "old.scala").writeText("// old\n")
+            File(directory, "new.scala").writeText("// new\n")
+            File(directory, "label.yaml").writeText(THROWING_LABEL)
+            val corpus = File(directory, "corpus.txt").apply { writeText(directory.absolutePath + "\n") }
+            val report = RelationshipBenchmark.run(corpus, File(directory, "report"), minimum = 0, commitMinimum = 0)
+            val case = report.cases.single()
+            assertNull("a throwing second parse does not abort the run", case.exception)
+            val move = case.actualRelationships.single { it.kind == RelationshipBenchmark.Kind.MOVE }
+            assertEquals("without the old tree the new container is used", "class B", move.old.path)
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
     fun `test an extraction keeps the copy with declaration ranges`() {
         // relationships/01-relationship-benchmark-details.md: an extraction is listed from both ends
         val source = Subject.Declaration(DeclarationKind.METHOD, "render", "()")
@@ -1254,7 +1280,54 @@ notes: "Built inside the test."
         Presence.MATCHED,
     )
 
+    /**
+     * A provider whose first comparison succeeds with a move and whose second old-side parse throws, as a provider error
+     * on the old tree does after the comparison (R26).
+     */
+    private class ThrowingTreeProvider : DeclarationProvider {
+        private var builds = 0
+
+        override fun supports(languageId: String): Boolean = languageId == THROWING_LANGUAGE
+
+        override fun parse(project: Project, text: CharSequence, fileName: String?, dialect: Language?): PsiFile =
+            JavaDeclarationProvider().parse(project, text, fileName, dialect)
+
+        override fun build(file: PsiFile, cancellation: Cancellation): DeclarationTree {
+            builds++
+            if (builds > 2) error("the second parse of the old side threw")
+            return tree(if (builds == 1) "A" else "B")
+        }
+
+        private fun tree(container: String): DeclarationTree {
+            val method = Declaration(DeclarationKind.METHOD, "run", "()", TextRange(10, 20))
+            val first = Declaration(
+                DeclarationKind.CLASS, "A", null, TextRange(0, 40),
+                children = if (container == "A") listOf(method) else emptyList(),
+            )
+            val second = Declaration(
+                DeclarationKind.CLASS, "B", null, TextRange(40, 80),
+                children = if (container == "B") listOf(method) else emptyList(),
+            )
+            return DeclarationTree(listOf(first, second), FileRegion(emptyList(), emptyList()), WhitespacePolicy.INSIGNIFICANT)
+        }
+    }
+
     private companion object {
+        const val THROWING_LANGUAGE = "THROWING_SECOND_PARSE"
+        const val THROWING_LABEL = """case: throwing-second-parse
+language: THROWING_SECOND_PARSE
+corpus: java
+category: move-in-file
+split: tuning
+expected:
+  relationships:
+    - kinds: [MOVE]
+      old: { path: "class A", kind: METHOD, name: run, signature: "()" }
+      new: { path: "class B", kind: METHOD, name: run, signature: "()" }
+  changes: []
+  ambiguous: []
+"""
+
         const val LABEL = """case: rename-method
 language: JAVA
 corpus: java
