@@ -38,7 +38,7 @@ For each flagged file in `report.md`:
 
 1. Read the file's outline and conflicts in the report.
 2. Compare each side with the base for the flagged declaration: `git diff <base> <parent> -- <path>` for both parents, in the clone.
-3. For `both-sides-clean`, check that both sides changed the declaration's own content. If one side only added or removed a sibling next to it, the outline is wrong. If one side is only [formatting-only](../../GLOSSARY.md#formatting-only), the outline is right and the flag is wrong (R8).
+3. For `both-sides-clean`, check that both sides changed the declaration beyond formatting: its own content, or a move, rename, signature or kind change. If one side only added or removed a sibling next to it, the outline is wrong. If one side is only [formatting-only](../../GLOSSARY.md#formatting-only), with no move, rename, signature or kind change, the outline is right and the flag is wrong (R8).
 4. For `conflict-one-side`, check where Git's conflict hunk lies. A hunk that starts or ends inside the declaration because the other side changed a neighbouring line is `expected`; a hunk inside a declaration whose content the other side did change means the outline missed a change.
 5. Pick the verdict, write a one-line reason, and open an issue for each wrong outline that is not fixed in the same pull request.
 
