@@ -1,6 +1,6 @@
 # Merge validation
 
-Status: implemented, 2026-11-01
+Status: accepted, 2026-11-02
 
 **Description:** Runs the merge outline on real merge commits before it ships, and flags results to review by hand.
 
@@ -32,6 +32,14 @@ Status: implemented, 2026-11-01
 - **R22** The report counts the files that have each flag.
 - **R23** For each flagged file, the report lists the conflicts next to the outline.
 - **R24** The corpus has at least 30 files changed on both sides for each of Java, Kotlin, Scala 2 and Scala 3.
+- **R25** R15 to R17 are judged on a run of the engine version that will ship, with the corpus list of the previous run.
+- **R26** Each `both-sides-clean` and `conflict-one-side` file gets one verdict: `expected`, `fixed`, `known limit` or `wrong flag`.
+- **R27** VALIDATION.md lists each flagged file with its verdict and a one-line reason, grouped by verdict.
+- **R28** A wrong outline that is not fixed counts as explained only as a `known limit`, with a linked issue.
+- **R29** A `wrong flag` verdict comes with a fix to the validation and a test for it.
+- **R30** The dated section gives each flag's count next to the previous run's, and names the fix behind each change.
+- **R31** Each file flagged `status` is listed with its fallback reason.
+- **R32** The merge outline is not ready while a `status` file fell back because the comparison threw.
 
 ## Out of scope
 
@@ -40,5 +48,6 @@ Status: implemented, 2026-11-01
 
 ## References
 
+- [Details: design and tests](06-merge-validation-details.md)
 - [Three-way merge plan §8 and §9, phase 5](../../THREE-WAY-MERGE.md#8-validation)
 - [VALIDATION.md](../../VALIDATION.md)

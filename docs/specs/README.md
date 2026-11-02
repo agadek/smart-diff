@@ -74,13 +74,13 @@ Out of scope for now: AI explanations, cloud processing, expression-level differ
 | [03 Merge outline in three-sided diffs](merge/03-three-sided-diffs.md) | implemented, 2026-10-31 |
 | [04 Merge outline in the merge window](merge/04-merge-window.md) | implemented, 2026-10-31 |
 | [05 Scala merges and merge fixtures](merge/05-scala-merges.md) | implemented, 2026-11-01 |
-| [06 Merge validation](merge/06-merge-validation.md) | implemented, 2026-11-01 |
+| [06 Merge validation](merge/06-merge-validation.md) | accepted, 2026-11-02 |
 
 ## Relationships
 
 | Feature | Status |
 | --- | --- |
-| [01 Relationship benchmark](relationships/01-relationship-benchmark.md) | implemented, 2026-11-01 |
+| [01 Relationship benchmark](relationships/01-relationship-benchmark.md) | accepted, 2026-11-01 |
 | [02 Relationship model](relationships/02-relationship-model.md) | proposed, 2026-11-01 |
 | [03 Relationship matching](relationships/03-relationship-matching.md) | proposed, 2026-11-01 |
 | [04 Rename grouping](relationships/04-rename-grouping.md) | proposed, 2026-11-01 |

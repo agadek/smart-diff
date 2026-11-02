@@ -1,6 +1,6 @@
 # Relationship benchmark
 
-Status: implemented, 2026-11-01
+Status: accepted, 2026-11-01
 
 **Description:** Measures how well the declaration engine pairs declarations across two versions, against labelled ground truth, so a matcher change is accepted or rejected by its numbers.
 
@@ -37,6 +37,20 @@ Status: implemented, 2026-11-01
 - **R27** The report records the gate mode used.
 - **R28** Two runs on the same engine and cases give the same report, apart from times.
 - **R29** Before the first relationship model change, a baseline report of today's engine is recorded in VALIDATION.md.
+- **R30** Every run checks the minimums of R8, R9 and R10, and the report lists each category and language below its minimum.
+- **R31** A run below any minimum is reported as a [smoke run](../../GLOSSARY.md#smoke-run).
+- **R32** A smoke run's report is refused as a baseline, and a smoke run never meets R29.
+- **R33** Scala 2 and Scala 3 are separate languages in every count, metric, minimum and report row.
+- **R34** A real-commit line is run: every Java, Kotlin and Scala file it selects is compared with its first parent.
+- **R35** A label for a real commit names the repository, the commit and the file path, in place of old and new files.
+- **R36** A file selected by a real-commit line with no reviewed label is counted and listed as unlabelled, and is not scored.
+- **R37** The benchmark can write a draft label for an unlabelled file, and a draft is not scored until it is marked reviewed.
+- **R38** A reported relationship whose endpoints match a label is a true positive for each kind both list, a false positive for each kind only the report lists, and a false negative for each kind only the label lists.
+- **R39** A [forced pair](../../GLOSSARY.md#forced-pair) counts as forced, not as a wrong pair, and is left out of precision.
+- **R40** A baseline path that does not exist fails the run.
+- **R41** The `precision` and `tolerance` gates compare each relationship kind in each language on its own, and the report lists the kinds and languages the baseline lacks.
+- **R42** The report lists every declaration whose presence or content classification differs from its label, with both values.
+- **R43** The corpus revision changes when any case file or label changes.
 
 ## Out of scope
 
