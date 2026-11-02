@@ -44,6 +44,8 @@ A move's endpoint is named by its container on each side, and a cross-container 
 
 An extraction is listed from both ends: the source's `extractedTo` and the target's `extractedFrom`. The adapter counts the two listings as one link when kind, both identities and the source's declaration range agree; the copy kept is the one that carries declaration ranges on both sides, so a label that gives a range still matches. Two extractions whose source declaration ranges differ stay two links (R6).
 
+Exact duplicate rename, move and kind-change links are dropped today: two links with the same kind and both endpoint keys collapse to one. This is safe for the current adapter, which visits each `ChangeNode` once, so one node tree cannot produce the same non-extraction link twice. It is not safe for an engine that reports its own relationship list, where a repeated link is a wrong pair. When [relationships/02](02-relationship-model.md) makes the benchmark read that list, it should stop dropping these duplicates, so a repeated link counts as the false positive it is.
+
 `null`, `""` and `"()"` are the same signature identity in every language. In Scala, `def size` and `def size()` are distinct declarations, so a label for one can match the other. This is a deliberate adapter simplification until relationships/02 gives each endpoint its declaration's own signature; the current labels do not rely on the difference.
 
 Once relationships/02 ships, the benchmark reads the result's list directly and the adapter is removed.
@@ -212,7 +214,7 @@ In every mode a nothing-hidden violation, a file over the 5 s limit or an except
 | R41 | A baseline missing one `(corpus, kind)` pair passes and lists it as new; a lower precision in one pair fails |
 | R42 | A case with a wrong classification is listed with both values; two same-identity changes cannot claim one node |
 | R43 | Editing a case label, editing a real-commit label, or moving a clone's HEAD changes the corpus revision |
-| Adapter (not a requirement) | A cross-container move names its old container from the old tree; two extractions that differ only by range stay two links; the signature simplification is pinned by a test |
+| Adapter (not a requirement) | A cross-container move names its old container from the old tree; a provider that throws on the second old-side parse falls back to the new-side path and the run still reports the file; two extractions that differ only by range stay two links; the signature simplification is pinned by a test |
 
 ## Open questions
 

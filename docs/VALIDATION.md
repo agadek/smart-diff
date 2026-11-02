@@ -27,6 +27,9 @@ This is the R29 baseline: the first run with no shortfall. It covers the full ca
 commits per corpus, so it is a complete run, not the [2026-11-01 smoke run](#2026-11-01-relationship-benchmark)
 below.
 
+This baseline was re-recorded after the #68 adapter fix (#79): the `replicateA_` move is no longer wrong, and Scala 2
+MOVE went from 10/1/4 to 11/0/3.
+
 **Corpus:** `src/test/testData/relationships-corpus-full.txt` lists all 304 checked-in cases and the real commits.
 The cases are 25 categories with 3 cases for each of Java, Kotlin, Scala 2 and Scala 3, plus the four starter cases
 (300 + 4); Scala 2 and Scala 3 stay separate rows. The real-commit lines name the clones by relative path, so the list

@@ -817,7 +817,9 @@ object RelationshipBenchmark {
                 node.extractedFrom.isNotEmpty() || node.extractedTo.isNotEmpty() || needed(node.children)
         }
         if (!needed(listOfNotNull(result.fileRegion) + result.changes)) return null
-        return onPooledThread { engine.trees(request, Cancellation.NONE)?.first }
+        // The old side is parsed a second time, deliberately outside Outcome.millis: the comparison's time is what the
+        // report measures. A provider error here must not abort the run, so the new-side path fallback is used instead.
+        return runCatching { onPooledThread { engine.trees(request, Cancellation.NONE)?.first } }.getOrNull()
     }
 
     private fun compare(engine: ComparisonEngine, request: ComparisonRequest): Outcome {
