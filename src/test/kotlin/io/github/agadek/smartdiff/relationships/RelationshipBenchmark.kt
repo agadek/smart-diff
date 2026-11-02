@@ -266,15 +266,15 @@ object RelationshipBenchmark {
             val label = result.label
             val matched = BooleanArray(result.actualRelationships.size)
             for (expected in label.relationships) {
-                var any = false
+                val matchedKinds = mutableSetOf<Kind>()
                 result.actualRelationships.forEachIndexed { index, actual ->
                     if (actual.kind in expected.kinds && endpointsMatch(expected.old, actual.old) && endpointsMatch(expected.new, actual.new)) {
                         matched[index] = true
-                        any = true
+                        matchedKinds += actual.kind
                         perKind.getOrPut(actual.kind.name) { PairCounts() }.tp++
                     }
                 }
-                if (!any) expected.kinds.forEach { perKind.getOrPut(it.name) { PairCounts() }.fn++ }
+                (expected.kinds - matchedKinds).forEach { perKind.getOrPut(it.name) { PairCounts() }.fn++ }
             }
             result.actualRelationships.forEachIndexed { index, actual ->
                 val forcedPair = label.ambiguous.any { endpointsMatch(it, actual.old) || endpointsMatch(it, actual.new) }
@@ -428,10 +428,11 @@ object RelationshipBenchmark {
             val label = case.label
             val matched = BooleanArray(case.actualRelationships.size)
             for (expected in label.relationships) {
-                val index = case.actualRelationships.indexOfFirst { actual ->
-                    actual.kind in expected.kinds && endpointsMatch(expected.old, actual.old) && endpointsMatch(expected.new, actual.new)
+                case.actualRelationships.forEachIndexed { index, actual ->
+                    if (actual.kind in expected.kinds && endpointsMatch(expected.old, actual.old) && endpointsMatch(expected.new, actual.new)) {
+                        matched[index] = true
+                    }
                 }
-                if (index >= 0) matched[index] = true
             }
             case.actualRelationships.forEachIndexed { index, actual ->
                 val forced = label.ambiguous.any { endpointsMatch(it, actual.old) || endpointsMatch(it, actual.new) }
@@ -453,10 +454,12 @@ object RelationshipBenchmark {
     fun missedRelationships(cases: List<CaseResult>): List<String> = buildList {
         for (case in cases) {
             for (expected in case.label.relationships) {
-                val found = case.actualRelationships.any { actual ->
+                val found = case.actualRelationships.filter { actual ->
                     actual.kind in expected.kinds && endpointsMatch(expected.old, actual.old) && endpointsMatch(expected.new, actual.new)
+                }.map { it.kind }.toSet()
+                (expected.kinds - found).forEach { kind ->
+                    add("${case.label.case}|missed|$kind|${expected.old.name}|${expected.new.name}")
                 }
-                if (!found) add("${case.label.case}|missed|${expected.kinds.first()}|${expected.old.name}|${expected.new.name}")
             }
         }
     }
@@ -465,7 +468,11 @@ object RelationshipBenchmark {
         for (case in cases) {
             for (expected in case.label.changes) {
                 val actual = case.actualNodes.firstOrNull { (endpoint, _) -> endpointsMatch(expected.subject, endpoint) }?.second
-                if (actual == null || actual.presence != expected.presence || actual.content != expected.content) {
+                val mismatch = actual == null || actual.presence != expected.presence || actual.content != expected.content ||
+                    (expected.moved != null && actual.moved != expected.moved) ||
+                    (expected.signatureChanged != null && actual.signatureChanged != expected.signatureChanged) ||
+                    (expected.kindChangedFrom != null && actual.kindChangedFrom != expected.kindChangedFrom)
+                if (mismatch) {
                     add("${case.label.case}|${expected.subject.name}|expected ${expected.presence}/${expected.content}, actual ${actual?.presence ?: "missing"}/${actual?.content ?: "-"}")
                 }
             }
@@ -555,9 +562,8 @@ object RelationshipBenchmark {
     private fun revision(file: File): String {
         val digest = MessageDigest.getInstance("SHA-256")
         digest.update(file.readText().toByteArray())
-        val root = file.parentFile
         file.readLines().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("#") }.forEach { line ->
-            val directory = if (File(line).isAbsolute) File(line) else File(root, line)
+            val directory = File(line)
             if (directory.isDirectory) directory.listFiles().orEmpty().sortedBy { it.name }.forEach { digest.update(it.readBytes()) }
         }
         return digest.digest().joinToString("") { "%02x".format(it) }.take(12)

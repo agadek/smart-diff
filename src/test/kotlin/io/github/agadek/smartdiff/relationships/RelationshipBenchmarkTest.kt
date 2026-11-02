@@ -237,13 +237,11 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
             println("RELATIONSHIPS skipped: no corpus (run with -P${RelationshipBenchmark.CORPUS_PROPERTY}=<list>)")
             return
         }
-        val output = Files.createTempDirectory("relationship-property").toFile()
-        try {
-            val report = RelationshipBenchmark.run(list, output)
-            assertTrue(report.gateFailures.toString(), report.gateFailures.isEmpty())
-        } finally {
-            output.deleteRecursively()
-        }
+        val report = RelationshipBenchmark.run(list)
+        assertTrue(report.gateFailures.toString(), report.gateFailures.isEmpty())
+        assertTrue(File("build/reports/smartdiff-relationships/summary.tsv").isFile)
+        assertTrue(File("build/reports/smartdiff-relationships/report.md").isFile)
+        assertTrue(File("build/reports/smartdiff-relationships/report.json").isFile)
     }
 
     fun `test a multi-kind relationship matches every actual kind`() {
@@ -264,6 +262,13 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         assertEquals(1, metrics.perKind.getValue("RENAME").tp)
         assertEquals(1, metrics.perKind.getValue("MOVE").tp)
         assertEquals(0, metrics.perKind.values.sumOf { it.fp })
+        val result = caseResult(label, actuals, nodes())
+        assertTrue(RelationshipBenchmark.wrongPairs(listOf(result)).isEmpty())
+        assertTrue(RelationshipBenchmark.missedRelationships(listOf(result)).isEmpty())
+
+        val oneKind = caseResult(label, listOf(actuals.first()), nodes())
+        assertEquals(1, RelationshipBenchmark.evaluate(listOf(label), listOf(oneKind)).perKind.getValue("MOVE").fn)
+        assertTrue(RelationshipBenchmark.missedRelationships(listOf(oneKind)).any { it.contains("MOVE") })
     }
 
     fun `test a missing baseline file is a gate failure`() {
