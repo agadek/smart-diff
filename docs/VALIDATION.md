@@ -229,7 +229,7 @@ The 2026-11-01 run predates the #50 fix (#58). Replaying the same commits with i
 
 **Time:** the median was 29 ms for both comparisons together and 23 ms for one base-side comparison, a ratio of 1.26, against 33 ms and 23 ms in the first run. Within the twice-the-side limit (R17).
 
-**Flagged files:** 59 files, 61 flag rows. Every `both-sides-clean` and `conflict-one-side` file gets one row, and a file with both flags gets one row per flag (`Entity.kt` and `DMLTests.kt`).
+**Flagged files:** 60 files, 61 flag rows. Every `both-sides-clean` and `conflict-one-side` file gets one row, and a file with both flags gets one row per flag (`DMLTests.kt`).
 
 ### Expected
 
