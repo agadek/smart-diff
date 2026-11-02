@@ -72,7 +72,8 @@ class CorpusValidationTest : BasePlatformTestCase() {
                 println("VALIDATION ${repository.name} commit ${index + 1} of ${commits.size}: ${commit.take(10)}")
                 val parent = git(repository, listOf("rev-parse", "--verify", "--quiet", "$commit^"), allowFailure = true).trim()
                 if (parent.isEmpty()) continue
-                val paths = git(repository, listOf("diff", "--name-only", "--diff-filter=M", parent, commit, "--", "*.java", "*.kt", "*.scala"))
+                // --no-renames: a rename is a delete plus an add, so it is skipped here instead of vanishing from the run.
+                val paths = git(repository, listOf("diff", "--no-renames", "--name-only", "--diff-filter=M", parent, commit, "--", "*.java", "*.kt", "*.scala"))
                     .lines().filter { it.isNotBlank() }
                 for (path in paths) {
                     val old = git(repository, listOf("show", "$parent:$path")).replace("\r\n", "\n")

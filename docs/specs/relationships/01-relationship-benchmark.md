@@ -19,7 +19,7 @@ Status: implemented, 2026-11-02
 - **R9** Each case category has at least 3 cases for each of Java, Kotlin, Scala 2 and Scala 3, where the language has the construct.
 - **R10** The corpus list can also name real commits, as the [corpus validation](../../VALIDATION.md) does, with at least 30 labelled commits per language.
 - **R11** The cases are split into a tuning set and a held-out set, and the report gives the held-out results separately.
-- **R12** For each relationship kind, the report gives precision, recall and the share of wrong pairs, per language and overall.
+- **R12** For each relationship kind, the report gives precision, recall and the share of wrong pairs, per language and overall, and `n/a` in place of a precision or recall with nothing to divide.
 - **R13** A reported relationship with the right name but the wrong declaration counts as wrong.
 - **R14** The report counts the ambiguous cases that were forced into a pair.
 - **R15** The report gives the accuracy of each declaration's presence and content classification.
@@ -36,12 +36,12 @@ Status: implemented, 2026-11-02
 - **R26** In every mode, the run fails on a nothing-hidden violation, a file over the time limit, or malformed input that throws.
 - **R27** The report records the gate mode used.
 - **R28** Two runs on the same engine and cases give the same report, apart from times.
-- **R29** Before the first relationship model change, a baseline report of today's engine is recorded in VALIDATION.md.
+- **R29** Before the first relationship model change, a baseline report of today's engine is recorded in VALIDATION.md, with its `report.json` checked in beside the tests.
 - **R30** Every run checks the minimums of R8, R9 and R10, and the report lists each category and language below its minimum.
 - **R31** A run below any minimum is reported as a [smoke run](../../GLOSSARY.md#smoke-run).
 - **R32** A smoke run's report is refused as a baseline, and a smoke run never meets R29.
 - **R33** Scala 2 and Scala 3 are separate languages in every count, metric, minimum and report row.
-- **R34** A real-commit line is run: every Java, Kotlin and Scala file it selects is compared with its first parent.
+- **R34** A real-commit line is run: every modified Java, Kotlin and Scala file it selects is compared with its first parent, and added and deleted files are listed as skipped.
 - **R35** A label for a real commit names the repository, the commit and the file path, in place of old and new files.
 - **R36** A file selected by a real-commit line with no reviewed label is counted and listed as unlabelled, and is not scored.
 - **R37** The benchmark can write a draft label for an unlabelled file, and a draft is not scored until it is marked reviewed.

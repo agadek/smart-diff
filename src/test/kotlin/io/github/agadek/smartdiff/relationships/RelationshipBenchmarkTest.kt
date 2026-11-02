@@ -11,6 +11,10 @@ import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
+import io.github.agadek.smartdiff.engine.declarations.model.Declaration
+import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
+import io.github.agadek.smartdiff.engine.declarations.model.FileRegion
+import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy
 import java.io.File
 import java.nio.file.Files
 
@@ -226,12 +230,11 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         val output = Files.createTempDirectory("relationship-corpus-report").toFile()
         try {
             val report = RelationshipBenchmark.run(File("src/test/testData/relationships-corpus.txt"), output)
-            assertEquals(304, report.cases.size)
+            assertEquals("every checked-in case runs", checkedInCaseFolders().size, report.cases.size)
             assertTrue("the case-only list is a smoke run because it has no real commits", report.smoke)
             assertTrue(File(output, "summary.tsv").isFile)
             assertTrue(File(output, "report.md").isFile)
             assertTrue(File(output, "report.json").isFile)
-
         } finally {
             output.deleteRecursively()
         }
@@ -241,7 +244,9 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         // relationships/01-relationship-benchmark R8, R9, R30
         val entries = RelationshipBenchmark.parseCorpus(File("src/test/testData/relationships-corpus.txt"))
         val labels = entries.mapNotNull { it.path }.map { RelationshipBenchmark.parseLabel(File(it, "label.yaml")) }
-        assertEquals("every checked-in case folder is in the list", 304, labels.size)
+        val checkedIn = checkedInCaseFolders().map { it.absoluteFile.normalize() }.toSet()
+        val listed = entries.mapNotNull { it.path }.map { it.absoluteFile.normalize() }.toSet()
+        assertEquals("every checked-in case folder is in the list", checkedIn, listed)
         assertTrue("every case is reviewed", labels.all { it.reviewed })
         val failures = RelationshipBenchmark.matrixFailures(labels, labelledCommits = emptyMap(), commitMinimum = 0)
         assertTrue("shortfalls: $failures", failures.isEmpty())
@@ -258,23 +263,34 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         val text = file.readText()
         assertFalse("no absolute path names a user", text.contains("/Users/"))
         val entries = RelationshipBenchmark.parseCorpus(file)
-        assertEquals("all checked-in cases are listed", 304, entries.count { it.path != null })
+        assertEquals("all checked-in cases are listed", checkedInCaseFolders().size, entries.count { it.path != null })
         val commits = entries.filter { it.repository != null }
         assertTrue("the full list names the real-commit clones", commits.size >= 4)
-        assertEquals(120, commits.sumOf { line -> Regex("[0-9a-f]{40}").findAll(line.line).count() })
+        val hashes = commits.flatMap { line -> Regex("[0-9a-f]{40}").findAll(line.line).map { it.value }.toList() }
+        val folders = checkedInCommitFolders()
+        assertEquals("every checked-in labelled commit is in the list, once", folders.size, hashes.distinct().size)
+        for (folder in folders) {
+            assertTrue(
+                "the list names the commit folder ${folder.parentFile.name}/${folder.name}",
+                hashes.any { it.startsWith(folder.name) },
+            )
+        }
     }
 
     fun `test the checked-in real commit labels meet the commit minimum`() {
         // relationships/01-relationship-benchmark R10, R35, R36, R37
         for (corpus in RelationshipBenchmark.CORPORA) {
             val directory = File("src/test/testData/$corpus/relationships/commits")
-            val labels = directory.walkTopDown().filter { it.isFile && it.name.endsWith(".yaml") }.toList()
-            assertTrue("$corpus has ${labels.size} real-commit labels", labels.size >= RelationshipBenchmark.MINIMUM_COMMITS)
-            for (file in labels) {
-                val label = RelationshipBenchmark.parseLabel(file)
-                assertTrue("${file.path} is reviewed", label.reviewed)
-                assertNotNull("${file.path} names its commit", label.source)
-                assertEquals(corpus, label.corpus)
+            val commits = directory.listFiles().orEmpty().filter { it.isDirectory }
+                .flatMap { repository -> repository.listFiles().orEmpty().filter { it.isDirectory } }
+            assertTrue("$corpus has ${commits.size} labelled commits", commits.size >= RelationshipBenchmark.MINIMUM_COMMITS)
+            for (commit in commits) {
+                for (file in commit.listFiles().orEmpty().filter { it.isFile && it.name.endsWith(".yaml") }) {
+                    val label = RelationshipBenchmark.parseLabel(file)
+                    assertTrue("${file.path} is reviewed", label.reviewed)
+                    assertNotNull("${file.path} names its commit", label.source)
+                    assertEquals(corpus, label.corpus)
+                }
             }
         }
     }
@@ -321,8 +337,8 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         assertTrue(RelationshipBenchmark.missedRelationships(listOf(oneKind)).any { it.contains("MOVE") })
     }
 
-    fun `test a renamed move names its old subject and an extraction link is counted once`() {
-        // relationships/01-relationship-benchmark R38, R39
+    fun `test a renamed move names its old subject`() {
+        // relationships/01-relationship-benchmark-details.md: Before the relationship model exists (the adapter)
         val oldSubject = Subject.Declaration(DeclarationKind.METHOD, "total", "()")
         val newSubject = Subject.Declaration(DeclarationKind.METHOD, "sum", "()")
         val moved = ChangeNode(
@@ -334,7 +350,10 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         )
         assertEquals(setOf(RelationshipBenchmark.Kind.RENAME, RelationshipBenchmark.Kind.MOVE), relationship.map { it.kind }.toSet())
         assertEquals("total", relationship.single { it.kind == RelationshipBenchmark.Kind.MOVE }.old.name)
+    }
 
+    fun `test an extraction link is counted once`() {
+        // relationships/01-relationship-benchmark R38
         val source = Subject.Declaration(DeclarationKind.METHOD, "render", "(String)")
         val target = Subject.Declaration(DeclarationKind.METHOD, "renderLines", "(String)")
         val sourceNode = ChangeNode(source, TextRange(0, 5), TextRange(6, 11), Presence.MATCHED, extractedTo = listOf(target))
@@ -395,6 +414,8 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
                 ),
             )
             val markdown = File(directory, "report.md").readText()
+            assertTrue("wrong and forced pairs have their own heading", markdown.contains("## Wrong and forced relationships"))
+            assertFalse("the old heading is gone", markdown.contains("## Wrong and missed relationships"))
             assertTrue(markdown.contains("## Missed relationships"))
             assertTrue(markdown.contains("## Classification mismatches"))
         } finally {
@@ -417,8 +438,24 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         assertTrue("the baseline section", validation.contains("## 2026-11-02: relationship benchmark baseline"))
         assertTrue("the run has no shortfall", validation.contains("no shortfall"))
         assertTrue("the corpus list is named", validation.contains("relationships-corpus-full.txt"))
+        assertTrue("the checked-in baseline report is named", validation.contains("src/test/testData/relationships-baseline/report.json"))
         assertTrue("the report paths are named", validation.contains("build/reports/smartdiff-relationships/summary.tsv"))
         assertTrue("the old smoke run is linked", validation.contains("(#2026-11-01-relationship-benchmark)"))
+    }
+
+    fun `test the checked-in baseline report is complete and matches the recorded revision`() {
+        // relationships/01-relationship-benchmark R20, R29, R32
+        val file = File("src/test/testData/relationships-baseline/report.json")
+        assertTrue("the baseline report is checked in", file.isFile)
+        val json = file.readText()
+        assertTrue("the baseline is not a smoke run", json.contains("\"smoke\": false"))
+        assertTrue("the baseline has no shortfall", json.contains("\"shortfalls\": []"))
+        val revision = Regex("\"corpusRevision\":\\s*\"([0-9a-f]+)\"").find(json)
+        assertNotNull("the baseline records the corpus revision", revision)
+        assertTrue(
+            "VALIDATION.md records the baseline revision ${revision!!.groupValues[1]}",
+            File("docs/VALIDATION.md").readText().contains(revision.groupValues[1]),
+        )
     }
 
     fun `test every run checks the case matrix minimums`() {
@@ -461,21 +498,26 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test a smoke baseline is refused`() {
-        // relationships/01-relationship-benchmark R32
-        val directory = Files.createTempDirectory("relationship-smoke-baseline").toFile()
+    fun `test a smoke baseline report is refused`() {
+        // relationships/01-relationship-benchmark R30, R31, R32
+        val output = Files.createTempDirectory("relationship-smoke-baseline").toFile()
         try {
-            val baseline = File(directory, "baseline.json").apply {
-                writeText("""{"smoke":true,"wrongPairs":[],"precision":{},"recall":{}}""")
-            }
+            val report = RelationshipBenchmark.run(File("src/test/testData/relationships-corpus.txt"), output)
+            assertTrue("the case-only corpus is below the minimums", report.smoke)
+            // The baseline is the smoke report.json the run itself produced, not a hand-written file.
+            val baseline = File(output, "report.json")
+            assertTrue(baseline.isFile)
             val result = caseResult(label("rename-1", "JAVA", "method-rename"), emptyList(), nodes())
             val metrics = RelationshipBenchmark.evaluate(listOf(result.label), listOf(result))
             val failures = RelationshipBenchmark.gateFailures(
                 "no-new-wrong-pairs", metrics, mapOf("java" to metrics), baseline, 0.0, listOf(result),
             )
-            assertTrue(failures.any { it.contains("baseline is a smoke run") })
+            assertTrue(
+                "the produced smoke report is refused",
+                failures.any { it == "baseline is a smoke run: ${baseline.path}" },
+            )
         } finally {
-            directory.deleteRecursively()
+            output.deleteRecursively()
         }
     }
 
@@ -722,39 +764,373 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test editing a real commit label changes the corpus revision`() {
+        // relationships/01-relationship-benchmark R43
+        val repository = gitRepository()
+        try {
+            val before = RelationshipBenchmark.corpusRevision(repository.corpus, repository.labels)
+            val label = File(repository.labels, "java/relationships/commits/sample-repo/${repository.short}/A.yaml")
+            assertTrue(label.isFile)
+            label.appendText("# edited\n")
+            assertFalse("editing a real-commit label changes the revision", before == RelationshipBenchmark.corpusRevision(repository.corpus, repository.labels))
+        } finally {
+            repository.root.deleteRecursively()
+        }
+    }
+
+    fun `test moving a clone's HEAD changes the corpus revision`() {
+        // relationships/01-relationship-benchmark R43
+        val repository = gitRepository()
+        try {
+            val before = RelationshipBenchmark.corpusRevision(repository.corpus, repository.labels)
+            git(repository.repository, "commit", "--allow-empty", "-q", "-m", "move head")
+            assertFalse("moving a clone HEAD changes the revision", before == RelationshipBenchmark.corpusRevision(repository.corpus, repository.labels))
+        } finally {
+            repository.root.deleteRecursively()
+        }
+    }
+
+    fun `test two same-identity changes cannot claim one node`() {
+        // relationships/01-relationship-benchmark R15, R42
+        val subject = Subject.Declaration(DeclarationKind.METHOD, "read", "()")
+        val changed = ChangeNode(subject, TextRange(0, 5), TextRange(6, 11), Presence.MATCHED)
+        val added = ChangeNode(subject, null, TextRange(12, 18), Presence.ADDED)
+        val expected = RelationshipBenchmark.ExpectedChange(endpoint("read"), Presence.ADDED, Content.UNCHANGED)
+        val label = label("overload-1", "JAVA", "overloads-same-body").copy(
+            relationships = emptyList(),
+            changes = listOf(expected, expected),
+            ambiguous = emptyList(),
+        )
+        val result = RelationshipBenchmark.CaseResult(
+            label, ComparisonResult(EngineId("test"), "1", Status.ANALYZED),
+            emptyList(), listOf(endpoint("read") to changed, endpoint("read") to added),
+            1, false,
+        )
+        val metrics = RelationshipBenchmark.evaluate(listOf(label), listOf(result))
+        assertEquals("the added node is claimed once and the matched node scores as wrong", 1, metrics.presenceCorrect)
+        assertEquals(2, metrics.presenceTotal)
+        assertEquals("the second change is listed as a mismatch", 1, RelationshipBenchmark.classificationMismatches(listOf(result)).size)
+    }
+
+    fun `test a differing confidence does not change scoring`() {
+        // relationships/01-relationship-benchmark-details.md: confidence is not compared until the engine reports one
+        fun metricsFor(confidence: RelationshipBenchmark.Confidence?): RelationshipBenchmark.Metrics {
+            val expected = RelationshipBenchmark.LabelledRelationship(
+                setOf(RelationshipBenchmark.Kind.RENAME), old("total"), new("sum"), confidence,
+            )
+            val label = label("rename-1", "JAVA", "method-rename").copy(relationships = listOf(expected))
+            val actual = RelationshipBenchmark.ActualRelationship(
+                RelationshipBenchmark.Kind.RENAME, old("total"), new("sum"), RelationshipBenchmark.Confidence.MEDIUM,
+            )
+            val result = caseResult(label, listOf(actual), nodes())
+            return RelationshipBenchmark.evaluate(listOf(label), listOf(result))
+        }
+        val withConfidence = metricsFor(RelationshipBenchmark.Confidence.HIGH)
+        val without = metricsFor(null)
+        assertEquals(1, withConfidence.perKind.getValue("RENAME").tp)
+        assertEquals(0, withConfidence.perKind.getValue("RENAME").fp)
+        assertEquals(0, withConfidence.perKind.getValue("RENAME").fn)
+        assertEquals(without.perKind.getValue("RENAME").tp, withConfidence.perKind.getValue("RENAME").tp)
+        assertEquals(without.perKind.getValue("RENAME").fp, withConfidence.perKind.getValue("RENAME").fp)
+    }
+
+    fun `test a cross-container move names its old container`() {
+        // relationships/01-relationship-benchmark-details.md: Before the relationship model exists (the adapter)
+        val method = Declaration(DeclarationKind.METHOD, "replicateA_", "Int", TextRange(10, 20))
+        val oldTree = DeclarationTree(
+            listOf(Declaration(DeclarationKind.CLASS, "ApplicativeOps", null, TextRange(0, 100), children = listOf(method))),
+            FileRegion(emptyList(), emptyList()),
+            WhitespacePolicy.INSIGNIFICANT,
+        )
+        val moved = ChangeNode(
+            Subject.Declaration(DeclarationKind.METHOD, "replicateA_", "Int"),
+            TextRange(10, 20), TextRange(30, 40), Presence.MATCHED, moved = true,
+        )
+        val result = ComparisonResult(
+            EngineId("test"), "1", Status.ANALYZED,
+            changes = listOf(
+                ChangeNode(
+                    Subject.Declaration(DeclarationKind.CLASS, "ApplicativeByValueOps", null),
+                    TextRange(0, 100), TextRange(0, 100), Presence.MATCHED, children = listOf(moved),
+                ),
+            ),
+        )
+        val fallback = RelationshipBenchmark.actualRelationships(result).single { it.kind == RelationshipBenchmark.Kind.MOVE }
+        assertEquals("without the old tree the new container is used", "class ApplicativeByValueOps", fallback.old.path)
+        val relationship = RelationshipBenchmark.actualRelationships(result, oldTree).single { it.kind == RelationshipBenchmark.Kind.MOVE }
+        assertEquals("the old container comes from the old tree", "class ApplicativeOps", relationship.old.path)
+        assertEquals("class ApplicativeByValueOps", relationship.new.path)
+    }
+
+    fun `test an extraction keeps the copy with declaration ranges`() {
+        // relationships/01-relationship-benchmark-details.md: an extraction is listed from both ends
+        val source = Subject.Declaration(DeclarationKind.METHOD, "render", "()")
+        val target = Subject.Declaration(DeclarationKind.METHOD, "helper", "()")
+        val sourceNode = ChangeNode(source, TextRange(0, 5), TextRange(6, 11), Presence.MATCHED, extractedTo = listOf(target))
+        val targetNode = ChangeNode(
+            target, null, TextRange(20, 25), Presence.ADDED,
+            extractedFrom = listOf(Origin(source, TextRange(0, 5), TextRange(2, 4))),
+        )
+        val link = RelationshipBenchmark.actualRelationships(
+            ComparisonResult(EngineId("test"), "1", Status.ANALYZED, changes = listOf(sourceNode, targetNode)),
+        ).single { it.kind == RelationshipBenchmark.Kind.EXTRACT }
+        assertEquals("the source's declaration range is kept", TextRange(0, 5), link.old.range)
+        assertEquals("the target's declaration range is kept", TextRange(20, 25), link.new.range)
+    }
+
+    fun `test two extractions that differ only by range stay two links`() {
+        // relationships/01-relationship-benchmark R6
+        val source = Subject.Declaration(DeclarationKind.METHOD, "render", "()")
+        val target = Subject.Declaration(DeclarationKind.METHOD, "helper", "()")
+        fun targetNode(range: TextRange, sourceRange: TextRange) = ChangeNode(
+            target, null, range, Presence.ADDED,
+            extractedFrom = listOf(Origin(source, sourceRange, sourceRange)),
+        )
+        val links = RelationshipBenchmark.actualRelationships(
+            ComparisonResult(
+                EngineId("test"), "1", Status.ANALYZED,
+                changes = listOf(targetNode(TextRange(20, 25), TextRange(0, 5)), targetNode(TextRange(30, 35), TextRange(10, 15))),
+            ),
+        )
+        assertEquals(2, links.count { it.kind == RelationshipBenchmark.Kind.EXTRACT })
+    }
+
+    fun `test a no-argument signature is one identity in every language`() {
+        // relationships/01-relationship-benchmark-details.md: null, "" and "()" are the same signature identity
+        val none = RelationshipBenchmark.Endpoint("class Order", DeclarationKind.METHOD, "size", null)
+        assertTrue(none.sameIdentity(none.copy(signature = "")))
+        assertTrue(none.copy(signature = "").sameIdentity(none.copy(signature = "()")))
+        assertTrue(RelationshipBenchmark.endpointsMatch(none.copy(signature = "()", range = TextRange(0, 5)), none.copy(range = TextRange(0, 5))))
+    }
+
+    fun `test a renamed file is a delete plus an add, both skipped`() {
+        // relationships/01-relationship-benchmark R34
+        val repository = gitRepository(
+            initial = mapOf("A.java" to java("A", "total"), "B.java" to java("B", "total")),
+            changed = mapOf("A.java" to null, "C.java" to java("C", "sum"), "B.java" to java("B", "sum")),
+            labelled = listOf("B.java"),
+        )
+        try {
+            val report = runRepository(repository)
+            assertEquals("the modified file is compared", 1, report.cases.size)
+            assertTrue("the rename is listed as a delete", report.skippedFiles.any { it.endsWith("A.java: deleted") })
+            assertTrue("the rename is listed as an add", report.skippedFiles.any { it.endsWith("C.java: added") })
+            assertEquals(2, report.skippedFiles.size)
+        } finally {
+            repository.root.deleteRecursively()
+        }
+    }
+
+    fun `test a fully labelled commit counts toward R10`() {
+        // relationships/01-relationship-benchmark R10
+        val repository = gitRepository(labelled = listOf("A.java", "B.java"))
+        try {
+            val report = runRepository(repository)
+            assertEquals(2, report.cases.size)
+            assertTrue(report.unlabelled.isEmpty())
+            assertEquals("every modified file is labelled, so the commit counts", 1, report.labelledCommits["java"] ?: 0)
+        } finally {
+            repository.root.deleteRecursively()
+        }
+    }
+
+    fun `test a commit with an added file still counts when its modified file is labelled`() {
+        // relationships/01-relationship-benchmark R10
+        val repository = gitRepository(
+            initial = mapOf("A.java" to java("A", "total")),
+            changed = mapOf("A.java" to java("A", "sum"), "C.java" to java("C", "sum")),
+            labelled = listOf("A.java"),
+        )
+        try {
+            val report = runRepository(repository)
+            assertEquals(1, report.cases.size)
+            assertTrue("the added file is listed as skipped", report.skippedFiles.single().endsWith("C.java: added"))
+            assertEquals("the added file does not block the count", 1, report.labelledCommits["java"] ?: 0)
+            assertTrue(report.unlabelled.isEmpty())
+        } finally {
+            repository.root.deleteRecursively()
+        }
+    }
+
+    fun `test a non-ASCII path is read unquoted`() {
+        // relationships/01-relationship-benchmark R34
+        val repository = gitRepository(
+            initial = mapOf("A.java" to java("A", "total"), "café.java" to java("Cafe", "total")),
+            changed = mapOf("A.java" to java("A", "sum"), "café.java" to java("Cafe", "sum")),
+            labelled = listOf("A.java"),
+        )
+        try {
+            val report = runRepository(repository)
+            assertEquals("café.java", report.unlabelled.single().path)
+        } finally {
+            repository.root.deleteRecursively()
+        }
+    }
+
+    fun `test an unlabelled Scala file is filed under its dialect`() {
+        // relationships/01-relationship-benchmark R33
+        assertEquals("scala3", RelationshipBenchmark.scalaCorpusFor("Scala 3"))
+        assertEquals("scala2", RelationshipBenchmark.scalaCorpusFor("Scala 2"))
+        assertNull("an unknown dialect is not filed as Scala 2", RelationshipBenchmark.scalaCorpusFor(null))
+        assertNull(RelationshipBenchmark.scalaCorpusFor(""))
+        val repository = gitRepository(
+            initial = mapOf("S.scala" to scala3("total")),
+            changed = mapOf("S.scala" to scala3("sum")),
+            labelled = emptyList(),
+        )
+        try {
+            val report = runRepository(repository)
+            val unlabelled = report.unlabelled.single()
+            assertEquals("a Scala 3 file is counted under scala3", "scala3", unlabelled.corpus)
+            assertEquals("no label", unlabelled.reason)
+        } finally {
+            repository.root.deleteRecursively()
+        }
+    }
+
+    fun `test the report gives per category metrics and shows n a for nothing to divide`() {
+        // relationships/01-relationship-benchmark R12, R20
+        val directory = Files.createTempDirectory("relationship-category-report").toFile()
+        try {
+            val inline = RelationshipBenchmark.PairCounts(tp = 0, fp = 0, fn = 3)
+            val metrics = RelationshipBenchmark.Metrics(mapOf("INLINE" to inline), 0, 0, 0, 0, 0, listOf(5))
+            val report = RelationshipBenchmark.Report(
+                emptyList(), mapOf("java" to metrics), mapOf(RelationshipBenchmark.Split.TUNING to metrics), metrics,
+                "no-new-wrong-pairs", emptyList(), "abc", directory,
+                metricsByCategory = mapOf("inlining" to metrics),
+            )
+            RelationshipBenchmark.write(report)
+            val markdown = File(directory, "report.md").readText()
+            assertTrue("the report has per-category rows", markdown.contains("## Per category"))
+            assertTrue(markdown.contains("| inlining | n/a | 0.000 |"))
+            assertTrue("a kind with no reported pair shows n/a", markdown.contains("| java | INLINE | 0 | 0 | 3 | n/a | 0.000 |"))
+            val tsv = File(directory, "summary.tsv").readText()
+            assertTrue("summary.tsv shows n/a", tsv.contains("java\tINLINE\t0\t0\t3\tn/a\t0.000"))
+            val json = File(directory, "report.json").readText()
+            assertTrue("report.json has per-category metrics", json.contains("\"perCategory\""))
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
+    fun `test a label path not in the commit fails with the label path`() {
+        // relationships/01-relationship-benchmark R35
+        val repository = gitRepository()
+        try {
+            val bad = writeCommitLabel(repository, "A", reviewed = true, path = "Missing.java")
+            val error = runCatching { runRepository(repository) }.exceptionOrNull()
+            assertNotNull("a missing path fails the run", error)
+            assertTrue("the failure names the label path", error!!.message.orEmpty().contains(bad.path))
+        } finally {
+            repository.root.deleteRecursively()
+        }
+    }
+
+    fun `test a commit with no first parent fails with the label path`() {
+        // relationships/01-relationship-benchmark R35
+        val repository = gitRepository()
+        try {
+            val bad = writeCommitLabel(
+                repository, "A", reviewed = true,
+                short = repository.rootCommit.take(7), commit = repository.rootCommit,
+            )
+            val error = runCatching { runRepository(repository) }.exceptionOrNull()
+            assertNotNull("a root commit fails the run", error)
+            assertTrue("the failure names the label path", error!!.message.orEmpty().contains("has no first parent"))
+            assertTrue(error.message.orEmpty().contains(bad.path))
+        } finally {
+            repository.root.deleteRecursively()
+        }
+    }
+
+    fun `test a label from another repository fails with the label path`() {
+        // relationships/01-relationship-benchmark R35
+        val repository = gitRepository()
+        try {
+            val bad = writeCommitLabel(repository, "A", reviewed = true, sourceRepository = "other-clone")
+            val error = runCatching { runRepository(repository) }.exceptionOrNull()
+            assertNotNull("a repository mismatch fails the run", error)
+            assertTrue("the failure names the label path", error!!.message.orEmpty().contains(bad.path))
+        } finally {
+            repository.root.deleteRecursively()
+        }
+    }
+
+    fun `test a label in the wrong corpus folder fails with the label path`() {
+        // relationships/01-relationship-benchmark R35
+        val repository = gitRepository()
+        try {
+            val bad = writeCommitLabel(repository, "A", reviewed = true, corpusFolder = "scala2", corpus = "java")
+            val error = runCatching { runRepository(repository) }.exceptionOrNull()
+            assertNotNull("a corpus mismatch fails the run", error)
+            assertTrue("the failure names the label path", error!!.message.orEmpty().contains(bad.path))
+        } finally {
+            repository.root.deleteRecursively()
+        }
+    }
+
     private class TestRepository(
         val root: File,
         val repository: File,
         val commit: String,
         val short: String,
+        val rootCommit: String,
         val labels: File,
         val corpus: File,
         val output: File,
     )
 
-    /** A clone with one commit that changes two Java files, so one file can be labelled and one left unlabelled. */
-    private fun gitRepository(): TestRepository {
+    /**
+     * A clone with an initial commit that sets [initial] and a second commit that applies [changed]; a null value deletes
+     * the file. Every file changed in the second commit has to have `total` before and `sum` after, so [labelled] names
+     * the files whose labels are written. The default changes two Java files, so one can be labelled and one left
+     * unlabelled.
+     */
+    private fun gitRepository(
+        initial: Map<String, String> = mapOf("A.java" to java("A", "total"), "B.java" to java("B", "total")),
+        changed: Map<String, String?> = mapOf("A.java" to java("A", "sum"), "B.java" to java("B", "sum")),
+        labelled: List<String> = listOf("A.java"),
+    ): TestRepository {
         val root = Files.createTempDirectory("relationship-git").toFile()
         val repository = File(root, "sample-repo").apply { mkdirs() }
         git(repository, "init", "-q")
         git(repository, "config", "user.email", "test@example.com")
         git(repository, "config", "user.name", "SMART Diff test")
         git(repository, "config", "commit.gpgsign", "false")
-        File(repository, "A.java").writeText("class A {\n  int total() { return 1; }\n}\n")
-        File(repository, "B.java").writeText("class B {\n  int first() { return 1; }\n}\n")
-        git(repository, "add", ".")
+        writeFiles(repository, initial)
+        git(repository, "add", "-A")
         git(repository, "commit", "-q", "-m", "initial")
-        File(repository, "A.java").writeText("class A {\n  int sum() { return 1; }\n}\n")
-        File(repository, "B.java").writeText("class B {\n  int second() { return 1; }\n}\n")
-        git(repository, "commit", "-q", "-am", "change both")
+        val rootCommit = git(repository, "rev-parse", "HEAD").trim()
+        writeFiles(repository, changed)
+        git(repository, "add", "-A")
+        git(repository, "commit", "-q", "-m", "change")
         val commit = git(repository, "rev-parse", "HEAD").trim()
         val labels = File(root, "labels")
         val corpus = File(root, "corpus.txt").apply { writeText("${repository.absolutePath} --max-count=1 HEAD\n") }
         val output = File(root, "output")
-        val test = TestRepository(root, repository, commit, commit.take(7), labels, corpus, output)
-        writeCommitLabel(test, "A", reviewed = true)
+        val test = TestRepository(root, repository, commit, commit.take(7), rootCommit, labels, corpus, output)
+        for (name in labelled) {
+            val className = name.substringBeforeLast('.')
+            writeCommitLabel(test, className, reviewed = true, path = name)
+        }
         return test
     }
+
+    private fun writeFiles(directory: File, files: Map<String, String?>) {
+        for ((path, text) in files) {
+            val file = File(directory, path)
+            if (text == null) {
+                file.delete()
+            } else {
+                file.parentFile.mkdirs()
+                file.writeText(text)
+            }
+        }
+    }
+
+    private fun java(className: String, method: String): String = "class $className {\n  int $method() { return 1; }\n}\n"
+
+    private fun scala3(method: String): String = "class Order:\n  def $method: Int =\n    val x = 42\n    x + 1\n"
 
     private fun writeCommitLabel(
         test: TestRepository,
@@ -763,20 +1139,24 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         repositoryName: String = "sample-repo",
         short: String = test.short,
         commit: String = test.commit,
+        path: String = "$name.java",
+        corpus: String = "java",
+        corpusFolder: String = "java",
+        sourceRepository: String = repositoryName,
     ): File {
-        val file = File(test.labels, "java/relationships/commits/$repositoryName/$short/$name.yaml")
+        val file = File(test.labels, "$corpusFolder/relationships/commits/$repositoryName/$short/$name.yaml")
         file.parentFile.mkdirs()
         file.writeText(
             """case: $repositoryName-$short-$name
 language: JAVA
-corpus: java
+corpus: $corpus
 category: real-commit
 split: held-out
 reviewed: $reviewed
 source:
-  repository: $repositoryName
+  repository: $sourceRepository
   commit: $commit
-  path: $name.java
+  path: $path
 expected:
   relationships:
     - kinds: [RENAME]
@@ -801,12 +1181,28 @@ notes: "Built inside the test."
         )
 
     private fun git(repository: File, vararg arguments: String): String {
-        val process = ProcessBuilder(listOf("git", "-C", repository.absolutePath) + arguments)
+        val process = ProcessBuilder(listOf("git", "-c", "core.quotePath=false", "-C", repository.absolutePath) + arguments)
             .redirectError(ProcessBuilder.Redirect.DISCARD).start()
         val output = process.inputStream.bufferedReader().readText()
         check(process.waitFor() == 0) { "git ${arguments.joinToString(" ")} failed in $repository" }
         return output
     }
+
+    /** Every checked-in case folder, which is a folder under a corpus's relationships folder with a label beside its texts. */
+    private fun checkedInCaseFolders(): List<File> =
+        File("src/test/testData").walkTopDown()
+            .filter { it.isFile && it.name == "label.yaml" && !it.path.replace(File.separatorChar, '/').contains("/commits/") }
+            .map { it.parentFile }
+            .sortedBy { it.path }
+            .toList()
+
+    /** Every checked-in labelled commit, one folder per repository and commit. */
+    private fun checkedInCommitFolders(): List<File> =
+        RelationshipBenchmark.CORPORA.flatMap { corpus ->
+            val root = File("src/test/testData/$corpus/relationships/commits")
+            root.listFiles().orEmpty().filter { it.isDirectory }
+                .flatMap { repository -> repository.listFiles().orEmpty().filter { it.isDirectory } }
+        }
 
     private fun label(
         case: String,

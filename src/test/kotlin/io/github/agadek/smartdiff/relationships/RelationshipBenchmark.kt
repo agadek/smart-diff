@@ -19,6 +19,8 @@ import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.api.compareSafely
 import io.github.agadek.smartdiff.engine.api.contract.NothingHidden
+import io.github.agadek.smartdiff.engine.declarations.model.Declaration
+import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationEngine
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationProvider
 import io.github.agadek.smartdiff.ui.OutlineModel
@@ -225,6 +227,9 @@ object RelationshipBenchmark {
         val kindCorrect: Int = 0,
         val kindTotal: Int = 0,
     ) {
+        /** R12: the pairs the engine reported; zero means precision has nothing to divide, so the report shows `n/a`. */
+        val reportedPairs: Int get() = perKind.values.sumOf { it.tp + it.fp }
+        val labelledPairs: Int get() = perKind.values.sumOf { it.tp + it.fn }
         val classificationAccuracy: Double get() = if (classificationTotal == 0) 1.0 else classificationCorrect.toDouble() / classificationTotal
         val presenceAccuracy: Double get() = accuracy(presenceCorrect, presenceTotal)
         val contentAccuracy: Double get() = accuracy(contentCorrect, contentTotal)
@@ -249,6 +254,7 @@ object RelationshipBenchmark {
         val gateFailures: List<String>,
         val corpusRevision: String,
         val reportDirectory: File,
+        val metricsByCategory: Map<String, Metrics> = emptyMap(),
         val skippedCommitLines: Int = 0,
         val smoke: Boolean = false,
         val matrixFailures: List<MatrixFailure> = emptyList(),
@@ -380,12 +386,15 @@ object RelationshipBenchmark {
 
     private fun list(value: Any?): List<Any?> = value as? List<Any?> ?: emptyList()
 
-    fun actualRelationships(result: ComparisonResult): List<ActualRelationship> {
+    fun actualRelationships(result: ComparisonResult, oldTree: DeclarationTree? = null): List<ActualRelationship> {
+        val oldPaths = oldContainerPaths(oldTree)
         val relationships = mutableListOf<ActualRelationship>()
         fun visit(node: ChangeNode, ancestors: List<Subject>) {
-            val path = ancestors.joinToString(" / ") { OutlineModel.title(it) }
-            val old = { subject: Subject, range: TextRange? -> endpoint(subject, path, range) }
-            val new = { range: TextRange? -> endpoint(node.subject, path, range) }
+            val newPath = ancestors.joinToString(" / ") { OutlineModel.title(it) }
+            // A move can change the container, so an old endpoint's path comes from the old side's tree, by its old range.
+            fun old(subject: Subject, range: TextRange?): Endpoint =
+                endpoint(subject, range?.let { oldPaths[it] } ?: newPath, range)
+            val new = { range: TextRange? -> endpoint(node.subject, newPath, range) }
             node.renamedFrom?.let { relationships += ActualRelationship(Kind.RENAME, old(it, node.oldRange), new(node.newRange), Confidence.MEDIUM) }
             // A renamed declaration that also moved is old-named by its old subject, so the move names the old declaration.
             if (node.moved) relationships += ActualRelationship(Kind.MOVE, old(node.renamedFrom ?: node.subject, node.oldRange), new(node.newRange), Confidence.HIGH)
@@ -393,28 +402,62 @@ object RelationshipBenchmark {
                 val before = Subject.Declaration(it, (node.renamedFrom as? Subject.Declaration)?.name ?: (node.subject as Subject.Declaration).name, (node.subject as Subject.Declaration).signature)
                 relationships += ActualRelationship(Kind.KIND_CHANGE, old(before, node.oldRange), new(node.newRange), Confidence.HIGH)
             }
-            node.extractedFrom.forEach { relationships += ActualRelationship(Kind.EXTRACT, old(it.subject, it.range), new(node.newRange), Confidence.HIGH) }
-            node.extractedTo.forEach { relationships += ActualRelationship(Kind.EXTRACT, old(node.subject, node.oldRange), endpoint(it, path, null), Confidence.HIGH) }
+            node.extractedFrom.forEach {
+                relationships += ActualRelationship(Kind.EXTRACT, old(it.subject, it.declarationRange), new(node.newRange), Confidence.HIGH)
+            }
+            node.extractedTo.forEach { relationships += ActualRelationship(Kind.EXTRACT, old(node.subject, node.oldRange), endpoint(it, newPath, null), Confidence.HIGH) }
             node.children.forEach { visit(it, ancestors + node.subject) }
         }
         result.fileRegion?.let { visit(it, emptyList()) }
         result.changes.forEach { visit(it, emptyList()) }
-        // An extraction is linked from the source's extractedTo and the target's extractedFrom; it is one link, listed twice.
-        // Its two sides carry different ranges (the declaration and the extracted code), so compare its identity without them.
-        val seen = mutableSetOf<String>()
-        return relationships.filter { relationship ->
-            val key = if (relationship.kind == Kind.EXTRACT) {
-                listOf(
-                    relationship.kind,
-                    Endpoint(relationship.old.path, relationship.old.kind, relationship.old.name, relationship.old.signature).key(),
-                    Endpoint(relationship.new.path, relationship.new.kind, relationship.new.name, relationship.new.signature).key(),
-                ).joinToString("|")
-            } else {
-                listOf(relationship.kind, relationship.old.key(), relationship.new.key()).joinToString("|")
-            }
-            seen.add(key)
-        }
+        return deduplicate(relationships)
     }
+
+    /** Each declaration's container path on the old side, by the declaration's range in the old text. */
+    private fun oldContainerPaths(tree: DeclarationTree?): Map<TextRange, String> {
+        if (tree == null) return emptyMap()
+        val paths = HashMap<TextRange, String>()
+        fun visit(declaration: Declaration, ancestors: List<Subject>) {
+            paths[declaration.range] = ancestors.joinToString(" / ") { OutlineModel.title(it) }
+            val subject = Subject.Declaration(declaration.kind, declaration.name, declaration.displaySignature)
+            declaration.children.forEach { visit(it, ancestors + subject) }
+        }
+        tree.topLevel.forEach { visit(it, emptyList()) }
+        return paths
+    }
+
+    /**
+     * An extraction is linked from the source's `extractedTo` and the target's `extractedFrom`; it is one link, listed
+     * twice. The two listings carry different ranges, so group them by kind, both identities and the source's
+     * declaration range, and keep the copy with a range on both sides. Two links whose source declaration ranges differ
+     * are different extractions (R6). Other kinds drop exact duplicates only.
+     */
+    private fun deduplicate(relationships: List<ActualRelationship>): List<ActualRelationship> {
+        val others = mutableListOf<ActualRelationship>()
+        val extract = LinkedHashMap<String, MutableList<ActualRelationship>>()
+        val seen = mutableSetOf<String>()
+        for (relationship in relationships) {
+            if (relationship.kind == Kind.EXTRACT) {
+                val key = listOf(
+                    relationship.kind,
+                    identity(relationship.old),
+                    relationship.old.range,
+                    identity(relationship.new),
+                ).joinToString("|")
+                extract.getOrPut(key) { mutableListOf() } += relationship
+            } else if (seen.add(listOf(relationship.kind, relationship.old.key(), relationship.new.key()).joinToString("|"))) {
+                others += relationship
+            }
+        }
+        val canonical = extract.values.flatMap { copies ->
+            val ranged = copies.filter { it.new.range != null }.distinctBy { it.new.range }
+            if (ranged.isNotEmpty()) ranged else listOf(copies.first())
+        }
+        return others + canonical
+    }
+
+    private fun identity(endpoint: Endpoint): String =
+        Endpoint(endpoint.path, endpoint.kind, endpoint.name, endpoint.signature).key()
 
     fun actualNodes(result: ComparisonResult): List<Pair<Endpoint, ChangeNode>> {
         val nodes = mutableListOf<Pair<Endpoint, ChangeNode>>()
@@ -454,9 +497,7 @@ object RelationshipBenchmark {
             for (expected in label.relationships) {
                 val matchedKinds = mutableSetOf<Kind>()
                 result.actualRelationships.forEachIndexed { index, actual ->
-                    if (actual.kind in expected.kinds && endpointsMatch(expected.old, actual.old) && endpointsMatch(expected.new, actual.new) &&
-                        (expected.confidence == null || expected.confidence == actual.confidence)
-                    ) {
+                    if (actual.kind in expected.kinds && endpointsMatch(expected.old, actual.old) && endpointsMatch(expected.new, actual.new)) {
                         matched[index] = true
                         matchedKinds += actual.kind
                         perKind.getOrPut(actual.kind.name) { PairCounts() }.tp++
@@ -468,9 +509,10 @@ object RelationshipBenchmark {
                 val forcedPair = label.ambiguous.any { endpointsMatch(it, actual.old) || endpointsMatch(it, actual.new) }
                 if (forcedPair) forced++ else if (!matched[index]) perKind.getOrPut(actual.kind.name) { PairCounts() }.fp++
             }
-            for (expected in label.changes) {
+            val matchedNodes = matchingNodes(result)
+            for ((index, expected) in label.changes.withIndex()) {
                 total++
-                val actual = matchingNode(result, expected)
+                val actual = matchedNodes[index]
                 presenceTotal++
                 if (actual?.presence == expected.presence) presenceCorrect++
                 contentTotal++
@@ -549,12 +591,19 @@ object RelationshipBenchmark {
         expected.sameIdentity(actual) && (expected.range == null || expected.range == actual.range)
 
     /**
-     * The node a label's change describes. Overloads can share path, kind, name and signature; the node with the
-     * expected presence wins, so an added overload is not confused with an unchanged one of the same identity.
+     * One node per expected change (R15, R42). Overloads can share path, kind, name and signature, so a node is claimed
+     * once and removed from the pool: the node with the expected presence wins among the nodes left, so an added
+     * overload is not confused with an unchanged one of the same identity.
      */
-    private fun matchingNode(case: CaseResult, expected: ExpectedChange): ChangeNode? {
-        val candidates = case.actualNodes.filter { (endpoint, _) -> endpointsMatch(expected.subject, endpoint) }
-        return (candidates.firstOrNull { it.second.presence == expected.presence } ?: candidates.firstOrNull())?.second
+    fun matchingNodes(case: CaseResult): List<ChangeNode?> {
+        val remaining = case.actualNodes.toMutableList()
+        return case.label.changes.map { expected ->
+            val preferred = remaining.indexOfFirst { (endpoint, node) ->
+                endpointsMatch(expected.subject, endpoint) && node.presence == expected.presence
+            }
+            val chosen = if (preferred >= 0) preferred else remaining.indexOfFirst { (endpoint, _) -> endpointsMatch(expected.subject, endpoint) }
+            if (chosen < 0) null else remaining.removeAt(chosen).second
+        }
     }
 
     fun aggregate(counts: Collection<PairCounts>): PairCounts =
@@ -617,6 +666,7 @@ object RelationshipBenchmark {
         val draftsWritten = drafts?.let { writeDrafts(it, draftsToWrite) } ?: 0
         val byLanguage = cases.groupBy { it.label.corpus }.mapValues { evaluate(it.value.map { row -> row.label }, it.value) }
         val bySplit = cases.groupBy { it.label.split }.mapValues { evaluate(it.value.map { row -> row.label }, it.value) }
+        val byCategory = cases.groupBy { it.label.category }.toSortedMap().mapValues { evaluate(it.value.map { row -> row.label }, it.value) }
         val overall = evaluate(cases.map { it.label }, cases)
         val gateMode = System.getProperty(GATE_PROPERTY)?.takeIf { it.isNotBlank() } ?: DEFAULT_GATE
         val tolerance = System.getProperty(TOLERANCE_PROPERTY)?.toDoubleOrNull() ?: 0.0
@@ -632,6 +682,7 @@ object RelationshipBenchmark {
             gateFailures = failures,
             corpusRevision = corpusRevision(corpus, labelRoot),
             reportDirectory = output,
+            metricsByCategory = byCategory,
             skippedCommitLines = skippedCommitLines,
             smoke = shortfalls.isNotEmpty(),
             matrixFailures = shortfalls,
@@ -648,7 +699,7 @@ object RelationshipBenchmark {
         return report
     }
 
-    private fun runCase(engine: ComparisonEngine, directory: File): CaseResult {
+    private fun runCase(engine: DeclarationEngine, directory: File): CaseResult {
         val labelFile = File(directory, "label.yaml")
         require(labelFile.isFile) { "case ${directory.path} has no label.yaml" }
         val label = parseLabel(labelFile)
@@ -661,14 +712,15 @@ object RelationshipBenchmark {
         require(newFile.isFile) { "case ${directory.path} has no ${newFile.name}" }
         val old = oldFile.readText().replace("\r\n", "\n")
         val new = newFile.readText().replace("\r\n", "\n")
-        val outcome = compare(engine, old, new, label.language, "${label.case}.$extension")
+        val request = ComparisonRequest(old, new, label.language, "${label.case}.$extension")
+        val outcome = compare(engine, request)
         return CaseResult(
-            label, outcome.result, actualRelationships(outcome.result), actualNodes(outcome.result),
+            label, outcome.result, actualRelationships(outcome.result, oldTree(engine, request, outcome.result)), actualNodes(outcome.result),
             outcome.millis, hidden(old, new, outcome.result), outcome.exception,
         )
     }
 
-    private fun runCommitLine(engine: ComparisonEngine, entry: CorpusEntry, labelRoot: File, draft: Boolean): CommitLine {
+    private fun runCommitLine(engine: DeclarationEngine, entry: CorpusEntry, labelRoot: File, draft: Boolean): CommitLine {
         val repository = entry.repository ?: error("corpus line '${entry.line}' is not a case folder")
         if (!repository.isDirectory) error("real-commit repository not found: ${repository.path}")
         val result = CommitLine()
@@ -684,16 +736,15 @@ object RelationshipBenchmark {
             }
             val changes = git(
                 repository,
-                listOf("diff", "--name-status", "--diff-filter=ADM", parent, commit, "--", "*.java", "*.kt", "*.scala"),
+                // A rename is a delete plus an add, so it is listed as skipped instead of vanishing from the run.
+                listOf("diff", "--no-renames", "--name-status", "--diff-filter=ADM", parent, commit, "--", "*.java", "*.kt", "*.scala"),
             ).lines().map { it.trim() }.filter { it.isNotEmpty() }
             val files = mutableListOf<CommitFile>()
-            var skippedHere = 0
             for (change in changes) {
                 val parts = change.split(Regex("\\s+"), limit = 2)
                 val status = parts.first()
                 val path = parts.getOrNull(1) ?: continue
                 if (status != "M") {
-                    skippedHere++
                     result.skipped.add("${repository.name} ${commit.take(7)} $path: ${if (status == "A") "added" else "deleted"}")
                     continue
                 }
@@ -709,27 +760,35 @@ object RelationshipBenchmark {
                     require(source.path == path) { "label ${labelFile.path}: path ${source.path} is not $path" }
                     require(label.category == REAL_COMMIT_CATEGORY) { "label ${labelFile.path}: category must be $REAL_COMMIT_CATEGORY" }
                 }
-                val corpus = label?.corpus ?: if (path.endsWith(".scala")) scalaCorpus(old, new) else candidates.single()
+                // R33: an unlabelled Scala file's dialect decides its corpus; an unknown dialect is listed, not filed as Scala 2.
+                val corpus = label?.corpus ?: if (path.endsWith(".scala")) scalaCorpusFor(dialectId(old, new)) else candidates.single()
                 val languageId = label?.language ?: languageIdFor(path)
-                val outcome = compare(engine, old, new, languageId, File(path).name)
+                val request = ComparisonRequest(old, new, languageId, File(path).name)
+                val outcome = compare(engine, request)
                 val id = "${repository.name} ${commit.take(7)} $path"
                 if (label != null && label.reviewed) {
                     result.cases += CaseResult(
-                        label, outcome.result, actualRelationships(outcome.result), actualNodes(outcome.result),
+                        label, outcome.result, actualRelationships(outcome.result, oldTree(engine, request, outcome.result)), actualNodes(outcome.result),
                         outcome.millis, hidden(old, new, outcome.result), outcome.exception, id,
                     )
                 } else {
-                    result.unlabelled += UnlabelledFile(repository.name, commit, path, corpus, if (label == null) "no label" else "not reviewed")
+                    val reason = when {
+                        label == null && corpus == null -> "unknown dialect"
+                        label == null -> "no label"
+                        else -> "not reviewed"
+                    }
+                    result.unlabelled += UnlabelledFile(repository.name, commit, path, corpus ?: "unknown", reason)
                     val hiddenHere = hidden(old, new, outcome.result)
                     result.safety += safetyProblems(id, hiddenHere, outcome)
                     if (hiddenHere) result.unlabelledHidden++
                     if (outcome.result.status != Status.ANALYZED && outcome.result.status != Status.PARTIAL) result.unlabelledFallback++
-                    if (draft) result.drafts += draft(repository.name, commit, path, corpus, languageId, outcome)
+                    if (draft && corpus != null) result.drafts += draft(repository.name, commit, path, corpus, languageId, outcome)
                 }
                 files += CommitFile(corpus, label?.reviewed == true)
             }
-            if (files.isNotEmpty() && skippedHere == 0 && files.all { it.reviewed }) {
-                files.map { it.corpus }.distinct().forEach { corpusName -> result.labelledCommits[corpusName] = (result.labelledCommits[corpusName] ?: 0) + 1 }
+            // R10: a commit counts when every modified file has a reviewed label; added and deleted files do not block it.
+            if (files.isNotEmpty() && files.all { it.reviewed } && files.all { it.corpus != null }) {
+                files.mapNotNull { it.corpus }.distinct().forEach { corpusName -> result.labelledCommits[corpusName] = (result.labelledCommits[corpusName] ?: 0) + 1 }
             }
         }
         return result
@@ -747,14 +806,24 @@ object RelationshipBenchmark {
         var unlabelledFallback = 0
     }
 
-    private data class CommitFile(val corpus: String, val reviewed: Boolean)
+    private data class CommitFile(val corpus: String?, val reviewed: Boolean)
 
     private data class Draft(val corpus: String, val repository: String, val commit: String, val path: String, val text: String)
 
-    private fun compare(engine: ComparisonEngine, old: String, new: String, languageId: String, fileName: String): Outcome {
+    /** The declaration trees of the old side, only when an old endpoint's path is read, so a run does not parse twice. */
+    private fun oldTree(engine: DeclarationEngine, request: ComparisonRequest, result: ComparisonResult): DeclarationTree? {
+        fun needed(nodes: List<ChangeNode>): Boolean = nodes.any { node ->
+            node.renamedFrom != null || node.moved || node.kindChangedFrom != null ||
+                node.extractedFrom.isNotEmpty() || node.extractedTo.isNotEmpty() || needed(node.children)
+        }
+        if (!needed(listOfNotNull(result.fileRegion) + result.changes)) return null
+        return onPooledThread { engine.trees(request, Cancellation.NONE)?.first }
+    }
+
+    private fun compare(engine: ComparisonEngine, request: ComparisonRequest): Outcome {
         val started = System.nanoTime()
         return try {
-            val result = onPooledThread { compareSafely(engine, ComparisonRequest(old, new, languageId, fileName), Cancellation.NONE) }
+            val result = onPooledThread { compareSafely(engine, request, Cancellation.NONE) }
             Outcome(result, (System.nanoTime() - started) / 1_000_000)
         } catch (e: Exception) {
             Outcome(ComparisonResult(engine.id, engine.version, Status.FAILED, fallbackReason = e.message), (System.nanoTime() - started) / 1_000_000, e.message)
@@ -791,15 +860,25 @@ object RelationshipBenchmark {
         else -> listOf("scala2", "scala3")
     }
 
-    /** R33: an unlabelled Scala file is counted under the dialect it parses in. */
-    private fun scalaCorpus(old: String, new: String): String = try {
-        val provider = DeclarationProvider.EP_NAME.extensionList.firstOrNull { it.supports("Scala") } ?: return "scala2"
-        val id = ReadAction.compute(ThrowableComputable<String?, RuntimeException> {
-            provider.dialect(ProjectManager.getInstance().defaultProject, listOf(old, new), null)?.id
-        })
-        if (id == "Scala 3") "scala3" else "scala2"
+    /** R33: an unlabelled Scala file's dialect id, or null when no provider is loaded or the lookup throws. */
+    private fun dialectId(old: String, new: String): String? = try {
+        val provider = DeclarationProvider.EP_NAME.extensionList.firstOrNull { it.supports("Scala") }
+        if (provider == null) {
+            null
+        } else {
+            ReadAction.compute(ThrowableComputable<String?, RuntimeException> {
+                provider.dialect(ProjectManager.getInstance().defaultProject, listOf(old, new), null)?.id
+            })
+        }
     } catch (e: Exception) {
-        "scala2"
+        null
+    }
+
+    /** R33: the corpus an unlabelled Scala file is counted under; null means `unknown dialect`, never Scala 2 by default. */
+    fun scalaCorpusFor(dialectId: String?): String? = when (dialectId) {
+        "Scala 3" -> "scala3"
+        "Scala 2" -> "scala2"
+        else -> null
     }
 
     /**
@@ -1002,9 +1081,7 @@ object RelationshipBenchmark {
             val matched = BooleanArray(case.actualRelationships.size)
             for (expected in label.relationships) {
                 case.actualRelationships.forEachIndexed { index, actual ->
-                    if (actual.kind in expected.kinds && endpointsMatch(expected.old, actual.old) && endpointsMatch(expected.new, actual.new) &&
-                        (expected.confidence == null || expected.confidence == actual.confidence)
-                    ) {
+                    if (actual.kind in expected.kinds && endpointsMatch(expected.old, actual.old) && endpointsMatch(expected.new, actual.new)) {
                         matched[index] = true
                     }
                 }
@@ -1023,9 +1100,7 @@ object RelationshipBenchmark {
             val matched = BooleanArray(case.actualRelationships.size)
             for (expected in label.relationships) {
                 case.actualRelationships.forEachIndexed { index, actual ->
-                    if (actual.kind in expected.kinds && endpointsMatch(expected.old, actual.old) && endpointsMatch(expected.new, actual.new) &&
-                        (expected.confidence == null || expected.confidence == actual.confidence)
-                    ) {
+                    if (actual.kind in expected.kinds && endpointsMatch(expected.old, actual.old) && endpointsMatch(expected.new, actual.new)) {
                         matched[index] = true
                     }
                 }
@@ -1055,8 +1130,7 @@ object RelationshipBenchmark {
         for (case in cases) {
             for (expected in case.label.relationships) {
                 val found = case.actualRelationships.filter { actual ->
-                    actual.kind in expected.kinds && endpointsMatch(expected.old, actual.old) && endpointsMatch(expected.new, actual.new) &&
-                        (expected.confidence == null || expected.confidence == actual.confidence)
+                    actual.kind in expected.kinds && endpointsMatch(expected.old, actual.old) && endpointsMatch(expected.new, actual.new)
                 }.map { it.kind }.toSet()
                 (expected.kinds - found).forEach { kind ->
                     add("${case.label.case}|missed|$kind|${expected.old.name}|${expected.new.name}|${case.label.path ?: "-"}")
@@ -1067,8 +1141,9 @@ object RelationshipBenchmark {
 
     fun classificationMismatches(cases: List<CaseResult>): List<String> = buildList {
         for (case in cases) {
-            for (expected in case.label.changes) {
-                val actual = matchingNode(case, expected)
+            val matchedNodes = matchingNodes(case)
+            for ((index, expected) in case.label.changes.withIndex()) {
+                val actual = matchedNodes[index]
                 val mismatch = actual == null || actual.presence != expected.presence || actual.content != expected.content ||
                     (expected.moved != null && actual.moved != expected.moved) ||
                     (expected.signatureChanged != null && actual.signatureChanged != expected.signatureChanged) ||
@@ -1089,7 +1164,7 @@ object RelationshipBenchmark {
             appendLine("corpus\tkind\ttp\tfp\tfn\tprecision\trecall\twrong-share")
             for ((language, metrics) in report.metricsByLanguage) {
                 for ((kind, counts) in metrics.perKind) {
-                    appendLine(listOf(language, kind, counts.tp, counts.fp, counts.fn, format(counts.precision), format(counts.recall), format(counts.wrongShare)).joinToString("\t"))
+                    appendLine(listOf(language, kind, counts.tp, counts.fp, counts.fn, formatPrecision(counts), formatRecall(counts), format(counts.wrongShare)).joinToString("\t"))
                 }
             }
         })
@@ -1127,7 +1202,7 @@ object RelationshipBenchmark {
             for ((split, metrics) in report.metricsBySplit) {
                 appendLine("## ${split.name.lowercase()}")
                 appendLine(
-                    "Precision ${format(metrics.precision)}, recall ${format(metrics.recall)}, " +
+                    "Precision ${formatMetricsPrecision(metrics)}, recall ${formatMetricsRecall(metrics)}, " +
                         "presence ${format(metrics.presenceAccuracy)}, content ${format(metrics.contentAccuracy)}, " +
                         "classification ${format(metrics.classificationAccuracy)}, median ${metrics.medianMillis} ms, " +
                         "p95 ${metrics.p95Millis} ms, slowest ${metrics.slowestMillis} ms of $TIME_LIMIT_MILLIS ms",
@@ -1137,7 +1212,7 @@ object RelationshipBenchmark {
             appendLine("## Per corpus")
             for ((language, metrics) in report.metricsByLanguage) {
                 appendLine(
-                    "- $language: precision ${format(metrics.precision)}, recall ${format(metrics.recall)}, " +
+                    "- $language: precision ${formatMetricsPrecision(metrics)}, recall ${formatMetricsRecall(metrics)}, " +
                         "wrong share ${format(metrics.wrongShare)}, presence ${format(metrics.presenceAccuracy)}, " +
                         "content ${format(metrics.contentAccuracy)}, moved ${format(metrics.movedAccuracy)}, " +
                         "signature ${format(metrics.signatureAccuracy)}, kind ${format(metrics.kindAccuracy)}, " +
@@ -1145,12 +1220,34 @@ object RelationshipBenchmark {
                 )
             }
             appendLine()
+            appendLine("## Per kind")
+            appendLine("| Corpus | Kind | TP | FP | FN | Precision | Recall |")
+            appendLine("| --- | --- | --- | --- | --- | --- | --- |")
+            for (corpus in CORPORA) {
+                val metrics = report.metricsByLanguage[corpus] ?: continue
+                for ((kind, counts) in metrics.perKind) {
+                    appendLine("| $corpus | $kind | ${counts.tp} | ${counts.fp} | ${counts.fn} | ${formatPrecision(counts)} | ${formatRecall(counts)} |")
+                }
+            }
+            appendLine()
+            if (report.metricsByCategory.isNotEmpty()) {
+                appendLine("## Per category")
+                appendLine("| Category | Precision | Recall | Presence | Content | Cases |")
+                appendLine("| --- | --- | --- | --- | --- | --- |")
+                for ((category, metrics) in report.metricsByCategory) {
+                    appendLine(
+                        "| $category | ${formatMetricsPrecision(metrics)} | ${formatMetricsRecall(metrics)} | " +
+                            "${format(metrics.presenceAccuracy)} | ${format(metrics.contentAccuracy)} | ${metrics.presenceTotal} |",
+                    )
+                }
+                appendLine()
+            }
             if (report.newGatePairs.isNotEmpty()) {
                 appendLine("## New in this run")
                 report.newGatePairs.forEach { appendLine("- $it") }
                 appendLine()
             }
-            appendLine("## Wrong and missed relationships")
+            appendLine("## Wrong and forced relationships")
             val wrong = wrongPairLines(report.cases).sorted()
             if (wrong.isEmpty()) appendLine("- none") else wrong.forEach { appendLine("- $it") }
             appendLine()
@@ -1190,6 +1287,7 @@ object RelationshipBenchmark {
             "overall" to metricsJson(report.overall),
             "perLanguage" to report.metricsByLanguage.mapValues { metricsJson(it.value) },
             "perSplit" to report.metricsBySplit.mapKeys { it.key.name.lowercase() }.mapValues { metricsJson(it.value) },
+            "perCategory" to report.metricsByCategory.mapValues { metricsJson(it.value) },
             "gate" to report.gateMode,
             "corpusRevision" to report.corpusRevision,
             "skippedCommitLines" to report.skippedCommitLines,
@@ -1209,6 +1307,8 @@ object RelationshipBenchmark {
     private fun metricsJson(metrics: Metrics): Map<String, Any> = mapOf(
         "precision" to metrics.precision,
         "recall" to metrics.recall,
+        "reportedPairs" to metrics.reportedPairs,
+        "labelledPairs" to metrics.labelledPairs,
         "wrongShare" to metrics.wrongShare,
         "forcedPairs" to metrics.forcedPairs,
         "classificationAccuracy" to metrics.classificationAccuracy,
@@ -1222,8 +1322,22 @@ object RelationshipBenchmark {
         "medianMillis" to metrics.medianMillis,
         "p95Millis" to metrics.p95Millis,
         "slowestMillis" to metrics.slowestMillis,
-        "perKind" to metrics.perKind.mapValues { mapOf("tp" to it.value.tp, "fp" to it.value.fp, "fn" to it.value.fn, "precision" to it.value.precision, "recall" to it.value.recall) },
+        "perKind" to metrics.perKind.mapValues {
+            mapOf(
+                "tp" to it.value.tp, "fp" to it.value.fp, "fn" to it.value.fn,
+                "reportedPairs" to (it.value.tp + it.value.fp),
+                "precision" to it.value.precision, "recall" to it.value.recall,
+            )
+        },
     )
+
+    private fun formatPrecision(counts: PairCounts): String = if (counts.tp + counts.fp == 0) "n/a" else format(counts.precision)
+
+    private fun formatRecall(counts: PairCounts): String = if (counts.tp + counts.fn == 0) "n/a" else format(counts.recall)
+
+    private fun formatMetricsPrecision(metrics: Metrics): String = if (metrics.reportedPairs == 0) "n/a" else format(metrics.precision)
+
+    private fun formatMetricsRecall(metrics: Metrics): String = if (metrics.labelledPairs == 0) "n/a" else format(metrics.recall)
 
     /** R43: a hash of the list, every case and label file it reaches, and the clone of each real-commit line. */
     fun corpusRevision(corpus: File, labelRoot: File = File(DEFAULT_LABEL_ROOT)): String {
@@ -1265,7 +1379,7 @@ object RelationshipBenchmark {
     private fun format(value: Double): String = "%.3f".format(value)
 
     private fun git(repository: File, arguments: List<String>, allowFailure: Boolean = false): String {
-        val process = ProcessBuilder(listOf("git", "-C", repository.absolutePath) + arguments)
+        val process = ProcessBuilder(listOf("git", "-c", "core.quotePath=false", "-C", repository.absolutePath) + arguments)
             .redirectError(ProcessBuilder.Redirect.DISCARD).start()
         val output = process.inputStream.bufferedReader().readText()
         val exit = process.waitFor()
@@ -1274,7 +1388,7 @@ object RelationshipBenchmark {
     }
 
     private fun gitSucceeds(repository: File, arguments: List<String>): Boolean {
-        val process = ProcessBuilder(listOf("git", "-C", repository.absolutePath) + arguments)
+        val process = ProcessBuilder(listOf("git", "-c", "core.quotePath=false", "-C", repository.absolutePath) + arguments)
             .redirectError(ProcessBuilder.Redirect.DISCARD).redirectOutput(ProcessBuilder.Redirect.DISCARD).start()
         return process.waitFor() == 0
     }

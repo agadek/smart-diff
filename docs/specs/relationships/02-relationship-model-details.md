@@ -79,6 +79,16 @@ A `PARTIAL` result has relationships only between analyzed declarations; an `UNS
 
 - `high = 0.85` and `medium = 0.7`: medium matches today's 70% rename threshold, so rename candidates stay as they are. High is a starting value, set from the benchmark baseline before relationships/03.
 
+### Benchmark gate
+
+The recorded baseline is checked in at `src/test/testData/relationships-baseline/report.json` (relationships/01 R29). The gate command compares a run against it:
+
+```shell
+./gradlew test --tests '*RelationshipBenchmarkTest*' \
+  -Psmartdiff.relationships.corpus=src/test/testData/relationships-corpus-full.txt \
+  -Psmartdiff.relationships.baseline=src/test/testData/relationships-baseline/report.json
+```
+
 ## Tests
 
 | Requirement | Check |
