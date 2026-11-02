@@ -16,4 +16,4 @@ expected:
       presence: MATCHED
       content: UNCHANGED
   ambiguous: []
-notes: "A 40-method file with one rename; keeps the case under the time limit."
+notes: "A 300-method file with one rename; keeps the case under the time limit."
