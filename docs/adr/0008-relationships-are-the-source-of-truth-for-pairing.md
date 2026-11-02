@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Relationships are the source of truth for pairing

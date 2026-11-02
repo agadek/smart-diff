@@ -1,6 +1,6 @@
 # Relationship model
 
-Status: proposed, 2026-11-01
+Status: accepted, 2026-11-02
 
 **Description:** Adds a list of [relationships](../../GLOSSARY.md#relationship) to every comparison result: which old declarations and new declarations belong together, how sure the engine is, and why.
 
@@ -32,12 +32,23 @@ Status: proposed, 2026-11-01
 - **R22** An engine that does not detect relationships returns an empty list and still passes the engine contract.
 - **R23** The engine contract checks R16 to R20 for every engine.
 - **R24** The engine version changes when the matcher or a parser that can change the relationships changes, the Scala plugin included.
+- **R25** With today's matcher, a rename candidate has medium confidence, and a move, a kind change and an extraction have high confidence.
+- **R26** A declaration that is renamed and moved, or renamed and changed in kind, has one relationship with all its kinds, at its lowest kind's confidence.
+- **R27** An extraction has one relationship for each source and target, with the extracted code as its content evidence.
+- **R28** The outline labels every rename as a rename candidate, whatever its confidence.
+- **R29** An [uncertain](../../GLOSSARY.md#uncertain) declaration keeps its candidates, and they are not relationships.
+- **R30** A malformed registry value leaves the default thresholds in place.
+- **R31** The [relationship benchmark](01-relationship-benchmark.md) reads the result's relationships instead of deriving them from today's fields.
+- **R32** The benchmark counts a repeated relationship as a wrong pair.
+- **R33** The benchmark report counts the reported relationships of each kind by confidence.
 
 ## Out of scope
 
 - A refactorings view in the outline.
 - Grouping a rename with its usages, which needs a reference analysis pass.
 - Changes to how the matcher pairs declarations.
+- A label for a high-confidence rename other than rename candidate.
+- Scoring a label's confidence in the benchmark.
 - Cross-file relationships.
 
 ## References
@@ -45,5 +56,6 @@ Status: proposed, 2026-11-01
 - [Details: design and tests](02-relationship-model-details.md)
 - [ADR 0008](../../adr/0008-relationships-are-the-source-of-truth-for-pairing.md)
 - [Structural relationships plan §5 and §9](../../STRUCTURAL-RELATIONSHIPS.md)
+- [Relationship benchmark baseline, 2026-11-02](../../VALIDATION.md#2026-11-02-relationship-benchmark-baseline)
 - [Engine contract](../engines/02-engine-contract.md)
 - [ADR 0003](../../adr/0003-conservative-classification.md)

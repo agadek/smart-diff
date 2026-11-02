@@ -1,10 +1,12 @@
 # Relationship model: details
 
-Status: proposed, 2026-11-01
+Status: accepted, 2026-11-02
 
 Feature: [Relationship model](02-relationship-model.md)
 
 ## Design
+
+This step changes where today's facts live, not what they are. The matcher and the extraction detector keep finding the same pairs; they write them as relationships, and the old `ChangeNode` fields are computed from those relationships. The [2026-11-02 benchmark baseline](../../VALIDATION.md#2026-11-02-relationship-benchmark-baseline) measured today's engine through an adapter; after this step the same run reads the engine's own list and must give the same scores.
 
 ### Data
 
@@ -15,90 +17,137 @@ data class ComparisonResult(
 )
 
 data class Relationship(
-    val kinds: Set<RelationshipKind>,        // RENAME, MOVE, KIND_CHANGE, EXTRACT, INLINE
-    val old: List<RelationshipEndpoint>,     // empty when the old side has no endpoint
+    val kinds: Set<RelationshipKind>,        // RENAME, MOVE, KIND_CHANGE, EXTRACT, INLINE, in this order
+    val old: List<RelationshipEndpoint>,
     val new: List<RelationshipEndpoint>,
     val confidence: Confidence,              // HIGH, MEDIUM, LOW
     val evidence: List<Evidence>,
 )
 
+/** [range] is the declaration's whole range on its side, which identifies its node; a subject is not unique in a file. */
 data class RelationshipEndpoint(val subject: Subject, val range: TextRange)
 
 sealed interface Evidence {
-    data class Name(val old: String, val new: String, val similarity: Double) : Evidence
-    data class Content(val shared: Int, val total: Int, val oldRange: TextRange, val newRange: TextRange) : Evidence
-    data class Structure(val oldPath: String, val newPath: String) : Evidence
+    data class Name(val old: String, val new: String) : Evidence
+    data class Content(val shared: Int, val total: Int, val oldRange: TextRange, val newRange: TextRange?) : Evidence
+    data class Structure(val oldPath: String, val newPath: String, val oldKind: DeclarationKind?, val newKind: DeclarationKind?) : Evidence
     data class Position(val oldIndex: Int, val newIndex: Int) : Evidence
     data class Score(val value: Double) : Evidence
 }
 
 data class ConfidencePolicy(val high: Double = 0.85, val medium: Double = 0.7) {
+    init { require(medium in 0.0..1.0 && high in medium..1.0) { "invalid confidence policy: $this" } }
     companion object { val DEFAULT = ConfidencePolicy() }
 }
 ```
 
-`ComparisonRequest` gains `confidence: ConfidencePolicy = ConfidencePolicy.DEFAULT`, next to `limits`. The registry key `smartdiff.relationships.confidence` holds the two thresholds as `high,medium` and is read when the request is built. Tests and the benchmark pass a policy directly.
-
-- A relationship has at least one endpoint on each side, except inlining and extraction links, which name the declaration on one side and the code range on the other.
+- Every relationship has at least one endpoint on each side, and every endpoint is a declaration (R2, R16). An inlining, from [relationships/05](05-inlining-detection.md), follows the same rule: the removed declaration on the old side, the declarations it was inlined into on the new side.
+- An endpoint's `subject` is the subject of the node on its own side: the old subject for an old endpoint, so a rename's old endpoint carries the old name and a kind change's old endpoint the old kind. The benchmark adapter rebuilt the old subject from `renamedFrom` and `kindChangedFrom`; the model stores it.
+- `RelationshipKind`, `Confidence`, `Relationship`, `RelationshipEndpoint`, `Evidence` and `ConfidencePolicy` go in `engine.api`, next to `ComparisonResult`, so every engine and the UI see the same types.
 - Content and signature changes stay `ChangeNode` attributes. They are not relationship kinds.
 - A relationship is not a presence: it never replaces `MATCHED`, `ADDED`, `REMOVED` or `UNCERTAIN`.
 
+### Today's relationships
+
+`DeclarationMatcher` and `ExtractionDetector` produce these, and nothing else, in this step (R25 to R27):
+
+| Source today | Kinds | Endpoints | Confidence | Evidence |
+| --- | --- | --- | --- | --- |
+| Rule M5 rename candidate, a class's constructor included | `RENAME`, plus `MOVE` when the node is moved, plus `KIND_CHANGE` when it changed kind | The old and the new declaration | Medium, from the policy and its score (below) | `Name`, `Score` (the rename similarity), `Position`; `Structure` when moved or changed in kind |
+| A match by rules M1 to M4b that is moved | `MOVE` | The old and the new declaration | High | `Structure` (old and new container path), `Position` (index among siblings) |
+| Rule M4b kind change | `KIND_CHANGE`, plus `MOVE` when moved | The old and the new declaration | High | `Structure` (old and new kind) |
+| Extraction link | `EXTRACT` | The source on the old side, the extraction on the new side; one relationship per source and target pair | High | `Content` (tiled tokens as `shared`, the target's tokens as `total`, the extracted code's old range, and the target's range), `Score` (the share) |
+
+- `moved` covers both a container change and a change of order among siblings, as today. Both give `MOVE`.
+- A relationship with several kinds takes the lowest of its kinds' confidence (R26), so a renamed and moved declaration is medium.
+- Overload pairs from rule M3 are same-name matches with a changed signature. They are not relationships, as today.
+- Uncertain nodes from rule M4 keep `candidates` (R29). Ambiguity stays a presence state until [relationships/03](03-relationship-matching.md) R6 adds low-confidence relationships for it.
+
+### Confidence policy
+
+`ComparisonRequest` gains `confidence: ConfidencePolicy = ConfidencePolicy.DEFAULT`, next to `limits` (R14).
+
+- A scored relationship is high at `score >= high`, medium at `score >= medium`, and low below. Today only rename candidates are scored; moves, kind changes and extractions are high by rule (R25).
+- With today's matcher a rename pair needs `score >= RENAME_THRESHOLD` (0.7), which equals the default medium threshold, so no default rename is low. The matcher reads the threshold from the policy instead of `RENAME_THRESHOLD`; with the default policy that is the same number, so pairing does not change (R9).
+- A rename that scores at least `high` is high. It still shows as a rename candidate (R28), because no other label exists yet; the outline reads `renamedFrom`, which a high and a medium rename both set.
+- A low rename (only possible with a raised medium threshold, in tests or through the registry) leaves both declarations added and removed, and the relationship stays in the list linking them (R13). `renamedFrom` is not set for it.
+- The registry key `smartdiff.relationships.confidence` is declared in `plugin.xml` with the default `0.85,0.7` and holds `high,medium` (R15). It is read when a request is built, next to the analysis limits in `SmartDiffSettings.limits`, so the outline, the Changes tree and the merge outline use the same policy. A value that does not parse as two numbers with `0 <= medium <= high <= 1` logs one warning and the default policy is used (R30).
+- Tests and the benchmark pass a policy directly; the benchmark records the policy it used in `report.json`.
+
 ### Computed fields
 
-`renamedFrom`, `moved`, `kindChangedFrom`, `extractedFrom` and `extractedTo` keep their types but are computed from `relationships` when the result is built, then marked deprecated. `DeclarationMatcher` and `ExtractionDetector` write relationships only. Because the outline, the Changes tree and the merge outline read the same fields as before, they need no change in this step.
+`DeclarationAnalysis` builds the relationship list first, then sets `renamedFrom`, `moved`, `kindChangedFrom`, `extractedFrom` and `extractedTo` from it while it builds the nodes (R7, R8):
 
-### What each confidence shows
+1. The matcher returns its pairs and, beside them, a relationship for each rename, move and kind change. The extraction detector returns relationships instead of `Extraction` values.
+2. Each relationship is indexed by its endpoints' ranges on each side.
+3. When a node is built, its fields come from the relationships whose endpoints are the node's own ranges: `renamedFrom` from a high or medium `RENAME`, `moved` from `MOVE`, `kindChangedFrom` from `KIND_CHANGE`, `extractedFrom` and `extractedTo` from `EXTRACT`, in the relationships' order.
+4. `extractedFrom` and `extractedTo` of a link's two ends come from the same relationship (R18): the `Origin` on the target is the source endpoint plus the `Content` evidence's old range.
 
-| Confidence | Today's equivalent | Outline |
-| --- | --- | --- |
-| High | A rule M1 to M4b match | Paired |
-| Medium | A rename candidate (rule M5) | Paired as a candidate |
-| Low | Not produced today | Both sides stay added and removed |
+The fields keep their types and are marked `@Deprecated` with a pointer to `relationships`. The outline, the Changes tree, `MergeJoin` and the merge outline read the same fields as before, so they need no change in this step.
 
-With today's matcher every relationship is high or medium, so the outline does not change.
+### Order
+
+Relationships are sorted by the start of the first old endpoint, then the start of the first new endpoint, then the first kind in enum order. Endpoints are sorted by range start. Kinds are a set but are always iterated in enum order. Evidence is sorted by type in the order of the sealed interface: `Name`, `Content`, `Structure`, `Position`, `Score` (R19).
 
 ### Contract rules
 
-`ComparisonEngineContract` gains these checks for every engine:
+`ComparisonEngineContract` gains these checks for every engine (R23):
 
-- every endpoint names a subject in the result tree, on its own side;
-- every endpoint and evidence range lies inside its side's text;
-- an extraction or inlining link is the only source of the fields of both its ends;
-- relationships are sorted by the old side's first endpoint, then the new side's, then kind; evidence is sorted by type;
-- nothing-hidden gives the same answer with relationships removed.
+- every endpoint names a subject in the result tree, on its own side, at its range (R16);
+- every endpoint and evidence range lies inside its side's text (R17);
+- an extraction's `extractedFrom` and `extractedTo` fields agree with one `EXTRACT` relationship, and no relationship is listed twice (R18);
+- the list is in the order above, and two runs on the same request give equal lists (R19);
+- nothing-hidden gives the same answer with the relationships removed (R20).
+
+The line engine returns an empty list and passes every check (R22).
 
 ### Engine version
 
-`ComparisonEngine.version` adds the Scala plugin's version when the Scala provider is loaded, because its parser can change a result without a platform update.
+`DeclarationEngine.VERSION` goes from 6 to 7, because the result now carries relationships. When the Scala provider is loaded, `version` also adds the Scala plugin's version, for example `7 (251.26927.53; Scala 2025.1.32)`, because its parser can change a result without a platform update (R24). The benchmark and validation reports already record `version`. The Changes tree cache lives for one IDE session and keys on the engine id, so it needs no change.
 
 ### Failure behaviour
 
-A `PARTIAL` result has relationships only between analyzed declarations; an `UNSUPPORTED`, `TOO_LARGE` or `FAILED` result has none.
+A `PARTIAL` result has relationships only between analyzed declarations; a declaration inside an unanalyzed range is never an endpoint. An `UNSUPPORTED`, `TOO_LARGE` or `FAILED` result has none (R21).
 
-### Thresholds and reasons
+### Benchmark
 
-- `high = 0.85` and `medium = 0.7`: medium matches today's 70% rename threshold, so rename candidates stay as they are. High is a starting value, set from the benchmark baseline before relationships/03.
+The benchmark's `actualRelationships` adapter is removed (R31). `RelationshipBenchmark` reads `ComparisonResult.relationships`, maps each relationship to one benchmark relationship per kind, as the adapter did, and keeps the old-side container path from the old declaration tree.
 
-### Benchmark gate
+- The exact-duplicate drop in `deduplicate` goes, so a repeated relationship is a false positive and fails the `no-new-wrong-pairs` gate (R32). The extraction de-duplication goes too, because the model has one relationship per source and target.
+- `report.md` and `report.json` add, per corpus and kind, the number of reported relationships at each confidence (R33). A label's `confidence` is still not scored.
+- The signature simplification of the adapter (`null`, `""` and `"()"` are one identity) stays until a label needs the difference.
 
-The recorded baseline is checked in at `src/test/testData/relationships-baseline/report.json` (relationships/01 R29). The gate command compares a run against it:
+The gate run, against the checked-in baseline:
 
 ```shell
 ./gradlew test --tests '*RelationshipBenchmarkTest*' \
   -Psmartdiff.relationships.corpus=src/test/testData/relationships-corpus-full.txt \
-  -Psmartdiff.relationships.baseline=src/test/testData/relationships-baseline/report.json
+  -Psmartdiff.relationships.baseline=src/test/testData/relationships-baseline/report.json \
+  -Psmartdiff.relationships.gate=no-new-wrong-pairs
 ```
+
+It must pass with the same precision and recall per corpus and kind as the baseline; any difference is a bug in this step, since the matcher does not change. The run is recorded in a dated section of [VALIDATION.md](../../VALIDATION.md). The baseline file is not replaced: [relationships/03](03-relationship-matching.md) compares against the 2026-11-02 baseline.
+
+### Thresholds and reasons
+
+- `medium = 0.7` equals today's `RENAME_THRESHOLD`, so rename candidates stay as they are.
+- `high = 0.85` is a starting value. It only changes the confidence field, not what the outline shows (R28), so it needs no benchmark tuning in this step; [relationships/03](03-relationship-matching.md) tunes it on the tuning split.
 
 ## Tests
 
 | Requirement | Check |
 | --- | --- |
-| R1–R6 | Model tests in a new `ComparisonResultTest`: defaults, kinds, evidence and the score kept in evidence |
-| R7, R8 | `DeclarationEngineTest`: every computed field equals the field the old code set, over the golden fixtures |
-| R9, R10 | `GoldenFixturesTest`, `MergeFixturesTest` and `OutlineModelTest` pass with no fixture change |
-| R11–R13 | `DeclarationMatcherTest` with a policy that moves one pair across each threshold |
-| R14, R15 | A request test for the policy, and a registry test for the key |
-| R16–R20, R23 | New checks in `ComparisonEngineContract`, run by `ComparisonEngineContractTest` and `LineEngineContractTest` |
-| R21 | A partial-result fixture with a parse error |
+| R1–R6 | `RelationshipModelTest` (new, `engine/api`): defaults, kinds, endpoints, evidence and the score kept in evidence |
+| R7, R8, R18 | `DeclarationEngineTest`: over the golden fixtures, every computed field equals the field the engine set before this step (record the old fields from `main` once into the test as expected values, or compare against a copy of the old code kept in the test) |
+| R9, R10 | `GoldenFixturesTest`, `MergeFixturesTest`, `OutlineModelTest` and the Changes tree tests pass with no fixture change |
+| R11–R13 | `DeclarationMatcherTest` with policies that move one rename pair across each threshold: high and medium set `renamedFrom`, low leaves it added and removed with the relationship listed |
+| R14 | A request test: the default policy, and a custom policy reaching the matcher |
+| R15, R30 | A registry test: a valid value, an empty value, and a malformed value that keeps the default |
+| R16–R20, R23 | New checks in `ComparisonEngineContract`, run by `ComparisonEngineContractTest` and `LineEngineContractTest`; one negative test per check with a hand-built bad result |
+| R21 | A partial-result fixture with a parse error, and the fallback statuses |
 | R22 | `LineEngineContractTest` passes with an empty list |
 | R24 | An engine version test with and without the Scala plugin |
+| R25–R27 | `DeclarationAnalysisTest`: a rename, a move, a kind change, a renamed and moved method, a renamed class with a constructor, and an extraction with two sources |
+| R28 | `OutlineModelTest`: a high and a medium rename show the same row |
+| R29 | `DeclarationMatcherTest`: a rule M4 ambiguity has candidates and no relationship |
+| R31–R33 | `RelationshipBenchmarkTest`: a result with a repeated relationship fails the gate; the confidence counts appear in both reports; the full-corpus gate run above |
