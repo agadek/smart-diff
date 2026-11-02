@@ -29,6 +29,7 @@ Feature specs are in `docs/specs/`, in one folder per context. A context is a pa
 | `docs/specs/settings/` | Settings and toolbar toggles |
 
 - Put a feature in the folder of the context it changes most.
+- Put a validation study in the folder of the context it validates, such as `outline/06-usability-validation.md`.
 - Add a new folder only when a feature fits none of the existing ones.
 - Folder names are lower case, with hyphens.
 

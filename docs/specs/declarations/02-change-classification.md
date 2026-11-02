@@ -21,6 +21,7 @@ Status: implemented, 2026-10-21
 - **R11** The [file region](../../GLOSSARY.md#file-region) is classified in the same way.
 - **R12** A file with parse errors and no declarations, while it is not blank, fails to analyze.
 - **R13** Formatting-only never claims that two versions behave the same.
+- **R14** A declaration whose own source differs only in the whitespace before its first token is formatting-only, except for indentation the language treats as significant.
 
 ## References
 

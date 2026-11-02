@@ -28,4 +28,4 @@ Status: implemented, 2026-10-22
 
 - [ADR 0003](../../adr/0003-conservative-classification.md)
 - [Technical specification §7, rule M5](../../TECHNICAL-SPECIFICATION.md#7-declaration-engine-matching)
-- [Validation, 0.1.1 noise pass](../../VALIDATION.md#2026-10-22-011-noise-pass)
+- [Validation, 0.1.0 noise pass](../../VALIDATION.md#2026-10-22-010-noise-pass)
