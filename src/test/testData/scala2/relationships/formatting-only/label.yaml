@@ -1,13 +1,15 @@
 case: formatting-only
 language: Scala
 split: held-out
+category: formatting-only
+corpus: scala2
 expected:
   relationships: []
   changes:
     - subject: { path: "", kind: CLASS, name: Order, signature: null }
       presence: MATCHED
       content: UNCHANGED
-    - subject: { path: "class Order", kind: FUNCTION, name: total, signature: "" }
+    - subject: { path: "class Order", kind: FUNCTION, name: total, signature: null }
       presence: MATCHED
       content: FORMATTING_ONLY
   ambiguous: []

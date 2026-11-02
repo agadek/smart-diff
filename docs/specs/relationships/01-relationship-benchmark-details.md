@@ -45,8 +45,10 @@ One `label.yaml` per case, beside `old.<ext>` and `new.<ext>`:
 
 ```yaml
 case: rename-method
-language: JAVA
-split: held-out            # or tuning
+language: JAVA               # IntelliJ language id for the comparison
+corpus: java                 # java, kotlin, scala2 or scala3; groups the report rows
+category: method-rename      # the case matrix category
+split: held-out             # or tuning
 expected:
   relationships:
     - kinds: [RENAME]
@@ -60,6 +62,10 @@ expected:
 notes: "A second method with the same body exists on purpose."
 ```
 
+- `language` is the IntelliJ language id passed to the engine; `corpus` names the fixture folder and keeps Scala 2 and
+  Scala 3 as separate report rows.
+- `category` is the case matrix category, such as `method-rename` or `kind-change`; the matrix check uses it rather than
+  the case name.
 - An endpoint is path, kind, name and signature, as the outline names it. A `range` (`start..end` offsets) is added only when two declarations would have the same identity.
 - Confidence is optional in a label; it is compared only when given.
 - The label set is closed: every relationship the engine reports that is not listed is wrong, unless the case lists it under `ambiguous`.
