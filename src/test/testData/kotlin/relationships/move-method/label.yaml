@@ -1,7 +1,7 @@
 case: move-method
 language: kotlin
 split: tuning
-category: move
+category: move-in-file
 corpus: kotlin
 expected:
   relationships:

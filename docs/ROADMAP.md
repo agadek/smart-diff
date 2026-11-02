@@ -65,7 +65,7 @@ Proposed 2026-11-01 as the next item after 0.2.0. The benchmark harness and a sm
 
 | Step | Spec | Done when |
 | --- | --- | --- |
-| Benchmark and today's baseline | [relationships/01](specs/relationships/01-relationship-benchmark.md) | The baseline report of today's engine is in VALIDATION.md |
+| Benchmark and today's baseline | [relationships/01](specs/relationships/01-relationship-benchmark.md) | A run with no shortfall, so not a smoke run, is recorded as the baseline in VALIDATION.md |
 | Relationship model, with today's fields computed from it | [relationships/02](specs/relationships/02-relationship-model.md) | The outline, Changes tree and merge outline are unchanged, and the contract checks relationships |
 | Better pairing over the whole file | [relationships/03](specs/relationships/03-relationship-matching.md) | The benchmark shows no new wrong pairs and no lower held-out precision |
 | Rename grouped with its usages | [relationships/04](specs/relationships/04-rename-grouping.md) | The labelled usage cases pass, and unresolved usages stay ordinary changes |
