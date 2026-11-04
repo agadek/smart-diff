@@ -30,15 +30,17 @@ from that list. This run proves the move changes nothing the plugin shows and no
 `7 (251.26927.53; Scala 2025.1.32)`.
 
 **Corpus validation:** `CorpusValidationTest` over `corpus.txt` in the clone set (okhttp, guava, commons-lang, Exposed,
-moshi, spring-petclinic), the same list as the earlier runs. 1279 files from 6 clones, 97 flagged. The `summary.tsv` and
-`report.md` are equal to a run of `main`'s code on the same machine apart from the per-file timings: the same 97 files,
-flags and hunk counts, including the 4 extraction near misses and the 55 rename candidates. Reports in
-`build/reports/smartdiff-validation/`.
+moshi, spring-petclinic), the same list as the earlier runs. 1279 files from 6 clones, 97 flagged. The `summary.tsv`
+lists the same files, flags and hunk counts as a run of `main`'s code on the same machine, including the 4 extraction
+near misses and the 55 rename candidates. `report.md` diagnoses the same files, with one diagnostic line whose
+extraction sources follow the outline's order, largest covered share first, rather than the relationship order, and
+with the per-file timings. Reports in `build/reports/smartdiff-validation/`.
 
 **Merge validation:** `CorpusValidationTest` over `merges-2026-11-02.txt`: 275 files from 121 merge commits, 2 files
 missing from a parent or the base. Flags: 49 `both-sides-clean`, 12 `conflict-one-side`, 6 `status`; coverage Java 50,
-Kotlin 67, Scala 2 117 and Scala 3 41 files. The `summary.tsv` and `report.md` are equal to a run of `main`'s code apart
-from the timings. The [2026-11-02 rerun](#2026-11-02-merge-validation-rerun) records 50 `both-sides-clean`: the
+Kotlin 67, Scala 2 117 and Scala 3 41 files. The `summary.tsv` lists the same files, flags and hunk counts as a run of
+`main`'s code, and `report.md` diagnoses the same files, apart from the timings. The
+[2026-11-02 rerun](#2026-11-02-merge-validation-rerun) records 50 `both-sides-clean`: the
 one-file difference comes from the later merge-validation commits that judge moved sides and unchanged children, not
 from this change, and `main`'s code gives 49 on the same list too. Reports in
 `build/reports/smartdiff-validation/merge/`.

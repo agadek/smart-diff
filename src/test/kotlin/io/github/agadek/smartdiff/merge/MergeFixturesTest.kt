@@ -35,12 +35,16 @@ class MergeFixturesTest : BasePlatformTestCase() {
     private val scala by lazy { DeclarationProvider.EP_NAME.extensionList.first { it.supports("Scala") } }
     private val executor = Executor { it.run() }
 
+    // relationships/02 R9, R10: the expected merge outline is the join before the relationship model.
     fun `test Java merge fixtures`() = checkFixtures("java", "JAVA", "java")
 
+    // relationships/02 R9, R10: the expected merge outline is the join before the relationship model.
     fun `test Kotlin merge fixtures`() = checkFixtures("kotlin", "kotlin", "kt")
 
+    // relationships/02 R9, R10: the expected merge outline is the join before the relationship model.
     fun `test Scala 2 merge fixtures`() = checkFixtures("scala2", "Scala", "scala")
 
+    // relationships/02 R9, R10: the expected merge outline is the join before the relationship model.
     fun `test Scala 3 merge fixtures`() = checkFixtures("scala3", "Scala", "scala")
 
     fun `test merge fixture files live in the language merge folders`() {

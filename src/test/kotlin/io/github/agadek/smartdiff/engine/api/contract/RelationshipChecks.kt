@@ -63,9 +63,11 @@ object RelationshipChecks {
         val extractions = result.relationships.filter { RelationshipKind.EXTRACT in it.kinds }
         for (node in nodes(result)) {
             for (origin in node.extractedFrom) {
+                // The Origin names the source as the matched node shows it, so the endpoint's subject may differ when
+                // the source was renamed: the old declaration range and the target's range identify the link.
                 val links = extractions.filter { link ->
                     link.old.size == 1 && link.new.size == 1 &&
-                        link.old.first().range == origin.declarationRange && link.old.first().subject == origin.subject &&
+                        link.old.first().range == origin.declarationRange &&
                         link.new.first().range == node.newRange
                 }
                 check(case, links.size == 1) { "extractedFrom ${origin.subject} of $node matches ${links.size} relationships, not 1" }
@@ -118,16 +120,19 @@ object RelationshipChecks {
     }
 
     /**
-     * The old side of [node] is its own subject, the rename's old subject, or the old kind of a kind change. A
-     * constructor follows its class's rename without a rename of its own, so its old name is the old class's and the
-     * node does not carry it; the range identifies it.
+     * Whether [subject] can be the old side of [node], whose range already identifies its declaration. It is the node's
+     * own subject, the rename's old subject, an old kind of a kind change, or the same kind and name: a declaration
+     * that moved can also have changed its signature, so its endpoint carries the old signature while the node's
+     * subject carries the new one. A constructor follows its class's rename without a rename of its own, so its old
+     * name is the old class's and the node does not carry it.
      */
     private fun oldSubjectMatches(node: ChangeNode, subject: Subject): Boolean {
         if (node.subject == subject || node.renamedFrom == subject) return true
-        if (node.kindChangedFrom != null && (subject as? Subject.Declaration)?.kind == node.kindChangedFrom) return true
-        val nodeSubject = node.subject as? Subject.Declaration
-        val endpoint = subject as? Subject.Declaration
-        return nodeSubject?.kind == DeclarationKind.CONSTRUCTOR && endpoint?.kind == DeclarationKind.CONSTRUCTOR
+        val endpoint = subject as? Subject.Declaration ?: return false
+        if (node.kindChangedFrom != null && endpoint.kind == node.kindChangedFrom) return true
+        val nodeSubject = node.subject as? Subject.Declaration ?: return false
+        if (endpoint.kind == nodeSubject.kind && endpoint.name == nodeSubject.name) return true
+        return nodeSubject.kind == DeclarationKind.CONSTRUCTOR && endpoint.kind == DeclarationKind.CONSTRUCTOR
     }
 
     private fun contentOf(relationship: Relationship): Evidence.Content =

@@ -19,12 +19,16 @@ import java.io.File
  */
 class GoldenFixturesTest : BasePlatformTestCase() {
 
+    // relationships/02 R9, R10: the expected file is the outline before the relationship model.
     fun `test Java fixtures`() = checkFixtures("java", "JAVA", "java")
 
+    // relationships/02 R9, R10: the expected file is the outline before the relationship model.
     fun `test Kotlin fixtures`() = checkFixtures("kotlin", "kotlin", "kt")
 
+    // relationships/02 R9, R10: the expected file is the outline before the relationship model.
     fun `test Scala 2 fixtures`() = checkFixtures("scala2", "Scala", "scala")
 
+    // relationships/02 R9, R10: the expected file is the outline before the relationship model.
     fun `test Scala 3 fixtures`() = checkFixtures("scala3", "Scala", "scala")
 
     private fun checkFixtures(directory: String, languageId: String, extension: String) {

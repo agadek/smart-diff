@@ -1,6 +1,7 @@
 package io.github.agadek.smartdiff.engine.declarations.psi
 
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ChangeNode
@@ -18,6 +19,7 @@ import io.github.agadek.smartdiff.engine.api.contract.ContractCorpus
 import io.github.agadek.smartdiff.engine.api.contract.request
 import io.github.agadek.smartdiff.engine.declarations.analysis.DeclarationAnalysis
 import io.github.agadek.smartdiff.engine.declarations.analysis.tree
+import io.github.agadek.smartdiff.engine.declarations.psi.java.JavaDeclarationProvider
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
 import java.io.File
 import java.util.concurrent.CancellationException
@@ -150,6 +152,15 @@ class DeclarationEngineTest : BasePlatformTestCase() {
         assertTrue(version, version.startsWith("7 ("))
         // This IDE loads the Scala plugin, so its parser is named: it can change a result without a platform update.
         assertTrue(version, version.contains("; Scala "))
+    }
+
+    fun `test R24 the version omits the Scala plugin when no provider handles it`() {
+        // relationships/02-relationship-model R24
+        ExtensionTestUtil.maskExtensions(DeclarationProvider.EP_NAME, listOf(JavaDeclarationProvider()), testRootDisposable)
+        val version = DeclarationEngine(null).version
+
+        assertTrue(version, version.startsWith("7 ("))
+        assertFalse("no Scala plugin is named without its provider: $version", version.contains("Scala"))
     }
 
     fun `test the engine is registered first and supports Java and Kotlin only`() {

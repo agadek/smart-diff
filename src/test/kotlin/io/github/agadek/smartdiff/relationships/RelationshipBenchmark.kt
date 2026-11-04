@@ -33,9 +33,9 @@ import java.util.concurrent.Callable
 import java.util.concurrent.TimeUnit
 
 /**
- * The structural relationships benchmark: labelled cases, real commits, current-engine adapter, metrics, gates and
- * reports. The requirements are in `docs/specs/relationships/01-relationship-benchmark.md`; the design and the test
- * table are in its details file.
+ * The structural relationships benchmark: labelled cases, real commits, the relationships the result reports, their
+ * metrics and confidence counts, the gates and the reports. The requirements are in
+ * `docs/specs/relationships/01-relationship-benchmark.md`; the design and the test table are in its details file.
  */
 object RelationshipBenchmark {
 

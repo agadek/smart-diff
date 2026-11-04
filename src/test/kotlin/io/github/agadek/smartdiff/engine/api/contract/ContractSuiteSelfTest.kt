@@ -27,6 +27,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.EnumSet
 import java.util.concurrent.CancellationException
 
 /** The contract suite itself: its corpus is meaningful and each check can fail. */
@@ -135,6 +136,58 @@ class ContractSuiteSelfTest {
     }
 
     @Test
+    fun `the relationship checks accept a moved declaration whose signature also changed R16`() {
+        // relationships/02-relationship-model R16, R23
+        val node = ChangeNode(
+            method("run", "(int)"), TextRange(0, 3), TextRange(0, 3), Presence.MATCHED,
+            moved = true, signatureChanged = true, content = Content.CHANGED,
+        )
+        val moved = Relationship(
+            kinds = EnumSet.of(RelationshipKind.MOVE),
+            old = listOf(endpoint(method("run", "(long)"), TextRange(0, 3))),
+            new = listOf(endpoint(method("run", "(int)"), TextRange(0, 3))),
+            confidence = Confidence.HIGH,
+            evidence = emptyList(),
+        )
+
+        // The endpoint carries the old signature while the node's subject carries the new one; the range identifies it.
+        RelationshipChecks.endpointsInResultTree(CASE, result(node).copy(relationships = listOf(moved)))
+
+        // Another declaration at that range is still rejected.
+        val other = moved.copy(old = listOf(endpoint(method("other", "(long)"), TextRange(0, 3))))
+        assertThrows(AssertionError::class.java) {
+            RelationshipChecks.endpointsInResultTree(CASE, result(node).copy(relationships = listOf(other)))
+        }
+    }
+
+    @Test
+    fun `the relationship checks accept an extraction whose source was renamed R18`() {
+        // relationships/02-relationship-model R18, R23
+        val case = ContractCase("extract", ContractCorpus.TEXT, "aaa", "bbb")
+        val describe = method("helper", "()")
+        val source = ChangeNode(
+            method("sum", "(int)"), TextRange(0, 2), TextRange(0, 1), Presence.MATCHED, content = Content.CHANGED,
+        ).copy(
+            renamedFrom = method("total", "(int)"),
+            extractedTo = listOf(describe),
+            details = listOf(RangePair(TextRange(0, 1), null)),
+        )
+        val target = ChangeNode(describe, null, TextRange(1, 3), Presence.ADDED).copy(
+            extractedFrom = listOf(Origin(method("sum", "(int)"), TextRange(0, 2), TextRange(0, 1))),
+        )
+        val link = Relationship(
+            kinds = EnumSet.of(RelationshipKind.EXTRACT),
+            old = listOf(endpoint(method("total", "(int)"), TextRange(0, 2))),
+            new = listOf(endpoint(describe, TextRange(1, 3))),
+            confidence = Confidence.HIGH,
+            evidence = listOf(Evidence.Content(1, 2, TextRange(0, 1), TextRange(1, 3)), Evidence.Score(0.5)),
+        )
+
+        // The Origin names the source as the matched node shows it (sum), while the endpoint names the old one (total).
+        RelationshipChecks.extractionFieldsAgree(case, result(source, target).copy(relationships = listOf(link)))
+    }
+
+    @Test
     fun `the relationship checks reject a range outside the text R17`() {
         // relationships/02-relationship-model R17, R23
         val bad = result(
@@ -183,6 +236,10 @@ class ContractSuiteSelfTest {
             rename(TextRange(0, old.length), "all", TextRange(0, new.length), "all"),
         ),
     )
+
+    private fun method(name: String, signature: String?) = Subject.Declaration(DeclarationKind.METHOD, name, signature)
+
+    private fun endpoint(subject: Subject, range: TextRange) = RelationshipEndpoint(subject, range)
 
     private fun rename(old: TextRange, oldName: String, new: TextRange, newName: String) = Relationship(
         kinds = java.util.EnumSet.of(RelationshipKind.RENAME),
