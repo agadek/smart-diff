@@ -1,10 +1,18 @@
 package io.github.agadek.smartdiff.engine.declarations.analysis
 
 import io.github.agadek.smartdiff.engine.api.Cancellation
+import io.github.agadek.smartdiff.engine.api.Confidence
+import io.github.agadek.smartdiff.engine.api.ConfidencePolicy
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
+import io.github.agadek.smartdiff.engine.api.Evidence
+import io.github.agadek.smartdiff.engine.api.EvidenceOrder
+import io.github.agadek.smartdiff.engine.api.Relationship
+import io.github.agadek.smartdiff.engine.api.RelationshipEndpoint
+import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.declarations.model.Declaration
 import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
 import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
+import java.util.EnumSet
 import java.util.IdentityHashMap
 
 /** The rule that matched a declaration to its counterpart (technical specification §7). */
@@ -70,6 +78,11 @@ class Matching(
     val removed: List<Declaration>,
     /** New-side declarations without a counterpart, in source order. */
     val added: List<Declaration>,
+    /**
+     * A relationship for each match that is a rename candidate, is moved or changed kind (relationships/02 R25, R26), in
+     * old-side source order. Extraction links are added by [ExtractionDetector].
+     */
+    val relationships: List<Relationship> = emptyList(),
 ) {
     private val byOld = IdentityHashMap<Declaration, Match>().apply { matches.forEach { put(it.old, it) } }
     private val byNew = IdentityHashMap<Declaration, Match>().apply { matches.forEach { put(it.new, it) } }
@@ -90,7 +103,16 @@ class Matching(
  */
 object DeclarationMatcher {
 
-    fun match(old: DeclarationTree, new: DeclarationTree, cancellation: Cancellation): Matching {
+    /** Matches with the default [ConfidencePolicy], as a test or a caller without a request does. */
+    fun match(old: DeclarationTree, new: DeclarationTree, cancellation: Cancellation): Matching =
+        match(old, new, ConfidencePolicy.DEFAULT, cancellation)
+
+    /**
+     * Matches with [confidence] classifying the scored pairs. The policy never changes which pairs are found: the
+     * rename floor stays at [RENAME_THRESHOLD], and the policy only tells a high pair from a medium or a low one
+     * (relationships/02 R9, R13, R25).
+     */
+    fun match(old: DeclarationTree, new: DeclarationTree, confidence: ConfidencePolicy, cancellation: Cancellation): Matching {
         val oldSide = Side(old)
         val newSide = Side(new)
         // Old declaration -> its counterpart and the rule that matched it; newMatched holds the counterparts.
@@ -217,17 +239,74 @@ object DeclarationMatcher {
         }
         val orderChanged = orderChanges(old, new, pairs, cancellation)
 
+        val matches = old.all.mapNotNull { o ->
+            val (n, rule) = pairs[o] ?: return@mapNotNull null
+            Match(o, n, rule, containerChanged = !containersMatch(o, n), orderChanged = o in orderChanged)
+        }
+
         return Matching(
-            matches = old.all.mapNotNull { o ->
-                val (n, rule) = pairs[o] ?: return@mapNotNull null
-                Match(o, n, rule, containerChanged = !containersMatch(o, n), orderChanged = o in orderChanged)
-            },
+            matches = matches,
             uncertainOld = old.all.mapNotNull { uncertainOld[it] },
             uncertainNew = new.all.mapNotNull { uncertainNew[it] },
             removed = old.all.filter { it !in pairs && it !in uncertainOld },
             added = new.all.filter { it !in newMatched && it !in uncertainNew },
+            relationships = relationships(matches, oldSide, newSide, similarity, confidence),
         )
     }
+
+    /**
+     * The rename, move and kind change relationships of [matches] (relationships/02, `Today's relationships`). A rename
+     * candidate's confidence comes from its rename similarity through [policy]; a move and a kind change are high, and a
+     * relationship with several kinds takes its lowest one (R25, R26). Ties in the greedy pass keep using both
+     * declarations, so a low pair is still visible in this list (R13).
+     */
+    private fun relationships(
+        matches: List<Match>,
+        oldSide: Side,
+        newSide: Side,
+        similarity: Similarity,
+        policy: ConfidencePolicy,
+    ): List<Relationship> {
+        val relationships = mutableListOf<Relationship>()
+        for (match in matches) {
+            val kinds = EnumSet.noneOf(RelationshipKind::class.java)
+            val evidence = mutableListOf<Evidence>()
+            val renameScore = if (match.rule == MatchRule.RENAME_CANDIDATE) similarity.rename(match.old, match.new) else null
+            if (renameScore != null) {
+                kinds += RelationshipKind.RENAME
+                evidence += Evidence.Name(match.old.name, match.new.name)
+                evidence += Evidence.Score(renameScore)
+            }
+            if (match.moved) kinds += RelationshipKind.MOVE
+            if (match.old.kind != match.new.kind) kinds += RelationshipKind.KIND_CHANGE
+            if (kinds.isEmpty()) continue
+            if (match.moved || match.old.kind != match.new.kind) {
+                evidence += Evidence.Structure(
+                    oldPath = path(oldSide, match.old),
+                    newPath = path(newSide, match.new),
+                    oldKind = match.old.kind,
+                    newKind = match.new.kind,
+                )
+            }
+            if (RelationshipKind.RENAME in kinds || RelationshipKind.MOVE in kinds) {
+                evidence += Evidence.Position(oldSide.position(match.old), newSide.position(match.new))
+            }
+            relationships += Relationship(
+                kinds = kinds,
+                old = listOf(RelationshipEndpoint(declarationSubject(match.old), match.old.range)),
+                new = listOf(RelationshipEndpoint(declarationSubject(match.new), match.new.range)),
+                confidence = renameScore?.let(policy::classify) ?: Confidence.HIGH,
+                evidence = evidence.sortedBy { EvidenceOrder.of(it) },
+            )
+        }
+        return relationships
+    }
+
+    /** A declaration's container path on its side, as `class Order / method total(int)`. */
+    private fun path(side: Side, declaration: Declaration): String =
+        side.path(declaration).joinToString(" / ") { container ->
+            container.kind.name.lowercase().replace('_', ' ') + (if (container.name.isEmpty()) "" else " " + container.name)
+        }
 
     /**
      * For each matched container pair and the top level, the matched children outside the longest common subsequence
@@ -478,6 +557,12 @@ object DeclarationMatcher {
         fun parent(declaration: Declaration): Declaration? = parents[declaration]
 
         fun path(declaration: Declaration): List<Container> = paths.getValue(declaration)
+
+        /** The index of [declaration] among its siblings on this side, or its top-level index. */
+        fun position(declaration: Declaration): Int {
+            val parent = parents[declaration]
+            return if (parent == null) tree.topLevel.indexOf(declaration) else parent.children.indexOf(declaration)
+        }
 
         /** The declarations not in [matched], grouped by [key]; keys and groups in source order. */
         fun groupUnmatched(matched: Set<Declaration>, key: (Side, Declaration) -> Key, cancellation: Cancellation): Map<Key, List<Declaration>> {

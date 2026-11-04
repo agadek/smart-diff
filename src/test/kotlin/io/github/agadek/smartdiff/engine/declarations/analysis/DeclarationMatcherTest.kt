@@ -1,11 +1,18 @@
 package io.github.agadek.smartdiff.engine.declarations.analysis
 
 import io.github.agadek.smartdiff.engine.api.Cancellation
+import io.github.agadek.smartdiff.engine.api.Confidence
+import io.github.agadek.smartdiff.engine.api.ConfidencePolicy
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
+import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.Evidence
+import io.github.agadek.smartdiff.engine.api.Presence
+import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.declarations.model.Declaration
 import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -442,6 +449,72 @@ class DeclarationMatcherTest {
     }
 
     @Test
+    fun `R29 a rule M4 ambiguity keeps candidates and is not a relationship`() {
+        // relationships/02-relationship-model R29
+        val old = tree { cls("A") { method("foo", "int"); method("foo", "String") } }
+        val new = tree { cls("A") { method("foo", "long"); method("foo", "char"); method("foo", "byte") } }
+
+        val matching = match(old, new)
+
+        assertTrue(matching.uncertainOld.isNotEmpty() && matching.uncertainNew.isNotEmpty())
+        assertTrue("an uncertain declaration keeps its candidates", matching.uncertainOld.all { it.candidates.isNotEmpty() })
+        assertTrue("no relationship for an ambiguity", matching.relationships.isEmpty())
+    }
+
+    @Test
+    fun `R11 R12 R13 a policy classifies a rename pair without changing the pairs found`() {
+        // relationships/02-relationship-model R11, R12, R13, R25
+        val old = tree { cls("A") { method("other", "", "{ a(); b(); c(); }"); method("total", "int", BODY) } }
+        val new = tree { cls("A") { method("sum", "int", BODY.replace("x", "y")); method("other", "", "{ a(); b(); c(); }") } }
+        val score = match(old, new).relationships.single { RelationshipKind.RENAME in it.kinds }
+            .evidence.filterIsInstance<Evidence.Score>().single().value
+        assertTrue("the fixture scores between the floor and 1.0: $score", score >= 0.7 && score < 1.0)
+        val high = ConfidencePolicy(high = score, medium = score)
+        val medium = ConfidencePolicy(high = score + (1.0 - score) / 2, medium = score)
+        val low = ConfidencePolicy(high = 1.0, medium = 1.0)
+
+        // The pairing floor does not move: every policy finds the same pairs, in the same order.
+        val pairs = listOf(high, medium, low).map { policy -> match(old, new, policy).matches.map { it.toString() } }
+        assertEquals(pairs[0], pairs[1])
+        assertEquals(pairs[0], pairs[2])
+        assertEquals(Confidence.HIGH, match(old, new, high).relationships.single { RelationshipKind.RENAME in it.kinds }.confidence)
+        assertEquals(Confidence.MEDIUM, match(old, new, medium).relationships.single { RelationshipKind.RENAME in it.kinds }.confidence)
+        assertEquals(Confidence.LOW, match(old, new, low).relationships.single { RelationshipKind.RENAME in it.kinds }.confidence)
+
+        // High and medium set renamedFrom; low leaves both declarations added and removed with the link still listed.
+        val highNodes = compare(old, new, high)
+        assertEquals(Presence.MATCHED, highNodes.node("sum").presence)
+        assertEquals("total", (highNodes.node("sum").renamedFrom as io.github.agadek.smartdiff.engine.api.Subject.Declaration).name)
+        val mediumNodes = compare(old, new, medium)
+        assertEquals(Presence.MATCHED, mediumNodes.node("sum").presence)
+        assertNotNull(mediumNodes.node("sum").renamedFrom)
+        val lowResult = compare(old, new, low)
+        assertEquals(Presence.ADDED, lowResult.node("sum").presence)
+        assertEquals(Presence.REMOVED, lowResult.node("total").presence)
+        assertNull(lowResult.node("sum").renamedFrom)
+        assertEquals("the low relationship stays in the list", 1, lowResult.relationships.count { RelationshipKind.RENAME in it.kinds })
+    }
+
+    @Test
+    fun `R13 a low composite relationship sets none of the computed fields`() {
+        // relationships/02-relationship-model R13, R26
+        // `total` is renamed to `sum` and is outside the longest common subsequence, so it is moved as well.
+        val old = tree { cls("A") { method("other", "", "{ a(); b(); c(); }"); method("total", "int", BODY) } }
+        val new = tree { cls("A") { method("sum", "int", BODY.replace("x", "y")); method("other", "", "{ a(); b(); c(); }") } }
+        val composed = match(old, new).relationships.single { it.kinds.containsAll(listOf(RelationshipKind.RENAME, RelationshipKind.MOVE)) }
+        assertEquals(RelationshipKind.RENAME, composed.kinds.first())
+
+        val low = ConfidencePolicy(high = 1.0, medium = 1.0)
+        val result = compare(old, new, low)
+
+        assertNull("no rename", result.node("sum").renamedFrom)
+        assertFalse("no move", result.node("sum").moved)
+        assertNull("no kind change", result.node("sum").kindChangedFrom)
+        assertEquals(Presence.ADDED, result.node("sum").presence)
+        assertTrue(result.relationships.any { RelationshipKind.MOVE in it.kinds })
+    }
+
+    @Test
     fun `matching is deterministic`() {
         val build = {
             tree { cls("A") { method("foo", "int"); method("foo", "String"); method("bar") }; cls("B") { method("baz") } }
@@ -492,6 +565,15 @@ class DeclarationMatcherTest {
     }
 
     private fun match(old: DeclarationTree, new: DeclarationTree) = DeclarationMatcher.match(old, new, Cancellation.NONE)
+
+    private fun match(old: DeclarationTree, new: DeclarationTree, confidence: ConfidencePolicy) =
+        DeclarationMatcher.match(old, new, confidence, Cancellation.NONE)
+
+    private fun compare(old: DeclarationTree, new: DeclarationTree, confidence: ConfidencePolicy) =
+        DeclarationAnalysis(EngineId("smartdiff.test.declarations"), "1").compare(old, new, 5_000, Cancellation.NONE, confidence)
+
+    private fun io.github.agadek.smartdiff.engine.api.ComparisonResult.node(name: String) =
+        changes.flatMap { listOf(it) + it.children }.single { (it.subject as io.github.agadek.smartdiff.engine.api.Subject.Declaration).name == name }
 
     @Test
     fun `M3 pairs what remains of a repeated name once the rest of the group is paired`() {

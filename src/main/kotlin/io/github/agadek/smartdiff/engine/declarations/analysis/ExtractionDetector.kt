@@ -1,14 +1,23 @@
 package io.github.agadek.smartdiff.engine.declarations.analysis
 
 import io.github.agadek.smartdiff.engine.api.Cancellation
+import io.github.agadek.smartdiff.engine.api.Confidence
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
+import io.github.agadek.smartdiff.engine.api.Evidence
+import io.github.agadek.smartdiff.engine.api.Relationship
+import io.github.agadek.smartdiff.engine.api.RelationshipEndpoint
+import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.declarations.model.Declaration
 import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
-import java.util.IdentityHashMap
+import java.util.EnumSet
 
-/** An added declaration whose body is mostly code that [source]'s old side had and its new side no longer has. */
-class Extraction(
+/**
+ * One extraction link as detection found it, with the shares its thresholds compare. Its [relationship] is the
+ * engine-neutral form the result carries (relationships/02 R27); the shares stay for the corpus validation's near-miss
+ * diagnostics (§8) and are not part of the result.
+ */
+internal class Extraction(
     val target: Declaration,
     val source: Match,
     /** The old-side range of the extracted code, inside the source's old range. */
@@ -17,18 +26,22 @@ class Extraction(
     val covered: Double,
     /** The share of the tiled source tokens that were removed from the source. */
     val removed: Double,
-)
-
-/** The extractions of one comparison, from both ends. */
-class Extractions(
-    /** For each added declaration, its sources: largest covered share first, then in old-side source order. */
-    val ofTarget: Map<Declaration, List<Extraction>>,
-    /** For each source's old declaration, the extractions from it, in new-side source order. */
-    val ofSource: Map<Declaration, List<Extraction>>,
+    /** The target's body tokens the tiles covered. */
+    val shared: Int,
+    /** All of the target's body tokens. */
+    val total: Int,
 ) {
-    companion object {
-        val NONE = Extractions(emptyMap(), emptyMap())
-    }
+    /** The [RelationshipKind.EXTRACT] relationship of this link (relationships/02 R18, R27). */
+    val relationship: Relationship = Relationship(
+        kinds = EnumSet.of(RelationshipKind.EXTRACT),
+        old = listOf(RelationshipEndpoint(declarationSubject(source.old), source.old.range)),
+        new = listOf(RelationshipEndpoint(declarationSubject(target), target.range)),
+        confidence = Confidence.HIGH,
+        evidence = listOf(
+            Evidence.Content(shared, total, origin, target.range),
+            Evidence.Score(covered),
+        ),
+    )
 }
 
 /**
@@ -70,8 +83,9 @@ object ExtractionDetector {
     )
 
     /**
-     * The extractions among [matching]'s added declarations; [changed] tells which matches have changed content, the
-     * only ones that can be sources. Returns [Extractions.NONE] when the work would exceed [maxWork].
+     * The extraction links among [matching]'s added declarations as relationships (relationships/02 R27);
+     * [changed] tells which matches have changed content, the only ones that can be sources. Returns an empty list when
+     * the work would exceed [maxWork].
      */
     fun detect(
         matching: Matching,
@@ -79,15 +93,27 @@ object ExtractionDetector {
         cancellation: Cancellation,
         maxWork: Long = MAX_WORK,
         thresholds: Thresholds = Thresholds(),
-    ): Extractions {
+    ): List<Relationship> = detectLinks(matching, changed, cancellation, maxWork, thresholds).map { it.relationship }
+
+    /**
+     * The links [detect] turns into relationships, with the shares it measured. The corpus validation uses them to list
+     * the links lower thresholds would make (§8); the result never carries them.
+     */
+    internal fun detectLinks(
+        matching: Matching,
+        changed: (Match) -> Boolean,
+        cancellation: Cancellation,
+        maxWork: Long = MAX_WORK,
+        thresholds: Thresholds = Thresholds(),
+    ): List<Extraction> {
         val keys = Keys()
         val targets = matching.added.filter { it.kind in TARGET_KINDS }.mapNotNull { declaration ->
             val body = declaration.body ?: return@mapNotNull null
             keys.significant(declaration) { it in body }?.takeIf { it.size >= MIN_TOKENS }?.let { Target(declaration, it) }
         }
-        if (targets.isEmpty()) return Extractions.NONE
+        if (targets.isEmpty()) return emptyList()
         val candidates = matching.matches.filter { it.old.kind in SOURCE_KINDS && changed(it) }
-        if (candidates.isEmpty()) return Extractions.NONE
+        if (candidates.isEmpty()) return emptyList()
 
         val budget = Budget(maxWork, cancellation)
         val found = try {
@@ -99,17 +125,15 @@ object ExtractionDetector {
             val pairs = targets.flatMap { target -> sources.filter { overlaps(target, it) }.map { target to it } }
             pairs.mapNotNull { (target, source) -> link(target, source, budget, thresholds) }
         } catch (e: OverBudget) {
-            return Extractions.NONE
+            return emptyList()
         }
-        if (found.isEmpty()) return Extractions.NONE
-
-        val ofTarget = IdentityHashMap<Declaration, List<Extraction>>()
-        found.groupBy { it.target }.forEach { (target, links) ->
-            ofTarget[target] = links.sortedWith(compareByDescending<Extraction> { it.covered }.thenBy { it.source.old.range.start })
-        }
-        val ofSource = IdentityHashMap<Declaration, List<Extraction>>()
-        found.groupBy { it.source.old }.forEach { (old, links) -> ofSource[old] = links.sortedBy { it.target.range.start } }
-        return Extractions(ofTarget, ofSource)
+        // A target's sources come largest covered share first, then in old-side source order; a source's targets come
+        // in new-side source order. The analysis reads the fields in these orders (relationships/02 R18).
+        return found
+            .groupBy { it.target }
+            .values
+            .sortedBy { links -> links.first().target.range.start }
+            .flatMap { links -> links.sortedWith(compareByDescending<Extraction> { it.covered }.thenBy { it.source.old.range.start }) }
     }
 
     private class Target(val declaration: Declaration, val tokens: Significant) {
@@ -140,7 +164,15 @@ object ExtractionDetector {
         val last = tiles.maxOf { it.source + it.length }
         if (last - first > 2 * tiled) return null
         val origin = TextRange(source.old.starts[first], source.old.ends[last - 1])
-        return Extraction(target.declaration, source.match, origin, tiled.toDouble() / target.tokens.size, removed.toDouble() / tiled)
+        return Extraction(
+            target = target.declaration,
+            source = source.match,
+            origin = origin,
+            covered = tiled.toDouble() / target.tokens.size,
+            removed = removed.toDouble() / tiled,
+            shared = tiled,
+            total = target.tokens.size,
+        )
     }
 
     private class Tile(val target: Int, val source: Int, val length: Int)

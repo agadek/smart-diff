@@ -3,8 +3,12 @@ package io.github.agadek.smartdiff.engine.declarations.analysis
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
+import io.github.agadek.smartdiff.engine.api.Confidence
+import io.github.agadek.smartdiff.engine.api.ConfidencePolicy
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
+import io.github.agadek.smartdiff.engine.api.Evidence
+import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.RangePair
@@ -375,6 +379,111 @@ class DeclarationAnalysisTest {
         assertEquals(Subject.Declaration(DeclarationKind.FUNCTION, "formatIsoDate", "", "Date"), compare(old, new).changes.single().subject)
     }
 
+    @Test
+    fun `R25 R26 R27 today's relationships carry their kinds, confidence and evidence`() {
+        // relationships/02-relationship-model R25, R26, R27
+        // A rename is scored, and today's floor puts it at high or medium.
+        val renamed = compare(tree { cls("A") { method("total", "int", BODY) } }, tree { cls("A") { method("sum", "int", BODY) } })
+        val rename = renamed.relationships.single()
+        assertEquals(listOf(RelationshipKind.RENAME), rename.kinds.toList())
+        assertTrue(rename.confidence == Confidence.HIGH || rename.confidence == Confidence.MEDIUM)
+        assertEquals(Evidence.Name("total", "sum"), rename.evidence.filterIsInstance<Evidence.Name>().single())
+        assertTrue("the score is evidence", rename.evidence.any { it is Evidence.Score })
+
+        // A move is high and says where the declaration went.
+        val moved = compare(tree { cls("A") { method("foo") }; cls("B") }, tree { cls("A"); cls("B") { method("foo") } })
+        val move = moved.relationships.single()
+        assertEquals(listOf(RelationshipKind.MOVE), move.kinds.toList())
+        assertEquals(Confidence.HIGH, move.confidence)
+        assertEquals("class A", move.evidence.filterIsInstance<Evidence.Structure>().single().oldPath)
+        assertEquals("class B", move.evidence.filterIsInstance<Evidence.Structure>().single().newPath)
+
+        // A kind change is high and names both kinds.
+        val kind = compare(
+            tree { declaration(DeclarationKind.CLASS, "Order") },
+            tree { declaration(DeclarationKind.INTERFACE, "Order") },
+        )
+        val kindChange = kind.relationships.single()
+        assertEquals(listOf(RelationshipKind.KIND_CHANGE), kindChange.kinds.toList())
+        assertEquals(Confidence.HIGH, kindChange.confidence)
+        assertEquals(DeclarationKind.CLASS, kindChange.evidence.filterIsInstance<Evidence.Structure>().single().oldKind)
+        assertEquals(DeclarationKind.INTERFACE, kindChange.evidence.filterIsInstance<Evidence.Structure>().single().newKind)
+
+        // R26: a renamed and moved declaration is one relationship with both kinds, at the rename's confidence.
+        val composite = compare(
+            tree { cls("A") { method("other", "", "{ a(); b(); c(); }"); method("total", "int", BODY) } },
+            tree { cls("A") { method("sum", "int", BODY.replace("x", "y")); method("other", "", "{ a(); b(); c(); }") } },
+        ).relationships.single { RelationshipKind.RENAME in it.kinds }
+        assertEquals(listOf(RelationshipKind.RENAME, RelationshipKind.MOVE), composite.kinds.toList())
+        assertTrue(composite.confidence == Confidence.HIGH || composite.confidence == Confidence.MEDIUM)
+
+        // A renamed class is one rename; its constructor follows it and is not a rename of its own.
+        val classRename = compare(
+            tree { cls("Parser", "class Parser { private final String text; }") { declaration(DeclarationKind.CONSTRUCTOR, "Parser", "String", "Parser(String text) { this.text = text; }") } },
+            tree { cls("Reader", "class Reader { private final String text; }") { declaration(DeclarationKind.CONSTRUCTOR, "Reader", "String", "Reader(String text) { this.text = text; }") } },
+        )
+        assertEquals(listOf(RelationshipKind.RENAME), classRename.relationships.single().kinds.toList())
+        assertEquals("Parser", (classRename.relationships.single().old.single().subject as Subject.Declaration).name)
+    }
+
+    @Test
+    fun `R18 R27 an extraction with two sources has one high relationship per source and target pair`() {
+        // relationships/02-relationship-model R18, R27
+        val loop = "for (Item item : order.items()) { text.append(item.name()).append(item.quantity()); }"
+        val old = tree {
+            cls("A") {
+                method("a", body = "{ first(); $loop }")
+                method("b", body = "{ second(); $loop }")
+            }
+        }
+        val new = tree {
+            cls("A") {
+                method("a", body = "{ first(); describe(); }")
+                method("b", body = "{ second(); describe(); }")
+                method("describe", body = "{ $loop }")
+            }
+        }
+
+        val result = compare(old, new)
+        val links = result.relationships.filter { RelationshipKind.EXTRACT in it.kinds }
+        assertEquals(2, links.size)
+        links.forEach { link ->
+            assertEquals(Confidence.HIGH, link.confidence)
+            val content = link.evidence.filterIsInstance<Evidence.Content>().single()
+            assertEquals(link.new.single().range, content.newRange)
+            assertTrue(content.shared in 1..content.total)
+            assertEquals(content.shared.toDouble() / content.total, link.evidence.filterIsInstance<Evidence.Score>().single().value, 0.0)
+        }
+        // R18: both ends of a link carry the same extracted code and named source.
+        val describe = result.changes.single().children.single { (it.subject as Subject.Declaration).name == "describe" }
+        assertEquals(setOf("a", "b"), describe.extractedFrom.map { (it.subject as Subject.Declaration).name }.toSet())
+        describe.extractedFrom.forEach { origin ->
+            val source = result.changes.single().children.single { (it.subject as Subject.Declaration).name == (origin.subject as Subject.Declaration).name }
+            assertEquals(source.oldRange, origin.declarationRange)
+            assertEquals(origin.subject, source.subject)
+            assertTrue(source.extractedTo.contains(describe.subject))
+            assertTrue(source.details.contains(RangePair(origin.range, null)))
+        }
+    }
+
+    @Test
+    fun `R14 the default policy is in the request and a custom one reaches the matcher`() {
+        // relationships/02-relationship-model R14
+        assertEquals(ConfidencePolicy.DEFAULT, io.github.agadek.smartdiff.engine.api.ComparisonRequest("a", "b", "TEXT").confidence)
+        assertEquals(ConfidencePolicy.DEFAULT, ConfidencePolicy())
+
+        val old = tree { cls("A") { method("total", "int", BODY) } }
+        val new = tree { cls("A") { method("sum", "int", BODY.replace("x", "y")) } }
+        val strict = ConfidencePolicy(high = 1.0, medium = 1.0)
+
+        val byDefault = compare(old, new)
+        val byRequest = DeclarationAnalysis(ENGINE, "1").compare(old, new, 5_000, Cancellation.NONE, strict)
+
+        assertTrue("the default policy makes the pair at least medium", byDefault.relationships.single().confidence != Confidence.LOW)
+        assertEquals(Confidence.LOW, byRequest.relationships.single().confidence)
+        assertEquals(byDefault.relationships.single().kinds, byRequest.relationships.single().kinds)
+    }
+
     private fun compare(old: DeclarationTree, new: DeclarationTree): ComparisonResult =
         DeclarationAnalysis(ENGINE, "1").compare(old, new, maxDeclarations = 5_000, cancellation = Cancellation.NONE)
 
@@ -398,5 +507,8 @@ class DeclarationAnalysisTest {
 
     private companion object {
         val ENGINE = EngineId("smartdiff.test.declarations")
+
+        /** A body long enough to be compared by content. */
+        const val BODY = "{ int x = compute(a, b); return x * 2; }"
     }
 }

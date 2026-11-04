@@ -2,7 +2,9 @@ package io.github.agadek.smartdiff.ui
 
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.util.registry.Registry
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import io.github.agadek.smartdiff.engine.api.ConfidencePolicy
 import io.github.agadek.smartdiff.engine.api.Limits
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
 
@@ -52,6 +54,29 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
         settings.loadState(SmartDiffSettings.SettingsState().apply { maxChars = 0; timeoutMillis = -1 })
 
         assertEquals(Limits.DEFAULT, settings.limits)
+    }
+
+    fun `test R15 R30 the confidence thresholds come from the registry and a malformed value keeps the default`() {
+        // relationships/02-relationship-model R15, R30
+        val key = Registry.get(SmartDiffSettings.CONFIDENCE_KEY)
+        val previous = key.asString()
+        try {
+            assertEquals("the declared default is the policy's default", "0.85,0.7", previous)
+            assertEquals(ConfidencePolicy.DEFAULT, settings.confidence)
+
+            key.setValue("0.9,0.8")
+            assertEquals(ConfidencePolicy(high = 0.9, medium = 0.8), settings.confidence)
+
+            key.setValue("")
+            assertEquals("an empty value keeps the default", ConfidencePolicy.DEFAULT, settings.confidence)
+
+            key.setValue("high,medium")
+            assertEquals("a malformed value keeps the default", ConfidencePolicy.DEFAULT, settings.confidence)
+            key.setValue("0.9,0.95")
+            assertEquals("medium above high keeps the default", ConfidencePolicy.DEFAULT, settings.confidence)
+        } finally {
+            key.setValue(previous)
+        }
     }
 
     fun `test the settings page lists each language with an engine`() {

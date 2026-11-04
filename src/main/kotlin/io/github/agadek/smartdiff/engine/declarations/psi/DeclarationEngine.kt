@@ -1,7 +1,9 @@
 package io.github.agadek.smartdiff.engine.declarations.psi
 
+import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.lang.Language
 import com.intellij.openapi.application.ApplicationInfo
+import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
@@ -26,8 +28,12 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
     override val id: EngineId = ID
     override val displayName: String = "Declarations"
 
-    /** The engine's own version and the platform build whose parsers it uses, so results from another IDE differ. */
-    override val version: String = "$VERSION (${ApplicationInfo.getInstance().build.asStringWithoutProductCode()})"
+    /**
+     * The engine's own version and the platform build whose parsers it uses, so results from another IDE differ; the
+     * Scala plugin's version is added too when its provider is loaded, since its parser can change a result without a
+     * platform update (relationships/02 R24).
+     */
+    override val version: String = formatVersion(ApplicationInfo.getInstance().build.asStringWithoutProductCode(), scalaPluginVersion())
 
     override fun supports(languageId: String): Boolean = provider(languageId) != null
 
@@ -36,7 +42,7 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
             ?: return ComparisonResult.unsupported(this, "no declaration provider for language ${request.languageId}")
         return try {
             val (old, new) = trees(provider, request, cancellation)
-            DeclarationAnalysis(id, version).compare(old, new, request.limits.maxDeclarations, cancellation)
+            DeclarationAnalysis(id, version).compare(old, new, request.limits.maxDeclarations, cancellation, request.confidence)
         } catch (e: CancellationException) {
             throw e
         } catch (e: ProcessCanceledException) {
@@ -78,6 +84,26 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
         val ID = EngineId("smartdiff.declarations")
 
         /** Raise when a change to a provider, matching or classification can change results. */
-        const val VERSION = "6"
+        const val VERSION = "7"
+
+        /** The result's engine version: `7 (251.26927.53)`, or with the Scala plugin, `7 (251.26927.53; Scala 2025.1.32)`. */
+        internal fun formatVersion(platformBuild: String, scalaPluginVersion: String?): String =
+            if (scalaPluginVersion == null) "$VERSION ($platformBuild)" else "$VERSION ($platformBuild; Scala $scalaPluginVersion)"
+
+        /**
+         * The Scala plugin's version when its declaration provider is loaded, since its parser can change a result
+         * (R24); null when it is not loaded, so an IDE without the Scala plugin keeps a shorter version.
+         */
+        private fun scalaPluginVersion(): String? {
+            if (DeclarationProvider.EP_NAME.extensionList.none { it.supports(SCALA) }) return null
+            return try {
+                PluginManagerCore.getPlugin(PluginId.getId("org.intellij.scala"))?.version ?: UNKNOWN
+            } catch (e: Exception) {
+                UNKNOWN
+            }
+        }
+
+        private const val SCALA = "Scala"
+        private const val UNKNOWN = "unknown"
     }
 }

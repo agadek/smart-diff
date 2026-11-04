@@ -157,10 +157,10 @@ class CorpusValidationTest : BasePlatformTestCase() {
             ContentClassifier.classify(match.old.ownTokens, match.new.ownTokens, new.whitespacePolicy, parseError = false,
                 signatureChanged = match.old.signature != match.new.signature) == Content.CHANGED
         }
-        val loose = ExtractionDetector.detect(matching, changed, Cancellation.NONE, thresholds = ExtractionDetector.Thresholds(0.5, 0.5))
-        val strict = ExtractionDetector.detect(matching, changed, Cancellation.NONE)
-        return loose.ofTarget.flatMap { (target, links) ->
-            val linked = strict.ofTarget[target].orEmpty().map { it.source }
+        val loose = ExtractionDetector.detectLinks(matching, changed, Cancellation.NONE, thresholds = ExtractionDetector.Thresholds(0.5, 0.5))
+        val strict = ExtractionDetector.detectLinks(matching, changed, Cancellation.NONE)
+        return loose.groupBy { it.target }.flatMap { (target, links) ->
+            val linked = strict.filter { it.target === target }.map { it.source }
             links.filter { link -> linked.none { it === link.source } }.map { link ->
                 "${target.name} <- ${link.source.old.name} covered %.2f removed %.2f".format(link.covered, link.removed)
             }

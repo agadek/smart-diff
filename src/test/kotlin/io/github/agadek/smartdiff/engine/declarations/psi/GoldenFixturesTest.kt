@@ -13,6 +13,9 @@ import java.io.File
  *
  * Every fixture must also hide nothing (§3.1 rule 6). Run the build with `-Psmartdiff.updateGolden=true` to write the
  * expected files from the current results; review every change to them before committing.
+ *
+ * relationships/02 R9, R10: these fixture files are the outline the engine showed before the relationship model, so
+ * they pass unchanged. A diff there is a change in what the plugin shows.
  */
 class GoldenFixturesTest : BasePlatformTestCase() {
 

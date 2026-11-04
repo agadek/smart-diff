@@ -25,6 +25,9 @@ import java.util.concurrent.Executor
  *
  * Every fixture also hides nothing on either side. Run with `-Psmartdiff.updateGolden=true` to rewrite the expected
  * files from the current results; review every change before committing.
+ *
+ * relationships/02 R9, R10: the merge outline fixtures are the rows the engine joined before the relationship
+ * model, so they pass unchanged.
  */
 class MergeFixturesTest : BasePlatformTestCase() {
 

@@ -25,5 +25,15 @@ abstract class ComparisonEngineContractTest {
 
     @Test fun `results are deterministic`() = contract.`results are deterministic`()
 
+    @Test fun `relationships name declarations in the result`() = contract.`relationships name declarations in the result`()
+
+    @Test fun `relationship ranges lie inside their side`() = contract.`relationship ranges lie inside their side`()
+
+    @Test fun `extraction fields agree and no relationship repeats`() = contract.`extraction fields agree and no relationship repeats`()
+
+    @Test fun `relationships are in a fixed order`() = contract.`relationships are in a fixed order`()
+
+    @Test fun `relationships hide nothing`() = contract.`relationships hide nothing`()
+
     @Test fun `cancellation propagates promptly`() = contract.`cancellation propagates promptly`()
 }

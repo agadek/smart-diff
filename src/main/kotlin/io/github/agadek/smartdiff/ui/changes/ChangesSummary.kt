@@ -179,8 +179,19 @@ class ChangesSummaryService(private val project: Project) {
         ) : Entry
     }
 
-    /** What a summary was computed from: the file's paths, a version of each side and the engine. */
-    private data class Key(val oldPath: String, val newPath: String, val oldVersion: String, val newVersion: String, val engineId: String)
+    /**
+     * What a summary was computed from: the file's paths, a version of each side, the engine and the confidence policy.
+     * The policy is part of the key, so a changed registry threshold does not leave summaries computed under the old one
+     * (relationships/02 R15).
+     */
+    private data class Key(
+        val oldPath: String,
+        val newPath: String,
+        val oldVersion: String,
+        val newVersion: String,
+        val engineId: String,
+        val confidence: String,
+    )
 
     private val executor = AppExecutorUtil.createBoundedApplicationPoolExecutor("SMART Diff Changes summary", 1)
     private val cache = ConcurrentHashMap<Key, Entry>()
@@ -232,7 +243,7 @@ class ChangesSummaryService(private val project: Project) {
         val fileName = new.file.name
         val languageId = (FileTypeRegistry.getInstance().getFileTypeByFileName(fileName) as? LanguageFileType)?.language?.id ?: return null
         val engine = EngineRegistry.getInstance(project).select(languageId).selected ?: return null
-        val key = Key(old.file.path, new.file.path, version(old), version(new), engine.id.value)
+        val key = Key(old.file.path, new.file.path, version(old), version(new), engine.id.value, SmartDiffSettings.getInstance().confidence.format())
         return Request(key, change, languageId, fileName)
     }
 
@@ -277,8 +288,9 @@ class ChangesSummaryService(private val project: Project) {
         val engine = EngineRegistry.getInstance(project).findEngine(EngineId(request.key.engineId)) ?: return null
         val oldText = content(request.change.beforeRevision) ?: return null
         val newText = content(request.change.afterRevision) ?: return null
-        val limits = SmartDiffSettings.getInstance().limits
-        val comparison = ComparisonRequest(oldText, newText, request.languageId, request.fileName, limits)
+        val settings = SmartDiffSettings.getInstance()
+        val limits = settings.limits
+        val comparison = ComparisonRequest(oldText, newText, request.languageId, request.fileName, limits, confidence = settings.confidence)
         val deadline = Deadline(limits.timeoutMillis)
         val result = try {
             compareSafely(engine, comparison, deadline)

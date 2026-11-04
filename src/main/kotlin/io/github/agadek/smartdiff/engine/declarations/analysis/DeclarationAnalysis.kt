@@ -4,12 +4,17 @@ import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.Candidate
 import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
+import io.github.agadek.smartdiff.engine.api.Confidence
+import io.github.agadek.smartdiff.engine.api.ConfidencePolicy
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.Evidence
 import io.github.agadek.smartdiff.engine.api.Origin
 import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.RangePair
+import io.github.agadek.smartdiff.engine.api.Relationship
+import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
@@ -31,7 +36,17 @@ import java.util.IdentityHashMap
  */
 class DeclarationAnalysis(private val engineId: EngineId, private val engineVersion: String) {
 
-    fun compare(old: DeclarationTree, new: DeclarationTree, maxDeclarations: Int, cancellation: Cancellation): ComparisonResult {
+    /**
+     * Compares the two trees. [confidence] classifies the scored pairs; it never changes which pairs are found
+     * (relationships/02 R9, R14, R25).
+     */
+    fun compare(
+        old: DeclarationTree,
+        new: DeclarationTree,
+        maxDeclarations: Int,
+        cancellation: Cancellation,
+        confidence: ConfidencePolicy = ConfidencePolicy.DEFAULT,
+    ): ComparisonResult {
         val largest = maxOf(old.all.size, new.all.size)
         if (largest > maxDeclarations) {
             return result(Status.TOO_LARGE, reason = "file has $largest declarations, the limit is $maxDeclarations")
@@ -39,20 +54,28 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
         unparsable(old, "old")?.let { return result(Status.FAILED, reason = it) }
         unparsable(new, "new")?.let { return result(Status.FAILED, reason = it) }
 
-        val matching = DeclarationMatcher.match(old, new, cancellation)
-        val changes = Tree(old, new, matching, cancellation).apply { detectExtractions() }.build()
+        val matching = DeclarationMatcher.match(old, new, confidence, cancellation)
+        val tree = Tree(old, new, matching, cancellation)
+        tree.detectExtractions()
+        val changes = tree.build()
         val fileRegion = fileRegion(old, new)
         val partial = fileRegion?.content == Content.UNANALYZED || changes.any { it.hasUnanalyzed() }
         return result(
             status = if (partial) Status.PARTIAL else Status.ANALYZED,
             fileRegion = fileRegion,
             changes = changes,
+            relationships = tree.relationships,
             reason = if (partial) "some source could not be parsed and was not analyzed" else null,
         )
     }
 
-    private fun result(status: Status, fileRegion: ChangeNode? = null, changes: List<ChangeNode> = emptyList(), reason: String?) =
-        ComparisonResult(engineId, engineVersion, status, fileRegion, changes, fallbackReason = reason)
+    private fun result(
+        status: Status,
+        fileRegion: ChangeNode? = null,
+        changes: List<ChangeNode> = emptyList(),
+        relationships: List<Relationship> = emptyList(),
+        reason: String?,
+    ) = ComparisonResult(engineId, engineVersion, status, fileRegion, changes, fallbackReason = reason, relationships = relationships)
 
     /** §6.7: a side with a parse error, no declarations and source other than whitespace cannot be analyzed at all. */
     private fun unparsable(tree: DeclarationTree, side: String): String? {
@@ -113,11 +136,53 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
         /** The content of each match, classified once (§8). */
         private val contents = IdentityHashMap<Match, Content>()
 
-        private var extractions = Extractions.NONE
+        /** The relationships of the result, sorted as relationships/02 R19 requires. */
+        var relationships: List<Relationship> = emptyList()
+            private set
 
         /** Links added declarations to the code they were extracted from, after matching and classification. */
         fun detectExtractions() {
-            extractions = ExtractionDetector.detect(matching, { content(it) == Content.CHANGED }, cancellation)
+            val extractions = ExtractionDetector.detect(matching, { content(it) == Content.CHANGED }, cancellation)
+            relationships = (matching.relationships + extractions).sortedWith(ORDER)
+        }
+
+        /** The MATCH relationship of a pair, high or medium, which carries its rename, move and kind change. */
+        private val matchLinks: Map<Pair<TextRange, TextRange>, Relationship> by lazy {
+            usableMatches.associateBy { it.old.first().range to it.new.first().range }
+        }
+
+        /** The pairs whose match is low: the matcher paired them, but the tree leaves both sides added and removed (R13). */
+        private val lowMatches: Set<Pair<TextRange, TextRange>> by lazy {
+            relationships
+                .filter { RelationshipKind.EXTRACT !in it.kinds && it.confidence == Confidence.LOW }
+                .mapTo(HashSet()) { it.old.first().range to it.new.first().range }
+        }
+
+        private fun isLow(match: Match): Boolean = (match.old.range to match.new.range) in lowMatches
+
+        /** The extraction links, by the source's old range and by the target's new range (R18). */
+        private val extractionBySource: Map<TextRange, List<Relationship>> by lazy {
+            usableExtractions.groupBy { it.old.first().range }
+        }
+        private val extractionByTarget: Map<TextRange, List<Relationship>> by lazy {
+            usableExtractions.groupBy { it.new.first().range }
+        }
+
+        /**
+         * The subject each matched declaration shows, by its old range. An extraction's [Origin] names its source as
+         * the outline shows it, on the matched node, so the note keeps the name and signature it has today (R9).
+         */
+        private val matchedSubjects: Map<TextRange, Subject> =
+            matching.matches.associate { it.old.range to declarationSubject(it.new) }
+
+        /** The high or medium matches; a low one stays in the list and sets no field (R13). */
+        private val usableMatches: List<Relationship> by lazy {
+            relationships.filter { RelationshipKind.EXTRACT !in it.kinds && it.confidence != Confidence.LOW }
+        }
+
+        /** A low link stays in the list but sets none of the computed fields (R13). */
+        private val usableExtractions: List<Relationship> by lazy {
+            relationships.filter { RelationshipKind.EXTRACT in it.kinds && it.confidence != Confidence.LOW }
         }
 
         fun build(): List<ChangeNode> {
@@ -128,13 +193,17 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
 
         private fun newSide(declaration: Declaration): Builder {
             cancellation.checkCanceled()
-            val match = matching.ofNew(declaration)
+            // A low pair is found by the matcher but shown as added and removed (R13).
+            val match = matching.ofNew(declaration)?.takeIf { !isLow(it) }
             val uncertain = uncertainNew[declaration]
             val builder = when {
                 match != null -> Builder { children -> matched(match, children) }
                 uncertain != null -> Builder { children -> uncertain(uncertain, onOldSide = false, children) }
                 else -> Builder { children ->
-                    val origins = extractions.ofTarget[declaration].orEmpty().map { Origin(subject(it.source.new), it.source.old.range, it.origin) }
+                    val origins = sourcesOf(declaration.range).map { link ->
+                        val source = link.old.first()
+                        Origin(matchedSubjects[source.range] ?: source.subject, source.range, contentOf(link).oldRange)
+                    }
                     node(declaration, null, declaration.range, Presence.ADDED, children).copy(extractedFrom = origins)
                 }
             }
@@ -148,7 +217,7 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
             cancellation.checkCanceled()
             var insertAt = 0
             for (child in oldChildren) {
-                val counterpart = matching.ofOld(child)?.new?.let { ofNew.getValue(it) }
+                val counterpart = matching.ofOld(child)?.takeIf { !isLow(it) }?.new?.let { ofNew.getValue(it) }
                 if (counterpart != null) {
                     val index = target.indexOf(counterpart)
                     if (index >= 0) insertAt = index + 1
@@ -160,7 +229,7 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
             }
             for (child in oldChildren) {
                 if (child.children.isEmpty()) continue
-                val container = matching.ofOld(child)?.new?.let { ofNew.getValue(it) } ?: ofOldOnly.getValue(child)
+                val container = matching.ofOld(child)?.takeIf { !isLow(it) }?.new?.let { ofNew.getValue(it) } ?: ofOldOnly.getValue(child)
                 placeOldOnly(child.children, container.children)
             }
         }
@@ -172,7 +241,8 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
         }
 
         private fun matched(match: Match, children: List<ChangeNode>): ChangeNode {
-            val extracted = extractions.ofSource[match.old].orEmpty()
+            val link = matchLinks[match.old.range to match.new.range]
+            val extracted = extractionBySource[match.old.range].orEmpty()
             val node = node(
                 declaration = match.new,
                 oldRange = match.old.range,
@@ -181,19 +251,36 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
                 newDeclaration = match.new,
                 presence = Presence.MATCHED,
                 children = children,
-                moved = match.moved,
+                moved = link != null && RelationshipKind.MOVE in link.kinds,
                 signatureChanged = signatureChanged(match),
-                renamedFrom = if (match.rule == MatchRule.RENAME_CANDIDATE) subject(match.old) else null,
-                kindChangedFrom = match.old.kind.takeIf { it != match.new.kind },
+                renamedFrom = link?.takeIf { RelationshipKind.RENAME in it.kinds }?.old?.first()?.subject,
+                kindChangedFrom = link?.takeIf { RelationshipKind.KIND_CHANGE in it.kinds }
+                    ?.old?.first()?.subject?.let { (it as? Subject.Declaration)?.kind },
                 content = content(match),
             )
             if (extracted.isEmpty()) return node
             // The extracted code is highlighted on the old side, apart from the lines that really changed.
             return node.copy(
-                extractedTo = extracted.map { subject(it.target) },
-                details = node.details + extracted.map { RangePair(it.origin, null) }.distinct(),
+                extractedTo = extracted.map { it.new.first().subject },
+                details = node.details + extracted.map { RangePair(contentOf(it).oldRange, null) }.distinct(),
             )
         }
+
+        /**
+         * A target's sources in the order the extraction detector measured them, largest covered share first and then
+         * in old-side source order, which is the order the outline has always named them in (R9, R18). The list itself
+         * is in the relationship order (R19), so the field is ordered here.
+         */
+        private fun sourcesOf(target: TextRange): List<Relationship> =
+            extractionByTarget[target].orEmpty().sortedWith(
+                compareByDescending<Relationship> { contentOf(it).share() }.thenBy { it.old.first().range.start },
+            )
+
+        private fun contentOf(extraction: Relationship): Evidence.Content =
+            extraction.evidence.filterIsInstance<Evidence.Content>().single()
+
+        /** The share of the target's tokens the tiles covered, which the detector compares with its threshold. */
+        private fun Evidence.Content.share(): Double = if (total == 0) 0.0 else shared.toDouble() / total
 
         private fun content(match: Match): Content = contents.getOrPut(match) {
             val oldTokens = renamed(match.old.ownTokens, match.old.name, match.new.name)
@@ -292,11 +379,17 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
             }
         }
 
-        private fun subject(declaration: Declaration) =
-            Subject.Declaration(declaration.kind, declaration.name, declaration.displaySignature, declaration.receiver)
+        private fun subject(declaration: Declaration) = declarationSubject(declaration)
     }
 
     companion object {
         const val FILE_REGION = "File region"
+
+        /** relationships/02 R19: old start, then new start, then the first kind in enum order. */
+        private val ORDER = compareBy<Relationship>(
+            { it.old.first().range.start },
+            { it.new.first().range.start },
+            { it.kinds.first().ordinal },
+        )
     }
 }

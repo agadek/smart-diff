@@ -1,4 +1,10 @@
+@file:Suppress("DEPRECATION")
+
 package io.github.agadek.smartdiff.engine.api
+
+/** The deprecation message of the [ChangeNode] fields that are now computed from a [Relationship] (relationships/02 R7). */
+internal const val RELATIONSHIP_FIELD =
+    "Read ComparisonResult.relationships instead: this field is computed from a Relationship (relationships/02 R7, R8)."
 
 /** The engine-neutral outcome of one comparison (technical specification §5). */
 data class ComparisonResult(
@@ -17,6 +23,12 @@ data class ComparisonResult(
      * Only [threw] sets it, so a reason that happens to start with the same words is not counted.
      */
     val engineThrew: Boolean = false,
+    /**
+     * The declarations this comparison linked, in a fixed order (relationships/02 R1, R19). Empty by default and for an
+     * engine that does not detect relationships (R22). The [ChangeNode] rename, move, kind change and extraction fields
+     * are computed from this list (R7, R8).
+     */
+    val relationships: List<Relationship> = emptyList(),
 ) {
     /** Whether any change, the file region or an unanalyzed range would show in the outline. */
     val hasReportedChanges: Boolean
@@ -86,19 +98,29 @@ data class ChangeNode(
     /**
      * Only for [Presence.MATCHED]: the subject on the old side when the engine paired two subjects with different names
      * because their content is similar. Such a rename candidate may be wrong, so the outline always shows it.
+     *
+     * Computed from a [Relationship] of kind [RelationshipKind.RENAME] (relationships/02 R7, R8).
      */
+    @get:Deprecated(RELATIONSHIP_FIELD, ReplaceWith("relationships"))
     val renamedFrom: Subject? = null,
     /**
      * Only for [Presence.MATCHED]: the kind on the old side when the declaration changed kind, such as a trait turned
      * into a class. Such a node always has [signatureChanged] set.
+     *
+     * Computed from a [Relationship] of kind [RelationshipKind.KIND_CHANGE] (relationships/02 R7, R8).
      */
+    @get:Deprecated(RELATIONSHIP_FIELD, ReplaceWith("relationships"))
     val kindChangedFrom: DeclarationKind? = null,
     /**
      * Only for [Presence.ADDED]: the old-side code this subject was extracted from, most of its body first. A link adds
      * information and is never a match (ADR 0003).
+     *
+     * Computed from a [Relationship] of kind [RelationshipKind.EXTRACT] (relationships/02 R7, R8).
      */
+    @get:Deprecated(RELATIONSHIP_FIELD, ReplaceWith("relationships"))
     val extractedFrom: List<Origin> = emptyList(),
     /** Only for [Presence.MATCHED]: the added subjects that code removed from this one was extracted to. */
+    @get:Deprecated(RELATIONSHIP_FIELD, ReplaceWith("relationships"))
     val extractedTo: List<Subject> = emptyList(),
 ) {
     /** Whether this node is a change by itself, not only because of its children. */

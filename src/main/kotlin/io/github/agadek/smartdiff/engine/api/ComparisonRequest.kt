@@ -15,6 +15,11 @@ data class ComparisonRequest(
      * reads the old side the same way.
      */
     val relatedTexts: List<CharSequence> = emptyList(),
+    /**
+     * The thresholds that turn an engine's score into a [Confidence] (relationships/02 R14), as [limits] carries the
+     * analysis limits. A registry key sets it in a running IDE (R15).
+     */
+    val confidence: ConfidencePolicy = ConfidencePolicy.DEFAULT,
 )
 
 /** Analysis limits (technical specification §9.3). */
