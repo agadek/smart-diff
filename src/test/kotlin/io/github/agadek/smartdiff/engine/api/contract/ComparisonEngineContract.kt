@@ -83,6 +83,31 @@ class ComparisonEngineContract(private val newEngine: () -> ComparisonEngine) {
         }
     }
 
+    /** R16: every endpoint names a subject in the result tree. */
+    fun `relationships name declarations in the result`() {
+        for (case in relationshipCases()) RelationshipChecks.endpointsInResultTree(case, compare(case))
+    }
+
+    /** R17: every endpoint and evidence range lies inside its side's text. */
+    fun `relationship ranges lie inside their side`() {
+        for (case in relationshipCases()) RelationshipChecks.rangesInsideText(case, compare(case))
+    }
+
+    /** R18: an extraction's two fields agree with one relationship, and no relationship is listed twice. */
+    fun `extraction fields agree and no relationship repeats`() {
+        for (case in relationshipCases()) RelationshipChecks.extractionFieldsAgree(case, compare(case))
+    }
+
+    /** R19: the list, its kinds, endpoints and evidence are in a fixed order. Two runs are equal by `results are deterministic`. */
+    fun `relationships are in a fixed order`() {
+        for (case in relationshipCases()) RelationshipChecks.fixedOrder(case, compare(case))
+    }
+
+    /** R20: nothing-hidden holds with the relationships removed as it does with them. */
+    fun `relationships hide nothing`() {
+        for (case in relationshipCases()) RelationshipChecks.nothingHiddenWithoutRelationships(case, compare(case))
+    }
+
     fun `cancellation propagates promptly`() {
         for (language in supportedLanguages) {
             val case = ContractCorpus.large(language)
@@ -113,8 +138,16 @@ class ComparisonEngineContract(private val newEngine: () -> ComparisonEngine) {
         `results are well-formed and hide nothing`()
         `malformed input gives a result, not an exception`()
         `results are deterministic`()
+        `relationships name declarations in the result`()
+        `relationship ranges lie inside their side`()
+        `extraction fields agree and no relationship repeats`()
+        `relationships are in a fixed order`()
+        `relationships hide nothing`()
         `cancellation propagates promptly`()
     }
+
+    /** The cases the relationship checks read: everything a result can be analyzed for (R16 to R20). */
+    private fun relationshipCases(): List<ContractCase> = supported(ContractCorpus.cases + ContractCorpus.emptyCases)
 
     private fun compare(case: ContractCase): ComparisonResult = engine.compare(case.request(), Cancellation.NONE)
 

@@ -4,6 +4,7 @@ import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
+import io.github.agadek.smartdiff.engine.api.ConfidencePolicy
 import io.github.agadek.smartdiff.engine.api.Limits
 import io.github.agadek.smartdiff.engine.api.compareSafely
 import java.util.concurrent.CancellationException
@@ -22,6 +23,8 @@ data class MergeTexts(
     /** A hint only, as in [ComparisonRequest.fileName]. */
     val fileName: String? = null,
     val limits: Limits = Limits.DEFAULT,
+    /** The policy both comparisons classify their relationships with, so the three sides agree (relationships/02 R15). */
+    val confidence: ConfidencePolicy = ConfidencePolicy.DEFAULT,
 )
 
 /**
@@ -61,7 +64,15 @@ object MergeComparison {
         sideRequest(request, request.left, request.right) to sideRequest(request, request.right, request.left)
 
     private fun sideRequest(request: MergeTexts, side: CharSequence, other: CharSequence) =
-        ComparisonRequest(request.base, side, request.languageId, request.fileName, request.limits, relatedTexts = listOf(other))
+        ComparisonRequest(
+            request.base,
+            side,
+            request.languageId,
+            request.fileName,
+            request.limits,
+            relatedTexts = listOf(other),
+            confidence = request.confidence,
+        )
 
     private fun run(engine: ComparisonEngine, request: ComparisonRequest, cancellation: Cancellation, canceled: AtomicBoolean): ComparisonResult =
         try {

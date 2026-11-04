@@ -11,8 +11,12 @@ import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.Confidence as EngineConfidence
 import io.github.agadek.smartdiff.engine.api.Origin
 import io.github.agadek.smartdiff.engine.api.Presence
+import io.github.agadek.smartdiff.engine.api.Relationship
+import io.github.agadek.smartdiff.engine.api.RelationshipEndpoint
+import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
@@ -345,31 +349,38 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
     }
 
     fun `test a renamed move names its old subject`() {
-        // relationships/01-relationship-benchmark-details.md: Before the relationship model exists (the adapter)
+        // relationships/02-relationship-model R31
         val oldSubject = Subject.Declaration(DeclarationKind.METHOD, "total", "()")
         val newSubject = Subject.Declaration(DeclarationKind.METHOD, "sum", "()")
-        val moved = ChangeNode(
-            newSubject, TextRange(0, 5), TextRange(6, 11), Presence.MATCHED,
-            moved = true, renamedFrom = oldSubject,
+        val result = ComparisonResult(
+            EngineId("test"), "1", Status.ANALYZED,
+            changes = listOf(ChangeNode(newSubject, TextRange(0, 5), TextRange(6, 11), Presence.MATCHED, moved = true)),
+            relationships = listOf(
+                relationship(
+                    java.util.EnumSet.of(RelationshipKind.RENAME, RelationshipKind.MOVE),
+                    oldSubject, TextRange(0, 5), newSubject, TextRange(6, 11),
+                ),
+            ),
         )
-        val relationship = RelationshipBenchmark.actualRelationships(
-            ComparisonResult(EngineId("test"), "1", Status.ANALYZED, changes = listOf(moved)),
-        )
+        val relationship = RelationshipBenchmark.reportedRelationships(result)
         assertEquals(setOf(RelationshipBenchmark.Kind.RENAME, RelationshipBenchmark.Kind.MOVE), relationship.map { it.kind }.toSet())
         assertEquals("total", relationship.single { it.kind == RelationshipBenchmark.Kind.MOVE }.old.name)
     }
 
     fun `test an extraction link is counted once`() {
-        // relationships/01-relationship-benchmark R38
+        // relationships/02-relationship-model R31; relationships/01-relationship-benchmark R38
         val source = Subject.Declaration(DeclarationKind.METHOD, "render", "(String)")
         val target = Subject.Declaration(DeclarationKind.METHOD, "renderLines", "(String)")
-        val sourceNode = ChangeNode(source, TextRange(0, 5), TextRange(6, 11), Presence.MATCHED, extractedTo = listOf(target))
-        val targetNode = ChangeNode(
-            target, null, TextRange(12, 20), Presence.ADDED,
-            extractedFrom = listOf(Origin(source, TextRange(0, 5), TextRange(2, 4))),
-        )
-        val extraction = RelationshipBenchmark.actualRelationships(
-            ComparisonResult(EngineId("test"), "1", Status.ANALYZED, changes = listOf(sourceNode, targetNode)),
+        val sourceNode = ChangeNode(source, TextRange(0, 5), TextRange(6, 11), Presence.MATCHED)
+        val targetNode = ChangeNode(target, null, TextRange(12, 20), Presence.ADDED)
+        val extraction = RelationshipBenchmark.reportedRelationships(
+            ComparisonResult(
+                EngineId("test"), "1", Status.ANALYZED,
+                changes = listOf(sourceNode, targetNode),
+                relationships = listOf(
+                    relationship(java.util.EnumSet.of(RelationshipKind.EXTRACT), source, TextRange(0, 5), target, TextRange(12, 20)),
+                ),
+            ),
         )
         assertEquals(1, extraction.count { it.kind == RelationshipBenchmark.Kind.EXTRACT })
     }
@@ -819,6 +830,83 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         assertEquals("the second change is listed as a mismatch", 1, RelationshipBenchmark.classificationMismatches(listOf(result)).size)
     }
 
+    fun `test R31 the benchmark reads the result relationships`() {
+        // relationships/02-relationship-model R31
+        val old = Subject.Declaration(DeclarationKind.METHOD, "total", "()")
+        val new = Subject.Declaration(DeclarationKind.METHOD, "sum", "()")
+        // The nodes carry none of the deprecated fields: the relationship is the only source.
+        val renamed = ChangeNode(new, TextRange(0, 5), TextRange(6, 11), Presence.MATCHED)
+        val result = ComparisonResult(
+            EngineId("test"), "1", Status.ANALYZED,
+            changes = listOf(renamed),
+            relationships = listOf(
+                relationship(java.util.EnumSet.of(RelationshipKind.RENAME), old, TextRange(0, 5), new, TextRange(6, 11)),
+            ),
+        )
+
+        val reported = RelationshipBenchmark.reportedRelationships(result).single()
+
+        assertEquals(RelationshipBenchmark.Kind.RENAME, reported.kind)
+        assertEquals("total", reported.old.name)
+        assertEquals("sum", reported.new.name)
+        assertEquals(TextRange(0, 5), reported.old.range)
+        assertEquals(RelationshipBenchmark.Confidence.HIGH, reported.confidence)
+    }
+
+    fun `test R32 a repeated relationship is a wrong pair and fails the gate`() {
+        // relationships/02-relationship-model R32
+        val directory = Files.createTempDirectory("relationship-repeat").toFile()
+        try {
+            val expected = label("rename-1", "JAVA", "method-rename")
+            val reported = actual(RelationshipBenchmark.Kind.RENAME, old("total"), new("sum"))
+            val result = caseResult(expected, listOf(reported, reported), nodes())
+            val metrics = RelationshipBenchmark.evaluate(listOf(expected), listOf(result))
+
+            assertEquals("the label claims one pair", 1, metrics.perKind.getValue("RENAME").tp)
+            assertEquals("the repeated pair is a false positive", 1, metrics.perKind.getValue("RENAME").fp)
+            assertTrue(RelationshipBenchmark.wrongPairs(listOf(result)).isNotEmpty())
+            val baseline = File(directory, "baseline.json").apply {
+                writeText("""{"smoke":false,"wrongPairs":[],"precision":{"java|RENAME":1.0},"recall":{"java|RENAME":1.0}}""")
+            }
+            val failures = RelationshipBenchmark.gateFailures(
+                "no-new-wrong-pairs", metrics, mapOf("java" to metrics), baseline, 0.0, listOf(result),
+            )
+            assertTrue(failures.toString(), failures.any { it.contains("new wrong or forced pairs") })
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
+    fun `test R33 both reports count the reported relationships of each kind by confidence`() {
+        // relationships/02-relationship-model R33
+        val directory = Files.createTempDirectory("relationship-confidence").toFile()
+        try {
+            val expected = label("rename-1", "JAVA", "method-rename")
+            val high = actual(RelationshipBenchmark.Kind.RENAME, old("total"), new("sum"))
+            val medium = high.copy(confidence = RelationshipBenchmark.Confidence.MEDIUM)
+            val result = caseResult(expected, listOf(high, medium), nodes())
+            val metrics = RelationshipBenchmark.evaluate(listOf(expected), listOf(result))
+            assertEquals(mapOf(RelationshipBenchmark.Confidence.HIGH to 1, RelationshipBenchmark.Confidence.MEDIUM to 1), metrics.confidenceByKind.getValue("RENAME"))
+
+            val report = RelationshipBenchmark.Report(
+                listOf(result), mapOf("java" to metrics), mapOf(RelationshipBenchmark.Split.TUNING to metrics), metrics,
+                "no-new-wrong-pairs", emptyList(), "abc", directory,
+            )
+            RelationshipBenchmark.write(report)
+
+            val markdown = File(directory, "report.md").readText()
+            assertTrue(markdown.contains("## Confidence counts"))
+            assertTrue(markdown.contains("| java | RENAME | 1 | 1 | 0 |"))
+            val json = File(directory, "report.json").readText()
+            assertTrue(json.contains("\"confidencePolicy\""))
+            assertTrue(json.contains("\"HIGH\": 1"))
+            assertTrue(json.contains("\"MEDIUM\": 1"))
+            assertTrue(json.contains("\"LOW\": 0"))
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
     fun `test a differing confidence does not change scoring`() {
         // relationships/01-relationship-benchmark-details.md: confidence is not compared until the engine reports one
         fun metricsFor(confidence: RelationshipBenchmark.Confidence?): RelationshipBenchmark.Metrics {
@@ -842,7 +930,7 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
     }
 
     fun `test a cross-container move names its old container`() {
-        // relationships/01-relationship-benchmark-details.md: Before the relationship model exists (the adapter)
+        // relationships/02-relationship-model R31
         val method = Declaration(DeclarationKind.METHOD, "replicateA_", "Int", TextRange(10, 20))
         val oldTree = DeclarationTree(
             listOf(Declaration(DeclarationKind.CLASS, "ApplicativeOps", null, TextRange(0, 100), children = listOf(method))),
@@ -861,10 +949,17 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
                     TextRange(0, 100), TextRange(0, 100), Presence.MATCHED, children = listOf(moved),
                 ),
             ),
+            relationships = listOf(
+                relationship(
+                    java.util.EnumSet.of(RelationshipKind.MOVE),
+                    Subject.Declaration(DeclarationKind.METHOD, "replicateA_", "Int"), TextRange(10, 20),
+                    Subject.Declaration(DeclarationKind.METHOD, "replicateA_", "Int"), TextRange(30, 40),
+                ),
+            ),
         )
-        val fallback = RelationshipBenchmark.actualRelationships(result).single { it.kind == RelationshipBenchmark.Kind.MOVE }
+        val fallback = RelationshipBenchmark.reportedRelationships(result).single { it.kind == RelationshipBenchmark.Kind.MOVE }
         assertEquals("without the old tree the new container is used", "class ApplicativeByValueOps", fallback.old.path)
-        val relationship = RelationshipBenchmark.actualRelationships(result, oldTree).single { it.kind == RelationshipBenchmark.Kind.MOVE }
+        val relationship = RelationshipBenchmark.reportedRelationships(result, oldTree).single { it.kind == RelationshipBenchmark.Kind.MOVE }
         assertEquals("the old container comes from the old tree", "class ApplicativeOps", relationship.old.path)
         assertEquals("class ApplicativeByValueOps", relationship.new.path)
     }
@@ -888,34 +983,38 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test an extraction keeps the copy with declaration ranges`() {
-        // relationships/01-relationship-benchmark-details.md: an extraction is listed from both ends
+    fun `test an extraction keeps the declaration ranges of both ends`() {
+        // relationships/02-relationship-model R27
         val source = Subject.Declaration(DeclarationKind.METHOD, "render", "()")
         val target = Subject.Declaration(DeclarationKind.METHOD, "helper", "()")
-        val sourceNode = ChangeNode(source, TextRange(0, 5), TextRange(6, 11), Presence.MATCHED, extractedTo = listOf(target))
-        val targetNode = ChangeNode(
-            target, null, TextRange(20, 25), Presence.ADDED,
-            extractedFrom = listOf(Origin(source, TextRange(0, 5), TextRange(2, 4))),
-        )
-        val link = RelationshipBenchmark.actualRelationships(
-            ComparisonResult(EngineId("test"), "1", Status.ANALYZED, changes = listOf(sourceNode, targetNode)),
+        val sourceNode = ChangeNode(source, TextRange(0, 5), TextRange(6, 11), Presence.MATCHED)
+        val targetNode = ChangeNode(target, null, TextRange(20, 25), Presence.ADDED)
+        val link = RelationshipBenchmark.reportedRelationships(
+            ComparisonResult(
+                EngineId("test"), "1", Status.ANALYZED,
+                changes = listOf(sourceNode, targetNode),
+                relationships = listOf(
+                    relationship(java.util.EnumSet.of(RelationshipKind.EXTRACT), source, TextRange(0, 5), target, TextRange(20, 25)),
+                ),
+            ),
         ).single { it.kind == RelationshipBenchmark.Kind.EXTRACT }
         assertEquals("the source's declaration range is kept", TextRange(0, 5), link.old.range)
         assertEquals("the target's declaration range is kept", TextRange(20, 25), link.new.range)
     }
 
     fun `test two extractions that differ only by range stay two links`() {
-        // relationships/01-relationship-benchmark R6
+        // relationships/01-relationship-benchmark R6; relationships/02-relationship-model R27
         val source = Subject.Declaration(DeclarationKind.METHOD, "render", "()")
         val target = Subject.Declaration(DeclarationKind.METHOD, "helper", "()")
-        fun targetNode(range: TextRange, sourceRange: TextRange) = ChangeNode(
-            target, null, range, Presence.ADDED,
-            extractedFrom = listOf(Origin(source, sourceRange, sourceRange)),
-        )
-        val links = RelationshipBenchmark.actualRelationships(
+        fun targetNode(range: TextRange) = ChangeNode(target, null, range, Presence.ADDED)
+        val links = RelationshipBenchmark.reportedRelationships(
             ComparisonResult(
                 EngineId("test"), "1", Status.ANALYZED,
-                changes = listOf(targetNode(TextRange(20, 25), TextRange(0, 5)), targetNode(TextRange(30, 35), TextRange(10, 15))),
+                changes = listOf(targetNode(TextRange(20, 25)), targetNode(TextRange(30, 35))),
+                relationships = listOf(
+                    relationship(java.util.EnumSet.of(RelationshipKind.EXTRACT), source, TextRange(0, 5), target, TextRange(20, 25)),
+                    relationship(java.util.EnumSet.of(RelationshipKind.EXTRACT), source, TextRange(10, 15), target, TextRange(30, 35)),
+                ),
             ),
         )
         assertEquals(2, links.count { it.kind == RelationshipBenchmark.Kind.EXTRACT })
@@ -1263,6 +1362,20 @@ notes: "Built inside the test."
         exception: String? = null,
     ) = RelationshipBenchmark.CaseResult(
         label, ComparisonResult(EngineId("test"), "1", status), actualRelationships, nodes, millis, hidden, exception,
+    )
+
+    private fun relationship(
+        kinds: java.util.EnumSet<RelationshipKind>,
+        old: Subject,
+        oldRange: TextRange,
+        new: Subject,
+        newRange: TextRange,
+    ) = Relationship(
+        kinds = kinds,
+        old = listOf(RelationshipEndpoint(old, oldRange)),
+        new = listOf(RelationshipEndpoint(new, newRange)),
+        confidence = EngineConfidence.HIGH,
+        evidence = emptyList(),
     )
 
     private fun actual(kind: RelationshipBenchmark.Kind, old: RelationshipBenchmark.Endpoint, new: RelationshipBenchmark.Endpoint) =

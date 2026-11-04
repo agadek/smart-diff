@@ -21,6 +21,80 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-04: relationship model migration
+
+[relationships/02](specs/relationships/02-relationship-model.md) moves the facts the declaration engine already reports
+into `ComparisonResult.relationships`; the `ChangeNode` rename, move, kind change and extraction fields are computed
+from that list. This run proves the move changes nothing the plugin shows and no pair the engine finds.
+`DeclarationEngine.VERSION` is 7, and the engine names the Scala plugin's version too, for example
+`7 (251.26927.53; Scala 2025.1.32)`.
+
+**Corpus validation:** `CorpusValidationTest` over `corpus.txt` in the clone set (okhttp, guava, commons-lang, Exposed,
+moshi, spring-petclinic), the same list as the earlier runs. 1279 files from 6 clones, 97 flagged. The `summary.tsv`
+lists the same files, flags and hunk counts as a run of `main`'s code on the same machine, including the 4 extraction
+near misses and the 55 rename candidates. `report.md` diagnoses the same files, with one diagnostic line whose
+extraction sources follow the outline's order, largest covered share first, rather than the relationship order, and
+with the per-file timings. Reports in `build/reports/smartdiff-validation/`.
+
+**Merge validation:** `CorpusValidationTest` over `merges-2026-11-02.txt`: 275 files from 121 merge commits, 2 files
+missing from a parent or the base. Flags: 49 `both-sides-clean`, 12 `conflict-one-side`, 6 `status`; coverage Java 50,
+Kotlin 67, Scala 2 117 and Scala 3 41 files. The `summary.tsv` lists the same files, flags and hunk counts as a run of
+`main`'s code, and `report.md` diagnoses the same files, apart from the timings. The
+[2026-11-02 rerun](#2026-11-02-merge-validation-rerun) records 50 `both-sides-clean`: the
+one-file difference comes from the later merge-validation commits that judge moved sides and unchanged children, not
+from this change, and `main`'s code gives 49 on the same list too. Reports in
+`build/reports/smartdiff-validation/merge/`.
+
+**Relationship benchmark, both gates:** the run is the full list,
+`src/test/testData/relationships-corpus-full.txt`, against the unchanged
+[2026-11-02 baseline](#2026-11-02-relationship-benchmark-baseline), 424 cases (304 checked-in cases and 120 real
+commits). Both gates pass:
+
+- `no-new-wrong-pairs`: no new wrong or forced pair; there is no wrong or forced pair at all.
+- `tolerance=0`: no lower precision or recall for any corpus and kind than the baseline.
+
+Precision is 1.000 and recall 0.826 overall, and every `(corpus, kind)` pair has the same true positives, false
+positives, false negatives, precision and recall as the baseline; the 42 missed relationships are the same list. So no
+benchmark difference needed an explanation: no MOVE or KIND_CHANGE pair in the corpus has old and new signatures that
+differ, and no extraction source changed its name or signature either. The corpus revision is `87588c7829c5`, the
+baseline's, because no label or clone changed. The policy is the default, high `0.85` and medium `0.7`.
+
+### Reported relationships by confidence
+
+The benchmark now reads `ComparisonResult.relationships` and counts the reported relationships of each kind by
+confidence (relationships/02 R33). The scale comes from the rename similarity; a move, a kind change and an extraction
+are high by rule.
+
+| Corpus | Kind | HIGH | MEDIUM | LOW |
+| --- | --- | --- | --- | --- |
+| Java | RENAME | 18 | 6 | 0 |
+| Java | MOVE | 9 | 0 | 0 |
+| Java | KIND_CHANGE | 3 | 0 | 0 |
+| Java | EXTRACT | 20 | 0 | 0 |
+| Java | INLINE | 0 | 0 | 0 |
+| Kotlin | RENAME | 18 | 3 | 0 |
+| Kotlin | MOVE | 10 | 0 | 0 |
+| Kotlin | KIND_CHANGE | 3 | 0 | 0 |
+| Kotlin | EXTRACT | 12 | 0 | 0 |
+| Kotlin | INLINE | 0 | 0 | 0 |
+| Scala 2 | RENAME | 17 | 6 | 0 |
+| Scala 2 | MOVE | 11 | 0 | 0 |
+| Scala 2 | KIND_CHANGE | 4 | 0 | 0 |
+| Scala 2 | EXTRACT | 12 | 0 | 0 |
+| Scala 2 | INLINE | 0 | 0 | 0 |
+| Scala 3 | RENAME | 15 | 6 | 0 |
+| Scala 3 | MOVE | 10 | 0 | 0 |
+| Scala 3 | KIND_CHANGE | 4 | 0 | 0 |
+| Scala 3 | EXTRACT | 12 | 0 | 0 |
+| Scala 3 | INLINE | 0 | 0 | 0 |
+
+**What stays the same:** the golden fixtures, the merge fixtures, `OutlineModelTest` and the Changes tree tests pass with
+no fixture change. The `extracted from …` note keeps the source as the matched node shows it, so the note names the same
+name and signature as before. The baseline report is not replaced; [relationships/03](specs/relationships/03-relationship-matching.md)
+compares against the [2026-11-02 baseline](#2026-11-02-relationship-benchmark-baseline).
+
+The report is in `build/reports/smartdiff-relationships/summary.tsv`, `report.md` and `report.json`.
+
 ## 2026-11-04: two-sided corpus partial rerun
 
 **Corpus:** the six Java and Kotlin clones from the [2026-10-23 extraction run](#2026-10-23-extraction-detection) at the

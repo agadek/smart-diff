@@ -13,15 +13,22 @@ import java.io.File
  *
  * Every fixture must also hide nothing (§3.1 rule 6). Run the build with `-Psmartdiff.updateGolden=true` to write the
  * expected files from the current results; review every change to them before committing.
+ *
+ * relationships/02 R9, R10: these fixture files are the outline the engine showed before the relationship model, so
+ * they pass unchanged. A diff there is a change in what the plugin shows.
  */
 class GoldenFixturesTest : BasePlatformTestCase() {
 
+    // relationships/02 R9, R10: the expected file is the outline before the relationship model.
     fun `test Java fixtures`() = checkFixtures("java", "JAVA", "java")
 
+    // relationships/02 R9, R10: the expected file is the outline before the relationship model.
     fun `test Kotlin fixtures`() = checkFixtures("kotlin", "kotlin", "kt")
 
+    // relationships/02 R9, R10: the expected file is the outline before the relationship model.
     fun `test Scala 2 fixtures`() = checkFixtures("scala2", "Scala", "scala")
 
+    // relationships/02 R9, R10: the expected file is the outline before the relationship model.
     fun `test Scala 3 fixtures`() = checkFixtures("scala3", "Scala", "scala")
 
     private fun checkFixtures(directory: String, languageId: String, extension: String) {

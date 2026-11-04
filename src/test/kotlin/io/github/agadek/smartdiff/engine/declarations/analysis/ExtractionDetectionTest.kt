@@ -13,7 +13,6 @@ import io.github.agadek.smartdiff.engine.declarations.model.Declaration
 import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.CancellationException
@@ -243,8 +242,8 @@ class ExtractionDetectionTest {
         val found = ExtractionDetector.detect(matching, { true }, Cancellation.NONE)
         val skipped = ExtractionDetector.detect(matching, { true }, Cancellation.NONE, maxWork = 100)
 
-        assertEquals(1, found.ofTarget.size)
-        assertSame(Extractions.NONE, skipped)
+        assertEquals(1, found.size)
+        assertTrue(skipped.isEmpty())
     }
 
     @Test(expected = CancellationException::class)

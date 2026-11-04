@@ -166,6 +166,7 @@ class MergeOutlineController private constructor(
             languageId = languageId,
             fileName = fileName,
             limits = SmartDiffSettings.getInstance().limits,
+            confidence = SmartDiffSettings.getInstance().confidence,
         )
         val job = Job(
             engine,

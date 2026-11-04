@@ -63,6 +63,11 @@
                                  id="io.github.agadek.smartdiff.settings"
                                  displayName="SMART Diff"
                                  instance="io.github.agadek.smartdiff.ui.SmartDiffConfigurable"/>
+        <!-- The confidence thresholds the declaration engine classifies its relationships with, as high,medium
+             (relationships/02 R15). A malformed value keeps the default (R30). -->
+        <registryKey key="smartdiff.relationships.confidence"
+                     defaultValue="0.85,0.7"
+                     description="SMART Diff relationship confidence thresholds: high,medium. A rename at or above the high value is high confidence, at or above the medium value medium, and below it low."/>
     </extensions>
 
     <actions>

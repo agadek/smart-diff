@@ -139,6 +139,7 @@ class OutlineController internal constructor(
             languageId = languageId,
             fileName = fileName,
             limits = SmartDiffSettings.getInstance().limits,
+            confidence = SmartDiffSettings.getInstance().confidence,
         )
         val job = Job(engine, oldDocument.modificationStamp, newDocument.modificationStamp, request.limits.timeoutMillis)
         running = job

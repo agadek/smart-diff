@@ -5,7 +5,10 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.thisLogger
+import com.intellij.openapi.util.registry.Registry
 import com.intellij.util.messages.Topic
+import io.github.agadek.smartdiff.engine.api.ConfidencePolicy
 import io.github.agadek.smartdiff.engine.api.Limits
 
 /**
@@ -41,6 +44,10 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
 
     @Volatile
     private var current = SettingsState()
+
+    /** The last malformed registry value that was logged, so one bad value logs one warning (R30). */
+    @Volatile
+    private var warnedConfidence: String? = null
 
     override fun getState(): SettingsState = current
 
@@ -86,6 +93,28 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
             timeoutMillis = value.timeoutMillis
         }
 
+    /**
+     * The [ConfidencePolicy] passed to engines beside [limits], from the `smartdiff.relationships.confidence` registry key
+     * (relationships/02 R14, R15). An empty value leaves the default; a malformed one logs a single warning and leaves
+     * the default too (R30).
+     */
+    val confidence: ConfidencePolicy
+        get() {
+            val raw = registryConfidence()
+            val policy = ConfidencePolicy.parse(raw)
+            if (policy == null && !raw.isNullOrBlank() && raw != warnedConfidence) {
+                warnedConfidence = raw
+                thisLogger().warn("Ignoring malformed $CONFIDENCE_KEY '$raw', expected high,medium such as 0.85,0.7; using the default")
+            }
+            return policy ?: ConfidencePolicy.DEFAULT
+        }
+
+    private fun registryConfidence(): String? = try {
+        Registry.get(CONFIDENCE_KEY).asString()
+    } catch (e: Exception) {
+        null
+    }
+
     /** Replaces the state rather than changing it, so a reader on another thread sees either the old or the new values. */
     private fun update(change: SettingsState.() -> Unit) {
         val old = current
@@ -109,6 +138,9 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
     }
 
     companion object {
+        /** The registry key that sets [confidence] in a running IDE; plugin.xml declares it with the default `0.85,0.7`. */
+        const val CONFIDENCE_KEY = "smartdiff.relationships.confidence"
+
         @Topic.AppLevel
         val CHANGED: Topic<Listener> = Topic(Listener::class.java, Topic.BroadcastDirection.NONE)
 

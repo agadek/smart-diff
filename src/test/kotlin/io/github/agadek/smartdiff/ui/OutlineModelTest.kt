@@ -3,12 +3,16 @@ package io.github.agadek.smartdiff.ui
 import io.github.agadek.smartdiff.engine.api.Candidate
 import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
+import io.github.agadek.smartdiff.engine.api.Confidence
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.api.Origin
 import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.RangePair
+import io.github.agadek.smartdiff.engine.api.Relationship
+import io.github.agadek.smartdiff.engine.api.RelationshipEndpoint
+import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
@@ -39,6 +43,36 @@ class OutlineModelTest {
 
         assertEquals("method total → sum()  rename candidate", render(OutlineModel.build(result, "", "", formattingInline = false, hidden = everything)))
         assertEquals("1 changed · 1 rename candidate · 1 hidden", OutlineModel.summary(result, everything))
+    }
+
+    @Test
+    fun `R28 a high and a medium rename show the same row`() {
+        // relationships/02-relationship-model R28
+        val old = Subject.Declaration(DeclarationKind.METHOD, "total", "")
+        val new = Subject.Declaration(DeclarationKind.METHOD, "sum", "")
+        val node = node("sum", renamedFrom = old)
+        fun row(confidence: Confidence): String = render(
+            OutlineModel.build(
+                ComparisonResult(
+                    EngineId("e"), "1", Status.ANALYZED,
+                    changes = listOf(node),
+                    relationships = listOf(
+                        Relationship(
+                            kinds = java.util.EnumSet.of(RelationshipKind.RENAME),
+                            old = listOf(RelationshipEndpoint(old, TextRange(0, 5))),
+                            new = listOf(RelationshipEndpoint(new, TextRange(6, 11))),
+                            confidence = confidence,
+                            evidence = emptyList(),
+                        ),
+                    ),
+                ),
+                "", "", formattingInline = false,
+            ),
+        )
+
+        val high = row(Confidence.HIGH)
+        assertEquals("both confidences show one rename candidate row", high, row(Confidence.MEDIUM))
+        assertEquals("method total → sum()  rename candidate", high)
     }
 
     @Test
