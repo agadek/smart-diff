@@ -145,15 +145,17 @@ class DeclarationMatcherTest {
     }
 
     @Test
-    fun `a repeated key that still does not pair up once each stays uncertain`() {
+    fun `M3 pairs a complete tie by the old and then the new source order`() {
+        // relationships/03-relationship-matching R11
         val old = tree { cls("A") { method("of", "E", "{x();}"); method("of", "E", "{y();}"); method("of", "E", "{z();}") } }
         val new = tree { cls("A") { method("of", "E", "{x();}"); method("of", "E", "{y2();}"); method("of", "E", "{z2();}") } }
 
         val matching = match(old, new)
 
         assertSame(new.all[1], matching.ofOld(old.all[1])!!.new)
-        assertEquals(old.all.drop(2), matching.uncertainOld.map { it.declaration })
-        assertEquals(new.all.drop(2), matching.uncertainNew.map { it.declaration })
+        assertSame("the first old option takes the first new one", new.all[2], matching.ofOld(old.all[2])!!.new)
+        assertSame("the second old option takes the second new one", new.all[3], matching.ofOld(old.all[3])!!.new)
+        assertNothingLeft(matching)
     }
 
     @Test
@@ -465,7 +467,7 @@ class DeclarationMatcherTest {
     fun `R11 R12 R13 a policy classifies a rename pair without changing the pairs found`() {
         // relationships/02-relationship-model R11, R12, R13, R25
         val old = tree { cls("A") { method("other", "", "{ a(); b(); c(); }"); method("total", "int", BODY) } }
-        val new = tree { cls("A") { method("sum", "int", BODY.replace("x", "y")); method("other", "", "{ a(); b(); c(); }") } }
+        val new = tree { cls("A") { method("sum", "int", BODY.replace("2", "3")); method("other", "", "{ a(); b(); c(); }") } }
         val score = match(old, new).relationships.single { RelationshipKind.RENAME in it.kinds }
             .evidence.filterIsInstance<Evidence.Score>().single().value
         assertTrue("the fixture scores between the floor and 1.0: $score", score >= 0.7 && score < 1.0)
@@ -500,7 +502,7 @@ class DeclarationMatcherTest {
         // relationships/02-relationship-model R13, R26
         // `total` is renamed to `sum` and is outside the longest common subsequence, so it is moved as well.
         val old = tree { cls("A") { method("other", "", "{ a(); b(); c(); }"); method("total", "int", BODY) } }
-        val new = tree { cls("A") { method("sum", "int", BODY.replace("x", "y")); method("other", "", "{ a(); b(); c(); }") } }
+        val new = tree { cls("A") { method("sum", "int", BODY.replace("2", "3")); method("other", "", "{ a(); b(); c(); }") } }
         val composed = match(old, new).relationships.single { it.kinds.containsAll(listOf(RelationshipKind.RENAME, RelationshipKind.MOVE)) }
         assertEquals(RelationshipKind.RENAME, composed.kinds.first())
 

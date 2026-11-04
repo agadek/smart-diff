@@ -1,6 +1,6 @@
 # Relationship matching
 
-Status: accepted, 2026-11-04
+Status: implemented, 2026-11-04
 
 **Description:** Improves how the declaration engine pairs renamed, reordered and kind-changed declarations, by scoring every option over the whole candidate graph and keeping ambiguous cases unpaired.
 
@@ -47,3 +47,4 @@ Status: accepted, 2026-11-04
 - [Relationship benchmark](01-relationship-benchmark.md)
 - [ADR 0003](../../adr/0003-conservative-classification.md)
 - [ADR 0008](../../adr/0008-relationships-are-the-source-of-truth-for-pairing.md)
+- [Validation, 2026-11-04](../../VALIDATION.md#2026-11-04-relationship-matching)

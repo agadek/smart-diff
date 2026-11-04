@@ -307,7 +307,7 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
     }
 
     fun `test the benchmark runs the corpus named by the property`() {
-        // relationships/01-relationship-benchmark R1, R22-R27
+        // relationships/01-relationship-benchmark R1, R22-R27; relationships/03-relationship-matching R15, R16
         val list = RelationshipBenchmark.listFile(System.getProperty(RelationshipBenchmark.CORPUS_PROPERTY))
         if (list == null) {
             println("RELATIONSHIPS skipped: no corpus (run with -P${RelationshipBenchmark.CORPUS_PROPERTY}=<list>)")
@@ -905,6 +905,23 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         } finally {
             directory.deleteRecursively()
         }
+    }
+
+    fun `test R15 R16 a low relationship is counted by confidence and never scored as a pair`() {
+        // relationships/03-relationship-matching R15, R16; relationships/03 details, `Benchmark treatment of low confidence`
+        val expected = label("rename-1", "JAVA", "method-rename")
+        val low = actual(RelationshipBenchmark.Kind.RENAME, old("total"), new("sum"))
+            .copy(confidence = RelationshipBenchmark.Confidence.LOW)
+        val result = caseResult(expected, listOf(low), nodes())
+        val metrics = RelationshipBenchmark.evaluate(listOf(expected), listOf(result))
+
+        assertEquals("not a true positive", 0, metrics.perKind.getValue("RENAME").tp)
+        assertEquals("not a false positive", 0, metrics.perKind.getValue("RENAME").fp)
+        assertEquals("the labelled pair is still missed", 1, metrics.perKind.getValue("RENAME").fn)
+        assertEquals("not a forced pair either", 0, metrics.forcedPairs)
+        assertEquals("still counted by confidence", 1, metrics.confidenceByKind.getValue("RENAME").getValue(RelationshipBenchmark.Confidence.LOW))
+        assertTrue(RelationshipBenchmark.wrongPairs(listOf(result)).isEmpty())
+        assertTrue(RelationshipBenchmark.forcedPairs(listOf(result)).isEmpty())
     }
 
     fun `test a differing confidence does not change scoring`() {

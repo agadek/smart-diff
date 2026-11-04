@@ -67,7 +67,7 @@ Proposed 2026-11-01 as the next item after 0.2.0. The benchmark harness, the ful
 | --- | --- | --- |
 | Benchmark and today's baseline | [relationships/01](specs/relationships/01-relationship-benchmark.md) | Done: the [2026-11-02 baseline](VALIDATION.md#2026-11-02-relationship-benchmark-baseline) is a run with no shortfall |
 | Relationship model, with today's fields computed from it | [relationships/02](specs/relationships/02-relationship-model.md) (implemented 2026-11-04) | The outline, Changes tree and merge outline are unchanged, the contract checks relationships, and the benchmark reads the list with the baseline's scores |
-| Better pairing over the whole file | [relationships/03](specs/relationships/03-relationship-matching.md) | The benchmark shows no new wrong pairs and no lower held-out precision |
+| Better pairing over the whole file | [relationships/03](specs/relationships/03-relationship-matching.md) (implemented 2026-11-04) | The benchmark shows no new wrong pairs and no lower held-out precision; the output is unchanged on the 2026-11-04 corpus |
 | Rename grouped with its usages | [relationships/04](specs/relationships/04-rename-grouping.md) | The labelled usage cases pass, and unresolved usages stay ordinary changes |
 | Inlining detection | [relationships/05](specs/relationships/05-inlining-detection.md) | The inlining cases pass, and every linked declaration stays visible |
 | Refactorings view | [relationships/06](specs/relationships/06-refactorings-view.md) | The view shows every change the container tree shows |
