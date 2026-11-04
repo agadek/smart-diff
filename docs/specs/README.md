@@ -108,7 +108,7 @@ The accepted features added on 2026-11-01 (outline/05, declarations/06 and chang
 | Feature | Status |
 | --- | --- |
 | [01 Relationship benchmark](relationships/01-relationship-benchmark.md) | implemented, 2026-11-02 |
-| [02 Relationship model](relationships/02-relationship-model.md) | proposed, 2026-11-01 |
+| [02 Relationship model](relationships/02-relationship-model.md) | accepted, 2026-11-02 |
 | [03 Relationship matching](relationships/03-relationship-matching.md) | proposed, 2026-11-01 |
 | [04 Rename grouping](relationships/04-rename-grouping.md) | proposed, 2026-11-01 |
 | [05 Inlining detection](relationships/05-inlining-detection.md) | proposed, 2026-11-01 |
