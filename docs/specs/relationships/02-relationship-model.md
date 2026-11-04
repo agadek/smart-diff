@@ -19,7 +19,7 @@ Status: accepted, 2026-11-02
 - **R9** With today's matcher, the outline, the Changes tree and the merge outline show the same rows and labels as before.
 - **R10** The golden fixtures pass unchanged.
 - **R11** A high-confidence relationship pairs its declarations.
-- **R12** A medium-confidence relationship still pairs its declarations, and the outline shows it as a [rename candidate](../../GLOSSARY.md#rename-candidate).
+- **R12** A medium-confidence relationship still pairs its declarations, not as one added and one removed.
 - **R13** A low-confidence relationship leaves both declarations added and removed.
 - **R14** The thresholds for each confidence level are set in the request, as the [analysis limits](../../GLOSSARY.md#analysis-limits) are.
 - **R15** A registry key sets the thresholds in a running IDE, and tests and the benchmark set them directly.
@@ -35,7 +35,7 @@ Status: accepted, 2026-11-02
 - **R25** With today's matcher, a rename candidate is high when its score reaches the high threshold and medium otherwise; a move, a kind change and an extraction have high confidence.
 - **R26** A declaration that is renamed and moved, or renamed and changed in kind, has one relationship with all its kinds, at its lowest kind's confidence.
 - **R27** An extraction has one relationship for each source and target, with the extracted code as its content evidence.
-- **R28** The outline labels every rename as a rename candidate, whatever its confidence.
+- **R28** The outline labels every paired rename as a [rename candidate](../../GLOSSARY.md#rename-candidate), whatever its confidence.
 - **R29** An [uncertain](../../GLOSSARY.md#uncertain) declaration keeps its candidates, and they are not relationships.
 - **R30** A malformed registry value leaves the default thresholds in place.
 - **R31** The [relationship benchmark](01-relationship-benchmark.md) reads the result's relationships instead of deriving them from today's fields.

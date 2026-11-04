@@ -60,7 +60,7 @@ data class ConfidencePolicy(val high: Double = 0.85, val medium: Double = 0.7) {
 | Extraction link | `EXTRACT` | The source on the old side, the extraction on the new side; one relationship per source and target pair | High | `Content` (tiled tokens as `shared`, the target's tokens as `total`, the extracted code's old range, and the target's range), `Score` (the share) |
 
 - `moved` covers both a container change and a change of order among siblings, as today. Both give `MOVE`.
-- A relationship with several kinds takes the lowest of its kinds' confidence (R26), so a renamed and moved declaration is medium.
+- A relationship with several kinds takes the lowest of its kinds' confidence (R26), so a renamed and moved declaration takes the rename's confidence.
 - Overload pairs from rule M3 are same-name matches with a changed signature. They are not relationships, as today.
 - Uncertain nodes from rule M4 keep `candidates` (R29). Ambiguity stays a presence state until [relationships/03](03-relationship-matching.md) R6 adds low-confidence relationships for it.
 
@@ -69,10 +69,10 @@ data class ConfidencePolicy(val high: Double = 0.85, val medium: Double = 0.7) {
 `ComparisonRequest` gains `confidence: ConfidencePolicy = ConfidencePolicy.DEFAULT`, next to `limits` (R14).
 
 - A scored relationship is high at `score >= high`, medium at `score >= medium`, and low below. Today only rename candidates are scored; moves, kind changes and extractions are high by rule (R25).
-- With today's matcher a rename pair needs `score >= RENAME_THRESHOLD` (0.7). The matcher keeps that fixed pairing floor; the policy classifies each pair the matcher forms, and a low pair does not consume its declarations. With the default policy that gives the same pairs as before (R9). Raising `medium` in a test or through the registry makes a pair between 0.7 and `medium` low, which leaves both declarations added and removed while the relationship stays in the list (R13); lowering `medium` does not form new pairs.
+- With today's matcher a rename pair needs `score >= RENAME_THRESHOLD` (0.7). The matcher keeps that fixed pairing floor; the policy classifies each pair the matcher forms. A low pair still uses both declarations in the greedy pass, so changing the policy never changes which pairs are found. With the default policy that gives the same pairs as before (R9). Raising `medium` in a test or through the registry makes a pair between 0.7 and `medium` low, which leaves both declarations added and removed while the relationship stays in the list (R13); lowering `medium` does not form new pairs, because the floor stays at 0.7.
 - A rename that scores at least `high` is high. It still shows as a rename candidate (R28), because no other label exists yet; the outline reads `renamedFrom`, which a high and a medium rename both set.
-- A low rename (only possible with a raised medium threshold, in tests or through the registry) leaves both declarations added and removed, and the relationship stays in the list linking them (R13). `renamedFrom` is not set for it. Because the low pair is not consumed, both declarations stay free for other rename candidates in the greedy pairing, so raising `medium` can change which pairs form, not only their confidence.
-- The registry key `smartdiff.relationships.confidence` is declared in `plugin.xml` with the default `0.85,0.7` and holds `high,medium` (R15). It is read when a request is built, next to the analysis limits in `SmartDiffSettings.limits`, so the outline, the Changes tree and the merge outline use the same policy. A value that does not parse as two numbers with `0 <= medium <= high <= 1` logs one warning and the default policy is used (R30).
+- A low rename (only possible with a raised medium threshold, in tests or through the registry) leaves both declarations added and removed, and the relationship stays in the list linking them (R13). None of its computed fields is set, a composite included. A low pair still uses both declarations in the greedy pass, so the same pairs are found whatever the policy; only the confidence and the computed fields change.
+- The registry key `smartdiff.relationships.confidence` is declared in `plugin.xml` with the default `0.85,0.7` and holds `high,medium` (R15). It is read when a request is built, next to the analysis limits in `SmartDiffSettings.limits`, so the outline, the Changes tree and the merge outline use the same policy. A value that does not parse as two numbers with `0 <= medium <= high <= 1` logs one warning and the default policy is used (R30). The Changes tree cache key and clear path cover `SmartDiffSettings` but not this registry key, so a threshold change can leave summaries computed under the old policy; the implementation must include the policy in the key or clear the cache when it changes.
 - Tests and the benchmark pass a policy directly; the benchmark records the policy it used in `report.json`.
 
 ### Computed fields
@@ -81,7 +81,7 @@ data class ConfidencePolicy(val high: Double = 0.85, val medium: Double = 0.7) {
 
 1. The matcher returns its pairs and, beside them, a relationship for each rename, move and kind change. The extraction detector returns relationships instead of `Extraction` values.
 2. Each relationship is indexed by its endpoints' ranges on each side.
-3. When a node is built, its fields come from the relationships whose endpoints are the node's own ranges: `renamedFrom` from a high or medium `RENAME`, `moved` from `MOVE`, `kindChangedFrom` from `KIND_CHANGE`, `extractedFrom` and `extractedTo` from `EXTRACT`, in the relationships' order.
+3. When a node is built, its fields come only from high or medium relationships whose endpoints are the node's own ranges: `renamedFrom` from a `RENAME`, `moved` from `MOVE`, `kindChangedFrom` from `KIND_CHANGE`, `extractedFrom` and `extractedTo` from `EXTRACT`, in the relationships' order. A low relationship sets none of these fields, a composite included, so its declarations stay added and removed (R13).
 4. `extractedFrom` and `extractedTo` of a link's two ends come from the same relationship (R18): the `Origin` on the target is the source endpoint plus the `Content` evidence's old range.
 
 The fields keep their types and are marked `@Deprecated` with a pointer to `relationships`. The outline, the Changes tree, `MergeJoin` and the merge outline read the same fields as before, so they need no change in this step.
@@ -104,7 +104,7 @@ The line engine returns an empty list and passes every check (R22).
 
 ### Engine version
 
-`DeclarationEngine.VERSION` goes from 6 to 7, because the result now carries relationships. When the Scala provider is loaded, `version` also adds the Scala plugin's version, for example `7 (251.26927.53; Scala 2025.1.32)`, because its parser can change a result without a platform update (R24). The benchmark and validation reports already record `version`. The Changes tree cache lives for one IDE session and keys on the engine id, so it needs no change.
+`DeclarationEngine.VERSION` goes from 6 to 7, because the result now carries relationships. When the Scala provider is loaded, `version` also adds the Scala plugin's version, for example `7 (251.26927.53; Scala 2025.1.32)`, because its parser can change a result without a platform update (R24). The benchmark and validation reports already record `version`. The Changes tree cache (`ChangesSummaryService`) lives for one IDE session and keys on the engine id, not the engine version (the key also has each file's content version), so a Scala plugin change that can alter relationships needs an IDE restart before cached summaries are trusted; this step does not clear the cache on plugin load or unload.
 
 ### Failure behaviour
 
@@ -125,9 +125,15 @@ The gate run, against the checked-in baseline:
   -Psmartdiff.relationships.corpus=src/test/testData/relationships-corpus-full.txt \
   -Psmartdiff.relationships.baseline=src/test/testData/relationships-baseline/report.json \
   -Psmartdiff.relationships.gate=no-new-wrong-pairs
+
+./gradlew test --tests '*RelationshipBenchmarkTest*' \
+  -Psmartdiff.relationships.corpus=src/test/testData/relationships-corpus-full.txt \
+  -Psmartdiff.relationships.baseline=src/test/testData/relationships-baseline/report.json \
+  -Psmartdiff.relationships.gate=tolerance \
+  -Psmartdiff.relationships.tolerance=0
 ```
 
-It must pass with no new wrong pair and no lower precision or recall for any corpus and kind than the baseline. The model stores the real old subject, so a moved or kind-changed declaration whose signature also changed can differ from the adapter's old endpoint and move a score upward; any such difference is explained in the VALIDATION section. The run is recorded in a dated section of [VALIDATION.md](../../VALIDATION.md). The baseline file is not replaced: [relationships/03](03-relationship-matching.md) compares against the 2026-11-02 baseline.
+The first run must pass with no new wrong pair. The second must pass with no lower precision or recall for any corpus and kind than the baseline, because `tolerance=0` fails any drop. The model stores the real old subject, so a moved or kind-changed declaration whose signature also changed can differ from the adapter's old endpoint and move a score upward; any such difference is explained in the VALIDATION section. No MOVE or KIND_CHANGE relationship in the current corpus has old and new signatures that differ (57 across 55 label files: 50 case labels and 7 real-commit labels in 5 files), so this difference does not arise today; a later label that adds one gets its score change explained in the same way. The run is recorded in a dated section of [VALIDATION.md](../../VALIDATION.md). The baseline file is not replaced: [relationships/03](03-relationship-matching.md) compares against the 2026-11-02 baseline.
 
 ### Thresholds and reasons
 
@@ -141,7 +147,7 @@ It must pass with no new wrong pair and no lower precision or recall for any cor
 | R1–R6 | `RelationshipModelTest` (new, `engine/api`): defaults, kinds, endpoints, evidence and the score kept in evidence |
 | R7, R8, R18 | `DeclarationEngineTest`: over the golden fixtures, every computed field equals the field the engine set before this step (record the old fields from `main` once into the test as expected values, or compare against a copy of the old code kept in the test) |
 | R9, R10 | `GoldenFixturesTest`, `MergeFixturesTest`, `OutlineModelTest` and the Changes tree tests pass with no fixture change |
-| R11–R13 | `DeclarationMatcherTest` with policies that move one rename pair across each threshold: high and medium set `renamedFrom`, low leaves it added and removed with the relationship listed |
+| R11–R13 | `DeclarationMatcherTest` with policies that move one rename pair across each threshold: high and medium set `renamedFrom`, low leaves it added and removed with the relationship listed, the pair set is identical under every policy, and a low composite sets none of the computed fields |
 | R14 | A request test: the default policy, and a custom policy reaching the matcher |
 | R15, R30 | A registry test: a valid value, an empty value, and a malformed value that keeps the default |
 | R16–R20, R23 | New checks in `ComparisonEngineContract`, run by `ComparisonEngineContractTest` and `LineEngineContractTest`; one negative test per check with a hand-built bad result |
