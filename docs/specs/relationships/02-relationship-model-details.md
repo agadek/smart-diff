@@ -69,9 +69,9 @@ data class ConfidencePolicy(val high: Double = 0.85, val medium: Double = 0.7) {
 `ComparisonRequest` gains `confidence: ConfidencePolicy = ConfidencePolicy.DEFAULT`, next to `limits` (R14).
 
 - A scored relationship is high at `score >= high`, medium at `score >= medium`, and low below. Today only rename candidates are scored; moves, kind changes and extractions are high by rule (R25).
-- With today's matcher a rename pair needs `score >= RENAME_THRESHOLD` (0.7). The matcher keeps that fixed pairing floor; the policy classifies each pair the matcher forms, and a low pair does not consume its declarations. With the default policy that gives the same pairs as before (R9). Raising `medium` in a test or through the registry makes a pair between 0.7 and `medium` low, which leaves both declarations added and removed while the relationship stays in the list (R13); lowering `medium` does not form new pairs.
+- With today's matcher a rename pair needs `score >= RENAME_THRESHOLD` (0.7). The matcher keeps that fixed pairing floor; the policy classifies each pair the matcher forms. A low pair still uses both declarations in the greedy pass, so changing the policy never changes which pairs are found. With the default policy that gives the same pairs as before (R9). Raising `medium` in a test or through the registry makes a pair between 0.7 and `medium` low, which leaves both declarations added and removed while the relationship stays in the list (R13); lowering `medium` does not form new pairs, because the floor stays at 0.7.
 - A rename that scores at least `high` is high. It still shows as a rename candidate (R28), because no other label exists yet; the outline reads `renamedFrom`, which a high and a medium rename both set.
-- A low rename (only possible with a raised medium threshold, in tests or through the registry) leaves both declarations added and removed, and the relationship stays in the list linking them (R13). `renamedFrom` is not set for it. Because the low pair is not consumed, both declarations stay free for other rename candidates in the greedy pairing, so raising `medium` can change which pairs form, not only their confidence.
+- A low rename (only possible with a raised medium threshold, in tests or through the registry) leaves both declarations added and removed, and the relationship stays in the list linking them (R13). `renamedFrom` is not set for it. A low pair still uses both declarations in the greedy pass, so the same pairs are found whatever the policy; only the confidence and whether `renamedFrom` is set change.
 - The registry key `smartdiff.relationships.confidence` is declared in `plugin.xml` with the default `0.85,0.7` and holds `high,medium` (R15). It is read when a request is built, next to the analysis limits in `SmartDiffSettings.limits`, so the outline, the Changes tree and the merge outline use the same policy. A value that does not parse as two numbers with `0 <= medium <= high <= 1` logs one warning and the default policy is used (R30).
 - Tests and the benchmark pass a policy directly; the benchmark records the policy it used in `report.json`.
 
@@ -104,7 +104,7 @@ The line engine returns an empty list and passes every check (R22).
 
 ### Engine version
 
-`DeclarationEngine.VERSION` goes from 6 to 7, because the result now carries relationships. When the Scala provider is loaded, `version` also adds the Scala plugin's version, for example `7 (251.26927.53; Scala 2025.1.32)`, because its parser can change a result without a platform update (R24). The benchmark and validation reports already record `version`. The Changes tree cache lives for one IDE session and keys on the engine id, so it needs no change.
+`DeclarationEngine.VERSION` goes from 6 to 7, because the result now carries relationships. When the Scala provider is loaded, `version` also adds the Scala plugin's version, for example `7 (251.26927.53; Scala 2025.1.32)`, because its parser can change a result without a platform update (R24). The benchmark and validation reports already record `version`. The Changes tree cache (`ChangesSummaryService`) lives for one IDE session and keys on the engine id, not the version, so a Scala plugin change that can alter relationships needs an IDE restart before cached summaries are trusted; this step does not clear the cache on plugin load or unload.
 
 ### Failure behaviour
 
@@ -127,7 +127,7 @@ The gate run, against the checked-in baseline:
   -Psmartdiff.relationships.gate=no-new-wrong-pairs
 ```
 
-It must pass with no new wrong pair and no lower precision or recall for any corpus and kind than the baseline. The model stores the real old subject, so a moved or kind-changed declaration whose signature also changed can differ from the adapter's old endpoint and move a score upward; any such difference is explained in the VALIDATION section. The run is recorded in a dated section of [VALIDATION.md](../../VALIDATION.md). The baseline file is not replaced: [relationships/03](03-relationship-matching.md) compares against the 2026-11-02 baseline.
+It must pass with no new wrong pair and no lower precision or recall for any corpus and kind than the baseline. The model stores the real old subject, so a moved or kind-changed declaration whose signature also changed can differ from the adapter's old endpoint and move a score upward; any such difference is explained in the VALIDATION section. No MOVE or KIND_CHANGE label in the current corpus has old and new signatures that differ (50 checked), so this difference does not arise today; a later label that adds one gets its score change explained in the same way. The run is recorded in a dated section of [VALIDATION.md](../../VALIDATION.md). The baseline file is not replaced: [relationships/03](03-relationship-matching.md) compares against the 2026-11-02 baseline.
 
 ### Thresholds and reasons
 
