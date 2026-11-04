@@ -2,17 +2,20 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-04
+
 ### Added
 
 - Each changed Java, Kotlin or Scala file in Local Changes and the Commit tool window can be expanded to show its changed declarations, labelled as in the outline. Double-click or Enter on one opens the file's diff with that declaration selected in the outline.
-- Three-sided diffs show the merge outline: declarations grouped by side, side names from the pane titles, a container-tree layout, the change-type filter and three-pane navigation.
-- The merge window shows the same outline. Selecting a row frames the declaration in the editable result, follows edits, says `not tracked` when the result no longer contains it, and marks rows changed on both sides without a conflict as `merged without conflict`.
+- Three-sided diffs for Java, Kotlin, Scala 2 and Scala 3 show the merge outline: declarations grouped by side, side names from the pane titles, a container-tree layout, the change-type filter and three-pane navigation.
+- The merge window shows the same outline for Java, Kotlin, Scala 2 and Scala 3. Selecting a row frames the declaration in the editable result, follows edits, says `not tracked` when the result no longer contains it, and marks rows changed on both sides without a conflict as `merged without conflict`.
 - The structural outline also appears for a same-language text diff that no engine supports, such as YAML, showing why no engine applies while the native diff stays in place.
 
 ### Fixed
 
 - A changed file in the Changes tree that was not analyzed shows the reason in place of its summary, such as `not analyzed: too large`, `not analyzed: timed out`, `not analyzed: parse errors` or `not analyzed: analysis failed`.
 - Scala and Kotlin: adding a declaration above another no longer marks the unchanged declaration as changed; the line break before it is shown as formatting-only.
+- A failed analysis names the engine that failed in the outline's reason.
 
 ## [0.1.1] - 2026-10-23
 
@@ -42,6 +45,7 @@
 - Scala 2 and Scala 3 support, when the Scala plugin is installed: classes, traits, objects, enums, methods, values, type aliases, givens and extension methods, with Scala 3 indentation changes never shown as formatting-only.
 - Unsupported, malformed or oversized files fall back to the native diff with the reason shown.
 
-[Unreleased]: https://github.com/agadek/smart-diff/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/agadek/smart-diff/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/agadek/smart-diff/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/agadek/smart-diff/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/agadek/smart-diff/commits/v0.1.0

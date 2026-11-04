@@ -1,18 +1,18 @@
 # SMART Diff Roadmap
 
-Status: 2026-11-02. Items after the shipped baseline are candidates, not commitments; their order is a proposal. Scope details live in the [product scope](specs/README.md#product-scope), the [feature specifications](specs/README.md) and the [technical specification](TECHNICAL-SPECIFICATION.md).
+Status: 2026-11-04. Items after the shipped baseline are candidates, not commitments; their order is a proposal. Scope details live in the [product scope](specs/README.md#product-scope), the [feature specifications](specs/README.md) and the [technical specification](TECHNICAL-SPECIFICATION.md).
 
 ## Shipped baseline
 
-0.1.0 and 0.1.1 are released; the "Unreleased" section of [CHANGELOG.md](../CHANGELOG.md) is the next release.
+0.1.0, 0.1.1 and 0.2.0 (2026-11-04) are released.
 
 - Structural outline for two-sided diffs, attached to the native diff, per file only. It opens by default, with a setting to turn it off and a toolbar button in every diff to switch to the plain native diff.
 - Comparison engine interface, registry, per-language default, and engine dropdown ([ADR 0004](adr/0004-pluggable-comparison-engines.md)).
 - Declaration engine for Java, Kotlin, Scala 2 and Scala 3, using IntelliJ PSI ([ADR 0001](adr/0001-declaration-level-first-release.md), [ADR 0002](adr/0002-parser-neutral-model-with-psi-first.md)); Scala needs the Scala plugin.
 - Conservative classification: added, removed, changed, moved, formatting-only, uncertain, unanalyzed ([ADR 0003](adr/0003-conservative-classification.md)), plus rename candidates, kind changes and signature changes. Renamed declarations, classes included, are paired as rename candidates rather than reported literally.
 - Extraction detection for Java, Kotlin, Scala 2 and Scala 3 (0.1.1).
-- Changes tree summary and declaration rows in Local Changes and the Commit tool window (Unreleased).
-- Structural outline for three-way merges and three-sided diffs, for Java, Kotlin, Scala 2 and Scala 3 (Unreleased; merge validation results and review are in [VALIDATION.md](VALIDATION.md)).
+- Changes tree summary and declaration rows in Local Changes and the Commit tool window (0.2.0).
+- Structural outline for three-way merges and three-sided diffs, for Java, Kotlin, Scala 2 and Scala 3 (0.2.0; merge validation results and review are in [VALIDATION.md](VALIDATION.md)).
 - IntelliJ Platform 2025.1 and newer, checked by Plugin Verifier on 2025.1 and the latest release.
 
 Specified in [outline/01](specs/outline/01-structural-outline.md), [outline/02](specs/outline/02-outline-toggle.md), [outline/05](specs/outline/05-analysis-fallback.md), [engines/01](specs/engines/01-comparison-engines.md) to [engines/03](specs/engines/03-analysis-limits.md), [declarations/01](specs/declarations/01-declaration-matching.md), [declarations/02](specs/declarations/02-change-classification.md), [declarations/06](specs/declarations/06-change-labels.md), [languages/01](specs/languages/01-java.md) to [languages/03](specs/languages/03-scala.md), [changes-tree/01](specs/changes-tree/01-changes-tree-summary.md), [changes-tree/03](specs/changes-tree/03-coverage-and-scale.md) and [merge/01](specs/merge/01-merge-join.md) to [merge/05](specs/merge/05-scala-merges.md). The features accepted on 2026-11-01 have requirement-named tests and are implemented.
@@ -44,9 +44,9 @@ Keep a single space where the source separates words in a type (`Class<out Annot
 
 A nothing-hidden check cheap enough for large files, so the corpus validation covers every file (414 of 1279 were too large for the current one).
 
-## 0.2.0: three-way merge outline
+## 0.2.0: three-way merge outline, released 2026-11-04
 
-Decided 2026-10-30. It comes before everything else under [Later](#later), and ships the [structural outline for three-way merges](#structural-outline-for-three-way-merges) for Java, Kotlin, Scala 2 and Scala 3 together. Its features are specified in [docs/specs/merge/](specs/README.md#merges).
+Decided 2026-10-30. It came before everything else under [Later](#later), and shipped the [structural outline for three-way merges](#structural-outline-for-three-way-merges) for Java, Kotlin, Scala 2 and Scala 3 together. Its features are specified in [docs/specs/merge/](specs/README.md#merges).
 
 | Work | Spec | State |
 | --- | --- | --- |
@@ -57,7 +57,7 @@ Decided 2026-10-30. It comes before everything else under [Later](#later), and s
 | Validation on real merge commits | [merge/06](specs/merge/06-merge-validation.md) | Implemented, PR #48; results and review in [VALIDATION.md](VALIDATION.md) |
 | Outline for languages without an engine, and the "not analyzed" reason in the Changes tree | [outline/01](specs/outline/01-structural-outline.md), [changes-tree/01](specs/changes-tree/01-changes-tree-summary.md) | Implemented, PR #37 |
 
-0.2.0 is released once the merge validation meets its criteria (merge/06 R15 to R17 and R32), the flagged files are reviewed, and its results are in [VALIDATION.md](VALIDATION.md), following [RELEASING.md](RELEASING.md). The [2026-11-02 rerun](VALIDATION.md#2026-11-02-merge-validation-rerun) meets all four. The requirement-named tests for the features accepted on 2026-11-01 (outline/05, declarations/06 and changes-tree/03) are done, and those features are implemented.
+0.2.0 was released on 2026-11-04: the merge validation meets its criteria (merge/06 R15 to R17 and R32), the flagged files are reviewed, and its results are in [VALIDATION.md](VALIDATION.md), following [RELEASING.md](RELEASING.md). The [2026-11-02 rerun](VALIDATION.md#2026-11-02-merge-validation-rerun) meets all four. The requirement-named tests for the features accepted on 2026-11-01 (outline/05, declarations/06 and changes-tree/03) are done, and those features are implemented.
 
 ## After 0.2.0: structural relationships
 
@@ -117,7 +117,7 @@ It comes right after the [Changes tree level 2](#multi-file-summary-in-the-chang
 - **Approach:** run the selected comparison engine twice, base → left and base → right, and join both results on base-side ranges. No change to the engine interface; the request gains an optional hint so the Scala dialect is chosen from all three texts.
 - **Groups:** changed on both sides (likely conflicts), changed only on one side, uncertain; the same change on both sides is marked as such.
 - **Integration:** a `DiffExtension` for three-sided diffs, and for the merge window a `MergeTool` registered first that decorates the platform's own merge viewer, decided by spike S6 ([ADR 0007](adr/0007-merge-outline-attaches-through-a-delegating-merge-tool.md)). Base ranges are tracked into the editable result pane.
-- **Phases:** spike S6 (done 2026-10-23, [THREE-WAY-MERGE.md §12](THREE-WAY-MERGE.md#12-spike-s6-results)), the join, three-sided diffs, the merge window and the merge fixtures (done 2026-11-01), then a validation on replayed merge commits. Tracked in [0.2.0](#020-three-way-merge-outline).
+- **Phases:** spike S6 (done 2026-10-23, [THREE-WAY-MERGE.md §12](THREE-WAY-MERGE.md#12-spike-s6-results)), the join, three-sided diffs, the merge window and the merge fixtures (done 2026-11-01), then a validation on replayed merge commits. Tracked in [0.2.0](#020-three-way-merge-outline-released-2026-11-04).
 - **Decided 2026-10-23** ([THREE-WAY-MERGE.md §10](THREE-WAY-MERGE.md#10-decisions)): grouped by side with a toggle to the container tree; sides named by the merge window's titles, shortened; rows changed on both sides that merged without a conflict marked as such; the outline follows the existing setting; the item comes right after the Changes tree level 2.
 
 ### More languages
