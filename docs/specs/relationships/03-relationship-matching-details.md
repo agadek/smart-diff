@@ -108,7 +108,7 @@ A pair gets every kind that applies: rename when the matcher paired it as a rena
 
 ### Benchmark treatment of low confidence
 
-Only high and medium relationships are scored as reported relationships. A low-confidence relationship is a candidate the matcher did not take, so it is counted in the report's confidence table (relationships/02 R33) and is never a true positive, false positive or [forced pair](../../GLOSSARY.md#forced-pair). Without this rule a tie would count as a forced pair and fail R15, although it paired nothing. This refines the "one benchmark relationship per relationship" mapping of relationships/02's Benchmark section for the low level that relationships/03 adds.
+Only high and medium relationships are scored as reported relationships. A low-confidence relationship never pairs its declarations: it is either a tie the matcher left unpaired or a pair that a raised `medium` threshold moved below medium. It is counted in the report's confidence table (relationships/02 R33) and is never a true positive, false positive or [forced pair](../../GLOSSARY.md#forced-pair). Without this rule a tie would count as a forced pair and fail R15, although it paired nothing. This refines the "one benchmark relationship per relationship" mapping of relationships/02's Benchmark section for the low level that relationships/03 adds.
 
 ### Failure behaviour
 
