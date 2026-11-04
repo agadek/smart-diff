@@ -1,6 +1,6 @@
 # Change labels: details
 
-Status: accepted, 2026-11-01
+Status: implemented, 2026-11-04
 
 Feature: [Change labels](06-change-labels.md)
 
@@ -28,10 +28,17 @@ Feature: [Change labels](06-change-labels.md)
 
 | Requirement | Check |
 | --- | --- |
-| R1–R4 | `OutlineModelTest` label cases, including a kind change and a rename candidate |
-| R5, R7 | `OutlineModelTest` and the extraction golden fixtures |
-| R6, R8, R9 | `OutlineModelTest` summary cases, including hidden changes |
-| R10–R12 | `OutlineModelTest` filter cases |
-| R13 | `OutlineModelTest` accessible names and the label rendering tests |
-
-The tests above check the behavior but do not name these requirements; requirement-named tests are still needed before the feature moves to implemented.
+| R1 | `OutlineModelTest` `every change label appears when it applies`: added, removed, changed, moved, formatting-only, signature changed, rename candidate, uncertain and unanalyzed |
+| R2 | `OutlineModelTest` `labels list presence, moved, content and signature changed`: a signature change also shows `changed` |
+| R3 | `OutlineModelTest` `a kind change shows both kinds and carries signature changed`: `trait → class Shape` and `signature changed` |
+| R4 | `OutlineModelTest` `a rename candidate shows both names, is never hidden and is counted`: `method total → sum()` |
+| R5 | `OutlineModelTest` `extractions name both ends, qualified by container only when it differs`: `extracted from` and `code extracted to` |
+| R6 | `OutlineModelTest` `the summary counts every label in a fixed order`: all nine counts in order, with zero counts left out |
+| R7 | `OutlineModelTest` `extractions name both ends, qualified by container only when it differs`: an extraction counts as `extracted`, not `added` |
+| R8 | `OutlineModelTest` `a signature change and a kind change count as changed` |
+| R9 | `OutlineModelTest` `a change whose every label is hidden is left out, and the summary says how many are hidden`: every change is counted and the line ends with `· 4 hidden` |
+| R10 | `OutlineModelTest` `the filter hides changed, added, removed, moved and formatting-only`: changed covers signature changes |
+| R11 | `OutlineModelTest` `hiding changed covers signature changes, and uncertain and unanalyzed changes are never hidden`, and `a rename candidate shows both names, is never hidden and is counted` |
+| R12 | `OutlineModelTest` `a change whose every label is hidden is left out, and the summary says how many are hidden`: a change with another visible label stays |
+| R13 | `OutlineModelTest` `every row's label is its title followed by its change labels`: every row's label is the title followed by its change labels, so the meaning is text, not color alone |
+| R13 | Manual check: (1) open a Java diff with the outline; (2) move focus to a row; (3) inspect its accessible name with a screen reader or the IDE's accessibility inspector; (4) confirm it is the row's label |

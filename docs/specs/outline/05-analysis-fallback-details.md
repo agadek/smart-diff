@@ -1,6 +1,6 @@
 # Analysis fallback states: details
 
-Status: accepted, 2026-11-01
+Status: implemented, 2026-11-04
 
 Feature: [Analysis fallback states](05-analysis-fallback.md)
 
@@ -34,13 +34,13 @@ A comparison that is canceled by a timeout reaches the panel as `FAILED` with th
 
 | Requirement | Check |
 | --- | --- |
-| R1, R2 | `OutlineIntegrationTest` opens a YAML diff with no engine and checks the message; the message is part of the panel's accessible name |
-| R3, R4 | `OutlineIntegrationTest` checks the size and time limits; `OutlineModelTest` checks the fallback states without the IDE |
-| R5 | `OutlineIntegrationTest` timeout case |
-| R6 | `OutlineModelTest` `PARTIAL` result and banner |
-| R7, R8 | `ChangesSummaryTest` checks the four reasons, and that added, deleted, unsupported and other-language files get none |
-| R9, R10 | `OutlineIntegrationTest` checks that the native diff stays and that the viewer still hides no lines; product-scope P2 is checked in the label tests |
-| R11 | `OutlineIntegrationTest` toggles the outline in a fallback state |
-| R12 | `OutlineModelTest` `UNSUPPORTED` state |
-
-The tests above check the behavior but do not name these requirements; requirement-named tests are still needed before the feature moves to implemented.
+| R1, R2 | `OutlineIntegrationTest` `test a language without an engine shows the outline with an unsupported message`: the exact message names the language and says the native diff shows every change, and the message is the panel's accessible name |
+| R3 | `OutlineIntegrationTest` `test a result over the size limit shows a status message`: `Too large to analyze`, the reason, and no outline rows |
+| R4 | `OutlineIntegrationTest` `test a failed comparison shows analysis failed with the reason`: `Analysis failed`, the reason, and no outline rows |
+| R5 | `OutlineIntegrationTest` `test a comparison over the time limit is canceled and shown as failed`: `Analysis failed` with `timed out` |
+| R6 | `OutlineIntegrationTest` `test a partial comparison shows its rows and a banner`: the analyzed rows and the "Some source was not analyzed" banner |
+| R7 | `ChangesSummaryTest` `test the summary is the outline's summary line, or the reason it was not analyzed`: `not analyzed: too large`, `timed out`, `parse errors` and `analysis failed` |
+| R8 | `ChangesSummaryTest` `test added and deleted files and other languages get no summary`: added, deleted and engine-less files |
+| R9, R10 | `OutlineIntegrationTest` `test every fallback keeps both editors and never claims the versions are the same`: both editors and their text stay, and the message makes no equality claim |
+| R11 | `OutlineIntegrationTest` `test a language without an engine shows the outline with an unsupported message` toggles the outline in a fallback state, and `test the setting keeps the outline hidden in a fallback state` checks the setting |
+| R12 | `OutlineIntegrationTest` `test an unsupported result shows not supported with the reason`: `Not supported`, the reason, and no outline rows |
