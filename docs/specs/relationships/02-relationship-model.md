@@ -33,12 +33,12 @@ Status: implemented, 2026-11-04
 - **R23** The engine contract checks R16 to R20 for every engine.
 - **R24** The engine version changes when the matcher or a parser that can change the relationships changes, the Scala plugin included.
 - **R25** With today's matcher, a rename candidate is high when its score reaches the high threshold and medium otherwise; a move, a kind change and an extraction have high confidence.
-- **R26** A declaration that is renamed and moved, or renamed and changed in kind, has one relationship with all its kinds, at its lowest kind's confidence.
+- **R26** A declaration that is renamed and reordered, or changed in kind and reordered, has one relationship with all its kinds, at its lowest kind's confidence.
 - **R27** An extraction has one relationship for each source and target, with the extracted code as its content evidence.
 - **R28** The outline labels every paired rename as a [rename candidate](../../GLOSSARY.md#rename-candidate), whatever its confidence.
 - **R29** An [uncertain](../../GLOSSARY.md#uncertain) declaration keeps its candidates, and they are not relationships.
 - **R30** A malformed registry value leaves the default thresholds in place.
-- **R31** The [relationship benchmark](01-relationship-benchmark.md) reads the result's relationships instead of deriving them from today's fields.
+- **R31** The [relationship benchmark](01-relationship-benchmark.md) reads the result's high and medium relationships instead of deriving them from today's fields; a low relationship is not scored as a pair.
 - **R32** The benchmark counts a repeated relationship as a wrong pair.
 - **R33** The benchmark report counts the reported relationships of each kind by confidence.
 
