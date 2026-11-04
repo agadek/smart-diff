@@ -93,6 +93,27 @@ compares against the [2026-11-02 baseline](#2026-11-02-relationship-benchmark-ba
 
 The report is in `build/reports/smartdiff-relationships/summary.tsv`, `report.md` and `report.json`.
 
+## 2026-11-04: two-sided corpus partial rerun
+
+**Corpus:** the six Java and Kotlin clones from the [2026-10-23 extraction run](#2026-10-23-extraction-detection) at the
+same commits, plus cats and scala3 at their current heads. The zio clone is not available on this machine, so this is
+only a partial rerun: the Java and Kotlin half is the recorded set, the Scala half is not (scala3 has moved since the
+recorded run, and zio's 118 files are missing).
+
+**Java and Kotlin:** 1279 files, all `ANALYZED`, the same count as the recorded run. 10 files have links, matching the
+recorded count, and the 4 non-zio near misses are the recorded guava, Exposed and moshi rows. The other flags have the
+same counts as the [0.1.0 noise pass](#2026-10-22-010-noise-pass): `rename` 21, `rename-candidate` 55, `noisy` 12,
+`same-name` 1 and `uncertain` 1. The median is 5 ms against the recorded 4 ms, the slowest file takes 168 ms and all
+1279 files take 10.7 s, close to the recorded 9.9 to 10.1 s.
+
+**Scala:** cats has 307 files, the recorded count; scala3 has 257 against 171 recorded, because its head moved after the
+2026-10-23 run. 562 of the 564 files are `ANALYZED` and 2 `PARTIAL`. No extraction is flagged on these heads; the 8
+recorded Scala links include zio and scala3 commits outside the current list, so this subset cannot be compared with the
+recorded result and says nothing about the missing zio files.
+
+**Result:** the Java and Kotlin half reproduces the recorded run; the Scala half is not comparable, and the full corpus,
+zio included, is still required. This partial run does not close the 0.2.0 release gate.
+
 ## 2026-11-02: relationship benchmark baseline
 
 This is the R29 baseline: the first run with no shortfall. It covers the full case matrix and 30 labelled real
