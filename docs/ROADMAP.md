@@ -57,7 +57,7 @@ Decided 2026-10-30. It comes before everything else under [Later](#later), and s
 | Validation on real merge commits | [merge/06](specs/merge/06-merge-validation.md) | Implemented, PR #48; results and review in [VALIDATION.md](VALIDATION.md) |
 | Outline for languages without an engine, and the "not analyzed" reason in the Changes tree | [outline/01](specs/outline/01-structural-outline.md), [changes-tree/01](specs/changes-tree/01-changes-tree-summary.md) | Implemented, PR #37 |
 
-0.2.0 is released once the merge validation meets its criteria (merge/06 R15 to R17 and R32), the flagged files are reviewed, and its results are in [VALIDATION.md](VALIDATION.md), following [RELEASING.md](RELEASING.md). The [2026-11-02 rerun](VALIDATION.md#2026-11-02-merge-validation-rerun) meets all four, so 0.2.0 is ready to release. Before the release, the features accepted on 2026-11-01 that ship in it (outline/05, declarations/06 and changes-tree/03) get requirement-named tests and move to implemented.
+0.2.0 is released once the merge validation meets its criteria (merge/06 R15 to R17 and R32), the flagged files are reviewed, and its results are in [VALIDATION.md](VALIDATION.md), following [RELEASING.md](RELEASING.md). The [2026-11-02 rerun](VALIDATION.md#2026-11-02-merge-validation-rerun) meets all four. The remaining release gate is requirement-named tests for the features accepted on 2026-11-01 that ship in 0.2.0 (outline/05, declarations/06 and changes-tree/03), which then move to implemented.
 
 ## After 0.2.0: structural relationships
 

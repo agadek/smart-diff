@@ -29,7 +29,7 @@ data class RelationshipEndpoint(val subject: Subject, val range: TextRange)
 
 sealed interface Evidence {
     data class Name(val old: String, val new: String) : Evidence
-    data class Content(val shared: Int, val total: Int, val oldRange: TextRange, val newRange: TextRange?) : Evidence
+    data class Content(val shared: Int, val total: Int, val oldRange: TextRange, val newRange: TextRange) : Evidence
     data class Structure(val oldPath: String, val newPath: String, val oldKind: DeclarationKind?, val newKind: DeclarationKind?) : Evidence
     data class Position(val oldIndex: Int, val newIndex: Int) : Evidence
     data class Score(val value: Double) : Evidence
@@ -43,6 +43,7 @@ data class ConfidencePolicy(val high: Double = 0.85, val medium: Double = 0.7) {
 
 - Every relationship has at least one endpoint on each side, and every endpoint is a declaration (R2, R16). An inlining, from [relationships/05](05-inlining-detection.md), follows the same rule: the removed declaration on the old side, the declarations it was inlined into on the new side.
 - An endpoint's `subject` is the subject of the node on its own side: the old subject for an old endpoint, so a rename's old endpoint carries the old name and a kind change's old endpoint the old kind. The benchmark adapter rebuilt the old subject from `renamedFrom` and `kindChangedFrom`; the model stores it.
+- `Content.newRange` is the target declaration's range. Every relationship in this step has one, so it is not nullable; a later relationship with no new-side range would need a spec change.
 - `RelationshipKind`, `Confidence`, `Relationship`, `RelationshipEndpoint`, `Evidence` and `ConfidencePolicy` go in `engine.api`, next to `ComparisonResult`, so every engine and the UI see the same types.
 - Content and signature changes stay `ChangeNode` attributes. They are not relationship kinds.
 - A relationship is not a presence: it never replaces `MATCHED`, `ADDED`, `REMOVED` or `UNCERTAIN`.
@@ -53,7 +54,7 @@ data class ConfidencePolicy(val high: Double = 0.85, val medium: Double = 0.7) {
 
 | Source today | Kinds | Endpoints | Confidence | Evidence |
 | --- | --- | --- | --- | --- |
-| Rule M5 rename candidate, a class's constructor included | `RENAME`, plus `MOVE` when the node is moved, plus `KIND_CHANGE` when it changed kind | The old and the new declaration | Medium, from the policy and its score (below) | `Name`, `Score` (the rename similarity), `Position`; `Structure` when moved or changed in kind |
+| Rule M5 rename candidate, a class's constructor included | `RENAME`, plus `MOVE` when the node is moved, plus `KIND_CHANGE` when it changed kind | The old and the new declaration | High or medium, from the policy and its score (below) | `Name`, `Score` (the rename similarity), `Position`; `Structure` when moved or changed in kind |
 | A match by rules M1 to M4b that is moved | `MOVE` | The old and the new declaration | High | `Structure` (old and new container path), `Position` (index among siblings) |
 | Rule M4b kind change | `KIND_CHANGE`, plus `MOVE` when moved | The old and the new declaration | High | `Structure` (old and new kind) |
 | Extraction link | `EXTRACT` | The source on the old side, the extraction on the new side; one relationship per source and target pair | High | `Content` (tiled tokens as `shared`, the target's tokens as `total`, the extracted code's old range, and the target's range), `Score` (the share) |
@@ -68,9 +69,9 @@ data class ConfidencePolicy(val high: Double = 0.85, val medium: Double = 0.7) {
 `ComparisonRequest` gains `confidence: ConfidencePolicy = ConfidencePolicy.DEFAULT`, next to `limits` (R14).
 
 - A scored relationship is high at `score >= high`, medium at `score >= medium`, and low below. Today only rename candidates are scored; moves, kind changes and extractions are high by rule (R25).
-- With today's matcher a rename pair needs `score >= RENAME_THRESHOLD` (0.7), which equals the default medium threshold, so no default rename is low. The matcher reads the threshold from the policy instead of `RENAME_THRESHOLD`; with the default policy that is the same number, so pairing does not change (R9).
+- With today's matcher a rename pair needs `score >= RENAME_THRESHOLD` (0.7). The matcher keeps that fixed pairing floor; the policy only classifies a pair the matcher forms. With the default policy that gives the same pairs as before (R9). Raising `medium` in a test or through the registry makes a pair between 0.7 and `medium` low, which leaves both declarations added and removed while the relationship stays in the list (R13); lowering `medium` does not form new pairs.
 - A rename that scores at least `high` is high. It still shows as a rename candidate (R28), because no other label exists yet; the outline reads `renamedFrom`, which a high and a medium rename both set.
-- A low rename (only possible with a raised medium threshold, in tests or through the registry) leaves both declarations added and removed, and the relationship stays in the list linking them (R13). `renamedFrom` is not set for it.
+- A low rename (only possible with a raised medium threshold, in tests or through the registry) leaves both declarations added and removed, and the relationship stays in the list linking them (R13). `renamedFrom` is not set for it. Because the low pair is not consumed, both declarations stay free for other rename candidates in the greedy pairing, so raising `medium` can change which pairs form, not only their confidence.
 - The registry key `smartdiff.relationships.confidence` is declared in `plugin.xml` with the default `0.85,0.7` and holds `high,medium` (R15). It is read when a request is built, next to the analysis limits in `SmartDiffSettings.limits`, so the outline, the Changes tree and the merge outline use the same policy. A value that does not parse as two numbers with `0 <= medium <= high <= 1` logs one warning and the default policy is used (R30).
 - Tests and the benchmark pass a policy directly; the benchmark records the policy it used in `report.json`.
 
@@ -87,7 +88,7 @@ The fields keep their types and are marked `@Deprecated` with a pointer to `rela
 
 ### Order
 
-Relationships are sorted by the start of the first old endpoint, then the start of the first new endpoint, then the first kind in enum order. Endpoints are sorted by range start. Kinds are a set but are always iterated in enum order. Evidence is sorted by type in the order of the sealed interface: `Name`, `Content`, `Structure`, `Position`, `Score` (R19).
+Relationships are sorted by the start of the first old endpoint, then the start of the first new endpoint, then the first kind in enum order. Endpoints are sorted by range start. Kinds are built as an `EnumSet`, so iteration is in enum order by construction rather than by insertion order. Evidence is sorted by type in the order of the sealed interface: `Name`, `Content`, `Structure`, `Position`, `Score` (R19).
 
 ### Contract rules
 
@@ -126,7 +127,7 @@ The gate run, against the checked-in baseline:
   -Psmartdiff.relationships.gate=no-new-wrong-pairs
 ```
 
-It must pass with the same precision and recall per corpus and kind as the baseline; any difference is a bug in this step, since the matcher does not change. The run is recorded in a dated section of [VALIDATION.md](../../VALIDATION.md). The baseline file is not replaced: [relationships/03](03-relationship-matching.md) compares against the 2026-11-02 baseline.
+It must pass with no new wrong pair and no lower precision or recall for any corpus and kind than the baseline. The model stores the real old subject, so a moved or kind-changed declaration whose signature also changed can differ from the adapter's old endpoint and move a score upward; any such difference is explained in the VALIDATION section. The run is recorded in a dated section of [VALIDATION.md](../../VALIDATION.md). The baseline file is not replaced: [relationships/03](03-relationship-matching.md) compares against the 2026-11-02 baseline.
 
 ### Thresholds and reasons
 
