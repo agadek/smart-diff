@@ -479,7 +479,7 @@ Application-level, under *Settings → Tools → SMART Diff*:
 ### 12.1 Build and CI
 
 - Build target: IntelliJ IDEA Community 2025.1.3 (`platformVersion` in `gradle.properties`), `since-build` 251, no `until-build`. Bundled `com.intellij.java` and `org.jetbrains.kotlin` plugins, the pinned Scala plugin (`scalaPluginVersion` in `gradle.properties`, currently 2025.1.32, not bundled), IntelliJ Platform test framework with the Java test framework, JUnit 4 and ArchUnit.
-- GitHub Actions (`.github/workflows/build.yml`) on every push to `main` and every pull request: `buildPlugin check` (build and all tests), and `verifyPlugin` with Plugin Verifier on IntelliJ IDEA Community 2025.1.3 and the latest IntelliJ IDEA release. The pinned Scala plugin is installed for both verifier IDEs, so the optional Scala provider is checked on each.
+- GitHub Actions (`.github/workflows/build.yml`) on every push to `main` and every pull request: `buildPlugin check` (build and all tests), and `verifyPlugin` with Plugin Verifier on IntelliJ IDEA Community 2025.1.3 and the latest IntelliJ IDEA release. The verifier does not install the Scala plugin, so Scala PSI use is covered by the provider's tests rather than the verifier report.
 
 ## 13. Prototype spikes
 
