@@ -1,6 +1,6 @@
 # Changes tree coverage and scale: details
 
-Status: accepted, 2026-11-01
+Status: implemented, 2026-11-04
 
 Feature: [Changes tree coverage and scale](03-coverage-and-scale.md)
 
@@ -28,13 +28,11 @@ A considered file whose summary times out keeps `not analyzed: timed out` visibl
 
 | Requirement | Check |
 | --- | --- |
-| R1, R2, R3 | Manual check on a tree with more than 500 file nodes; no automated test yet |
-| R4 | Manual check: rebuild the same tree twice and compare the summarized files |
-| R5 | The settings page has no limit setting; changing the analysis limits leaves the 500-file count unchanged |
-| R6 | `ChangesSummaryTest` added and deleted cases |
-| R7 | `ChangesSummaryTest` checks `TOO_LARGE`, timeout, parse-error and failed reasons |
-| R8 | `ChangesSummaryTest` waits for background summaries and checks that the tree is not blocked |
-| R9 | Manual check: select, include and open a file after the limit |
-| R10 | `ChangesSummaryTest` timeout case checks one retry and the kept reason |
-
-No test names these requirements yet; requirement-named tests are still needed before the feature moves to implemented. R1 to R4 and R9 also rely on manual checks.
+| R1, R2, R3 | `ChangesSummaryTest` `test the first 500 file nodes are summarized and the rest keep the platform row`: the first 500 file nodes in depth-first order get a summary, and the next keeps the platform row with no summary and no declaration rows |
+| R4 | `ChangesSummaryTest` `test a rebuild summarizes the same 500 file nodes`: two rebuilds of the same tree summarize the same files in the same order |
+| R5 | Manual check: open Settings \| Tools \| SMART Diff and confirm there is no file-count limit next to the analysis limits; change `maxChars`, `maxDeclarations` and the timeout, rebuild a tree with more than 500 file nodes, and confirm the tree still summarizes at most 500 files and the same first 500 |
+| R6 | `ChangesSummaryTest` `test added and deleted files and other languages get no summary` |
+| R7 | `ChangesSummaryTest` `test the summary is the outline's summary line, or the reason it was not analyzed`: `TOO_LARGE`, timeout, parse-error and failed reasons |
+| R8 | `ChangesSummaryTest` `test a changed file shows its summary once it is computed`: the first tree is not blocked and the summary arrives from the background |
+| R9 | `ChangesSummaryTest` `test a file after the limit stays in the tree and opens like the platform's row`: the change is still in the tree and included, and the platform's own action handles the row |
+| R10 | `ChangesSummaryTest` `test a file over the time limit says it timed out`: one retry after the delay, then the reason is kept and not retried again |

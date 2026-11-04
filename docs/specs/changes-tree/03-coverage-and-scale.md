@@ -1,6 +1,6 @@
 # Changes tree coverage and scale
 
-Status: accepted, 2026-11-01
+Status: implemented, 2026-11-04
 
 **Description:** The [Changes tree](../../GLOSSARY.md#changes-tree) summarizes at most 500 files in one tree, in tree order, and leaves every other file as the platform draws it.
 

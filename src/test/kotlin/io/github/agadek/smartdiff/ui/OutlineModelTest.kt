@@ -32,6 +32,7 @@ class OutlineModelTest {
 
     @Test
     fun `a rename candidate shows both names, is never hidden and is counted`() {
+        // declarations/06-change-labels R4, R11
         val renamed = node("sum", renamedFrom = Subject.Declaration(DeclarationKind.METHOD, "total", ""))
         val result = result(renamed, node("other", content = Content.CHANGED))
         val everything = ChangeType.entries.toSet()
@@ -66,6 +67,7 @@ class OutlineModelTest {
 
     @Test
     fun `labels list presence, moved, content and signature changed`() {
+        // declarations/06-change-labels R2
         val result = result(
             node("a", moved = true, content = Content.FORMATTING_ONLY),
             node("b", signatureChanged = true, content = Content.CHANGED),
@@ -81,6 +83,50 @@ class OutlineModelTest {
             method d()  unanalyzed
             """.trimIndent(),
             render(OutlineModel.build(result, "", "", formattingInline = false)),
+        )
+    }
+
+    @Test
+    fun `every change label appears when it applies`() {
+        // declarations/06-change-labels R1
+        val result = result(
+            node("added", presence = Presence.ADDED, old = null),
+            node("removed", presence = Presence.REMOVED, new = null),
+            node("changed", content = Content.CHANGED),
+            node("moved", moved = true),
+            node("formatting", content = Content.FORMATTING_ONLY),
+            node("signature", signatureChanged = true, content = Content.CHANGED),
+            node("renamed", renamedFrom = Subject.Declaration(DeclarationKind.METHOD, "old", "")),
+            node("uncertain", presence = Presence.UNCERTAIN, old = null),
+            node("unanalyzed", content = Content.UNANALYZED),
+        )
+
+        assertEquals(
+            """
+            method added()  added
+            method removed()  removed
+            method changed()  changed
+            method moved()  moved
+            method formatting()  formatting-only
+            method signature()  changed, signature changed
+            method old → renamed()  rename candidate
+            method unanalyzed()  unanalyzed
+            Uncertain (1)
+              method uncertain()  uncertain
+            """.trimIndent(),
+            render(OutlineModel.build(result, "", "", formattingInline = true)),
+        )
+    }
+
+    @Test
+    fun `a kind change shows both kinds and carries signature changed`() {
+        // declarations/06-change-labels R3
+        val kindChange = node("Shape", signatureChanged = true, content = Content.CHANGED)
+            .copy(kindChangedFrom = DeclarationKind.TRAIT)
+
+        assertEquals(
+            "trait → class Shape  changed, signature changed",
+            render(OutlineModel.build(result(kindChange), "", "", formattingInline = false)),
         )
     }
 
@@ -203,7 +249,45 @@ class OutlineModelTest {
     }
 
     @Test
+    fun `the summary counts every label in a fixed order`() {
+        // declarations/06-change-labels R6
+        val result = ComparisonResult(
+            EngineId("e"), "1", Status.ANALYZED,
+            changes = listOf(
+                node("changed", content = Content.CHANGED),
+                node("formatting", content = Content.FORMATTING_ONLY),
+                node("moved", moved = true),
+                node("removed", presence = Presence.REMOVED, new = null),
+                node("added", presence = Presence.ADDED, old = null),
+                node("renamed", renamedFrom = Subject.Declaration(DeclarationKind.METHOD, "old", "")),
+                node("uncertain", presence = Presence.UNCERTAIN, old = null),
+                node("extracted", presence = Presence.ADDED, old = null).copy(
+                    extractedFrom = listOf(Origin(method("source"), TextRange(0, 1), TextRange(0, 1))),
+                ),
+            ),
+            unanalyzed = listOf(RangePair(TextRange(0, 1), null)),
+        )
+
+        assertEquals(
+            "1 changed · 1 extracted · 1 added · 1 removed · 1 moved · 1 formatting-only · 1 rename candidate · 1 uncertain · 1 unanalyzed",
+            OutlineModel.summary(result),
+        )
+    }
+
+    @Test
+    fun `a signature change and a kind change count as changed`() {
+        // declarations/06-change-labels R8
+        val result = result(
+            node("signature", signatureChanged = true, content = Content.CHANGED),
+            node("kind", signatureChanged = true, content = Content.CHANGED).copy(kindChangedFrom = DeclarationKind.TRAIT),
+        )
+
+        assertEquals("2 changed", OutlineModel.summary(result))
+    }
+
+    @Test
     fun `a change whose every label is hidden is left out, and the summary says how many are hidden`() {
+        // declarations/06-change-labels R9, R12
         val result = result(
             node(
                 "Parser",
@@ -235,6 +319,7 @@ class OutlineModelTest {
 
     @Test
     fun `hiding changed covers signature changes, and uncertain and unanalyzed changes are never hidden`() {
+        // declarations/06-change-labels R11
         val result = ComparisonResult(
             EngineId("e"), "1", Status.PARTIAL,
             fileRegion = ChangeNode(Subject.Region("file"), TextRange(0, 1), TextRange(0, 1), Presence.MATCHED, content = Content.CHANGED),
@@ -260,7 +345,37 @@ class OutlineModelTest {
     }
 
     @Test
+    fun `the filter hides changed, added, removed, moved and formatting-only`() {
+        // declarations/06-change-labels R10
+        val result = result(
+            node("changed", content = Content.CHANGED),
+            node("signature", signatureChanged = true, content = Content.CHANGED),
+            node("added", presence = Presence.ADDED, old = null),
+            node("removed", presence = Presence.REMOVED, new = null),
+            node("moved", moved = true),
+            node("formatting", content = Content.FORMATTING_ONLY),
+        )
+        val hiddenRows = mapOf(
+            ChangeType.CHANGED to listOf("changed", "signature"),
+            ChangeType.ADDED to listOf("added"),
+            ChangeType.REMOVED to listOf("removed"),
+            ChangeType.MOVED to listOf("moved"),
+            ChangeType.FORMATTING_ONLY to listOf("formatting"),
+        )
+
+        for ((type, hidden) in hiddenRows) {
+            val rows = render(OutlineModel.build(result, "", "", formattingInline = true, hidden = setOf(type)))
+            hidden.forEach { name ->
+                assertTrue("$type hides $name", rows.lines().none { it.startsWith("method $name()") })
+            }
+            val kept = if (type == ChangeType.CHANGED) "added" else "changed"
+            assertTrue("$type keeps $kept", rows.lines().any { it.startsWith("method $kept()") })
+        }
+    }
+
+    @Test
     fun `every row's label is its title followed by its change labels`() {
+        // declarations/06-change-labels R13
         val item = OutlineModel.build(result(node("a", moved = true, content = Content.CHANGED)), "", "", formattingInline = false).single()
 
         assertEquals("method a()  moved, changed", item.label)
@@ -270,6 +385,7 @@ class OutlineModelTest {
 
     @Test
     fun `extractions name both ends, qualified by container only when it differs`() {
+        // declarations/06-change-labels R5, R7
         val summaryOld = TextRange(10, 50)
         val shippingOld = TextRange(60, 90)
         val summary = node("summary", old = summaryOld, content = Content.CHANGED).copy(

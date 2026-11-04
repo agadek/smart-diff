@@ -30,12 +30,19 @@ import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
 import io.github.agadek.smartdiff.engine.api.Cancellation
+import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
+import io.github.agadek.smartdiff.engine.api.Content
+import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.api.Limits
+import io.github.agadek.smartdiff.engine.api.Presence
+import io.github.agadek.smartdiff.engine.api.RangePair
 import io.github.agadek.smartdiff.engine.api.Status
+import io.github.agadek.smartdiff.engine.api.Subject
+import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.lines.LineEngine
 import io.github.agadek.smartdiff.engine.lines.LineEngineFactory
 import io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory
@@ -285,16 +292,100 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test a result over the size limit shows a status message`() {
+        // outline/05-analysis-fallback R3
         settings.limits = Limits.DEFAULT.copy(maxChars = 10)
 
         val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
 
         assertEquals(Status.TOO_LARGE, (outline.state as OutlineState.Shown).result.status)
         assertTrue(outline.panel.message.text, outline.panel.message.text.contains("Too large to analyze"))
+        assertTrue("the reason is shown", outline.panel.message.text.contains("the limit is 10"))
         assertEquals(emptyList<String>(), rows(outline))
     }
 
+    fun `test a failed comparison shows analysis failed with the reason`() {
+        // outline/05-analysis-fallback R4
+        val engine = ResultEngine().apply {
+            status = Status.FAILED
+            reason = "could not read the file"
+        }
+        maskEngines(engine)
+
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+
+        assertEquals(Status.FAILED, (outline.state as OutlineState.Shown).result.status)
+        assertTrue(outline.panel.message.text, outline.panel.message.text.contains("Analysis failed"))
+        assertTrue("the reason is shown", outline.panel.message.text.contains("could not read the file"))
+        assertEquals(emptyList<String>(), rows(outline))
+    }
+
+    fun `test an unsupported result shows not supported with the reason`() {
+        // outline/05-analysis-fallback R12
+        val engine = ResultEngine().apply {
+            status = Status.UNSUPPORTED
+            reason = "not a source file"
+        }
+        maskEngines(engine)
+
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+
+        assertEquals(Status.UNSUPPORTED, (outline.state as OutlineState.Shown).result.status)
+        assertTrue(outline.panel.message.text, outline.panel.message.text.contains("Not supported"))
+        assertTrue("the reason is shown", outline.panel.message.text.contains("not a source file"))
+        assertEquals(emptyList<String>(), rows(outline))
+    }
+
+    fun `test a partial comparison shows its rows and a banner`() {
+        // outline/05-analysis-fallback R6
+        val engine = ResultEngine().apply {
+            status = Status.PARTIAL
+            reason = "some source could not be parsed and was not analyzed"
+            changes = listOf(
+                ChangeNode(
+                    Subject.Declaration(DeclarationKind.CLASS, "Greeter", null),
+                    TextRange(0, 1), TextRange(0, 1), Presence.MATCHED,
+                    content = Content.CHANGED,
+                ),
+            )
+            unanalyzed = listOf(RangePair(TextRange(0, 1), null))
+        }
+        maskEngines(engine)
+
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+
+        assertEquals(Status.PARTIAL, (outline.state as OutlineState.Shown).result.status)
+        assertTrue(outline.panel.banner.isVisible)
+        assertTrue(outline.panel.banner.text, outline.panel.banner.text.contains("Some source was not analyzed"))
+        assertTrue("the analyzed rows are shown", rows(outline).contains("class Greeter  changed"))
+    }
+
+    fun `test every fallback keeps both editors and never claims the versions are the same`() {
+        // outline/05-analysis-fallback R9, R10
+        val engine = ResultEngine()
+        maskEngines(engine)
+
+        for ((status, reason) in listOf(
+            Status.TOO_LARGE to "file has 100 characters, the limit is 10",
+            Status.FAILED to "the engine could not analyze the file",
+            Status.UNSUPPORTED to "not a source file",
+        )) {
+            engine.status = status
+            engine.reason = reason
+            val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+            val outline = shown.awaitResult()
+
+            assertEquals(status.name, JAVA_OLD, shown.viewer.editor1.document.text)
+            assertEquals(status.name, JAVA_NEW, shown.viewer.editor2.document.text)
+            assertTrue(status.name, UIUtil.isAncestor(shown.viewer.component, shown.viewer.editor1.component))
+            assertTrue(status.name, UIUtil.isAncestor(shown.viewer.component, shown.viewer.editor2.component))
+            val message = outline.panel.message.accessibleContext.accessibleName.orEmpty()
+            assertFalse("a fallback never says the versions behave the same", message.contains("behave the same", ignoreCase = true))
+            assertFalse("a fallback never says there are no changes", message.contains("No structural changes", ignoreCase = true))
+        }
+    }
+
     fun `test a comparison over the time limit is canceled and shown as failed`() {
+        // outline/05-analysis-fallback R5
         val engine = SlowEngine()
         ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(engine)), testRootDisposable)
         settings.limits = Limits.DEFAULT.copy(timeoutMillis = 100)
@@ -324,6 +415,7 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test a language without an engine shows the outline with an unsupported message`() {
+        // outline/05-analysis-fallback R1, R2, R11
         // The light test IDE loads neither properties nor YAML; mask the engines so Kotlin, which is loaded, has none.
         ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(JavaOnlyEngine())), testRootDisposable)
         val viewer = openAny(history(KOTLIN_OLD, KOTLIN_NEW, "Greeter.kt")) as TwosideTextDiffViewer
@@ -334,6 +426,8 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         val languageName = requireNotNull(Language.findLanguageByID("kotlin")?.displayName)
         val state = controller.state as OutlineState.NoEngine
         assertEquals(languageName, state.languageName)
+        val message = "No comparison engine supports $languageName files. The native diff shows every change."
+        assertEquals(message, controller.panel.message.accessibleContext.accessibleName)
         assertTrue(controller.panel.message.text, controller.panel.message.text.contains(languageName))
 
         assertTrue(UIUtil.isAncestor(viewer.component, viewer.editor1.component))
@@ -354,6 +448,18 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertTrue(UIUtil.isAncestor(viewer.component, controller.panel))
         assertEquals(languageName, (controller.state as OutlineState.NoEngine).languageName)
         assertTrue(controller.panel.message.text, controller.panel.message.text.contains(languageName))
+    }
+
+    fun `test the setting keeps the outline hidden in a fallback state`() {
+        // outline/05-analysis-fallback R11
+        ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(JavaOnlyEngine())), testRootDisposable)
+        settings.showOutline = false
+
+        val shown = open(history(KOTLIN_OLD, KOTLIN_NEW, "Greeter.kt"))
+
+        assertFalse(shown.outline.isOutlineVisible)
+        assertEquals(OutlineState.Hidden, shown.outline.state)
+        assertFalse(UIUtil.isAncestor(shown.viewer.component, shown.outline.panel))
     }
 
     fun `test a plain-text diff gets no outline`() {
@@ -450,6 +556,34 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
 
     private fun factory(engine: ComparisonEngine) = object : ComparisonEngineFactory {
         override fun create(project: Project?): ComparisonEngine = engine
+    }
+
+    private fun maskEngines(vararg engines: ComparisonEngine) {
+        ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, engines.map(::factory), testRootDisposable)
+    }
+
+    /** Returns the set status and reason for every file, so each outline fallback can be shown without a real engine. */
+    private class ResultEngine : ComparisonEngine {
+        override val id = EngineId("smartdiff.test.result")
+        override val displayName = "Result (test)"
+        override val version = "1"
+
+        @Volatile
+        var status = Status.FAILED
+
+        @Volatile
+        var reason: String? = null
+
+        @Volatile
+        var changes: List<ChangeNode> = emptyList()
+
+        @Volatile
+        var unanalyzed: List<RangePair> = emptyList()
+
+        override fun supports(languageId: String) = true
+
+        override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult =
+            ComparisonResult(id, version, status, changes = changes, unanalyzed = unanalyzed, fallbackReason = reason)
     }
 
     /** Supports Java only, so a Kotlin diff has no engine when this factory masks the real ones. */

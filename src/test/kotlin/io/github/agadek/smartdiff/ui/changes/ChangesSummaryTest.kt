@@ -83,6 +83,7 @@ class ChangesSummaryTest : BasePlatformTestCase() {
     }
 
     fun `test a changed file shows its summary once it is computed`() {
+        // changes-tree/03-coverage-and-scale R8
         val change = modified("Cart.java", OLD_CART, NEW_CART)
 
         assertNull("the first tree is built before the summary is known", summaryNode(change))
@@ -179,6 +180,7 @@ class ChangesSummaryTest : BasePlatformTestCase() {
     }
 
     fun `test the summary is the outline's summary line, or the reason it was not analyzed`() {
+        // changes-tree/03-coverage-and-scale R7
         val engine = EngineId("test")
         fun failed(reason: String?) = ComparisonResult(engine, "1", Status.FAILED, fallbackReason = reason)
 
@@ -205,6 +207,7 @@ class ChangesSummaryTest : BasePlatformTestCase() {
     }
 
     fun `test a file over the time limit says it timed out`() {
+        // changes-tree/03-coverage-and-scale R10
         val engine = SlowEngine()
         ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(engine)), testRootDisposable)
         settings.limits = Limits.DEFAULT.copy(timeoutMillis = 100)
@@ -232,6 +235,7 @@ class ChangesSummaryTest : BasePlatformTestCase() {
     }
 
     fun `test added and deleted files and other languages get no summary`() {
+        // changes-tree/03-coverage-and-scale R6
         val added = Change(null, SimpleContentRevision(NEW_CART, VcsUtil.getFilePath("/src/New.java", false), "2"))
         val deleted = Change(SimpleContentRevision(OLD_CART, VcsUtil.getFilePath("/src/Old.java", false), "1"), null)
         val text = modified("notes.txt", "a\n", "b\n")
@@ -250,6 +254,90 @@ class ChangesSummaryTest : BasePlatformTestCase() {
         settings.showChangesSummary = false
 
         assertNull(summaryNode(change))
+    }
+
+    fun `test the first 500 file nodes are summarized and the rest keep the platform row`() {
+        // changes-tree/03-coverage-and-scale R1, R2, R3
+        maskEngines(InstantEngine())
+        val changes = files(ChangesSummaryModifier.MAX_FILES + 1)
+
+        tree(changes)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        val (_, nodes) = tree(changes)
+
+        assertEquals(changes.size, nodes.size)
+        assertTrue(
+            "the first 500 file nodes are summarized",
+            nodes.take(ChangesSummaryModifier.MAX_FILES).all { it is SummaryChangeNode },
+        )
+        assertTrue("the file after the limit keeps the platform's row", nodes.last() !is SummaryChangeNode)
+        assertTrue("the file after the limit has no declaration rows", nodes.last().isLeaf && nodes.last().childCount == 0)
+    }
+
+    fun `test a rebuild summarizes the same 500 file nodes`() {
+        // changes-tree/03-coverage-and-scale R4
+        maskEngines(InstantEngine())
+        val changes = files(ChangesSummaryModifier.MAX_FILES + 2)
+
+        tree(changes)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        val first = summarized(tree(changes).second)
+        val second = summarized(tree(changes).second)
+
+        assertEquals(ChangesSummaryModifier.MAX_FILES, first.size)
+        assertEquals(first, second)
+    }
+
+    fun `test a file after the limit stays in the tree and opens like the platform's row`() {
+        // changes-tree/03-coverage-and-scale R9
+        maskEngines(InstantEngine())
+        val changes = files(ChangesSummaryModifier.MAX_FILES + 1)
+
+        tree(changes)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        val (root, nodes) = tree(changes)
+        val afterLimit = nodes.drop(ChangesSummaryModifier.MAX_FILES)
+        assertTrue("the tree has a file after the limit", afterLimit.isNotEmpty())
+        val last = afterLimit.first()
+        val change = last.userObject as Change
+
+        assertFalse("the file after the limit keeps the platform's row", last is SummaryChangeNode)
+        assertTrue("the file is still selectable and includable", change in VcsTreeModelData.allUnder(root).userObjects())
+        assertFalse("the platform's own action opens it, not the declaration action", DeclarationNodeAction(project).handleDoubleClick(last))
+    }
+
+    private fun maskEngines(vararg engines: ComparisonEngine) {
+        ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, engines.map(::factory), testRootDisposable)
+    }
+
+    private fun files(count: Int): List<Change> = (1..count).map { modified("File$it.java", OLD_CART, NEW_CART) }
+
+    /**
+     * Builds the tree for [changes] as the Changes view does. The file nodes are taken before the platform sorts
+     * the model, in the depth-first order the modifier walks.
+     */
+    private fun tree(changes: List<Change>): Pair<ChangesBrowserNode<*>, List<ChangesBrowserChangeNode>> {
+        val builder = TreeModelBuilder(project, NoneChangesGroupingFactory).setChanges(changes, null)
+        ChangesSummaryModifier(project).modifyTreeModelBuilder(builder)
+        val nodes = builder.myRoot.depthFirstEnumeration().toList().filterIsInstance<ChangesBrowserChangeNode>()
+        builder.build()
+        return builder.myRoot to nodes
+    }
+
+    private fun summarized(nodes: List<ChangesBrowserChangeNode>): List<String> =
+        nodes.filterIsInstance<SummaryChangeNode>()
+            .map { (it.userObject as Change).afterRevision!!.file.name }
+
+    /** An engine that analyzes every file at once, so a large tree needs no real comparison. */
+    private class InstantEngine : ComparisonEngine {
+        override val id = EngineId("smartdiff.test.instant")
+        override val displayName = "Instant (test)"
+        override val version = "1"
+
+        override fun supports(languageId: String) = true
+
+        override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult =
+            ComparisonResult(id, version, Status.ANALYZED)
     }
 
     private fun modified(fileName: String, oldText: String, newText: String): Change {
