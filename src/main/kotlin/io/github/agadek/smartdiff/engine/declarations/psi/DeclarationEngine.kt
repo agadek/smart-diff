@@ -1,9 +1,7 @@
 package io.github.agadek.smartdiff.engine.declarations.psi
 
-import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.lang.Language
 import com.intellij.openapi.application.ApplicationInfo
-import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
@@ -93,17 +91,30 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
         /**
          * The Scala plugin's version when its declaration provider is loaded, since its parser can change a result
          * (R24); null when it is not loaded, so an IDE without the Scala plugin keeps a shorter version.
+         *
+         * The Scala language class comes from the Scala plugin's classloader, whose classpath holds that plugin's
+         * descriptor. Reading the descriptor is deliberate: the plugin manager's lookup is an internal platform API,
+         * which the plugin verifier rejects since an internal API can change between releases.
          */
         private fun scalaPluginVersion(): String? {
             if (DeclarationProvider.EP_NAME.extensionList.none { it.supports(SCALA) }) return null
             return try {
-                PluginManagerCore.getPlugin(PluginId.getId("org.intellij.scala"))?.version ?: UNKNOWN
+                val language = Language.findLanguageByID(SCALA) ?: return UNKNOWN
+                val descriptor = language.javaClass.classLoader?.getResourceAsStream(PLUGIN_DESCRIPTOR)?.use { stream ->
+                    stream.bufferedReader(Charsets.ISO_8859_1).readText()
+                } ?: return UNKNOWN
+                // Another plugin's descriptor may answer instead when every plugin shares one classloader, as in a test.
+                if (!descriptor.contains("<id>$SCALA_PLUGIN_ID</id>")) return UNKNOWN
+                VERSION_TAG.find(descriptor)?.groupValues?.get(1) ?: UNKNOWN
             } catch (e: Exception) {
                 UNKNOWN
             }
         }
 
         private const val SCALA = "Scala"
+        private const val SCALA_PLUGIN_ID = "org.intellij.scala"
+        private const val PLUGIN_DESCRIPTOR = "META-INF/plugin.xml"
         private const val UNKNOWN = "unknown"
+        private val VERSION_TAG = Regex("<version>\\s*([^<\\s]+)\\s*</version>")
     }
 }
