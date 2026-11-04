@@ -62,7 +62,7 @@ data class ConfidencePolicy(val high: Double = 0.85, val medium: Double = 0.7) {
 - `moved` covers both a container change and a change of order among siblings, as today. Both give `MOVE`.
 - A relationship with several kinds takes the lowest of its kinds' confidence (R26), so a renamed and moved declaration takes the rename's confidence.
 - Overload pairs from rule M3 are same-name matches with a changed signature. They are not relationships, as today.
-- Uncertain nodes from rule M4 keep `candidates` (R29). Ambiguity stays a presence state until [relationships/03](03-relationship-matching.md) R6 adds low-confidence relationships for it.
+- Uncertain nodes from rule M4 keep `candidates` (R29). Their ambiguity stays a presence state: [relationships/03](03-relationship-matching.md) R6 adds low-confidence relationships for ties in its own assignment, not for rule M4 uncertainty.
 
 ### Confidence policy
 
