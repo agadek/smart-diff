@@ -28,7 +28,7 @@ Every `both-sides-clean` and `conflict-one-side` file in the run that will ship 
 | `expected` | The outline is right and the flag is the signal it is meant to be: both sides changed different parts of the declaration and Git merged them, or a conflict lies inside a declaration that only one side changed because the other side changed the lines next to it | Not blocked |
 | `fixed` | The outline was wrong, and a merged fix makes it right; the rerun shows the file as `expected` or no longer flags it | Not blocked |
 | `known limit` | The outline is wrong and is not fixed for this release; an issue describes it (R28) | Not blocked; see the open question |
-| `wrong flag` | The outline is right, but the flag does not fit its own definition in R8 or R9, for example conflicts computed differently from the merge window (R10), or a formatting-only side counted as changed (R8) | Blocked until the validation is fixed and rerun (R29) |
+| `wrong flag` | The outline is right, but the flag does not fit its own definition in R8 or R9, for example conflicts computed differently from the merge window (R10), or a formatting-only side with no move, rename, signature or kind change counted as changed (R8) | Blocked until the validation is fixed and rerun (R29) |
 
 A file with several flagged declarations gets the verdict of its worst declaration, in the order `wrong flag`, `known limit`, `fixed`, `expected`, and the reason names the declarations.
 
