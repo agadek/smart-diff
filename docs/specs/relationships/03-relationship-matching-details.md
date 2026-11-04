@@ -72,7 +72,7 @@ For each candidate group:
 3. In a rename group, an edge that fails the margin still passes when the name tie-break below decides for it.
 4. Take the assignment with the largest total score among the assignments whose chosen edges all pass; each declaration appears at most once. This is a maximum-weight bipartite matching, for example the Hungarian algorithm. An implementation may solve, review and drop failing edges and solve again on the remaining edges; it must give this result.
 5. Of assignments with equal total score, compare their pairs as `(old index, new index)` lists sorted by old index and then new index, lexicographically; if one list is a prefix of the other, the longer list wins. This gives the old side's source order, then the new side's (R11) as one deterministic order, and it never makes a pair the margin refuses (ADR 0008).
-6. A group with more possible pairs than `MAX_SIMILARITY_PAIRS` is not compared; its declarations stay unpaired. An M3 group's leftovers then go to M4, and an M5 group's declarations stay added and removed (R12).
+6. A group with more possible pairs than `MAX_SIMILARITY_PAIRS` is not compared; its declarations stay unpaired by this group. An M3 group's declarations then go through the second unique-key M3 pass and M4, and an M5 group's declarations stay added and removed (R12).
 7. The matcher checks for cancellation every row (R13). A group still unfinished at the time limit uses the greedy result for that group (see Failure behaviour).
 
 **Name tie-break (kept).** An edge that fails the score margin still passes when its name similarity is at least `TIEBREAK_MIN` (0.5) and every rival's name similarity is at least `TIEBREAK_MARGIN` (0.2) lower. This is today's rule with today's constants. It is applied to a chosen edge after the assignment, as part of the pass test; it is not a search key or a score. It is kept rather than replaced, because it is what lets today's near-ties with a clear name pair, and replacing it would lose pairs the golden fixtures and the benchmark show as correct. The name feature (0.15) also contributes to the score; the tie-break only resolves a near-tie the score cannot. The review notes of the [structural relationships plan](../../STRUCTURAL-RELATIONSHIPS.md#review-comments) ask for this choice to be explicit.
@@ -132,7 +132,7 @@ When the time limit is reached during the assignment, the matcher returns the gr
 | R9 | A rename with an order change, and a kind change with an order change |
 | R10 | A policy test that moves a rename from high to medium, and one from medium to low |
 | R11 | A tie fixture where only the old and new order decides; the margin still wins over order |
-| R12 | A generated group with more than 10 000 possible pairs: no pair, M3 leftovers uncertain, M5 leftovers added and removed |
+| R12 | A generated group with more than 10 000 possible pairs: no pair from that group; M3 declarations follow the unique-key pass and M4, M5 declarations stay added and removed |
 | R13 | A cancellation test during the assignment |
 | R14 | `LimitsBenchmarkTest` |
 | R15, R16 | `RelationshipBenchmarkTest` with the recorded baseline, run in the pull request; a low-confidence relationship does not count as a pair |
