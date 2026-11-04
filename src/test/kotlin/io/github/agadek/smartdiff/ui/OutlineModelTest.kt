@@ -272,6 +272,7 @@ class OutlineModelTest {
             "1 changed · 1 extracted · 1 added · 1 removed · 1 moved · 1 formatting-only · 1 rename candidate · 1 uncertain · 1 unanalyzed",
             OutlineModel.summary(result),
         )
+        assertEquals("a zero count is left out", "1 changed", OutlineModel.summary(result(node("changed", content = Content.CHANGED))))
     }
 
     @Test

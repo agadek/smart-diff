@@ -180,7 +180,7 @@ class ChangesSummaryTest : BasePlatformTestCase() {
     }
 
     fun `test the summary is the outline's summary line, or the reason it was not analyzed`() {
-        // changes-tree/03-coverage-and-scale R7
+        // changes-tree/03-coverage-and-scale R7; outline/05-analysis-fallback R7
         val engine = EngineId("test")
         fun failed(reason: String?) = ComparisonResult(engine, "1", Status.FAILED, fallbackReason = reason)
 
@@ -235,7 +235,7 @@ class ChangesSummaryTest : BasePlatformTestCase() {
     }
 
     fun `test added and deleted files and other languages get no summary`() {
-        // changes-tree/03-coverage-and-scale R6
+        // changes-tree/03-coverage-and-scale R6; outline/05-analysis-fallback R8
         val added = Change(null, SimpleContentRevision(NEW_CART, VcsUtil.getFilePath("/src/New.java", false), "2"))
         val deleted = Change(SimpleContentRevision(OLD_CART, VcsUtil.getFilePath("/src/Old.java", false), "1"), null)
         val text = modified("notes.txt", "a\n", "b\n")

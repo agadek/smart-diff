@@ -34,5 +34,5 @@ A considered file whose summary times out keeps `not analyzed: timed out` visibl
 | R6 | `ChangesSummaryTest` `test added and deleted files and other languages get no summary` |
 | R7 | `ChangesSummaryTest` `test the summary is the outline's summary line, or the reason it was not analyzed`: `TOO_LARGE`, timeout, parse-error and failed reasons |
 | R8 | `ChangesSummaryTest` `test a changed file shows its summary once it is computed`: the first tree is not blocked and the summary arrives from the background |
-| R9 | `ChangesSummaryTest` `test a file after the limit stays in the tree and opens like the platform's row`: the change is still in the tree and included, and the platform's own action handles the row |
+| R9 | `ChangesSummaryTest` `test a file after the limit stays in the tree and opens like the platform's row`: the change is still in the tree and included, and the declaration action leaves the row to the platform (`handleDoubleClick` returns false) |
 | R10 | `ChangesSummaryTest` `test a file over the time limit says it timed out`: one retry after the delay, then the reason is kept and not retried again |

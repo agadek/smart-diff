@@ -40,4 +40,5 @@ Feature: [Change labels](06-change-labels.md)
 | R10 | `OutlineModelTest` `the filter hides changed, added, removed, moved and formatting-only`: changed covers signature changes |
 | R11 | `OutlineModelTest` `hiding changed covers signature changes, and uncertain and unanalyzed changes are never hidden`, and `a rename candidate shows both names, is never hidden and is counted` |
 | R12 | `OutlineModelTest` `a change whose every label is hidden is left out, and the summary says how many are hidden`: a change with another visible label stays |
-| R13 | `OutlineModelTest` `every row's label is its title followed by its change labels`: the label is text and is the row's accessible name |
+| R13 | `OutlineModelTest` `every row's label is its title followed by its change labels`: every row's label is the title followed by its change labels, so the meaning is text, not color alone |
+| R13 | Manual check: (1) open a Java diff with the outline; (2) move focus to a row; (3) inspect its accessible name with a screen reader or the IDE's accessibility inspector; (4) confirm it is the row's label |
