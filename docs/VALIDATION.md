@@ -95,6 +95,149 @@ compares against the [2026-11-02 baseline](#2026-11-02-relationship-benchmark-ba
 
 The report is in `build/reports/smartdiff-relationships/summary.tsv`, `report.md` and `report.json`.
 
+## 2026-11-04: two-sided corpus rerun
+
+This is the full two-sided run the 0.2.0 release gate in [RELEASING.md](RELEASING.md) step 3 asks for. It supersedes the
+[partial rerun](#2026-11-04-two-sided-corpus-partial-rerun) below: it adds zio, which that run lacked, and records every
+clone's commit.
+
+**Corpus:** the [Java and Kotlin list](#2026-10-22-before-010) and the [Scala list](#2026-10-22-scala), with every clone's
+HEAD pinned so the run can be replayed. `CorpusValidationTest` appends `-- *.java *.kt *.scala` to each line, so the lines
+carry no pathspec; that is also why the Scala lines take the last 40 or 80 commits touching one of the three languages and
+then compare their modified files (145 of the recorded 160 had one). `/src/...` stands for the clone location on the
+machine running the validation:
+
+```text
+/src/okhttp --no-merges --max-count=40 2b6399483639405e9277d33a3a1d355d5fabda1c
+/src/guava --no-merges --max-count=40 b157643c41f9ee6a38732b4fa1a590ba187912d9
+/src/commons-lang --no-merges --max-count=40 b9b30efb01e861a16503232bb96b684107e73199
+/src/Exposed --no-merges --max-count=40 09f814c61c22851b76840ccb65c1ac2c4db97452
+/src/moshi --no-merges --max-count=40 889013ec2edb8d8034902662a1dc8c4f3b3f8111
+/src/spring-petclinic --no-merges --max-count=40 500158f732419217507c7656904b8e6aa1bcc0d6
+/src/cats --no-merges --max-count=40 e28985fe2a0d7123a8fb84cbb70c72b5e3d935ca
+/src/zio --no-merges --max-count=80 df4c5b29ddaa1df8a7ffe122cd5b5d783b60c706
+/src/scala3 --no-merges --max-count=40 3e003afbf3854d9b3189a51a47258d0b9e31e792
+```
+
+| Clone | HEAD | Selected commits | With a modified file | Files |
+| --- | --- | --- | --- | --- |
+| okhttp | `2b6399483639405e9277d33a3a1d355d5fabda1c` | 40 | 37 | 159 |
+| guava | `b157643c41f9ee6a38732b4fa1a590ba187912d9` | 40 | 40 | 297 |
+| commons-lang | `b9b30efb01e861a16503232bb96b684107e73199` | 40 | 39 | 75 |
+| Exposed | `09f814c61c22851b76840ccb65c1ac2c4db97452` | 40 | 39 | 273 |
+| moshi | `889013ec2edb8d8034902662a1dc8c4f3b3f8111` | 40 | 40 | 301 |
+| spring-petclinic | `500158f732419217507c7656904b8e6aa1bcc0d6` | 40 | 39 | 174 |
+| cats | `e28985fe2a0d7123a8fb84cbb70c72b5e3d935ca` | 40 | 40 | 307 |
+| zio | `df4c5b29ddaa1df8a7ffe122cd5b5d783b60c706` | 80 | 72 | 127 |
+| scala3 | `3e003afbf3854d9b3189a51a47258d0b9e31e792` | 40 | 40 | 257 |
+
+The six Java and Kotlin clones are at the commits the [2026-11-02 baseline](#2026-11-02-relationship-benchmark-baseline)
+records and give the [2026-10-23 run's](#2026-10-23-extraction-detection) 234 commits and 1279 files. cats is at its
+recorded head and gives 307 files. zio and scala3 take a different window than the one recorded on 2026-10-22, whose heads
+were not recorded: zio gives 80 selected commits, 72 with a modified file and 127 files, against 118 files recorded;
+scala3 at the commit the [2026-11-02 baseline](#2026-11-02-relationship-benchmark-baseline) pins gives 257 files, against
+171. The zio clone is shallow at depth 1000 (`git rev-list --count HEAD` is 1000), and all 80 selected commits have their
+parent in that history, so no commit was skipped for a missing parent. The 8 selected commits without a modified file
+contribute no rows because the harness compares modified files only. So the Java and Kotlin half is the recorded set and
+the Scala half is not; the comparison below says which counts can be compared.
+
+**Versions:** engine `smartdiff.declarations` 7, named `7 (251.26927.53; Scala 2025.1.32)`; IDE 2025.1.3, build
+`251.26927.53`; Scala plugin 2025.1.32; JVM 21.0.9; macOS 15.7.7 on arm64.
+
+**Result:** 1970 files from 386 commits: 1279 Java and Kotlin (97 flagged), 307 cats (2), 127 zio (13) and 257 scala3
+(13). 1968 are `ANALYZED` and 2 `PARTIAL`; none fell back to the native diff. No file has `hidden` or `empty`: every
+difference lies inside a reported change, and every changed text has one. 125 files are flagged:
+
+| Flag | Java and Kotlin | Scala | All |
+| --- | --- | --- | --- |
+| `extraction` | 10 | 5 | 15 |
+| `extraction-near-miss` | 4 | 4 | 8 |
+| `noisy` | 12 | 11 | 23 |
+| `rename` | 21 | 8 | 29 |
+| `rename-candidate` | 55 | 4 | 59 |
+| `same-name` | 1 | 1 | 2 |
+| `status` (`PARTIAL`) | 0 | 2 | 2 |
+| `uncertain` | 1 | 0 | 1 |
+| **Flagged files** | **97** | **28** | **125** |
+
+The 15 extraction files link 19 added declarations: 14 in the Java and Kotlin half and 5 in zio. The 8 near-miss files are
+the recorded rows with unchanged shares: guava `Maps.java` (both copies) `lastEntry` ← `descendingEntryIterator` 0.56/0.90,
+Exposed `EntityCache.kt` `trimToFirst` ← `maxEntitiesToStore` 0.54/0.89, moshi `-MoshiKotlinTypesExtensions.kt`
+`subtypeOf`/`supertypeOf` 0.55/0.94, and zio `package.scala` `make` ← `live` 0.58/0.98, `ZTestLogger.scala` `apply` ← `make`
+0.63/1.00, `Annotations.scala` `make` ← `live` 0.85/0.64 and `TestRandom.scala` `make` ← `make` 0.82/0.67.
+
+**Comparison with the 2026-10-23 run:** the Java and Kotlin half reproduces it exactly. It has the same 1279 files and 97
+flagged files, and the same count for every flag: `extraction` 10, `extraction-near-miss` 4, `noisy` 12, `rename` 21,
+`rename-candidate` 55, `same-name` 1 and `uncertain` 1. The 10 extraction files and 4 near-miss files are the recorded
+ones, and the recorded review of those flags still applies. The Scala half cannot be compared file by file, because the
+zio and scala3 windows still differ (zio has 127 files against 118, scala3 257 against 171); its 691 files include 28
+flagged files, all in the recorded kinds:
+
+| Scala flag | 2026-10-23 (596 files) | 2026-11-04 (691 files) |
+| --- | --- | --- |
+| `status` | 1 | 2 |
+| `noisy` | 5 | 11 |
+| `rename` | 9 | 8 |
+| `rename-candidate` | 4 | 4 |
+| `same-name` | 0 | 1 |
+| `extraction` | 8 | 5 |
+| `extraction-near-miss` | 4 | 4 |
+| **Flagged files** | **29** | **28** |
+
+No flag kind is new. The 28 Scala files were each reviewed:
+
+| File | Commit | Flags | Review |
+| --- | --- | --- | --- |
+| cats `core/src/main/scala/cats/FlatMap.scala` | `3a2a2304` | `rename-candidate` | right: `FoldableFlatMap` → `AbstractFoldableFlatMap`; recorded |
+| cats `core/src/main/scala/cats/NonEmptyReducible.scala` | `503d4887` | `noisy` | right: the class split into a trait and its members moved; recorded |
+| zio `test/shared/src/main/scala/zio/test/TestAspect.scala` | `948a3d50` | `noisy` | right: five GraalVM aspects added |
+| zio `core/shared/src/main/scala/zio/FiberRefs.scala` | `fda16f73` | `rename` | right prompt: `needsTransformWhenForked` → `needTransformWhenForked`, rewritten; recorded judgement call |
+| zio `test/shared/src/main/scala/zio/test/package.scala` | `b1bd5e47` | `extraction-near-miss` | recorded: `make` ← `live` 0.58/0.98 |
+| zio `core/shared/src/main/scala/zio/Supervisor.scala` | `76820f7f` | `extraction` | right: `fibersIn` extracted; recorded |
+| zio `test/shared/src/main/scala/zio/test/ZTestLogger.scala` | `76820f7f` | `extraction-near-miss` | recorded: `apply` ← `make` 0.63/1.00 |
+| zio `test/shared/src/main/scala/zio/test/Annotations.scala` | `da2aab5c` | `extraction-near-miss` | recorded: `make` ← `live` 0.85/0.64 |
+| zio `test/shared/src/main/scala/zio/test/TestClock.scala` | `da2aab5c` | `extraction` | right: `make` extracted from `live` |
+| zio `test/shared/src/main/scala/zio/test/TestConsole.scala` | `da2aab5c` | `extraction` | right: `make` extracted from `make` |
+| zio `test/shared/src/main/scala/zio/test/TestRandom.scala` | `da2aab5c` | `extraction-near-miss` | recorded: `make` ← `make` 0.82/0.67 |
+| zio `specs/snippet-check/showcase.scala` | `b7d39ee9` | `rename`, `rename-candidate`, `noisy` | right: rewritten; recorded |
+| zio `core/shared/src/main/scala/zio/Queue.scala` | `efd715d7` | `extraction` | right: `offerToTaker` extracted from `tryOffer` |
+| zio `core/jvm-native/src/main/scala/zio/internal/OneShot.scala` | `0ed7e33d` | `extraction` | right: `tryGet(Long)` extracted from `get(Long)`, which now delegates to it |
+| zio `concurrent/src/main/scala/zio/concurrent/CyclicBarrier.scala` | `01ec1b45` | `rename` | prompt only: rewritten on promises and a semaphore, no rename; recorded as right: rewritten |
+| scala3 `compiler/src/dotty/tools/dotc/config/ScalaSettings.scala` | `a3a50265` | `noisy` | explained limit: the abstract class became a type alias and is not paired, so its members show as removed |
+| scala3 `compiler/src/dotty/tools/dotc/config/Settings.scala` | `a3a50265` | `rename` | prompt only: dead code removed and helpers added; no rename is shown |
+| scala3 `tests/neg/i7746.scala` | `878f4dba` | `status` | `PARTIAL`: an intentionally invalid negative test |
+| scala3 `compiler/src/dotty/tools/dotc/classpath/ClassPathFactory.scala` | `32e78d4f` | `same-name` | explained limit: the class became an object and is not paired; `sourcesInPath` and `classesInPath` gained parameters |
+| scala3 `library/src/scala/collection/immutable/LazyListIterable.scala` | `d708ca17` | `status` | `PARTIAL`: capture-set syntax `Function0[_]^{this}` |
+| scala3 `compiler/src/dotty/tools/dotc/core/Definitions.scala` | `82f931c0` | `rename`, `noisy` | right: `NullMarkedAnnots` → `NullMarkedAnnot`, `NullUnmarkedAnnots` → `NullUnmarkedAnnot`, `KotlinMetadataAnnot` added |
+| scala3 `compiler/src/dotty/tools/dotc/core/ImplicitNullInterop.scala` | `82f931c0` | `rename` | right: `ownerNullMarking` replaced by `nullMarking`, with helpers added |
+| scala3 `compiler/src/dotty/tools/dotc/core/classfile/ClassfileConstants.scala` | `82f931c0` | `noisy` | right: 14 constants added |
+| scala3 `tests/explicit-nulls/neg/nullmarked/J.java` | `82f931c0` | `rename`, `rename-candidate`, `noisy` | right: the test was rewritten; `innerGet` → `get` is a rename candidate |
+| scala3 `tests/explicit-nulls/neg/nullmarked/S.scala` | `82f931c0` | `rename`, `rename-candidate`, `noisy` | right: the test was rewritten; `a`/`b`/`c` → `j5`/`j6`/`j7` are rename candidates |
+| scala3 `tests/explicit-nulls/neg/nullmarked-separate/S_3.scala` | `477509b0` | `noisy` | right: five test functions added |
+| scala3 `tests/explicit-nulls/neg/nullmarked/S.scala` | `477509b0` | `noisy` | right: five test functions added |
+| scala3 `compiler/src/dotty/tools/dotc/util/MutableSet.scala` | `0033a28d` | `noisy` | right: six implementations added |
+
+Two `rename` prompts do not correspond to a rename: `Settings.scala` (dead code removed and helpers added) and
+`CyclicBarrier.scala` (rewritten). The `rename` flag is the coarse removed-plus-added prompt, not a claim in the outline,
+and neither file shows a rename pair; the recorded Java and Kotlin review describes most of its 21 `rename` files the same
+way. The other `rename` flags name real replacements, and the shown rename candidates were checked. No wrong row or pair
+was found in the reviewed files.
+
+**Time:** the median is 4 ms for Java and Kotlin, the recorded value, and 20 ms for Scala, against 22.5 ms with extraction
+detection in the recorded run. The overall median is 7 ms and the 95th percentile 81 ms. The slowest file takes 599 ms
+(zio `ZIO.scala`), against 545 ms recorded. All 1279 Java and Kotlin files take 10.7 s, against 10.1 s, and all 1970 files
+take 43.0 s; the recorded Scala half alone, on a different window, took 27.8 s.
+
+**Gate:** all files were analyzed, or `PARTIAL` in 2 cases for a Scala plugin parse gap; none fell back, none broke the
+nothing-hidden rule, and no changed text was left unreported. Every flagged file was reviewed: no wrong row or pair was
+found, and the two `rename` prompts that do not name a rename are the coarse heuristic described above. Both 0.2.0 gates
+in [RELEASING.md](RELEASING.md) step 3 are therefore met: this section records the corpus validation, and the
+[2026-11-04 relationship model run](#2026-11-04-relationship-model-migration) records the relationship benchmark with both
+of its gates passing. 0.2.0 is validated and ready for the release steps; the tag, the GitHub release and any Marketplace
+upload remain the maintainer's steps.
+
+The report is in `build/reports/smartdiff-validation/summary.tsv` and `report.md`.
+
 ## 2026-11-04: two-sided corpus partial rerun
 
 **Corpus:** the six Java and Kotlin clones from the [2026-10-23 extraction run](#2026-10-23-extraction-detection) at the
