@@ -54,13 +54,13 @@ data class ConfidencePolicy(val high: Double = 0.85, val medium: Double = 0.7) {
 
 | Source today | Kinds | Endpoints | Confidence | Evidence |
 | --- | --- | --- | --- | --- |
-| Rule M5 rename candidate, a class's constructor included | `RENAME`, plus `MOVE` when the node is moved, plus `KIND_CHANGE` when it changed kind | The old and the new declaration | High or medium, from the policy and its score (below) | `Name`, `Score` (the rename similarity), `Position`; `Structure` when moved or changed in kind |
+| Rule M5 rename candidate, a class's constructor included | `RENAME`, plus `MOVE` when the node's order among siblings changed | The old and the new declaration | High or medium, from the policy and its score (below) | `Name`, `Score` (the rename similarity), `Position`; `Structure` when moved |
 | A match by rules M1 to M4b that is moved | `MOVE` | The old and the new declaration | High | `Structure` (old and new container path), `Position` (index among siblings) |
-| Rule M4b kind change | `KIND_CHANGE`, plus `MOVE` when moved | The old and the new declaration | High | `Structure` (old and new kind) |
+| Rule M4b kind change | `KIND_CHANGE`, plus `MOVE` when its order among siblings changed | The old and the new declaration | High | `Structure` (old and new kind) |
 | Extraction link | `EXTRACT` | The source on the old side, the extraction on the new side; one relationship per source and target pair | High | `Content` (tiled tokens as `shared`, the target's tokens as `total`, the extracted code's old range, and the target's range), `Score` (the share) |
 
 - `moved` covers both a container change and a change of order among siblings, as today. Both give `MOVE`.
-- A relationship with several kinds takes the lowest of its kinds' confidence (R26), so a renamed and moved declaration takes the rename's confidence.
+- A relationship with several kinds takes the lowest of its kinds' confidence (R26), so a renamed and reordered declaration takes the rename's confidence.
 - Overload pairs from rule M3 are same-name matches with a changed signature. They are not relationships, as today.
 - Uncertain nodes from rule M4 keep `candidates` (R29). Their ambiguity stays a presence state: [relationships/03](03-relationship-matching.md) R6 adds low-confidence relationships for ties in its own assignment, not for rule M4 uncertainty.
 
@@ -68,10 +68,10 @@ data class ConfidencePolicy(val high: Double = 0.85, val medium: Double = 0.7) {
 
 `ComparisonRequest` gains `confidence: ConfidencePolicy = ConfidencePolicy.DEFAULT`, next to `limits` (R14).
 
-- A scored relationship is high at `score >= high`, medium at `score >= medium`, and low below. Today only rename candidates are scored; moves, kind changes and extractions are high by rule (R25).
-- With today's matcher a rename pair needs `score >= RENAME_THRESHOLD` (0.7). The matcher keeps that fixed pairing floor; the policy classifies each pair the matcher forms. A low pair still uses both declarations in the greedy pass, so changing the policy never changes which pairs are found. With the default policy that gives the same pairs as before (R9). Raising `medium` in a test or through the registry makes a pair between 0.7 and `medium` low, which leaves both declarations added and removed while the relationship stays in the list (R13); lowering `medium` does not form new pairs, because the floor stays at 0.7.
-- A rename that scores at least `high` is high. It still shows as a rename candidate (R28), because no other label exists yet; the outline reads `renamedFrom`, which a high and a medium rename both set.
-- A low rename (only possible with a raised medium threshold, in tests or through the registry) leaves both declarations added and removed, and the relationship stays in the list linking them (R13). None of its computed fields is set, a composite included. A low pair still uses both declarations in the greedy pass, so the same pairs are found whatever the policy; only the confidence and the computed fields change.
+- A scored rename is high at `score >= high`, medium at `score >= medium`, and low below. A tied option is low whatever its score, even at or above `high`, because no pair was taken ([relationships/03](03-relationship-matching.md) R6). Today only rename candidates are scored; moves, kind changes and extractions are high by rule (R25).
+- A rename pair needs `score >= RENAME_THRESHOLD` (0.7). The matcher keeps that fixed pairing floor; the policy classifies each pair the matcher forms. A pair the policy calls low still occupies both declarations in the assignment, so changing the policy never changes which pairs are found. With the default policy that gives the same pairs as before (R9). Raising `medium` in a test or through the registry makes a pair between 0.7 and `medium` low, which leaves both declarations added and removed while the relationship stays in the list (R13); lowering `medium` does not form new pairs, because the floor stays at 0.7.
+- A rename that scores at least `high` is high. It still shows as a rename candidate (R28), because no other label exists; the outline reads `renamedFrom`, which a high and a medium rename both set. This is the decided label for high confidence as well ([relationships/03](03-relationship-matching.md), 2026-11-04).
+- A low rename comes from a tie under the default policy ([relationships/03](03-relationship-matching.md) R6), or from a pair a raised `medium` threshold moves below medium, in tests or through the registry. It leaves both declarations added and removed, and the relationship stays in the list linking them (R13). None of its computed fields is set, a composite included. A low pair still occupies both declarations in the assignment, so the same pairs are found whatever the policy; only the confidence and the computed fields change.
 - The registry key `smartdiff.relationships.confidence` is declared in `plugin.xml` with the default `0.85,0.7` and holds `high,medium` (R15). It is read when a request is built, next to the analysis limits in `SmartDiffSettings.limits`, so the outline, the Changes tree and the merge outline use the same policy. A value that does not parse as two numbers with `0 <= medium <= high <= 1` logs one warning and the default policy is used (R30). The Changes tree cache key and clear path cover `SmartDiffSettings` but not this registry key, so a threshold change can leave summaries computed under the old policy; the implementation must include the policy in the key or clear the cache when it changes.
 - Tests and the benchmark pass a policy directly; the benchmark records the policy it used in `report.json`.
 
@@ -112,8 +112,9 @@ A `PARTIAL` result has relationships only between analyzed declarations; a decla
 
 ### Benchmark
 
-The benchmark's `actualRelationships` adapter is removed (R31). `RelationshipBenchmark` reads `ComparisonResult.relationships`, maps each relationship to one benchmark relationship per kind, as the adapter did, and keeps the old-side container path from the old declaration tree.
+The benchmark's `actualRelationships` adapter is removed (R31). `RelationshipBenchmark` reads `ComparisonResult.relationships`, maps each high or medium relationship to one benchmark relationship per kind, as the adapter did, and keeps the old-side container path from the old declaration tree. A low relationship is not a pair: it is counted in the confidence table and never as a true positive, false positive or forced pair (R33; [relationships/03](03-relationship-matching.md)).
 
+- A forced pair is a relationship reported for a declaration the label marks ambiguous; a low relationship never pairs its declarations, so the ambiguous-case rule does not make it forced either.
 - The exact-duplicate drop in `deduplicate` goes, so a repeated relationship is a false positive and fails the `no-new-wrong-pairs` gate (R32). The extraction de-duplication goes too, because the model has one relationship per source and target.
 - `report.md` and `report.json` add, per corpus and kind, the number of reported relationships at each confidence (R33). A label's `confidence` is still not scored.
 - The signature simplification of the adapter (`null`, `""` and `"()"` are one identity) stays until a label needs the difference.
@@ -154,7 +155,7 @@ The first run must pass with no new wrong pair. The second must pass with no low
 | R21 | A partial-result fixture with a parse error, and the fallback statuses |
 | R22 | `LineEngineContractTest` passes with an empty list |
 | R24 | An engine version test with and without the Scala plugin |
-| R25–R27 | `DeclarationAnalysisTest`: a rename, a move, a kind change, a renamed and moved method, a renamed class with a constructor, and an extraction with two sources |
+| R25–R27 | `DeclarationAnalysisTest`: a rename, a move, a kind change, a renamed and moved method, a kind change with an order change, a renamed class with a constructor, and an extraction with two sources |
 | R28 | `OutlineModelTest`: a high and a medium rename show the same row |
 | R29 | `DeclarationMatcherTest`: a rule M4 ambiguity has candidates and no relationship |
-| R31–R33 | `RelationshipBenchmarkTest`: a result with a repeated relationship fails the gate; the confidence counts appear in both reports; the full-corpus gate run above |
+| R31–R33 | `RelationshipBenchmarkTest`: a result with a repeated relationship fails the gate; a low relationship is counted by confidence and not scored as a pair; the confidence counts appear in both reports; the full-corpus gate run above |
