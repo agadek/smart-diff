@@ -1,6 +1,6 @@
 # Relationship model: details
 
-Status: accepted, 2026-11-02
+Status: implemented, 2026-11-04
 
 Feature: [Relationship model](02-relationship-model.md)
 

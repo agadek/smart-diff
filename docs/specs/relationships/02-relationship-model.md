@@ -1,6 +1,6 @@
 # Relationship model
 
-Status: accepted, 2026-11-02
+Status: implemented, 2026-11-04
 
 **Description:** Adds a list of [relationships](../../GLOSSARY.md#relationship) to every comparison result: which old declarations and new declarations belong together, how sure the engine is, and why.
 
