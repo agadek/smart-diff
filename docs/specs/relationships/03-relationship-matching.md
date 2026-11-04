@@ -9,7 +9,7 @@ Status: accepted, 2026-11-04
 ## Requirements
 
 - **R1** The matcher keeps today's matching rules as the first source of [candidates](../../GLOSSARY.md#candidate).
-- **R2** A candidate is scored by name, content, parameter types, [container](../../GLOSSARY.md#container), nearest siblings and order.
+- **R2** A rename candidate is scored by name, content, parameter types, [container](../../GLOSSARY.md#container), nearest siblings and order.
 - **R3** Source position adds to a score but never pairs two declarations on its own.
 - **R4** Pairs are chosen over the whole candidate graph of the file at once, so one pair never takes a better option from another.
 - **R5** A pair is taken only when its score reaches the pairing floor and beats every rival by a margin, unless the names clearly decide between close options.

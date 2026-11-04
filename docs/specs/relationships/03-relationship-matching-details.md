@@ -84,7 +84,7 @@ This is rule M5 only. M4's uncertainty is different and stays as it is: its decl
 
 - Both declarations stay added and removed: the outline and the Changes tree show one removed row and one added row, each on its side, with no rename candidate row and no `renamedFrom` note. The user sees two separate changes, exactly as without this feature.
 - The relationship is only in `ComparisonResult.relationships` until the [refactorings view](06-refactorings-view.md) displays it. It does not hide a change (relationships/02 R20).
-- A low-confidence tie is not a [rename candidate](../../GLOSSARY.md#rename-candidate). A medium or high rename is, as relationships/02 R28 says.
+- A low-confidence tie is not a [rename candidate](../../GLOSSARY.md#rename-candidate). In the container tree a medium or high rename is, as relationships/02 R28 says; the refactorings view has its own marks in relationships/06 R8.
 
 ### Combined changes
 
@@ -144,7 +144,7 @@ When the time limit is reached during the assignment, the matcher returns the gr
 
 ### Does a high-confidence rename lose the rename candidate mark?
 
-The design keeps relationships/02 R28: every paired rename, high or medium, shows as a [rename candidate](../../GLOSSARY.md#rename-candidate). But [relationships/07](07-relationship-validation-details.md) assumes that a high-confidence relationship "pairs declarations without a candidate mark". The two cannot both hold. Options:
+The design keeps relationships/02 R28: every paired rename, high or medium, shows as a [rename candidate](../../GLOSSARY.md#rename-candidate) in the container tree. But [relationships/07](07-relationship-validation-details.md) assumes that a high-confidence relationship "pairs declarations without a candidate mark", and [relationships/06](06-refactorings-view.md) R8 gives the candidate mark to medium only in the refactorings view. The two views need one decision. Options:
 
 - **Keep the candidate mark** for high and medium, as designed. No outline change, and relationships/07's premise needs amending.
 - **Drop the candidate mark for high**, showing a plain renamed row, and keep it for medium. This changes relationships/02 R28 and the outline, and makes relationships/07's premise hold.
