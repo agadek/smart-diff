@@ -9,9 +9,9 @@ Status: implemented, 2026-10-22
 ## Requirements
 
 - **R1** A removed and an added declaration of the same [kind](../../GLOSSARY.md#kind) in matched [containers](../../GLOSSARY.md#container), or both top level, can be paired as a rename candidate.
-- **R2** They are paired when their score, from content, name, parameter types and position, reaches the pairing floor of [relationships/03](../relationships/03-relationship-matching.md).
-- **R3** A pair is taken only when it is clearly ahead of every other option of both declarations, unless the names decide (R4).
-- **R4** When two options are about as similar, the names decide, and if they do not, nothing is paired.
+- **R2** They are paired when their score, from content, name, parameter types, position, nearest matched siblings and order as [relationships/03](../relationships/03-relationship-matching.md) defines it, reaches that feature's pairing floor.
+- **R3** A pair is taken only when it is clearly ahead of every rival, as [relationships/03](../relationships/03-relationship-matching.md) defines a rival, unless the names decide (R4).
+- **R4** When two rivals are about as similar, the names decide, and if they do not, nothing is paired.
 - **R5** A declaration with fewer than 6 tokens besides its name is never paired by content.
 - **R6** A rename candidate's label shows the old name first: `method total → sum(int)`.
 - **R7** A rename alone leaves the content unchanged.
