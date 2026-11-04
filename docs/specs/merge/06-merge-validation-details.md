@@ -28,7 +28,7 @@ Every `both-sides-clean` and `conflict-one-side` file in the run that will ship 
 | `expected` | The outline is right and the flag is the signal it is meant to be: both sides changed different parts of the declaration and Git merged them, or a conflict lies inside a declaration that only one side changed because the other side changed the lines next to it | Not blocked |
 | `fixed` | The outline was wrong, and a merged fix makes it right; the rerun shows the file as `expected` or no longer flags it | Not blocked |
 | `known limit` | The outline is wrong and is not fixed for this release; an issue describes it (R28) | Not blocked; see the open question |
-| `wrong flag` | The outline is right, but the flag does not fit its own definition in R8 or R9, for example conflicts computed differently from the merge window (R10), or a formatting-only side counted as changed (R8) | Blocked until the validation is fixed and rerun (R29) |
+| `wrong flag` | The outline is right, but the flag does not fit its own definition in R8 or R9, for example conflicts computed differently from the merge window (R10), or a formatting-only side with no move, rename, signature or kind change counted as changed (R8) | Blocked until the validation is fixed and rerun (R29) |
 
 A file with several flagged declarations gets the verdict of its worst declaration, in the order `wrong flag`, `known limit`, `fixed`, `expected`, and the reason names the declarations.
 
@@ -38,7 +38,7 @@ For each flagged file in `report.md`:
 
 1. Read the file's outline and conflicts in the report.
 2. Compare each side with the base for the flagged declaration: `git diff <base> <parent> -- <path>` for both parents, in the clone.
-3. For `both-sides-clean`, check that both sides changed the declaration's own content. If one side only added or removed a sibling next to it, the outline is wrong. If one side is only [formatting-only](../../GLOSSARY.md#formatting-only), the outline is right and the flag is wrong (R8).
+3. For `both-sides-clean`, check that both sides changed the declaration beyond formatting: its own content, or a move, rename, signature or kind change. If one side only added or removed a sibling next to it, the outline is wrong. If one side is only [formatting-only](../../GLOSSARY.md#formatting-only), with no move, rename, signature or kind change, the outline is right and the flag is wrong (R8).
 4. For `conflict-one-side`, check where Git's conflict hunk lies. A hunk that starts or ends inside the declaration because the other side changed a neighbouring line is `expected`; a hunk inside a declaration whose content the other side did change means the outline missed a change.
 5. Pick the verdict, write a one-line reason, and open an issue for each wrong outline that is not fixed in the same pull request.
 
