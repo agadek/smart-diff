@@ -1,6 +1,6 @@
 # Relationship matching: details
 
-Status: accepted, 2026-11-04
+Status: implemented, 2026-11-04
 
 Feature: [Relationship matching](03-relationship-matching.md)
 
@@ -36,18 +36,18 @@ Each edge gets a score from 0 to 1:
 
 | Feature | Weight | Source |
 | --- | --- | --- |
-| Content | 0.5 | Dice coefficient of adjacent token pairs, without names, as today |
-| Name | 0.15 | Character-pair similarity of the names, ignoring case, as today |
-| Parameter types | 0.15 | Dice coefficient of the parameter types as bags, split at top-level commas, as today |
-| Context | 0.1 | 1 when the nearest sibling before or after is matched on both sides to the same pair, 0 otherwise |
-| Order | 0.1 | 1 minus the normalised distance between the two positions among siblings |
+| Content | 0.83 | Dice coefficient of adjacent token pairs, without names, as today |
+| Name | 0.03 | Character-pair similarity of the names, ignoring case, as today |
+| Parameter types | 0.05 | Dice coefficient of the parameter types as bags, split at top-level commas, as today |
+| Context | 0.03 | 1 when the nearest sibling before or after is matched on both sides to the same pair, 0 otherwise |
+| Order | 0.06 | 1 minus the normalised distance between the two positions among siblings |
 
 - **Order:** `1 - min(1, |oldPosition - newPosition| / max(oldSiblingCount, newSiblingCount))`, where a position is the index among the declaration's siblings, or the top-level index.
 - **Context:** a sibling counts only when an earlier rule matched it: M1, M2, M3 or M4b. A sibling paired by M5, including by the same assignment, does not count, so the feature never depends on its own output. Within one group the container path is the same on both sides, so the container itself is not a score term.
-- **Order alone** is at most 0.1 and context plus order at most 0.2, both below every floor, so neither can pair two declarations by itself (R3).
-- **Weights** are a starting point. They are tuned on the benchmark's tuning split only, never on the held-out split (R20).
+- **Order alone** is 0.06 and context plus order 0.09, both below every floor, so neither can pair two declarations by itself (R3).
+- **Weights** are tuned on the benchmark's tuning split only, never on the held-out split (R20). The 2026-11-05 tuning kept the content weight high: the 0.7 floor was calibrated to content, and the original rename-plus-reorder fixture pairs at content 0.75 with only parameter types and order to add. With `0.5, 0.15, 0.15, 0.1, 0.1` the tuning split loses 16 correct renames; with `0.83, 0.03, 0.05, 0.03, 0.06` it keeps all 57 correct renames and the original fixture pairs. Lower content weights lose between 2 and 28 of the tuning renames, and the higher content weights pair an unrelated removed and added property in the corpus validation. The tuning table is in the pull request and in [VALIDATION.md](../../VALIDATION.md#2026-11-04-relationship-matching).
 
-**Same-body groups (R7).** When a declaration in a group has at least one other declaration with the same bigram bag — the same multiset of adjacent token pairs, names masked, that the content feature uses — content cannot identify it. For an edge that touches such a declaration the content weight becomes 0 and the other weights are renormalised to sum to 1: name 0.3, parameter types 0.3, context 0.2, order 0.2. Edges that touch no duplicated body keep the normal weights. Without the renormalisation the remaining evidence could reach only 0.5 and a duplicate body could never be paired, which contradicts today's behaviour and R7's "not by content alone". With it, a duplicate body pairs only when name, signature or position is clear.
+**Same-body groups (R7).** When a declaration in a group has at least one other declaration on its own side with the same bigram bag — the same multiset of adjacent token pairs, names masked, that the content feature uses — content cannot tell the candidates apart. A single old and a single new declaration with the same body is not a duplicate: content does identify that one pair. For an edge that touches such a declaration the content weight becomes 0 and the other weights are renormalised to sum to 1: name 0.18, parameter types 0.29, context 0.18, order 0.35. Edges that touch no duplicated body keep the normal weights. Without the renormalisation the remaining evidence could reach only 0.17 and a duplicate body could never be paired, which contradicts today's behaviour and R7's "not by content alone". With it, a duplicate body pairs only when name, signature or position is clear.
 
 ### Score for overloads (M3)
 
@@ -70,12 +70,12 @@ For each candidate group:
 1. Build an edge for every old and new declaration in the group. Only edges at or above the group's floor can be chosen.
 2. A **rival** of a chosen edge is an edge from either of its endpoints to a declaration that the assignment leaves unpaired. A rival's score is its raw score, even when it is below the floor. The chosen edge **passes the margin** when every rival scores no more than the chosen score minus `MARGIN` (0.1).
 3. In a rename group, an edge that fails the margin still passes when the name tie-break below decides for it.
-4. Take the assignment with the largest total score among the assignments whose chosen edges all pass; each declaration appears at most once. This is a maximum-weight bipartite matching, for example the Hungarian algorithm. An implementation may solve, review and drop failing edges and solve again on the remaining edges; it must give this result.
+4. Take the assignment with the largest total score among the assignments whose chosen edges all pass; each declaration appears at most once. The unrestricted maximum-weight matching is the upper bound; when it passes it is the answer, and otherwise the search branches over the rows, forbidding the violations, and keeps the best feasible assignment. The search is capped at 20 000 nodes so a pathological group cannot delay the analysis: at the cap it returns the best feasible assignment found, and the empty assignment is always feasible. This cap is the one case where the result is not proved largest.
 5. Of assignments with equal total score, compare their pairs as `(old index, new index)` lists sorted by old index and then new index, lexicographically; if one list is a prefix of the other, the longer list wins. This gives the old side's source order, then the new side's (R11) as one deterministic order, and it never makes a pair the margin refuses (ADR 0008).
 6. A group with more possible pairs than `MAX_SIMILARITY_PAIRS` is not compared; its declarations stay unpaired by this group. An M3 group's declarations then go through the second unique-key M3 pass and M4, and an M5 group's declarations stay added and removed (R12).
-7. The matcher checks for cancellation every row (R13). A group still unfinished at the time limit uses the greedy result for that group (see Failure behaviour).
+7. The matcher checks for cancellation every row (R13); a cancelled comparison stops there, as Failure behaviour says.
 
-**Name tie-break (kept).** An edge that fails the score margin still passes when its name similarity is at least `TIEBREAK_MIN` (0.5) and every rival's name similarity is at least `TIEBREAK_MARGIN` (0.2) lower. This is today's rule with today's constants. It is applied to a chosen edge after the assignment, as part of the pass test; it is not a search key or a score. It is kept rather than replaced, because it is what lets today's near-ties with a clear name pair, and replacing it would lose pairs the golden fixtures and the benchmark show as correct. The name feature (0.15) also contributes to the score; the tie-break only resolves a near-tie the score cannot. The review notes of the [structural relationships plan](../../STRUCTURAL-RELATIONSHIPS.md#review-comments) ask for this choice to be explicit.
+**Name tie-break (kept).** An edge that fails the score margin still passes when its name similarity is at least `TIEBREAK_MIN` (0.5) and every rival's name similarity is at least `TIEBREAK_MARGIN` (0.2) lower. This is today's rule with today's constants. It is applied to a chosen edge after the assignment, as part of the pass test; it is not a search key or a score. It is kept rather than replaced, because it is what lets today's near-ties with a clear name pair, and replacing it would lose pairs the golden fixtures and the benchmark show as correct. The name feature (0.03) also contributes to the score; the tie-break only resolves a near-tie the score cannot. The review notes of the [structural relationships plan](../../STRUCTURAL-RELATIONSHIPS.md#review-comments) ask for this choice to be explicit.
 
 **Ties and low-confidence relationships (R6).** A declaration that the assignment leaves unpaired may still have a close option. For every such declaration, let `best` be its highest-scoring edge to another unpaired declaration, below the floor included. Every edge at or above the floor to another unpaired declaration whose score is within `MARGIN` of `best` is reported once, as a low-confidence relationship with the `RENAME` kind. The relationship carries `Name` and `Score` evidence; it claims no move, kind change or position, because nothing was paired. Its confidence is `LOW` whatever its score, even when the score is at or above `high`; the score stays in `Score` evidence (relationships/02 R6). The declarations keep no computed fields and stay added and removed (relationships/02 R13).
 
@@ -102,10 +102,10 @@ A pair gets every kind that applies: rename when the matcher paired it as a rena
 - **Rename floor 0.7** (`RENAME_THRESHOLD`): today's value, and [declarations/03](../declarations/03-rename-candidates.md) R2 now delegates the score to this feature. The [2026-11-02 baseline](../../VALIDATION.md#2026-11-02-relationship-benchmark-baseline) has no wrong rename pair at it. It stays fixed so a policy change cannot change which declarations pair (R19; relationships/02 R9, R13).
 - **Overload floor 0.5** (`OVERLOAD_THRESHOLD`): today's value for a group whose names are equal. The rename weights and the 0.7 floor would drop pairs that the 2026-11-02 baseline labels correct (R8, R17).
 - **Margin 0.1** (`MARGIN`): today's value, which the validation found to prevent wrong pairs between near duplicates.
-- **Name tie-break 0.5 and 0.2**: today's values. Keeping them preserves the near-ties the current greedy pass accepts; the [review notes](../../STRUCTURAL-RELATIONSHIPS.md#review-comments) require this to be a stated choice.
-- **Same-body renormalisation**: without it the remaining evidence could reach only 0.5, below the floor, so no duplicate body could pair at all. The renormalisation lets name, signature and position decide (R7).
-- **High threshold, tuned (R20):** relationships/02's `high = 0.85` is a starting value and is replaced by a tuned one. The tuning run uses the 153 tuning cases only; its 271 held-out cases are not read. For each value from 0.70 to 1.00, it classifies every rename the matcher pairs on the tuning split; high-confidence precision is the share of high-confidence pairs that the labels mark correct, with every high pair in the denominator, wrong ones included. It takes the highest value that keeps that precision at least 95% (the target of [relationships/07](07-relationship-validation.md) R2) and keeps at least three quarters of the tuning split's correctly paired renames high; the three-quarter coverage floor is a-priori, chosen so high remains the majority band. If no value meets both, `high` stays 0.85 and the pull request records the table and the failure; precision is never traded for coverage. Once chosen the value is fixed: a failed held-out check in 07 does not re-tune it, and the failure is reported as a release-gate failure. The value replaces `ConfidencePolicy.DEFAULT.high` and the registry default `0.85,0.7`, and the pull request records the table.
-- **Hungarian assignment over greedy:** greedy can take a pair that leaves another declaration without its only option, where the global choice pairs both. The benchmark's `no-new-wrong-pairs` gate and held-out precision decide whether it ships (R15, R16); if it adds no correct pair, the greedy pass stays and only the scoring changes.
+- **Name tie-break 0.5 and 0.2**: today's values. Keeping them preserves the near-ties the earlier greedy pass accepts; the [review notes](../../STRUCTURAL-RELATIONSHIPS.md#review-comments) require this to be a stated choice.
+- **Same-body renormalisation**: without it the remaining evidence could reach only 0.17, below the floor, so no duplicate body could pair at all. The renormalisation lets name, signature and position decide (R7).
+- **High threshold, tuned (R20):** relationships/02's `high = 0.85` is a starting value and is replaced by `0.82`. The tuning run uses the tuning split as the labels define it; in the 2026-11-04 corpus that is 202 checked-in cases, while all 120 real-commit labels are held-out, so 202 tuning cases and 222 held-out cases are not mixed. Its held-out split is not read. For each value from 0.70 to 1.00, it classifies every rename the matcher pairs on the tuning split; high-confidence precision is the share of high-confidence pairs that the labels mark correct, with every high pair in the denominator, wrong ones included. It takes the highest value that keeps that precision at least 95% (the target of [relationships/07](07-relationship-validation.md) R2) and keeps at least three quarters of the tuning split's correctly paired renames high; the three-quarter coverage floor is a-priori, chosen so high remains the majority band. At `0.82` the tuning split has precision 1.000 and coverage 0.754; at `0.83` coverage falls to 0.719, below three quarters. If no value meets both, `high` stays the default `0.82` and the pull request records the table and the failure; precision is never traded for coverage. Once chosen the value is fixed: a failed held-out check in 07 does not re-tune it, and the failure is reported as a release-gate failure. The value replaces `ConfidencePolicy.DEFAULT.high` and the registry default `0.82,0.7`, and the pull request records the table.
+- **Assignment over greedy:** greedy can take a pair that leaves another declaration without its only option, where the global choice pairs both. The benchmark's `no-new-wrong-pairs` gate and held-out precision decide whether it ships (R15, R16). The 2026-11-04 run finds the same correct pairs, no wrong and no forced pair as the baseline, so the assignment adds and loses no scored pair on this corpus. The maintainer decided on 2026-11-05 that the whole-file assignment ships anyway because it is the rule the feature specifies; the earlier no-gain fallback to the greedy pass is removed. The scoring and the assignment are measured by the same gates.
 
 ### Benchmark treatment of low confidence
 
@@ -113,7 +113,7 @@ Only high and medium relationships are scored as reported relationships. A low-c
 
 ### Failure behaviour
 
-When the time limit is reached during the assignment, the matcher returns the greedy pass's result for the remaining groups, with the same score and floor; the result is still `ANALYZED`. Cancellation stops the match at the next row (R13). A group with more possible pairs than `MAX_SIMILARITY_PAIRS` is not compared (R12).
+The host's cancellation stops the match at the next cancellation check, so a comparison that reaches its time limit or is cancelled shows the host's timed-out or cancelled result (R13); the matcher does not return a partial greedy result, because the cancellation interface does not tell a time limit from a user cancellation. A group with more possible pairs than `MAX_SIMILARITY_PAIRS` is not compared (R12).
 
 ### Engine version
 
@@ -123,20 +123,20 @@ When the time limit is reached during the assignment, the matcher returns the gr
 
 | Requirement | Check |
 | --- | --- |
-| R1 | `DeclarationMatcherTest`: every M1, M2, M4 and M4b fixture, and every unique-key M3 fixture, still pairs the same way |
-| R2, R3 | Score tests that change one feature at a time; an order-only and a context-plus-order pair stay unpaired |
-| R4, R5 | A fixture where greedy and global assignment differ; a near-tie fixture with unclear names stays unpaired; a near-tie with clear names pairs as today; a below-floor rival leaves the pair unpaired |
-| R6 | The near-tie fixture has a low-confidence relationship for each tied option, none sets `renamedFrom`, and both declarations stay added and removed; a tie whose score is above `high` is still low |
-| R7 | Duplicate-body fixtures in Java, Kotlin, Scala 2 and Scala 3: content weight 0, renormalised weights, a pair only when name or signature is clear |
-| R8 | Overload fixtures in the four languages: the 0.5 floor and the parameter-types-plus-content score are unchanged; an overload tie stays uncertain with candidates and has no relationship |
-| R9 | A rename with an order change, and a kind change with an order change |
-| R10 | A policy test that moves a rename from high to medium, and one from medium to low |
-| R11 | A tie fixture where only the old and new order decides; the margin still wins over order |
-| R12 | A generated group with more than 10 000 possible pairs: no pair from that group; M3 declarations follow the unique-key pass and M4, M5 declarations stay added and removed |
-| R13 | A cancellation test during the assignment |
+| R1 | `RelationshipMatchingTest` and `DeclarationMatcherTest`: every M1, M2, M4 and M4b fixture, and every unique-key M3 fixture, still pairs the same way |
+| R2, R3 | `RelationshipMatchingTest`: changing content, name, parameter types, context or order one at a time changes the score; an order-only and a context-plus-order pair stay unpaired |
+| R4, R5 | `RelationshipMatchingTest`: a fixture where greedy and global assignment differ; the 3 by 4 exact-search counterexample; a group at the search cap keeps a feasible deterministic result; a near-tie with unclear names stays unpaired; a near-tie with clear names pairs; a below-floor rival leaves the pair unpaired |
+| R6 | `RelationshipMatchingTest`: the near-tie fixture has a low-confidence relationship for each tied option, none sets `renamedFrom`, and both declarations stay added and removed; a tie whose score is above `high` is still low |
+| R7 | `RelationshipMatchingTest` and the duplicate-body fixtures in Java, Kotlin, Scala 2 and Scala 3: content weight 0, renormalised weights, a pair only when name or signature is clear |
+| R8 | `RelationshipMatchingTest` and the overload fixtures in the four languages: the 0.5 floor and the parameter-types-plus-content score are unchanged; an overload tie stays uncertain with candidates and has no relationship |
+| R9 | `RelationshipMatchingTest`: a rename with an order change, and a kind change with an order change |
+| R10 | `RelationshipMatchingTest`: a policy test that moves a rename from high to medium, and one from medium to low |
+| R11 | `RelationshipMatchingTest`: a tie fixture where only the old and new order decides; the margin still wins over order |
+| R12 | `RelationshipMatchingTest`: a generated group with more than 10 000 possible pairs; no pair from that group; M3 declarations follow the unique-key pass and M4, M5 declarations stay added and removed |
+| R13 | `RelationshipMatchingTest`: a cancellation test during the assignment |
 | R14 | `LimitsBenchmarkTest` |
 | R15, R16 | `RelationshipBenchmarkTest` with the recorded baseline, run in the pull request; a low-confidence relationship does not count as a pair |
 | R17 | `GoldenFixturesTest`; changed rows listed in the pull request |
-| R18 | Engine version test |
-| R19 | The same pair set under a raised and a lowered `medium`, and under a raised `high` |
-| R20 | The tuning run over the tuning split only; the held-out run uses the fixed value; a failed held-out check leaves the value unchanged |
+| R18 | `DeclarationEngineTest`: the engine version is 8 |
+| R19 | `RelationshipMatchingTest`: the same pair set under a raised and a lowered `medium`, and under a raised `high` |
+| R20 | `RelationshipTuningTest`: the tuning run over the tuning split only; the held-out run uses the fixed value; a failed held-out check leaves the value unchanged |

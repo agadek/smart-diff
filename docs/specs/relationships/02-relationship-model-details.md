@@ -35,7 +35,7 @@ sealed interface Evidence {
     data class Score(val value: Double) : Evidence
 }
 
-data class ConfidencePolicy(val high: Double = 0.85, val medium: Double = 0.7) {
+data class ConfidencePolicy(val high: Double = 0.82, val medium: Double = 0.7) {
     init { require(medium in 0.0..1.0 && high in medium..1.0) { "invalid confidence policy: $this" } }
     companion object { val DEFAULT = ConfidencePolicy() }
 }
@@ -72,7 +72,7 @@ data class ConfidencePolicy(val high: Double = 0.85, val medium: Double = 0.7) {
 - A rename pair needs `score >= RENAME_THRESHOLD` (0.7). The matcher keeps that fixed pairing floor; the policy classifies each pair the matcher forms. A pair the policy calls low still occupies both declarations in the assignment, so changing the policy never changes which pairs are found. With the default policy that gives the same pairs as before (R9). Raising `medium` in a test or through the registry makes a pair between 0.7 and `medium` low, which leaves both declarations added and removed while the relationship stays in the list (R13); lowering `medium` does not form new pairs, because the floor stays at 0.7.
 - A rename that scores at least `high` is high. It still shows as a rename candidate (R28), because no other label exists; the outline reads `renamedFrom`, which a high and a medium rename both set. This is the decided label for high confidence as well ([relationships/03](03-relationship-matching.md), 2026-11-04).
 - A low rename comes from a tie under the default policy ([relationships/03](03-relationship-matching.md) R6), or from a pair a raised `medium` threshold moves below medium, in tests or through the registry. It leaves both declarations added and removed, and the relationship stays in the list linking them (R13). None of its computed fields is set, a composite included. A low pair still occupies both declarations in the assignment, so the same pairs are found whatever the policy; only the confidence and the computed fields change.
-- The registry key `smartdiff.relationships.confidence` is declared in `plugin.xml` with the default `0.85,0.7` and holds `high,medium` (R15). It is read when a request is built, next to the analysis limits in `SmartDiffSettings.limits`, so the outline, the Changes tree and the merge outline use the same policy. A value that does not parse as two numbers with `0 <= medium <= high <= 1` logs one warning and the default policy is used (R30). The Changes tree cache key and clear path cover `SmartDiffSettings` but not this registry key, so a threshold change can leave summaries computed under the old policy; the implementation must include the policy in the key or clear the cache when it changes.
+- The registry key `smartdiff.relationships.confidence` is declared in `plugin.xml` with the default `0.82,0.7` and holds `high,medium` (R15). It is read when a request is built, next to the analysis limits in `SmartDiffSettings.limits`, so the outline, the Changes tree and the merge outline use the same policy. A value that does not parse as two numbers with `0 <= medium <= high <= 1` logs one warning and the default policy is used (R30). The Changes tree cache key and clear path cover `SmartDiffSettings` but not this registry key, so a threshold change can leave summaries computed under the old policy; the implementation must include the policy in the key or clear the cache when it changes.
 - Tests and the benchmark pass a policy directly; the benchmark records the policy it used in `report.json`.
 
 ### Computed fields
@@ -139,7 +139,7 @@ The first run must pass with no new wrong pair. The second must pass with no low
 ### Thresholds and reasons
 
 - `medium = 0.7` equals today's `RENAME_THRESHOLD`, so rename candidates stay as they are.
-- `high = 0.85` is a starting value. It only changes the confidence field, not what the outline shows (R28), so it needs no benchmark tuning in this step; [relationships/03](03-relationship-matching.md) tunes it on the tuning split.
+- `high = 0.82` is the value [relationships/03](03-relationship-matching.md) tuned on the tuning split (R20); it only changes the confidence field, not what the outline shows (R28).
 
 ## Tests
 

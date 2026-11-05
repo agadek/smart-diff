@@ -14,6 +14,7 @@ import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.ConfidencePolicy
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
+import io.github.agadek.smartdiff.engine.api.Evidence
 import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.Relationship
 import io.github.agadek.smartdiff.engine.api.Status
@@ -166,6 +167,8 @@ object RelationshipBenchmark {
         val old: Endpoint,
         val new: Endpoint,
         val confidence: Confidence,
+        /** The engine's score, from the relationship's `Score` evidence; null when it has none (relationships/03 R20). */
+        val score: Double? = null,
     )
 
     data class CaseResult(
@@ -406,6 +409,7 @@ object RelationshipBenchmark {
         val paths = resultPaths(result)
         val relationships = mutableListOf<ActualRelationship>()
         for (relationship in result.relationships) {
+            val score = relationship.evidence.filterIsInstance<Evidence.Score>().firstOrNull()?.value
             for (old in relationship.old) for (new in relationship.new) {
                 val oldPath = oldPaths[old.range] ?: paths.old[old.range] ?: ""
                 val newPath = paths.new[new.range] ?: ""
@@ -415,6 +419,7 @@ object RelationshipBenchmark {
                         endpoint(old.subject, oldPath, old.range),
                         endpoint(new.subject, newPath, new.range),
                         confidence(relationship.confidence),
+                        score,
                     )
                 }
             }
@@ -506,10 +511,13 @@ object RelationshipBenchmark {
                 (expected.kinds - matchedKinds).forEach { perKind.getOrPut(it.name) { PairCounts() }.fn++ }
             }
             result.actualRelationships.forEachIndexed { index, actual ->
-                val forcedPair = label.ambiguous.any { endpointsMatch(it, actual.old) || endpointsMatch(it, actual.new) }
-                if (forcedPair) forced++ else if (!claimed[index]) perKind.getOrPut(actual.kind.name) { PairCounts() }.fp++
                 // R33: every reported relationship counts, whatever its kind scored.
                 confidenceByKind.getOrPut(actual.kind.name) { mutableMapOf() }.merge(actual.confidence, 1, Int::plus)
+                // A low relationship is not a pair: it is never a true positive, false positive or forced pair
+                // (relationships/03, `Benchmark treatment of low confidence`).
+                if (actual.confidence == Confidence.LOW) return@forEachIndexed
+                val forcedPair = label.ambiguous.any { endpointsMatch(it, actual.old) || endpointsMatch(it, actual.new) }
+                if (forcedPair) forced++ else if (!claimed[index]) perKind.getOrPut(actual.kind.name) { PairCounts() }.fp++
             }
             val matchedNodes = matchingNodes(result)
             for ((index, expected) in label.changes.withIndex()) {
@@ -572,7 +580,8 @@ object RelationshipBenchmark {
         for (expected in case.label.relationships) {
             for (kind in expected.kinds) {
                 val index = case.actualRelationships.indices.firstOrNull { i ->
-                    !claimed[i] && case.actualRelationships[i].kind == kind &&
+                    !claimed[i] && case.actualRelationships[i].confidence != Confidence.LOW &&
+                        case.actualRelationships[i].kind == kind &&
                         endpointsMatch(expected.old, case.actualRelationships[i].old) &&
                         endpointsMatch(expected.new, case.actualRelationships[i].new)
                 }
@@ -631,6 +640,42 @@ object RelationshipBenchmark {
         }
     }
 
+    /** One high-threshold candidate: how many rename pairs it would call high, and how many of those are correct. */
+    data class TuningRow(val threshold: Double, val high: Int, val correctHigh: Int, val correctPairs: Int) {
+        val precision: Double get() = if (high == 0) 1.0 else correctHigh.toDouble() / high
+        val coverage: Double get() = if (correctPairs == 0) 0.0 else correctHigh.toDouble() / correctPairs
+    }
+
+    /**
+     * The high-threshold table of relationships/03 R20, over [cases] only. A pair is correct when the label claims its
+     * `RENAME` kind; a low relationship is not a pair and is left out. Every score comes from the engine's `Score`
+     * evidence, so the table needs no second run.
+     */
+    fun tuningTable(cases: List<CaseResult>, from: Double = 0.70, to: Double = 1.00, step: Double = 0.01): List<TuningRow> {
+        val pairs = mutableListOf<Pair<Double, Boolean>>()
+        for (case in cases) {
+            val claimed = claimedRelationships(case)
+            case.actualRelationships.forEachIndexed { index, actual ->
+                if (actual.kind != Kind.RENAME || actual.confidence == Confidence.LOW) return@forEachIndexed
+                val score = actual.score ?: return@forEachIndexed
+                pairs += score to claimed[index]
+            }
+        }
+        val correctPairs = pairs.count { it.second }
+        val rows = mutableListOf<TuningRow>()
+        var threshold = from
+        while (threshold <= to + 1e-9) {
+            val high = pairs.filter { it.first >= threshold }
+            rows += TuningRow(threshold, high.size, high.count { it.second }, correctPairs)
+            threshold += step
+        }
+        return rows
+    }
+
+    /** The highest threshold that keeps high-confidence precision at least 95% and three quarters of correct pairs high. */
+    fun tunedHigh(rows: List<TuningRow>): Double? =
+        rows.filter { it.precision >= 0.95 && it.coverage >= 0.75 }.maxOfOrNull { it.threshold }
+
     fun aggregate(counts: Collection<PairCounts>): PairCounts =
         counts.fold(PairCounts()) { all, next -> PairCounts(all.tp + next.tp, all.fp + next.fp, all.fn + next.fn) }
 
@@ -655,6 +700,8 @@ object RelationshipBenchmark {
         minimum: Int = MINIMUM_CASES,
         commitMinimum: Int = MINIMUM_COMMITS,
         confidence: ConfidencePolicy = ConfidencePolicy.DEFAULT,
+        /** Only score cases of this split; null scores every split. The tuning run uses [Split.TUNING] only (R20). */
+        split: Split? = null,
     ): Report {
         val engine = DeclarationEngine(null)
         val entries = parseCorpus(corpus)
@@ -674,10 +721,10 @@ object RelationshipBenchmark {
         for (entry in entries) {
             val directory = entry.path
             if (directory != null) {
-                cases += runCase(engine, directory, confidence)
+                runCase(engine, directory, confidence, split)?.let { cases += it }
                 continue
             }
-            val line = runCommitLine(engine, entry, labelRoot, drafts != null, confidence)
+            val line = runCommitLine(engine, entry, labelRoot, drafts != null, confidence, split)
             cases += line.cases
             unlabelled += line.unlabelled
             skippedFiles += line.skipped
@@ -726,10 +773,11 @@ object RelationshipBenchmark {
         return report
     }
 
-    private fun runCase(engine: DeclarationEngine, directory: File, confidence: ConfidencePolicy): CaseResult {
+    private fun runCase(engine: DeclarationEngine, directory: File, confidence: ConfidencePolicy, split: Split?): CaseResult? {
         val labelFile = File(directory, "label.yaml")
         require(labelFile.isFile) { "case ${directory.path} has no label.yaml" }
         val label = parseLabel(labelFile)
+        if (split != null && label.split != split) return null
         require(label.source == null) { "label ${labelFile.path}: a case folder label must not have a source" }
         require(label.category in CATEGORIES) { "label ${labelFile.path}: unknown category ${label.category}" }
         val extension = extensionFor(label.language)
@@ -747,7 +795,14 @@ object RelationshipBenchmark {
         )
     }
 
-    private fun runCommitLine(engine: DeclarationEngine, entry: CorpusEntry, labelRoot: File, draft: Boolean, confidence: ConfidencePolicy): CommitLine {
+    private fun runCommitLine(
+        engine: DeclarationEngine,
+        entry: CorpusEntry,
+        labelRoot: File,
+        draft: Boolean,
+        confidence: ConfidencePolicy,
+        split: Split?,
+    ): CommitLine {
         val repository = entry.repository ?: error("corpus line '${entry.line}' is not a case folder")
         if (!repository.isDirectory) error("real-commit repository not found: ${repository.path}")
         val result = CommitLine()
@@ -793,12 +848,13 @@ object RelationshipBenchmark {
                 val request = ComparisonRequest(old, new, languageId, File(path).name, confidence = confidence)
                 val outcome = compare(engine, request)
                 val id = "${repository.name} ${commit.take(7)} $path"
-                if (label != null && label.reviewed) {
+                val scored = label != null && label.reviewed && (split == null || label.split == split)
+                if (scored) {
                     result.cases += CaseResult(
-                        label, outcome.result, reportedRelationships(outcome.result, oldTree(engine, request, outcome.result)), actualNodes(outcome.result),
+                        label!!, outcome.result, reportedRelationships(outcome.result, oldTree(engine, request, outcome.result)), actualNodes(outcome.result),
                         outcome.millis, hidden(old, new, outcome.result), outcome.exception, id,
                     )
-                } else {
+                } else if (label?.reviewed != true) {
                     val reason = when {
                         label == null && corpus == null -> "unknown dialect"
                         label == null -> "no label"
@@ -1105,6 +1161,7 @@ object RelationshipBenchmark {
             val label = case.label
             val claimed = claimedRelationships(case)
             case.actualRelationships.forEachIndexed { index, actual ->
+                if (actual.confidence == Confidence.LOW) return@forEachIndexed
                 val forced = label.ambiguous.any { endpointsMatch(it, actual.old) || endpointsMatch(it, actual.new) }
                 if (!claimed[index] && !forced) add("${label.case}|${actual.kind}|${actual.old.key()}|${actual.new.key()}")
             }
@@ -1117,6 +1174,7 @@ object RelationshipBenchmark {
             val label = case.label
             val claimed = claimedRelationships(case)
             case.actualRelationships.forEachIndexed { index, actual ->
+                if (actual.confidence == Confidence.LOW) return@forEachIndexed
                 val forced = label.ambiguous.any { endpointsMatch(it, actual.old) || endpointsMatch(it, actual.new) }
                 if (forced) {
                     add("${label.case}|forced|${actual.kind}|${actual.old.name}|${actual.new.name}|${label.path ?: "-"}")
@@ -1130,6 +1188,7 @@ object RelationshipBenchmark {
     fun forcedPairs(cases: List<CaseResult>): Set<String> = buildSet {
         for (case in cases) {
             for (actual in case.actualRelationships) {
+                if (actual.confidence == Confidence.LOW) continue
                 if (case.label.ambiguous.any { endpointsMatch(it, actual.old) || endpointsMatch(it, actual.new) }) {
                     add("${case.label.case}|forced|${actual.kind}|${actual.old.key()}|${actual.new.key()}")
                 }
@@ -1180,7 +1239,8 @@ object RelationshipBenchmark {
         File(report.reportDirectory, "summary.tsv").writeText(buildString {
             appendLine("corpus\tkind\ttp\tfp\tfn\tprecision\trecall\twrong-share")
             for ((language, metrics) in report.metricsByLanguage) {
-                for ((kind, counts) in metrics.perKind) {
+                for (kind in kinds(metrics)) {
+                    val counts = metrics.perKind[kind] ?: PairCounts()
                     appendLine(listOf(language, kind, counts.tp, counts.fp, counts.fn, formatPrecision(counts), formatRecall(counts), format(counts.wrongShare)).joinToString("\t"))
                 }
             }
@@ -1242,7 +1302,8 @@ object RelationshipBenchmark {
             appendLine("| --- | --- | --- | --- | --- | --- | --- |")
             for (corpus in CORPORA) {
                 val metrics = report.metricsByLanguage[corpus] ?: continue
-                for ((kind, counts) in metrics.perKind) {
+                for (kind in kinds(metrics)) {
+                    val counts = metrics.perKind[kind] ?: PairCounts()
                     appendLine("| $corpus | $kind | ${counts.tp} | ${counts.fp} | ${counts.fn} | ${formatPrecision(counts)} | ${formatRecall(counts)} |")
                 }
             }
@@ -1254,7 +1315,7 @@ object RelationshipBenchmark {
             appendLine("| --- | --- | --- | --- | --- |")
             for (corpus in CORPORA) {
                 val metrics = report.metricsByLanguage[corpus] ?: continue
-                for (kind in metrics.perKind.keys) {
+                for (kind in kinds(metrics)) {
                     val counts = metrics.confidenceByKind[kind].orEmpty()
                     appendLine(
                         "| $corpus | $kind | ${counts[Confidence.HIGH] ?: 0} | ${counts[Confidence.MEDIUM] ?: 0} | " +
@@ -1338,6 +1399,10 @@ object RelationshipBenchmark {
         println("RELATIONSHIPS ${report.cases.size} cases, precision ${format(report.overall.precision)}, recall ${format(report.overall.recall)}${if (report.smoke) ", smoke run" else ""}; report in ${report.reportDirectory.absolutePath}")
     }
 
+    /** Every kind the run saw, paired or low-only, in [Kind] order so the reports stay deterministic (R33). */
+    private fun kinds(metrics: Metrics): List<String> =
+        (metrics.perKind.keys + metrics.confidenceByKind.keys).distinct().sortedBy { Kind.valueOf(it).ordinal }
+
     private fun metricsJson(metrics: Metrics): Map<String, Any> = mapOf(
         "precision" to metrics.precision,
         "recall" to metrics.recall,
@@ -1356,7 +1421,8 @@ object RelationshipBenchmark {
         "medianMillis" to metrics.medianMillis,
         "p95Millis" to metrics.p95Millis,
         "slowestMillis" to metrics.slowestMillis,
-        "perKind" to metrics.perKind.mapValues { (kind, counts) ->
+        "perKind" to kinds(metrics).associateWith { kind ->
+            val counts = metrics.perKind[kind] ?: PairCounts()
             mapOf(
                 "tp" to counts.tp, "fp" to counts.fp, "fn" to counts.fn,
                 "reportedPairs" to (counts.tp + counts.fp),

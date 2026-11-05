@@ -20,6 +20,7 @@ import java.io.File
 class GoldenFixturesTest : BasePlatformTestCase() {
 
     // relationships/02 R9, R10: the expected file is the outline before the relationship model.
+    // relationships/03-relationship-matching R17
     fun `test Java fixtures`() = checkFixtures("java", "JAVA", "java")
 
     // relationships/02 R9, R10: the expected file is the outline before the relationship model.

@@ -307,7 +307,7 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
     }
 
     fun `test the benchmark runs the corpus named by the property`() {
-        // relationships/01-relationship-benchmark R1, R22-R27
+        // relationships/01-relationship-benchmark R1, R22-R27; relationships/03-relationship-matching R15, R16
         val list = RelationshipBenchmark.listFile(System.getProperty(RelationshipBenchmark.CORPUS_PROPERTY))
         if (list == null) {
             println("RELATIONSHIPS skipped: no corpus (run with -P${RelationshipBenchmark.CORPUS_PROPERTY}=<list>)")
@@ -902,6 +902,58 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
             assertTrue(json.contains("\"HIGH\": 1"))
             assertTrue(json.contains("\"MEDIUM\": 1"))
             assertTrue(json.contains("\"LOW\": 0"))
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
+    fun `test R15 R16 a low relationship is counted by confidence and never scored as a pair`() {
+        // relationships/03-relationship-matching R15, R16; relationships/03 details, `Benchmark treatment of low confidence`
+        val expected = label("rename-1", "JAVA", "method-rename")
+        val low = actual(RelationshipBenchmark.Kind.RENAME, old("total"), new("sum"))
+            .copy(confidence = RelationshipBenchmark.Confidence.LOW)
+        val result = caseResult(expected, listOf(low), nodes())
+        val metrics = RelationshipBenchmark.evaluate(listOf(expected), listOf(result))
+
+        assertEquals("not a true positive", 0, metrics.perKind.getValue("RENAME").tp)
+        assertEquals("not a false positive", 0, metrics.perKind.getValue("RENAME").fp)
+        assertEquals("the labelled pair is still missed", 1, metrics.perKind.getValue("RENAME").fn)
+        assertEquals("not a forced pair either", 0, metrics.forcedPairs)
+        assertEquals("still counted by confidence", 1, metrics.confidenceByKind.getValue("RENAME").getValue(RelationshipBenchmark.Confidence.LOW))
+        assertTrue(RelationshipBenchmark.wrongPairs(listOf(result)).isEmpty())
+        assertTrue(RelationshipBenchmark.forcedPairs(listOf(result)).isEmpty())
+    }
+
+    fun `test R33 a low-only kind appears in both reports`() {
+        // relationships/03-relationship-matching B6; relationships/02-relationship-model R33
+        val directory = Files.createTempDirectory("relationship-low-only").toFile()
+        try {
+            val metrics = RelationshipBenchmark.Metrics(
+                perKind = emptyMap(),
+                forcedPairs = 0,
+                classificationCorrect = 0,
+                classificationTotal = 0,
+                hidden = 0,
+                fallback = 0,
+                times = listOf(1),
+                confidenceByKind = mapOf(
+                    "RENAME" to mapOf(RelationshipBenchmark.Confidence.LOW to 1),
+                ),
+            )
+            RelationshipBenchmark.write(
+                RelationshipBenchmark.Report(
+                    emptyList(), mapOf("java" to metrics), mapOf(RelationshipBenchmark.Split.TUNING to metrics), metrics,
+                    "no-new-wrong-pairs", emptyList(), "abc", directory,
+                ),
+            )
+
+            val markdown = File(directory, "report.md").readText()
+            assertTrue("the per-kind table has the low-only kind", markdown.contains("| java | RENAME | 0 | 0 | 0 |"))
+            assertTrue("the confidence table has the low-only count", markdown.contains("| java | RENAME | 0 | 0 | 1 |"))
+            val json = File(directory, "report.json").readText()
+            assertTrue("the JSON has the kind with no scored pair", json.contains("\"RENAME\""))
+            assertTrue("the JSON counts the low relationship", json.contains("\"LOW\": 1"))
+            assertTrue(File(directory, "summary.tsv").readText().contains("java\tRENAME\t0\t0\t0"))
         } finally {
             directory.deleteRecursively()
         }

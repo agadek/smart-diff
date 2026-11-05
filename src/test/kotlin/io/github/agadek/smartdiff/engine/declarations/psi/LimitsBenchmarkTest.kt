@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit
 class LimitsBenchmarkTest : BasePlatformTestCase() {
 
     fun `test analysis time on large files`() {
+        // relationships/03-relationship-matching R14
         val list = System.getProperty("smartdiff.limits.corpus")?.takeIf { it.isNotBlank() }
         if (list == null) {
             benchmark("skipped: no corpus (run with -Psmartdiff.limits.corpus=<file listing paths>)")

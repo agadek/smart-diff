@@ -145,15 +145,17 @@ class DeclarationMatcherTest {
     }
 
     @Test
-    fun `a repeated key that still does not pair up once each stays uncertain`() {
+    fun `M3 pairs a complete tie by the old and then the new source order`() {
+        // relationships/03-relationship-matching R11
         val old = tree { cls("A") { method("of", "E", "{x();}"); method("of", "E", "{y();}"); method("of", "E", "{z();}") } }
         val new = tree { cls("A") { method("of", "E", "{x();}"); method("of", "E", "{y2();}"); method("of", "E", "{z2();}") } }
 
         val matching = match(old, new)
 
         assertSame(new.all[1], matching.ofOld(old.all[1])!!.new)
-        assertEquals(old.all.drop(2), matching.uncertainOld.map { it.declaration })
-        assertEquals(new.all.drop(2), matching.uncertainNew.map { it.declaration })
+        assertSame("the first old option takes the first new one", new.all[2], matching.ofOld(old.all[2])!!.new)
+        assertSame("the second old option takes the second new one", new.all[3], matching.ofOld(old.all[3])!!.new)
+        assertNothingLeft(matching)
     }
 
     @Test

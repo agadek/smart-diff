@@ -95,6 +95,131 @@ compares against the [2026-11-02 baseline](#2026-11-02-relationship-benchmark-ba
 
 The report is in `build/reports/smartdiff-relationships/summary.tsv`, `report.md` and `report.json`.
 
+## 2026-11-04: relationship matching
+
+[relationships/03](specs/relationships/03-relationship-matching.md) replaces the greedy rename pass with a scored,
+whole-file assignment (R1 to R13). `DeclarationEngine.VERSION` is 8. The rename weights are
+`content 0.83, name 0.03, parameter types 0.05, context 0.03, order 0.06`, and the default confidence policy is
+`high = 0.82, medium = 0.7`. The 2026-11-05 retune restores the original rename-plus-reorder fixture (`total` reordered,
+body changed with content 0.75); the earlier weights left it below the floor, so they were rejected.
+
+### Tuning run
+
+The tuning run scores the tuning split only; all 120 real-commit labels are held-out, so the run has 202 tuning cases.
+The 2026-11-02 baseline has 138 labelled pairs on the same split, and this run has the same 138, so the split is the
+baseline's. The full 0.70 to 1.00 table is in the pull request; the rows that decide the value are:
+
+| High threshold | High pairs | Correct high | High precision | Coverage |
+| --- | --- | --- | --- | --- |
+| 0.70 | 57 | 57 | 1.000 | 1.000 |
+| 0.71 | 55 | 55 | 1.000 | 0.965 |
+| 0.72 | 53 | 53 | 1.000 | 0.930 |
+| 0.73 | 51 | 51 | 1.000 | 0.895 |
+| 0.74 | 49 | 49 | 1.000 | 0.860 |
+| 0.79 | 45 | 45 | 1.000 | 0.789 |
+| 0.81 | 45 | 45 | 1.000 | 0.789 |
+| **0.82** | **43** | **43** | **1.000** | **0.754** |
+| 0.83 | 41 | 41 | 1.000 | 0.719 |
+| 0.91 | 33 | 33 | 1.000 | 0.579 |
+| 0.97 to 1.00 | 0 | 0 | 1.000 | 0.000 |
+
+`0.82` is the highest value that keeps precision at least 95% and three quarters of the 57 correct tuning renames high;
+`0.83` is below three quarters. The value replaces the starting `0.85`.
+
+The weight runs are tuning-only too. The first column is content, name, parameter types, context and order:
+
+| Weights | Tuning RENAME TP/FN | Result |
+| --- | --- | --- |
+| 0.50, 0.15, 0.15, 0.10, 0.10 | 41/16 | rejected: loses 16 correct renames; the starting table does not pair the signature-change cases |
+| 0.80, 0.05, 0.05, 0.05, 0.05 | 49/8 | rejected: 8 rename-with-signature-change cases are below the floor |
+| 0.85, 0.05, 0.05, 0.025, 0.025 | 53/4 | rejected: one signature-change case stays below the floor |
+| 0.75, 0.05, 0.05, 0.05, 0.10 | 53/4 | rejected: Kotlin and Scala 3 signature-change cases stay below the floor |
+| 0.80, 0.04, 0.04, 0.04, 0.08 | 55/2 | rejected: the Kotlin signature-change cases stay below the floor |
+| 0.82, 0.03, 0.03, 0.04, 0.08 | 57/0 | rejected: keeps the tuning renames but the original content-0.75 fixture stays below the floor |
+| 0.82, 0.04, 0.04, 0.03, 0.07 | 57/0 | rejected: the original content-0.75 fixture stays below the floor |
+| 0.90, 0.02, 0.02, 0.02, 0.04 | 57/0 | rejected: pairs an unrelated removed and added property in the corpus validation |
+| **0.83, 0.03, 0.05, 0.03, 0.06** | **57/0** | **chosen**: every tuning rename, the original content-0.75 fixture, and no changed corpus pair outside the intended two files |
+
+### Relationship benchmark, both gates
+
+The run is the full list, `src/test/testData/relationships-corpus-full.txt`, against the unchanged
+[2026-11-02 baseline](#2026-11-02-relationship-benchmark-baseline), 424 cases (304 checked-in cases and 120 real
+commits). Both gates pass:
+
+- `no-new-wrong-pairs`: no wrong or forced pair; there is no wrong or forced pair at all.
+- `tolerance=0`: no lower precision or recall for any corpus and kind than the baseline.
+
+Precision is 1.000 and recall 0.826 overall. Every `(corpus, kind)` row has the same true positives, false positives,
+false negatives, precision and recall as the baseline; the 42 missed relationships are the same list. So the assignment
+adds no new correct pair and loses none on this corpus. A low-confidence relationship is not scored: the run has none
+on this corpus, and the benchmark test checks that a low relationship is counted only in the confidence table.
+
+| Corpus | Kind | TP | FP | FN | Precision | Recall |
+| --- | --- | --- | --- | --- | --- | --- |
+| Java | RENAME | 24 | 0 | 1 | 1.000 | 0.960 |
+| Java | MOVE | 9 | 0 | 0 | 1.000 | 1.000 |
+| Java | KIND_CHANGE | 3 | 0 | 0 | 1.000 | 1.000 |
+| Java | EXTRACT | 20 | 0 | 14 | 1.000 | 0.588 |
+| Java | INLINE | 0 | 0 | 3 | n/a | 0.000 |
+| Kotlin | RENAME | 21 | 0 | 2 | 1.000 | 0.913 |
+| Kotlin | MOVE | 10 | 0 | 0 | 1.000 | 1.000 |
+| Kotlin | KIND_CHANGE | 3 | 0 | 0 | 1.000 | 1.000 |
+| Kotlin | EXTRACT | 12 | 0 | 4 | 1.000 | 0.750 |
+| Kotlin | INLINE | 0 | 0 | 3 | n/a | 0.000 |
+| Scala 2 | RENAME | 23 | 0 | 0 | 1.000 | 1.000 |
+| Scala 2 | MOVE | 11 | 0 | 3 | 1.000 | 0.786 |
+| Scala 2 | KIND_CHANGE | 4 | 0 | 0 | 1.000 | 1.000 |
+| Scala 2 | EXTRACT | 12 | 0 | 3 | 1.000 | 0.800 |
+| Scala 2 | INLINE | 0 | 0 | 3 | n/a | 0.000 |
+| Scala 3 | RENAME | 21 | 0 | 0 | 1.000 | 1.000 |
+| Scala 3 | MOVE | 10 | 0 | 0 | 1.000 | 1.000 |
+| Scala 3 | KIND_CHANGE | 4 | 0 | 0 | 1.000 | 1.000 |
+| Scala 3 | EXTRACT | 12 | 0 | 3 | 1.000 | 0.800 |
+| Scala 3 | INLINE | 0 | 0 | 3 | n/a | 0.000 |
+
+The confidence counts move one Java rename from medium to high because of the lower high threshold; every other row is
+the same as the [2026-11-04 relationship model run](#reported-relationships-by-confidence). The report is in
+`build/reports/smartdiff-relationships/summary.tsv`, `report.md` and `report.json`.
+
+### Corpus validation
+
+`CorpusValidationTest` over `two-sided-2026-11-04.txt`: 1970 files from 386 commits, 1968 `ANALYZED` and 2 `PARTIAL`,
+no fallback, no `hidden` or `empty` flag. 125 files are flagged, with the same counts as the
+[2026-11-04 two-sided rerun](#2026-11-04-two-sided-corpus-rerun) except `rename` 26 (was 29) and `rename-candidate`
+61 (was 59). Comparing every `summary.tsv` row with that run, six fields changed in three rows, on two files:
+
+| File | Commit | Change | Review |
+| --- | --- | --- | --- |
+| guava `android/guava-tests/test/com/google/common/collect/AbstractBiMapTest.java` | `67b6ad17db` | `testIdentityKeySetIteratorRemove` → `testEntryNotAccessedAfterKeySetIteratorRemove` and `testIdentityEntrySetIteratorRemove` → `testEntryNotAccessedAfterEntrySetIteratorRemove` are now rename candidates instead of removed and added; reported 15 → 13; flag `rename` → `rename-candidate` | right: the same two tests were renamed and their bodies changed from `IdentityHashMap` to the new `InvalidatingEntryMap` |
+| guava `guava-tests/test/com/google/common/collect/AbstractBiMapTest.java` | `67b6ad17db` | the same change in the second copy | right |
+| spring-petclinic `src/test/java/org/springframework/samples/petclinic/owner/PetControllerTests.java` | `37c7f98bf1` | `testProcessCreationFormWithBlankName` → `processCreationFormWithBlankName` is now a rename candidate instead of removed and added; reported 11 → 10; flags `rename,rename-candidate` → `rename-candidate` | right: the method was renamed by dropping the `test` prefix and its body is unchanged |
+
+No other row changed its status, hunks, reported count, formatting-only count, flags or dialect. The rename notes on
+the remaining rows are the recorded ones; no wrong row or pair was found.
+
+**Time:** the overall median is 7 ms and the 95th percentile 74 ms, against 7 ms and 80 ms recorded. The slowest file
+takes 572 ms (zio `ZIO.scala`), against 599 ms. All 1970 files take 41.0 s, against 43.0 s. By dialect, the median is
+4 ms for Java and Kotlin, 23 ms for Scala 2 and 16 ms for Scala 3; the slowest file in every group is below the 5 s
+analysis limit (140 ms, 572 ms and 352 ms).
+
+### Merge validation
+
+`CorpusValidationTest` over `merges-2026-11-02.txt`: 275 files from 121 merge commits, 2 files missing from a parent
+or the base. Flags: 49 `both-sides-clean`, 12 `conflict-one-side`, 6 `status`; coverage Java 50, Kotlin 67, Scala 2
+117 and Scala 3 41 files. The `summary.tsv` matches the
+[2026-11-04 relationship model run](#2026-11-04-relationship-model-migration): the same files, flags, hunk counts and
+diagnostics, apart from the timings (merge median 29 ms, the same as the recorded 29 ms). The one-file difference from the
+[2026-11-02 rerun](#2026-11-02-merge-validation-rerun), `commons-lang` `StringEscapeUtilsTest.java` not being
+`both-sides-clean`, is the one that section already explains: later merge-validation commits judge moved sides and
+unchanged children, and the fix is not part of the matcher. Reports in `build/reports/smartdiff-validation/merge/`.
+
+**Golden fixtures:** `GoldenFixturesTest`, `MergeFixturesTest`, `OutlineModelTest` and the Changes tree tests pass with
+no fixture change, so no golden row changed (R17). The high-confidence rename keeps the rename-candidate mark, as
+decided, so the outline does not change.
+
+The corpus reports are in `build/reports/smartdiff-validation/summary.tsv` and `report.md`; the relationship benchmark
+reports are in `build/reports/smartdiff-relationships/summary.tsv`, `report.md` and `report.json`.
+
 ## 2026-11-04: two-sided corpus rerun
 
 This is the full two-sided run the 0.2.0 release gate in [RELEASING.md](RELEASING.md) step 3 asks for. It supersedes the
@@ -317,8 +442,12 @@ no pair was wrong or forced. Precision is 1.000 and recall 0.826 overall. The 42
 | Kotlin | 106 | 1.000 | 0.836 | 0.000 | 0.986 | 0.986 | 1.000 | 1.000 | 1.000 | 0 ms | 29 ms | 85 ms |
 | Scala 2 | 106 | 1.000 | 0.847 | 0.000 | 1.000 | 0.986 | 0.824 | 1.000 | 1.000 | 0 ms | 55 ms | 209 ms |
 | Scala 3 | 106 | 1.000 | 0.887 | 0.000 | 1.000 | 0.970 | 1.000 | 1.000 | 1.000 | 0 ms | 146 ms | 273 ms |
-| tuning | 153 | 1.000 | 0.884 | 0.000 | 1.000 | 0.990 | 1.000 | 1.000 | 1.000 | 0 ms | 1 ms | 70 ms |
-| held-out | 271 | 1.000 | 0.748 | 0.000 | 0.991 | 0.980 | 0.864 | 1.000 | 1.000 | 2 ms | 91 ms | 273 ms |
+| tuning | 202 | 1.000 | 0.884 | 0.000 | 1.000 | 0.990 | 1.000 | 1.000 | 1.000 | 0 ms | 1 ms | 70 ms |
+| held-out | 222 | 1.000 | 0.748 | 0.000 | 0.991 | 0.980 | 0.864 | 1.000 | 1.000 | 2 ms | 91 ms | 273 ms |
+
+The case counts in the original table were recorded as 153 tuning and 271 held-out; that was wrong. The labels mark 202
+checked-in cases tuning and 222 held-out (102 checked-in plus the 120 real-commit labels). The labelled-pair counts
+(138 tuning and 103 held-out) and every metric above are unchanged. No held-out case was used for tuning.
 
 ### Per kind
 

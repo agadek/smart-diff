@@ -104,7 +104,7 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
             val policy = ConfidencePolicy.parse(raw)
             if (policy == null && !raw.isNullOrBlank() && raw != warnedConfidence) {
                 warnedConfidence = raw
-                thisLogger().warn("Ignoring malformed $CONFIDENCE_KEY '$raw', expected high,medium such as 0.85,0.7; using the default")
+                thisLogger().warn("Ignoring malformed $CONFIDENCE_KEY '$raw', expected high,medium such as 0.82,0.7; using the default")
             }
             return policy ?: ConfidencePolicy.DEFAULT
         }
@@ -138,7 +138,7 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
     }
 
     companion object {
-        /** The registry key that sets [confidence] in a running IDE; plugin.xml declares it with the default `0.85,0.7`. */
+        /** The registry key that sets [confidence] in a running IDE; plugin.xml declares it with the default `0.82,0.7`. */
         const val CONFIDENCE_KEY = "smartdiff.relationships.confidence"
 
         @Topic.AppLevel
