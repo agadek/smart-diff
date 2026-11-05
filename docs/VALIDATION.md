@@ -21,6 +21,36 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-05: Scala plugin version in the engine version
+
+[relationships/02](specs/relationships/02-relationship-model.md) R24 adds the Scala plugin's version to the declaration
+engine version, so a Scala plugin update changes the version. The version test used to accept `Scala unknown`, which
+passes even when the lookup never finds the Scala plugin's descriptor. The lookup now reads every
+`META-INF/plugin.xml` resource on the Scala language's classloader and takes the version of the descriptor whose id is
+`org.intellij.scala`, because a test's shared classloader answers the single-resource lookup with another plugin's
+descriptor.
+
+**Unit test:** `DeclarationEngineTest` has a descriptor test over a sample Scala `plugin.xml`, a descriptor with another
+plugin's id and one without a version, and its live version test now compares the engine version with
+`PluginManagerCore.getPlugin(PluginId.getId("org.intellij.scala"))?.version` and fails when the Scala part reads
+`unknown`. Before the fix, the shared test classloader gave `8 (251.26927.53; Scala unknown)`; after it, the same test
+gives `8 (251.26927.53; Scala 2025.1.32)`. Run with:
+
+```shell
+./gradlew test --tests '*DeclarationEngineTest*'
+```
+
+**Sandbox check:** `./gradlew runIde` started IntelliJ IDEA Community 2025.1.3 with the built plugin and the pinned
+Scala plugin 2025.1.32. A temporary application lifecycle listener logged `DeclarationEngine(null).version` once at
+startup and was removed before the change was committed; `idea.log` recorded:
+
+```text
+SCALA_VERSION_PROBE 8 (251.26927.53; Scala 2025.1.32)
+```
+
+The log is at `.intellijPlatform/sandbox/smart-diff/IC-2025.1.3/log/idea.log`. So the live version is not `unknown`,
+and a Scala plugin update changes the engine version.
+
 ## 2026-11-04: relationship model migration
 
 [relationships/02](specs/relationships/02-relationship-model.md) moves the facts the declaration engine already reports

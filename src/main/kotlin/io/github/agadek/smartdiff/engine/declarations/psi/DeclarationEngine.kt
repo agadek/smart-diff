@@ -2,6 +2,7 @@ package io.github.agadek.smartdiff.engine.declarations.psi
 
 import com.intellij.lang.Language
 import com.intellij.openapi.application.ApplicationInfo
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
@@ -12,6 +13,7 @@ import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.declarations.analysis.DeclarationAnalysis
 import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
+import java.util.Collections
 import java.util.concurrent.CancellationException
 
 /**
@@ -95,26 +97,50 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
          * The Scala language class comes from the Scala plugin's classloader, whose classpath holds that plugin's
          * descriptor. Reading the descriptor is deliberate: the plugin manager's lookup is an internal platform API,
          * which the plugin verifier rejects since an internal API can change between releases.
+         *
+         * Every descriptor is read, not just the first: in a test every plugin shares one classloader, where the
+         * first `META-INF/plugin.xml` belongs to another plugin.
          */
         private fun scalaPluginVersion(): String? {
             if (DeclarationProvider.EP_NAME.extensionList.none { it.supports(SCALA) }) return null
-            return try {
-                val language = Language.findLanguageByID(SCALA) ?: return UNKNOWN
-                val descriptor = language.javaClass.classLoader?.getResourceAsStream(PLUGIN_DESCRIPTOR)?.use { stream ->
-                    stream.bufferedReader(Charsets.ISO_8859_1).readText()
-                } ?: return UNKNOWN
-                // Another plugin's descriptor may answer instead when every plugin shares one classloader, as in a test.
-                if (!descriptor.contains("<id>$SCALA_PLUGIN_ID</id>")) return UNKNOWN
-                VERSION_TAG.find(descriptor)?.groupValues?.get(1) ?: UNKNOWN
+            val version = try {
+                val language = Language.findLanguageByID(SCALA)
+                val descriptors = language?.javaClass?.classLoader
+                    ?.getResources(PLUGIN_DESCRIPTOR)
+                    ?.let { Collections.list(it) }
+                    .orEmpty()
+                descriptors.firstNotNullOfOrNull { url ->
+                    try {
+                        url.openStream().use { stream ->
+                            parseScalaPluginVersion(stream.bufferedReader(Charsets.ISO_8859_1).readText())
+                        }
+                    } catch (e: Exception) {
+                        null
+                    }
+                } ?: UNKNOWN
             } catch (e: Exception) {
                 UNKNOWN
             }
+            if (version == UNKNOWN) {
+                Logger.getInstance(DeclarationEngine::class.java).debug(
+                    "Scala plugin version is $UNKNOWN: no $PLUGIN_DESCRIPTOR on the Scala language classloader names " +
+                        "$SCALA_PLUGIN_ID, so the engine version cannot name its parser (relationships/02 R24)",
+                )
+            }
+            return version
+        }
+
+        /** The version of a Scala plugin descriptor, or null when it is another plugin's or has no `<version>`. */
+        internal fun parseScalaPluginVersion(descriptor: String): String? {
+            if (!PLUGIN_ID_TAG.containsMatchIn(descriptor)) return null
+            return VERSION_TAG.find(descriptor)?.groupValues?.get(1)
         }
 
         private const val SCALA = "Scala"
         private const val SCALA_PLUGIN_ID = "org.intellij.scala"
         private const val PLUGIN_DESCRIPTOR = "META-INF/plugin.xml"
         private const val UNKNOWN = "unknown"
+        private val PLUGIN_ID_TAG = Regex("<id>\\s*${Regex.escape(SCALA_PLUGIN_ID)}\\s*</id>")
         private val VERSION_TAG = Regex("<version>\\s*([^<\\s]+)\\s*</version>")
     }
 }

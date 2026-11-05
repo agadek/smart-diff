@@ -1,6 +1,9 @@
 package io.github.agadek.smartdiff.engine.declarations.psi
 
+import com.intellij.ide.plugins.PluginManagerCore
+import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.extensions.PluginId
 import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import io.github.agadek.smartdiff.engine.api.Cancellation
@@ -142,16 +145,50 @@ class DeclarationEngineTest : BasePlatformTestCase() {
         )
     }
 
+    fun `test R24 the Scala plugin version is read from the Scala descriptor only`() {
+        // relationships/02-relationship-model R24
+        val descriptor = """
+            <?xml version="1.0" encoding="iso-8859-1"?>
+            <idea-plugin>
+                <id>org.intellij.scala</id>
+                <name>Scala</name>
+                <version>2025.1.32</version>
+            </idea-plugin>
+        """.trimIndent()
+
+        assertEquals("2025.1.32", DeclarationEngine.parseScalaPluginVersion(descriptor))
+        assertEquals(
+            "2025.1.32",
+            DeclarationEngine.parseScalaPluginVersion(descriptor.replace("<version>2025.1.32</version>", "<version>\n 2025.1.32 \n</version>")),
+        )
+        assertNull(
+            "another plugin's descriptor names no Scala version",
+            DeclarationEngine.parseScalaPluginVersion(descriptor.replace("org.intellij.scala", "org.jetbrains.kotlin")),
+        )
+        assertNull(
+            "a descriptor without a version names no Scala version",
+            DeclarationEngine.parseScalaPluginVersion(descriptor.replace("<version>2025.1.32</version>", "")),
+        )
+    }
+
     fun `test R24 the engine version names its own version, the IDE build and the Scala plugin`() {
         // relationships/02-relationship-model R24; relationships/03-relationship-matching R18
         assertEquals("8", DeclarationEngine.VERSION)
         assertEquals("8 (251.26927.53)", DeclarationEngine.formatVersion("251.26927.53", null))
         assertEquals("8 (251.26927.53; Scala 2025.1.32)", DeclarationEngine.formatVersion("251.26927.53", "2025.1.32"))
 
-        val version = DeclarationEngine(null).version
-        assertTrue(version, version.startsWith("8 ("))
         // This IDE loads the Scala plugin, so its parser is named: it can change a result without a platform update.
-        assertTrue(version, version.contains("; Scala "))
+        // The plugin manager is the independent source of truth; reading the descriptor through the shared test
+        // classloader must still find the Scala one, and never fall back to "unknown".
+        val pluginVersion = PluginManagerCore.getPlugin(PluginId.getId("org.intellij.scala"))?.version
+        assertNotNull("the test sandbox loads the Scala plugin", pluginVersion)
+        val version = DeclarationEngine(null).version
+
+        assertEquals(
+            DeclarationEngine.formatVersion(ApplicationInfo.getInstance().build.asStringWithoutProductCode(), pluginVersion),
+            version,
+        )
+        assertFalse("the Scala plugin version is unknown: $version", version.contains("Scala unknown"))
     }
 
     fun `test R24 the version omits the Scala plugin when no provider handles it`() {
