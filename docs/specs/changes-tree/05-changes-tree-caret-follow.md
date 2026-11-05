@@ -23,8 +23,8 @@ the tree. This is the reverse of opening a declaration from the tree.
   though the platform's own single-click preview may follow the new selection as it does for any selection.
 - **R6** Following does not change the tree while the tree has focus, a selection made in the tree is not overwritten by a
   later caret event, and caret moves are debounced so typing and arrow keys stay smooth.
-- **R7** While a file's [summary line](../../GLOSSARY.md#summary-line) is recomputed after an edit, the tree keeps its
-  current selection until the new summary arrives.
+- **R7** While a file's [summary line](../../GLOSSARY.md#summary-line) is stale after an edit, following does not change
+  the tree's selection, and it selects the row under the caret when the new summary arrives.
 - **R8** A file without a summary, because it is pending, not analyzed, in an
   [unsupported language](../../GLOSSARY.md#supported-language), added, deleted or after the 500-file limit, gets only its
   file row selected.
@@ -33,10 +33,12 @@ the tree. This is the reverse of opening a declaration from the tree.
 
 ## Out of scope
 
-- Three-sided diffs and merge windows.
+- Three-sided diffs and merge windows; the mapping returns for them without touching the tree.
 - The modal commit dialog and the Git log's commit details, which have no Changes tree hook.
-- Opening or focusing a diff; following only moves the tree's selection.
-- The future change type filter for the Changes tree, which is specified separately.
+- Opening or focusing a diff; following only moves the tree's selection. A platform diff preview that follows the
+  selection is the platform's behavior, not this feature.
+- The Changes tree's own display toggles and change type filter, which are specified separately; following uses the rows
+  that are shown.
 
 ## References
 

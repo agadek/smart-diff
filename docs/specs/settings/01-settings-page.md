@@ -18,8 +18,8 @@ Status: implemented, 2026-10-22
 - **R8** A language without a chosen engine uses the first registered one.
 - **R9** The [analysis limits](../../GLOSSARY.md#analysis-limits) can be changed: largest file, most declarations per side and analysis time.
 - **R13** "Follow the caret in the Changes tree" is on by default.
-- **R14** Changing it does not clear summaries or rebuild the tree, and when it is off, moving the caret does not change
-  the Changes tree selection.
+- **R14** Changing it does not clear summaries or rebuild the tree.
+- **R15** When it is off, moving the caret does not change the Changes tree selection.
 
 ## References
 

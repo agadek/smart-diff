@@ -123,7 +123,8 @@ summary says it was not analyzed, the language has no engine, the file is added 
   If the new summary still contains the row, it is selected; if it does not, the file row is selected. While the summary
   is stale the follower never picks a row from it. R7 is about what the follower chooses, not about preserving a row
   through a platform rebuild: if an unrelated rebuild removes the old row first, the platform's own selection restoration
-  applies, and the follower retries when the new summary arrives.
+  applies, and the follower retries when the new summary arrives. A stale summary therefore never makes the follower
+  select a row at an offset from the old text.
 - A rebuild restores the user's expanded rows through the platform. Following after a rebuild re-expands only the rows it
   needs to show the target.
 - The service installs one `TreeSelectionListener` and one mouse/key listener on the live tree. A mouse press or key press
@@ -144,11 +145,13 @@ release. Its `SelectInChangesViewTarget` serves the manual Select In action only
 Opened File" belongs to a different tree. The feature therefore gets its own application setting,
 `followChangesTreeCaret`, in `SmartDiffSettings.SettingsState`, copied in `update` and shown as the checkbox "Follow the
 caret in the Changes tree" in `SmartDiffConfigurable`. It is on by default because it does not fight any platform
-behavior for this tree. The toggle is display-only with respect to the tree's content: changing it does not call
-`ChangesSummaryService.clear()` and does not publish `ChangesViewModifier.TOPIC`. The summary settings listener ignores a
-change that only touches `followChangesTreeCaret`, by comparing the new settings state with the previous one; any other
-settings change keeps the existing clear-and-rebuild behavior (settings/01 R13, R14). Turning the follow toggle off only
-cancels a pending follow and leaves the tree as it is.
+behavior for this tree. The follow toggle is display-only on both sides: changing it does not call
+`ChangesSummaryService.clear()` and does not publish `ChangesViewModifier.TOPIC`, so it neither clears the cache nor
+rebuilds the tree. The summary settings listener ignores a change that only touches `followChangesTreeCaret`. For all
+other settings it follows the rule in §9.4: a display toggle of the tree, including Show structural summary, or its
+filter only rebuilds and keeps the cache, while an analysis setting (engine, limits or confidence policy) or the
+formatting-only layout, which changes the cached rows, clears the cache and recomputes the summaries (settings/01
+R13–R15). Turning the follow toggle off only cancels a pending follow and leaves the tree as it is.
 
 ### Debounce
 
@@ -220,10 +223,10 @@ language, a file over the size limit and a file with a timed-out or failed summa
 | R1 | `ChangesCaretFollowTest` `test the innermost changed declaration under the caret is selected and the file expands`: a caret in a changed method selects the method, not its class; a caret in a changed class outside its methods selects the class; the file row is expanded and the row is visible |
 | R2 | `ChangesCaretFollowTest` `test the caret outside every changed declaration selects the file row`: a caret in unchanged code of a changed file selects the file row and no declaration row |
 | R3 | `ChangesCaretFollowTest` `test a plain editor maps to the new side range`; `ChangesCaretFollowTest` `test the old and new sides of a two-sided diff map to their own ranges`; `OutlineIntegrationTest` `test the caret in each diff editor follows on that side`; `MergeOutlineIntegrationTest` `test the caret in a three-sided diff does not move the Changes tree` |
-| R4 | `SmartDiffSettingsTest` `test defaults` (settings/01 R13, the new setting is on); `ChangesCaretFollowTest` `test the setting turns following off` (settings/01 R14): with the setting off, a caret event leaves the tree selection unchanged; `ChangesSummaryTest` `test changing only the follow setting keeps the summary cache and does not rebuild the tree` |
+| R4 | `SmartDiffSettingsTest` `test defaults` (settings/01 R13, the new setting is on); `ChangesCaretFollowTest` `test the setting turns following off` (settings/01 R15): with the setting off, a caret event leaves the tree selection unchanged; `ChangesSummaryTest` `test changing only the follow setting neither clears the summary cache nor rebuilds the tree` (settings/01 R14) |
 | R5 | `ChangesCaretFollowTest` `test following leaves focus and commit inclusion alone with the platform preview off and on`: the editor keeps focus, the included changes and the commit count are unchanged, with preview off the recording `DiffManager` receives no request, and with preview on only the platform's own preview may open, as for a click |
 | R6 | `ChangesCaretFollowTest` `test following leaves the tree alone while the tree has focus`; `ChangesCaretFollowTest` `test a tree selection is not overwritten by a late caret event`: click a row while a caret follow is pending, then let the timer fire; the clicked row stays; `ChangesCaretFollowTest` `test caret moves are debounced`: several events in a row produce one follow after the delay |
-| R7 | `ChangesCaretFollowTest` `test a stale summary keeps the current row until the new summary arrives`: after an edit, a caret event before the rebuild leaves the row selected; after the rebuild the row under the caret is selected |
+| R7 | `ChangesCaretFollowTest` `test a stale summary leaves the current row and selects the caret row after the rebuild`: after an edit, a caret event before the rebuild leaves the row selected; after the rebuild the row under the caret is selected |
 | R8 | `ChangesCaretFollowTest` `test a file without a summary selects only the file row`: pending, not analyzed, unsupported language, added and deleted files, and a file after the 500-file limit each select the file row |
 | R9 | `ChangesCaretFollowTest` `test following reads no revision content on the UI thread`: a `ContentRevision` whose `content` fails when read on the EDT is never read; Plugin Verifier report: no new internal, experimental or deprecated usage from the follower, and the existing usages stay unchanged |
 | R1–R9 | Manual check: run the steps below on IntelliJ IDEA 2025.1 and the latest release |
@@ -252,14 +255,14 @@ Run this on IntelliJ IDEA 2025.1 and the latest release, in the Local Changes vi
 ## Open questions
 
 - **Where should the toggle live?** This spec puts it on the SMART Diff settings page (R4). Option: also add it to the
-  Changes view's View Options menu, next to the platform's own options; the future hide/filter work extends that menu.
-  Adding it there later does not change R4.
+  Changes view's View Options menu, next to the platform's own options; the Changes tree hide/filter work extends that
+  menu. Adding it there later does not change R4.
 - **Should the `File region` row be followable?** This spec selects the file row for changed source outside declarations
   (R2). Option: select the `File region` row when the caret is in changed imports or other file-level source, which would
   frame that region in a diff but is more surprising in a plain editor.
 - **What should happen while the Changes tool window is closed?** This spec does nothing and catches up on the next
   caret move after the window opens. Option: keep the model updated while the window is closed, so it is already correct
   when the window opens.
-- **How should the future tree filter affect following?** When the tree gets its own change type filter, a row hidden by
-  it should fall back to the nearest shown row above, as changes-tree/02 R12 does when opening a row. That filter's spec
-  owns the behavior; this feature keeps the mapping from caret to row.
+- **How should the tree's filter affect following?** The tree's own change type filter is specified separately. When it
+  hides the row under the caret, following should fall back to the nearest shown row above, as changes-tree/02 R12 does
+  when opening a row; that filter's spec owns the behavior, while this feature keeps the mapping from caret to row.
