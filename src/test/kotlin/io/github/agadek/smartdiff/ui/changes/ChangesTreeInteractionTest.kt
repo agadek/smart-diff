@@ -19,14 +19,14 @@ import com.intellij.openapi.vcs.changes.ui.TreeModelBuilder
 import com.intellij.openapi.vcs.changes.ui.VcsTreeModelData
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
+import com.intellij.ui.ClickListener.SyntheticClickEvent
 import com.intellij.ui.tree.ui.DefaultTreeUI
+import com.intellij.util.EditSourceOnDoubleClickHandler
 import com.intellij.util.Processor
-import com.intellij.util.ui.UIUtil
 import com.intellij.vcsUtil.VcsUtil
 import io.github.agadek.smartdiff.ui.SmartDiffSettings
 import java.awt.Point
 import java.awt.Window
-import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
 import javax.swing.tree.DefaultMutableTreeNode
@@ -65,14 +65,18 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
         val path = TreePath(summary.path)
         reveal(tree, path)
 
-        tree.doubleClick(path)
-        assertTrue("without the setup the tree expands the row", tree.isExpanded(path))
-        tree.collapsePath(path)
-        Thread.sleep(UIUtil.getMultiClickInterval().toLong() + 50)
+        assertTrue(
+            "without the setup the platform would expand the row",
+            EditSourceOnDoubleClickHandler.isExpandPreferable(tree, path),
+        )
 
         val handled = mutableListOf<MouseEvent>()
         tree.doubleClickHandler = Processor { handled += it; true }
         ChangesTreeSetup.install(tree)
+        assertFalse(
+            "the setup stops the platform expanding the row",
+            EditSourceOnDoubleClickHandler.isExpandPreferable(tree, path),
+        )
         tree.doubleClick(path)
 
         assertEquals("the platform's double-click handler runs once", 1, handled.size)
@@ -233,19 +237,13 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
         override fun rebuildTree() {}
 
         fun click(path: TreePath) {
-            val point = point(path)
-            val time = System.currentTimeMillis()
-            mouse(MouseEvent.MOUSE_PRESSED, point, time, 1)
-            mouse(MouseEvent.MOUSE_RELEASED, point, time, 1)
+            selectionPath = path
+            syntheticClick(path, 1)
         }
 
         fun doubleClick(path: TreePath) {
-            val point = point(path)
-            val time = System.currentTimeMillis()
-            mouse(MouseEvent.MOUSE_PRESSED, point, time, 1)
-            mouse(MouseEvent.MOUSE_RELEASED, point, time, 1)
-            mouse(MouseEvent.MOUSE_PRESSED, point, time + 20, 2)
-            mouse(MouseEvent.MOUSE_RELEASED, point, time + 20, 2)
+            selectionPath = path
+            syntheticClick(path, 2)
         }
 
         fun pressKey(keyCode: Int) {
@@ -257,10 +255,10 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
             return Point(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
         }
 
-        private fun mouse(type: Int, point: Point, whenTime: Long, clickCount: Int) {
-            val modifiers = if (type == MouseEvent.MOUSE_PRESSED) InputEvent.BUTTON1_DOWN_MASK else 0
+        private fun syntheticClick(path: TreePath, clickCount: Int) {
+            val point = point(path)
             processMouseEvent(
-                MouseEvent(this, type, whenTime, modifiers, point.x, point.y, clickCount, false, MouseEvent.BUTTON1),
+                SyntheticClickEvent(this, System.currentTimeMillis(), 0, point.x, point.y, clickCount, false, MouseEvent.BUTTON1),
             )
         }
     }
