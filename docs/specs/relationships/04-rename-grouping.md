@@ -25,7 +25,7 @@ Status: accepted, 2026-11-05
 - **R15** The Kotlin and Scala resolvers are reviewed in the Plugin Verifier report for both target IDEs; the verifier resolves the optional Scala dependency and installs a compatible Scala plugin for each target IDE.
 - **R16** The pass stops promptly when the comparison is cancelled.
 - **R17** The pass adds at most 1 s per file, and past that the result has no grouped usages.
-- **R18** Every rename in the benchmark corpus, including all 120 real commits, is usage-reviewed, and the pass adds no wrongly grouped usage against the baseline.
+- **R18** Every rename in the 440-case benchmark corpus, including all 120 real commits and the 16 usage-grouping cases, is usage-reviewed, and the pass adds no wrongly grouped usage against the baseline.
 - **R19** The pass runs in the two-sided diff outline only; the Changes tree, the merge outline and three-sided diffs show the engine's result.
 
 ## Out of scope

@@ -1,6 +1,6 @@
 # Change labels
 
-Status: implemented, 2026-11-04; the `usages renamed` additions (R1, R6, R9, R11 and R14) arrive with [rename grouping](../relationships/04-rename-grouping.md), 2026-11-05.
+Status: implemented, 2026-11-04; the `usages renamed` additions (R1, R4, R6, R9, R11 and R14) arrive with [rename grouping](../relationships/04-rename-grouping.md), 2026-11-05.
 
 **Description:** One set of user-facing [labels](../../GLOSSARY.md#label) says how each change is classified, how the [summary line](../../GLOSSARY.md#summary-line) counts it, and whether the [change type filter](../../GLOSSARY.md#change-type-filter) can hide it.
 

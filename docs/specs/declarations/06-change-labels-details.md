@@ -1,6 +1,6 @@
 # Change labels: details
 
-Status: implemented, 2026-11-04; the `usages renamed` additions (R1, R6, R9, R11 and R14) arrive with [rename grouping](../relationships/04-rename-grouping.md), 2026-11-05.
+Status: implemented, 2026-11-04; the `usages renamed` additions (R1, R4, R6, R9, R11 and R14) arrive with [rename grouping](../relationships/04-rename-grouping.md), 2026-11-05.
 
 Feature: [Change labels](06-change-labels.md)
 
@@ -10,7 +10,7 @@ Feature: [Change labels](06-change-labels.md)
 
 `OutlineModel.tags` builds a node's labels from two sources: `ChangeNode.presence` gives `added`, `removed` or `uncertain`; `ChangeNode.renamedFrom`, `moved`, `content` and `signatureChanged` add `rename candidate`, `moved`, `changed`, `formatting-only`, `unanalyzed` and `signature changed`. A node shown only as a container of changes has no label.
 
-`OutlineModel` also reads the result's relationships. A rename relationship with grouped usages adds the note `N usages` to the rename row. A matched node is labelled `usages renamed` when it is not the rename's new endpoint, contains at least one grouped `Reference`, and has no change other than those references. The check removes the grouped reference ranges from the node's old and new text, maps the rename's old name to its new name and compares the rest; it starts at the node's first non-whitespace token and never reads `ChangeNode.details`, so leading whitespace or an engine detail span cannot make the label. The grouped ranges go into the row's `OutlineItem.details` for navigation, not into `ChangeNode.details`. A node with another change keeps `changed`, and its grouped usages remain part of its row and the rename row. Neither case hides a usage: `usages renamed` is never a hidden type, and a node with a grouped usage is exempt from hiding even when its other labels are hidden (R11, R14).
+`OutlineModel` also reads the result's relationships. A rename relationship with grouped usages adds the note `N usages` to the rename row. A matched node is labelled `usages renamed` when it is not any rename's new endpoint, contains at least one grouped `Reference`, and has no change other than those references. The check applies the shared `RenameNameMapping` (`engine.api`) to the node's old text using every grouped reference in the node, maps each reference by its own rename relationship, and compares the result with the new text; it starts at the node's first non-whitespace token and never reads `ChangeNode.details`, so leading whitespace or an engine detail span cannot make the label. The helper changes only text at resolved reference ranges, never strings or comments. The grouped ranges go into the row's `OutlineItem.details` for navigation, not into `ChangeNode.details`. A node with another change keeps `changed`, and its grouped usages remain part of its row and the rename row. Neither case hides a usage: `usages renamed` is never a hidden type, and a node with a grouped usage is exempt from hiding even when its other labels are hidden (R11, R14).
 
 `OutlineModel.summary` counts labels in a fixed order: `changed`, `extracted`, `added`, `removed`, `moved`, `formatting-only`, `rename candidate`, `usages renamed`, `uncertain`, `unanalyzed`. An added node with `extractedFrom` counts as `extracted`; it keeps the `added` label on its row. `usages renamed` counts the declaration once, not each usage; the rename row's `N usages` note gives the usage count. `unanalyzed` adds the file region's unanalyzed ranges, so a range without a row is still counted. The hidden count comes from the rows the filter leaves out.
 
@@ -33,7 +33,7 @@ Feature: [Change labels](06-change-labels.md)
 
 | Requirement | Check |
 | --- | --- |
-| R1 | `OutlineModelTest` `every change label appears when it applies`: added, removed, changed, moved, formatting-only, signature changed, rename candidate, usages renamed, uncertain and unanalyzed |
+| R1 | `OutlineModelTest` `every change label appears when it applies`: added, removed, changed, moved, formatting-only, signature changed, rename candidate, usages renamed, uncertain and unanalyzed; a declaration with grouped usages from two renames maps both and still shows `usages renamed`, and a string or comment with an old name is unchanged |
 | R2 | `OutlineModelTest` `labels list presence, moved, content and signature changed`: a signature change also shows `changed` |
 | R3 | `OutlineModelTest` `a kind change shows both kinds and carries signature changed`: `trait → class Shape` and `signature changed` |
 | R4 | `OutlineModelTest` `a rename candidate shows both names, is never hidden and is counted`: `method total → sum()  rename candidate`; with grouped usages, `method total → sum(int)  rename candidate, 12 usages` |
