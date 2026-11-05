@@ -10,6 +10,7 @@
 ### Fixed
 
 - When the platform's Changes diff action cannot open a declaration, the fallback diff reads the committed revisions off the UI thread, so a slow VCS does not freeze the IDE.
+- Double-click or Enter on a changed file in the Changes tree opens its diff again when the file has a structural summary, and declaration rows open their diff through the tree's real selection.
 
 ## [0.2.0] - 2026-11-05
 
