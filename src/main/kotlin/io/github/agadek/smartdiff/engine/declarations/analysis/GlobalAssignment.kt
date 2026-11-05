@@ -25,8 +25,8 @@ internal const val ASSIGNMENT_TIEBREAK_MARGIN = 0.2
  * Otherwise the search branches over the rows, in deterministic order, and keeps the best assignment whose chosen edges
  * all pass. It stops after [MAX_SEARCH_NODES] nodes, and every phase stops when [MAX_ASSIGNMENT_WORK] work units are
  * spent. A group that runs out of work is left unpaired, as a group over the matcher's pair limit is (relationships/03
- * R12); below the work limit the result is exact. The empty assignment is always feasible, and the greedy-style repair
- * supplies a feasible start, which can be the empty assignment.
+ * R12). When neither [MAX_SEARCH_NODES] nor [MAX_ASSIGNMENT_WORK] is reached, the result is exact. The empty assignment
+ * is always feasible, and the greedy-style repair supplies a feasible start, which can be the empty assignment.
  */
 internal object GlobalAssignment {
 
@@ -35,9 +35,10 @@ internal object GlobalAssignment {
 
     /**
      * Work units for one group: one per repair round, cost-matrix cell, Hungarian cell and search bound check. A group
-     * that spends more is left unpaired (R12), so a dense near-tied group cannot delay the analysis.
+     * that spends more is left unpaired (R12), so a dense near-tied group cannot delay the analysis. The limit is high
+     * enough for ordinary groups that need several million units; only a pathological near-tied group reaches it.
      */
-    const val MAX_ASSIGNMENT_WORK = 2_000_000L
+    const val MAX_ASSIGNMENT_WORK = 10_000_000L
 
     /**
      * The pairs of [scores] indices, old first, that the assignment takes. [scores] holds every possible edge, below the

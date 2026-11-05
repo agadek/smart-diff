@@ -369,6 +369,22 @@ class RelationshipMatchingTest {
     }
 
     @Test
+    fun `R12 the default work budget keeps a moderate group's pair`() {
+        // relationships/03-relationship-matching R12: this 50 by 40 group needs about 3.6M work and returns in about
+        // 0.13 s; the earlier 2M default left it unpaired.
+        val random = Random(1)
+        val scores = Array(50) { i ->
+            DoubleArray(40) { j ->
+                if (i == 0 && j == 0) 1.0 else 0.70 + random.nextDouble() * 0.15
+            }
+        }
+        for (j in 1 until 40) scores[0][j] = 0.0
+        for (i in 1 until 50) scores[i][0] = 0.0
+
+        assertEquals(listOf(0 to 0), GlobalAssignment.solve(scores, 0.7, null, Cancellation.NONE))
+    }
+
+    @Test
     fun `R12 a group over the work limit is left unpaired and below it stays exact`() {
         // relationships/03-relationship-matching R12: the work limit changes only groups that exceed it.
         val scores = arrayOf(
