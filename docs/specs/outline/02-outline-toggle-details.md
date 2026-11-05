@@ -42,8 +42,8 @@ The header's Hide action uses `AllIcons.General.HideToolWindow`, the platform's 
 The header's Minimise action calls `OutlineController.setMinimised(true)`. The controller removes the panel from the splitter's second component, so the editors take its width, and adds `OutlineStrip` to `BorderLayout.EAST` of the diff viewer's `DiffPanelBase` (the same `BorderLayout` that `insertOutlineSplitter` uses). It does not call `refresh` or `cancel`, so the result and the rows stay as they are.
 
 - The strip is 24 scaled pixels wide and fills the height. It shows `AllIcons.Toolwindows.ToolWindowStructure`, the same icon as the toolbar toggle.
-- The icon is a `JButton`, so a click and the keyboard (Tab, then Space or Enter) restore the panel. Its accessible name is `Structural outline, minimised: <summary>. Click to restore.`
-- While a result exists, the strip's tooltip and accessible name carry the summary line (R9). Before a result exists they say `Structural outline, minimised`.
+- The icon is a `JButton`, so a click and the keyboard (Tab, then Space or Enter) restore the panel; a focus border shows where Tab is. Its accessible name is `Structural outline, minimised: <detail>. Click or press Enter to restore.`
+- While a result exists, the strip's tooltip and accessible name carry the summary line, or the fallback title and reason when the result is `UNSUPPORTED`, `TOO_LARGE` or `FAILED` (R9). The strip never uses the empty summary line for a fallback, so it never claims `No structural changes` when the analysis did not run. Before a result exists they say `Structural outline, minimised: Comparing…`.
 - Restoring removes the strip, puts the panel back as the splitter's second component, and does not compare again (R11). Because the splitter proportion was never changed while minimised, the panel returns to the width the user last chose (R10).
 - A diff opened from a declaration in the Changes tree ([changes-tree/02](../changes-tree/02-changes-tree-declarations.md)) opens the full panel even when the remembered state is minimised, so the selected row is visible. The remembered state itself is not changed by that diff.
 
@@ -63,7 +63,7 @@ The toggle is added to `Diff.ViewerToolbar` with `anchor="first"` instead of `an
 
 ### Edge cases
 
-- A fallback state (no engine, unsupported, too large, failed) minimises and restores like a result with rows; the strip shows the icon without a summary.
+- A fallback state (no engine, unsupported, too large, failed) minimises and restores like a result with rows; the strip shows the fallback title and reason, never an empty summary line.
 - Edits while minimised still rerun the comparison after the debounce, because the outline is visible; the strip's summary updates when the result arrives.
 - Hiding while minimised cancels the comparison and removes the strip. The remembered minimised state stays, so turning the toggle on again returns the strip.
 - Disposing the viewer removes the strip and releases the panel as before.
@@ -74,8 +74,8 @@ The toggle is added to `Diff.ViewerToolbar` with `anchor="first"` instead of `an
 | Requirement | Check |
 | --- | --- |
 | R7 (issue M1) | `OutlineIntegrationTest` `test outline 02 R7 the header hide button turns the outline off for this diff window`: the Hide icon, hiding, the window's next file, and another window |
-| R8, R9, R11 (issue M2) | `OutlineIntegrationTest` `test outline 02 R8 R9 R11 the minimise button shows the summary strip and restores the same result`: the strip and summary, then restoring the same `OutlineState.Shown` instance without a new comparison |
-| R10 (issue M2) | `OutlineIntegrationTest` `test outline 02 R10 clicking the strip restores the panel at its previous width`: a chosen splitter proportion survives minimise and restore |
+| R8, R9, R11 (issue M2) | `OutlineIntegrationTest` `test outline 02 R8 R9 R11 the minimise button shows the summary strip and restores the same result`: the strip and summary, then restoring the same `OutlineState.Shown` instance without a new comparison; `test outline 02 R9 minimising before a fallback result arrives names the fallback` and `test outline 02 R9 minimising after a fallback result names the fallback` check that unsupported, too large and failed results show their title and reason, never `No structural changes` |
+| R10 (issue M2) | `OutlineIntegrationTest` `test outline 02 R10 clicking the strip restores the panel at its previous width`: a chosen splitter proportion survives minimise and restore; `test outline 02 R10 Enter restores the strip and focus is visible` checks the Enter binding and focus border |
 | R12 (issue M3) | `OutlineIntegrationTest` `test outline 02 R12 the toggle has a default shortcut that does not clash and Keymap lists it`: the default keymap binds `Ctrl+Alt+Shift+O` to the toggle and to no other action |
 | R13 (issue M4) | `OutlineIntegrationTest` `test outline 02 R13 the toggle is placed first in the diff toolbar`: the toolbar group's first action is the toggle |
 | R14 (issue M5) | `OutlineIntegrationTest` `test outline 02 R14 the minimised state and width are remembered for the next diff`: the next file and a new window start minimised at the saved width; `SmartDiffSettingsTest` `test outline 02 R14 the minimised state is stored` |
@@ -85,8 +85,8 @@ The toggle is added to `Diff.ViewerToolbar` with `anchor="first"` instead of `an
 | Requirement | Steps |
 | --- | --- |
 | R7 | Open a Java diff with the outline. Hover the header's Hide button and check the platform Hide icon and description. Click it: the panel disappears, both editors stay, the toolbar toggle is off, and the next file in the same window starts hidden. Open another diff and check its outline is still shown. |
-| R8, R9 | Open a diff with a result. Click the header's Minimise button: a thin strip with the outline icon remains at the right edge, and its tooltip shows the summary line. Check the icon's accessible name in the UI inspector if available. |
-| R10, R11 | Drag the splitter to a distinctive width, minimise, and click the strip. The panel returns at that width. The rows are already there; there is no `Comparing…` state. Repeat with the keyboard: Tab to the strip, then Space or Enter. |
+| R8, R9 | Open a diff with a result. Click the header's Minimise button: a thin strip with the outline icon remains at the right edge, and its tooltip shows the summary line. Minimise a diff whose analysis fails: the tooltip shows `Analysis failed` and its reason, not `No structural changes`. Check the icon's accessible name in the UI inspector if available. |
+| R10, R11 | Drag the splitter to a distinctive width, minimise, and click the strip. The panel returns at that width. The rows are already there; there is no `Comparing…` state. Repeat with the keyboard: Tab to the strip and check the focus border, then press Space or Enter. |
 | R12 | Open `Settings → Keymap`, search for `Structural Outline`, and check the shortcut `Ctrl+Alt+Shift+O` (`Cmd+Option+Shift+O` on macOS) is listed under SMART Diff. Press it in a diff: the outline toggles. Check another action does not have the same shortcut. |
-| R13 | Narrow a diff window until the toolbar shows `>>`. Check the Structural Outline button is still visible in the toolbar, not only in the overflow. |
+| R13 | Narrow a diff window until the toolbar shows `>>`. Check the Structural Outline button is the first toolbar action and, when the window is too narrow for it, the button is in the `>>` overflow. |
 | R14 | Minimise a diff, close it, and open another diff: it starts minimised at the same width. Restore the panel and open one more: it starts full. Restart the IDE and check the same state is remembered. |

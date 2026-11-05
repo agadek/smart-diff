@@ -18,6 +18,7 @@ import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.compareSafely
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
 import io.github.agadek.smartdiff.engine.registry.EngineSelection
@@ -124,7 +125,7 @@ class OutlineController internal constructor(
         } else if (isMinimised) {
             splitter.secondComponent = null
             addStrip()
-            strip.show((state as? OutlineState.Shown)?.summary)
+            strip.show(stripDetail(state))
         } else {
             removeStrip()
             splitter.secondComponent = panel
@@ -262,8 +263,27 @@ class OutlineController internal constructor(
         if (state !is OutlineState.Shown) shownRequest = null
         this.state = state
         panel.show(state)
-        strip.show((state as? OutlineState.Shown)?.summary)
+        strip.show(stripDetail(state))
     }
+
+    /**
+     * What the strip says for [state]. A fallback keeps its reason and never uses the empty summary line, which would
+     * claim there are no structural changes when the analysis did not run (outline/02 R9).
+     */
+    private fun stripDetail(state: OutlineState): String? = when (state) {
+        OutlineState.Hidden -> null
+        OutlineState.Loading -> "Comparing…"
+        is OutlineState.NoEngine -> "No comparison engine supports ${state.languageName} files"
+        is OutlineState.Shown -> when (state.result.status) {
+            Status.ANALYZED, Status.PARTIAL -> state.summary
+            Status.UNSUPPORTED -> fallbackDetail("Not supported", state)
+            Status.TOO_LARGE -> fallbackDetail("Too large to analyze", state)
+            Status.FAILED -> fallbackDetail("Analysis failed", state)
+        }
+    }
+
+    private fun fallbackDetail(title: String, state: OutlineState.Shown): String =
+        state.result.fallbackReason?.let { "$title: $it" } ?: title
 
     override fun dispose() {
         disposed = true

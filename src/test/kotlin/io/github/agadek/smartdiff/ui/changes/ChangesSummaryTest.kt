@@ -40,6 +40,7 @@ import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
 import com.intellij.util.ThreeState
+import com.intellij.util.ui.UIUtil
 import com.intellij.vcsUtil.VcsUtil
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
@@ -173,12 +174,15 @@ class ChangesSummaryTest : BasePlatformTestCase() {
         val request = chain.requests[chain.index].process(UserDataHolderBase(), EmptyProgressIndicator())
         val panel = DiffManager.getInstance().createRequestPanel(project, testRootDisposable, null)
         settings.showOutline = false
+        settings.outlineMinimised = true
         panel.setRequest(request)
         PlatformTestUtil.waitWithEventsDispatching("no diff viewer was created", { viewers.isNotEmpty() }, 10)
         val outline = OutlineController.of(viewers.last())!!
         PlatformTestUtil.waitWithEventsDispatching({ "no outline; state is ${outline.state}" }, { outline.state is OutlineState.Shown }, 10)
 
         assertTrue("the outline is shown even when it is off by default", outline.isOutlineVisible)
+        assertFalse("a remembered minimised state does not hide the selected row", outline.isMinimised)
+        assertTrue("the full panel is shown for the selected row", UIUtil.isAncestor(viewers.last().component, outline.panel))
         assertEquals("method isEmpty()  added", outline.panel.selectedItem()?.label)
         assertNull("the request selects the row once", request.getUserData(OutlinePath.KEY))
     }

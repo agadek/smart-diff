@@ -16,7 +16,7 @@ Status: implemented, 2026-11-05
 - **R6** Other diff windows keep their own choice.
 - **R7** The outline panel's header has a Hide button with the platform's Hide icon that turns the outline toggle off for this diff window, as R2 to R6.
 - **R8** The outline panel's header has a Minimise button that replaces the panel with a thin strip at the right edge of the diff.
-- **R9** The strip shows the outline's [summary line](../../GLOSSARY.md#summary-line) as its tooltip and accessible name, and says that the outline is minimised before a result exists.
+- **R9** The strip shows the outline's [summary line](../../GLOSSARY.md#summary-line), or the fallback title and reason, as its tooltip and accessible name, and says that the outline is minimised before a result exists.
 - **R10** Clicking the strip restores the panel at its previous width.
 - **R11** While the outline is minimised it stays computed, so restoring it does not compare again.
 - **R12** The outline toggle has a default keyboard shortcut that does not clash with the platform's diff shortcuts, and Keymap lists it.

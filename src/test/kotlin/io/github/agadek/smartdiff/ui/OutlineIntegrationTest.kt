@@ -51,6 +51,9 @@ import io.github.agadek.smartdiff.engine.lines.LineEngine
 import io.github.agadek.smartdiff.engine.lines.LineEngineFactory
 import io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory
 import io.github.agadek.smartdiff.engine.registry.EngineDefaults
+import java.awt.event.ActionEvent
+import java.awt.event.FocusEvent
+import java.awt.event.KeyEvent
 import javax.swing.KeyStroke
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.TreePath
@@ -294,6 +297,68 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertEquals("1 changed · 1 added", outline.panel.summary.text)
     }
 
+    fun `test outline 02 R9 minimising before a fallback result arrives names the fallback`() {
+        // outline/02-outline-toggle R9
+        val engine = DelayedFallbackEngine()
+        ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(engine)), testRootDisposable)
+        val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+        val outline = shown.outline
+        assertEquals(OutlineState.Loading, outline.state)
+
+        outline.panel.minimiseAction.actionPerformed(TestActionEvent.createTestEvent(outline.panel.minimiseAction))
+        assertTrue(outline.isMinimised)
+        assertTrue(outline.strip.toolTipText, outline.strip.toolTipText.contains("Comparing"))
+
+        engine.finish()
+        awaitResult(outline) { it.result.status == Status.FAILED }
+
+        assertTrue(
+            "the strip names the fallback: ${outline.strip.toolTipText}",
+            outline.strip.toolTipText.contains("Analysis failed: analysis failed after a delay"),
+        )
+        assertFalse(outline.strip.toolTipText, outline.strip.toolTipText.contains("No structural changes"))
+    }
+
+    fun `test outline 02 R9 minimising after a fallback result names the fallback`() {
+        // outline/02-outline-toggle R9
+        val engine = ResultEngine()
+        maskEngines(engine)
+        for ((status, reason, expected) in listOf(
+            Triple(Status.UNSUPPORTED, "not a source file", "Not supported: not a source file"),
+            Triple(Status.TOO_LARGE, "file has 100 characters", "Too large to analyze: file has 100 characters"),
+            Triple(Status.FAILED, "could not read the file", "Analysis failed: could not read the file"),
+        )) {
+            engine.status = status
+            engine.reason = reason
+            val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+
+            outline.panel.minimiseAction.actionPerformed(TestActionEvent.createTestEvent(outline.panel.minimiseAction))
+
+            assertTrue("$status: ${outline.strip.toolTipText}", outline.strip.toolTipText.contains(expected))
+            assertFalse("$status: ${outline.strip.toolTipText}", outline.strip.toolTipText.contains("No structural changes"))
+        }
+    }
+
+    fun `test outline 02 R10 Enter restores the strip and focus is visible`() {
+        // outline/02-outline-toggle R10
+        val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+        val outline = shown.awaitResult()
+        outline.panel.minimiseAction.actionPerformed(TestActionEvent.createTestEvent(outline.panel.minimiseAction))
+        val button = outline.strip.restoreButton
+
+        val idle = button.border
+        button.focusListeners.forEach { it.focusGained(FocusEvent(button, FocusEvent.FOCUS_GAINED)) }
+        assertNotSame("focus shows a visible border for Tab", idle, button.border)
+
+        val actionKey = button.inputMap.get(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0))
+        assertNotNull("Enter is bound to the strip", actionKey)
+        requireNotNull(button.actionMap.get(actionKey))
+            .actionPerformed(ActionEvent(button, ActionEvent.ACTION_PERFORMED, actionKey.toString()))
+
+        assertFalse(outline.isMinimised)
+        assertTrue(UIUtil.isAncestor(shown.viewer.component, outline.panel))
+    }
+
     fun `test outline 02 R10 clicking the strip restores the panel at its previous width`() {
         // outline/02-outline-toggle R10
         val key = "smartdiff.outline.proportion"
@@ -364,6 +429,7 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
             val another = open(history(JAVA_OLD, JAVA_NEW, "Other.java"))
             another.awaitResult()
             assertTrue("a new diff window starts minimised", another.outline.isMinimised)
+            assertEquals("a new diff window keeps the width", 0.6f, another.outline.splitter.proportion, 0.01f)
         } finally {
             settings.outlineMinimised = false
             if (saved == null) properties.unsetValue(key) else properties.setValue(key, saved)
@@ -722,6 +788,30 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
 
         override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult =
             error("the outline must not call an engine for a language it does not support")
+    }
+
+    /** Waits until [finish] is called, then reports a failed analysis, so a fallback arrives after the user minimises. */
+    private class DelayedFallbackEngine : ComparisonEngine {
+        override val id = EngineId("smartdiff.test.delayedFallback")
+        override val displayName = "Delayed fallback (test)"
+        override val version = "1"
+
+        @Volatile
+        private var finished = false
+
+        fun finish() {
+            finished = true
+        }
+
+        override fun supports(languageId: String) = true
+
+        override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult {
+            while (!finished) {
+                cancellation.checkCanceled()
+                Thread.sleep(5)
+            }
+            return ComparisonResult(id, version, Status.FAILED, fallbackReason = "analysis failed after a delay")
+        }
     }
 
     /** Never finishes; it checks for cancellation until it is canceled. */
