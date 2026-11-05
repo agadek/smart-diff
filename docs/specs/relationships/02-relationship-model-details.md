@@ -104,7 +104,7 @@ The line engine returns an empty list and passes every check (R22).
 
 ### Engine version
 
-`DeclarationEngine.VERSION` goes from 6 to 7, because the result now carries relationships. When the Scala provider is loaded, `version` also adds the Scala plugin's version, for example `7 (251.26927.53; Scala 2025.1.32)`, because its parser can change a result without a platform update (R24). The benchmark and validation reports already record `version`. The Changes tree cache (`ChangesSummaryService`) lives for one IDE session and keys on the engine id, not the engine version (the key also has each file's content version), so a Scala plugin change that can alter relationships needs an IDE restart before cached summaries are trusted; this step does not clear the cache on plugin load or unload.
+`DeclarationEngine.VERSION` goes from 6 to 7, because the result now carries relationships. When the Scala provider is loaded, `version` also adds the Scala plugin's version, for example `8 (251.26927.53; Scala 2025.1.32)`, because its parser can change a result without a platform update (R24). `scalaPluginVersion()` reads every `META-INF/plugin.xml` resource on the Scala language's classloader and keeps the version from the descriptor whose `<id>` is `org.intellij.scala`; one resource is not enough, because in a test every plugin shares one classloader and the first descriptor belongs to another plugin. When no descriptor gives a usable `<version>` for the Scala plugin, whether it is missing, another plugin's, read fails or has no `<version>`, the version reads `Scala unknown` and the lookup logs a debug message with the reason. The benchmark and validation reports already record `version`. The Changes tree cache (`ChangesSummaryService`) lives for one IDE session and keys on the engine id, not the engine version (the key also has each file's content version), so a Scala plugin change that can alter relationships needs an IDE restart before cached summaries are trusted; this step does not clear the cache on plugin load or unload.
 
 ### Failure behaviour
 
@@ -154,7 +154,7 @@ The first run must pass with no new wrong pair. The second must pass with no low
 | R16–R20, R23 | New checks in `ComparisonEngineContract`, run by `ComparisonEngineContractTest` and `LineEngineContractTest`; one negative test per check with a hand-built bad result |
 | R21 | A partial-result fixture with a parse error, and the fallback statuses |
 | R22 | `LineEngineContractTest` passes with an empty list |
-| R24 | An engine version test with and without the Scala plugin |
+| R24 | `DeclarationEngineTest`: the descriptor parser over a sample Scala `plugin.xml`, a descriptor with another id and one without a version; an engine version test with and without the Scala plugin, where the live version must equal the plugin manager's Scala plugin version and must not read `unknown`; a sandbox check of the live version, recorded in [VALIDATION.md](../../VALIDATION.md) |
 | R25–R27 | `DeclarationAnalysisTest`: a rename, a move, a kind change, a renamed and moved method, a kind change with an order change, a renamed class with a constructor, and an extraction with two sources |
 | R28 | `OutlineModelTest`: a high and a medium rename show the same row |
 | R29 | `DeclarationMatcherTest`: a rule M4 ambiguity has candidates and no relationship |
