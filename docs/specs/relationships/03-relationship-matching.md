@@ -11,7 +11,7 @@ Status: implemented, 2026-11-04
 - **R1** The matcher keeps rules M1, M2, M4, M4b and the unique-key part of M3 as the first source of [candidates](../../GLOSSARY.md#candidate).
 - **R2** A rename candidate is scored by content, name, parameter types, nearest matched siblings and order.
 - **R3** Source position adds to a score but never pairs two declarations on its own.
-- **R4** Pairs are chosen over the whole candidate graph of the file at once, so one pair never takes a better option from another.
+- **R4** Pairs are chosen over the whole candidate graph of the file at once, so one pair never takes a better option from another, within the 20 000-node search cap; a group at the cap uses the best feasible assignment found.
 - **R5** A pair is taken only when its score reaches the pairing floor and beats every rival by a margin, unless the names clearly decide between close options.
 - **R6** When no rename option clearly wins, the declarations stay [added](../../GLOSSARY.md#added) and [removed](../../GLOSSARY.md#removed), and each tied option is a low-[confidence](../../GLOSSARY.md#confidence) [relationship](../../GLOSSARY.md#relationship).
 - **R7** Declarations with the same body in one container are never paired by content alone.

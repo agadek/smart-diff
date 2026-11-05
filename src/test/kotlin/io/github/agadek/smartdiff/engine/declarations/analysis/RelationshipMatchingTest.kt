@@ -147,7 +147,22 @@ class RelationshipMatchingTest {
 
         assertEquals(setOf(RelationshipKind.RENAME, RelationshipKind.MOVE), relationship.kinds)
         val score = relationship.evidence.filterIsInstance<Evidence.Score>().single().value
-        assertTrue("the original fixture pairs again at $score", score >= 0.7)
+        assertTrue("the original fixture scores just above the floor: $score (expected 0.7025)", score >= 0.7)
+        assertTrue("the margin above the floor is small", score < 0.71)
+    }
+
+    @Test
+    fun `B1 a group at the search cap keeps a feasible deterministic result`() {
+        // relationships/03-relationship-matching B1 and R4: the cap returns the best feasible assignment found.
+        val scores = arrayOf(
+            doubleArrayOf(0.95, 0.80, 0.90, 0.65),
+            doubleArrayOf(0.75, 0.80, 0.80, 0.95),
+            doubleArrayOf(0.00, 0.50, 0.60, 0.90),
+        )
+        val first = GlobalAssignment.solve(scores, 0.5, null, Cancellation.NONE, maxNodes = 1)
+        val second = GlobalAssignment.solve(scores, 0.5, null, Cancellation.NONE, maxNodes = 1)
+        assertEquals("the capped result is deterministic", first, second)
+        assertTrue("the capped result is feasible: $first", feasibleAssignment(scores, first))
     }
 
     @Test
@@ -374,6 +389,21 @@ class RelationshipMatchingTest {
      * An independent exhaustive reference for the 3 by 4 B1 fixtures: every row may be unpaired or take one free allowed
      * column, and an assignment counts only when every chosen edge passes the margin rule.
      */
+    private fun feasibleAssignment(scores: Array<DoubleArray>, pairs: List<Pair<Int, Int>>): Boolean {
+        val olds = scores.size
+        val news = scores[0].size
+        val pairedOld = pairs.map { it.first }.toSet()
+        val pairedNew = pairs.map { it.second }.toSet()
+        if (pairedOld.size != pairs.size || pairedNew.size != pairs.size) return false
+        for ((i, j) in pairs) {
+            if (scores[i][j] < 0.5) return false
+            val close = scores[i][j] - ASSIGNMENT_MARGIN
+            if ((0 until olds).any { it != i && it !in pairedOld && scores[it][j] > close }) return false
+            if ((0 until news).any { it != j && it !in pairedNew && scores[i][it] > close }) return false
+        }
+        return true
+    }
+
     private fun bruteForceMaximum(scores: Array<DoubleArray>, floor: Double): Double {
         val olds = scores.size
         val news = scores[0].size

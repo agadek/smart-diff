@@ -2,6 +2,7 @@ package io.github.agadek.smartdiff.relationships
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import io.github.agadek.smartdiff.engine.api.ConfidencePolicy
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import java.nio.file.Files
@@ -59,9 +60,8 @@ class RelationshipTuningTest : BasePlatformTestCase() {
             }
             val tuned = RelationshipBenchmark.tunedHigh(rows)
             println("RELATIONSHIPS TUNING chosen=${tuned ?: "none, keep ${ConfidencePolicy.DEFAULT.high}"}")
-            if (tuned != null) {
-                assertEquals("the checked-in high threshold is the tuned value", ConfidencePolicy.DEFAULT.high, tuned, 1e-9)
-            }
+            assertNotNull("the tuning split must choose a value", tuned)
+            assertEquals("the checked-in high threshold is the tuned value", ConfidencePolicy.DEFAULT.high, tuned!!, 1e-9)
         } finally {
             output.deleteRecursively()
         }
@@ -70,8 +70,15 @@ class RelationshipTuningTest : BasePlatformTestCase() {
     fun `test R20 a failed held-out check leaves the high threshold unchanged`() {
         // relationships/03-relationship-matching R20: a held-out failure is a release-gate failure, not a re-tune.
         val fixed = ConfidencePolicy.DEFAULT.high
-        val heldOutFailure = listOf(RelationshipBenchmark.TuningRow(0.83, high = 10, correctHigh = 8, correctPairs = 10))
-        assertEquals("the failed table has no value that meets both rules", null, RelationshipBenchmark.tunedHigh(heldOutFailure))
+        val precisionFailure = listOf(RelationshipBenchmark.TuningRow(0.82, high = 10, correctHigh = 8, correctPairs = 10))
+        val coverageFailure = listOf(RelationshipBenchmark.TuningRow(0.82, high = 10, correctHigh = 10, correctPairs = 20))
+        assertEquals("precision failure has no valid value", null, RelationshipBenchmark.tunedHigh(precisionFailure))
+        assertEquals("coverage failure has no valid value", null, RelationshipBenchmark.tunedHigh(coverageFailure))
+        assertEquals(
+            "a valid table still chooses a value",
+            0.82,
+            RelationshipBenchmark.tunedHigh(listOf(RelationshipBenchmark.TuningRow(0.82, high = 10, correctHigh = 10, correctPairs = 10))),
+        )
         assertEquals("a failed held-out check does not change the tuned value", fixed, ConfidencePolicy.DEFAULT.high, 0.0)
     }
 

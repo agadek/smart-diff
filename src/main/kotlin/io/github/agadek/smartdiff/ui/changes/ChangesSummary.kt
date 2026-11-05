@@ -15,9 +15,7 @@ import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vcs.changes.ChangesViewModifier
 import com.intellij.openapi.vcs.changes.ChangesViewNodeAction
 import com.intellij.openapi.vcs.changes.ContentRevision
-import com.intellij.openapi.vcs.changes.CurrentContentRevision
-import com.intellij.openapi.vcs.changes.actions.diff.ShowDiffAction
-import com.intellij.openapi.vcs.changes.actions.diff.ShowDiffContext
+import com.intellij.openapi.vcs.history.VcsRevisionNumber
 import com.intellij.openapi.vcs.changes.ui.ChangesBrowserChangeNode
 import com.intellij.openapi.vcs.changes.ui.ChangesBrowserNode
 import com.intellij.openapi.vcs.changes.ui.ChangesBrowserNodeRenderer
@@ -150,9 +148,7 @@ class DeclarationNodeAction(private val project: Project) : ChangesViewNodeActio
         val change = declaration.fileNode?.userObject ?: return false
         val root = declaration.root as? ChangesBrowserNode<*> ?: return false
         val changes = VcsTreeModelData.allUnder(root).userObjects(Change::class.java).distinct()
-        val context = ShowDiffContext()
-        context.putChangeContext(change, OutlinePath.KEY, declaration.path)
-        ShowDiffAction.showDiffForChange(project, changes, changes.indexOf(change).coerceAtLeast(0), context)
+        ChangesDiff.show(project, changes, changes.indexOf(change).coerceAtLeast(0), OutlinePath.KEY, declaration.path)
         return true
     }
 }
@@ -249,8 +245,9 @@ class ChangesSummaryService(private val project: Project) {
 
     /** A local file's version is its unsaved or saved state, so a summary is recomputed after every edit. */
     private fun version(revision: ContentRevision): String {
-        if (revision !is CurrentContentRevision) return revision.revisionNumber.asString()
-        val file = revision.virtualFile ?: return "local"
+        // The current content of a local file has the null revision number; other revisions name their commit.
+        if (revision.revisionNumber !== VcsRevisionNumber.NULL) return revision.revisionNumber.asString()
+        val file = revision.file.virtualFile ?: return "local"
         val stamp = FileDocumentManager.getInstance().getCachedDocument(file)?.modificationStamp ?: file.modificationStamp
         return "local:$stamp"
     }

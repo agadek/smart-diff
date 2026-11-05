@@ -24,8 +24,8 @@ internal const val ASSIGNMENT_TIEBREAK_MARGIN = 0.2
  * The unrestricted maximum-weight matching is the upper bound. When it passes every chosen edge, it is the answer.
  * Otherwise the search branches over the rows, in deterministic order, and keeps the best assignment whose chosen edges
  * all pass. It stops after [MAX_SEARCH_NODES] nodes and returns the best feasible assignment found; the empty assignment
- * is always feasible, and the greedy-style repair supplies a non-empty feasible start. This cap is the only case where
- * the result is not proved largest, and it is stated in the details.
+ * is always feasible, and the greedy-style repair supplies a feasible start, which can be the empty assignment. This cap
+ * is the only case where the result is not proved largest, and it is stated in the details.
  */
 internal object GlobalAssignment {
 
@@ -42,6 +42,8 @@ internal object GlobalAssignment {
         floor: Double,
         tiebreak: Array<DoubleArray>?,
         cancellation: Cancellation,
+        /** The search cap; tests pass a small value to exercise the cap without a long search. */
+        maxNodes: Int = MAX_SEARCH_NODES,
     ): List<Pair<Int, Int>> {
         val olds = scores.size
         val news = if (olds == 0) 0 else scores[0].size
@@ -79,7 +81,7 @@ internal object GlobalAssignment {
             cancellation.checkCanceled()
             if (stopped) return
             nodes++
-            if (nodes > MAX_SEARCH_NODES) {
+            if (nodes > maxNodes) {
                 stopped = true
                 return
             }
