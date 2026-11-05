@@ -14,14 +14,18 @@ import com.intellij.diff.tools.simple.SimpleDiffChange
 import com.intellij.diff.tools.util.DiffDataKeys
 import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
 import com.intellij.diff.util.Side
+import com.intellij.icons.AllIcons
+import com.intellij.ide.util.PropertiesComponent
 import com.intellij.lang.Language
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.IdeActions
+import com.intellij.openapi.actionSystem.KeyboardShortcut
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.ExtensionTestUtil
@@ -47,6 +51,7 @@ import io.github.agadek.smartdiff.engine.lines.LineEngine
 import io.github.agadek.smartdiff.engine.lines.LineEngineFactory
 import io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory
 import io.github.agadek.smartdiff.engine.registry.EngineDefaults
+import javax.swing.KeyStroke
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.TreePath
 
@@ -242,6 +247,127 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         action.setSelected(TestActionEvent.createTestEvent(action, SimpleDataContext.getSimpleContext(DiffDataKeys.DIFF_VIEWER, next.viewer)), true)
         assertTrue(UIUtil.isAncestor(next.viewer.component, next.outline.panel))
         next.awaitResult()
+    }
+
+    fun `test outline 02 R7 the header hide button turns the outline off for this diff window`() {
+        // outline/02-outline-toggle R7
+        val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+        val outline = shown.awaitResult()
+        assertEquals(AllIcons.General.HideToolWindow, outline.panel.hideAction.templatePresentation.icon)
+
+        outline.panel.hideAction.actionPerformed(TestActionEvent.createTestEvent(outline.panel.hideAction))
+
+        assertFalse(outline.isOutlineVisible)
+        assertEquals(OutlineState.Hidden, outline.state)
+        assertFalse(UIUtil.isAncestor(shown.viewer.component, outline.panel))
+        assertFalse(UIUtil.isAncestor(shown.viewer.component, outline.strip))
+
+        // The window keeps the choice for its next file; another window keeps its own.
+        val next = shown.show(history(KOTLIN_OLD, KOTLIN_NEW, "Greeter.kt"))
+        assertFalse(next.outline.isOutlineVisible)
+        assertTrue(open(history(JAVA_OLD, JAVA_NEW, "Other.java")).outline.isOutlineVisible)
+    }
+
+    fun `test outline 02 R8 R9 R11 the minimise button shows the summary strip and restores the same result`() {
+        // outline/02-outline-toggle R8, R9, R11
+        val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+        val outline = shown.awaitResult()
+
+        outline.panel.minimiseAction.actionPerformed(TestActionEvent.createTestEvent(outline.panel.minimiseAction))
+
+        assertTrue(outline.isMinimised)
+        assertTrue(outline.isOutlineVisible)
+        assertTrue(UIUtil.isAncestor(shown.viewer.component, outline.strip))
+        assertFalse(UIUtil.isAncestor(shown.viewer.component, outline.panel))
+        assertTrue(outline.strip.toolTipText, outline.strip.toolTipText.contains("1 changed · 1 added"))
+        assertTrue(
+            outline.strip.restoreButton.accessibleContext.accessibleName.orEmpty().contains("1 changed · 1 added"),
+        )
+
+        val shownState = outline.state
+        outline.strip.restoreButton.doClick()
+
+        assertFalse(outline.isMinimised)
+        assertTrue(UIUtil.isAncestor(shown.viewer.component, outline.panel))
+        assertFalse(UIUtil.isAncestor(shown.viewer.component, outline.strip))
+        assertSame("restoring reuses the computed result", shownState, outline.state)
+        assertEquals("1 changed · 1 added", outline.panel.summary.text)
+    }
+
+    fun `test outline 02 R10 clicking the strip restores the panel at its previous width`() {
+        // outline/02-outline-toggle R10
+        val key = "smartdiff.outline.proportion"
+        val properties = PropertiesComponent.getInstance()
+        val saved = properties.getValue(key)
+        try {
+            val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+            outline.splitter.proportion = 0.6f
+            val width = outline.splitter.proportion
+
+            outline.panel.minimiseAction.actionPerformed(TestActionEvent.createTestEvent(outline.panel.minimiseAction))
+            outline.strip.restoreButton.doClick()
+
+            assertEquals(width, outline.splitter.proportion, 0.001f)
+        } finally {
+            if (saved == null) properties.unsetValue(key) else properties.setValue(key, saved)
+        }
+    }
+
+    fun `test outline 02 R12 the toggle has a default shortcut that does not clash and Keymap lists it`() {
+        // outline/02-outline-toggle R12
+        val action = ActionManager.getInstance().getAction("SmartDiff.ToggleOutline")!!
+        val actionId = ActionManager.getInstance().getId(action) ?: "SmartDiff.ToggleOutline"
+        val expected = listOf(KeyStroke.getKeyStroke("control alt shift O"), KeyStroke.getKeyStroke("meta alt shift O"))
+        val keymap = KeymapManager.getInstance().activeKeymap
+        val shortcuts = keymap.getShortcuts(actionId).filterIsInstance<KeyboardShortcut>()
+
+        assertTrue(
+            "the toggle's default shortcut is missing from ${keymap.name}: $shortcuts",
+            shortcuts.any { it.firstKeyStroke in expected },
+        )
+        for (shortcut in shortcuts) {
+            assertEquals(
+                "no other action is bound to ${shortcut.firstKeyStroke} in ${keymap.name}",
+                listOf(actionId),
+                keymap.getActionIds(shortcut.firstKeyStroke).toList(),
+            )
+        }
+    }
+
+    fun `test outline 02 R13 the toggle is placed first in the diff toolbar`() {
+        // outline/02-outline-toggle R13
+        val action = ActionManager.getInstance().getAction("SmartDiff.ToggleOutline") as ToggleOutlineAction
+        val toolbar = ActionManager.getInstance().getAction(IdeActions.DIFF_VIEWER_TOOLBAR) as DefaultActionGroup
+
+        val order = toolbar.childActionsOrStubs.map { ActionManager.getInstance().getId(it) }
+        assertEquals("SmartDiff.ToggleOutline", ActionManager.getInstance().getId(action))
+        assertEquals("the first toolbar action stays visible in a narrow diff; order is $order", "SmartDiff.ToggleOutline", order.first())
+    }
+
+    fun `test outline 02 R14 the minimised state and width are remembered for the next diff`() {
+        // outline/02-outline-toggle R14
+        val key = "smartdiff.outline.proportion"
+        val properties = PropertiesComponent.getInstance()
+        val saved = properties.getValue(key)
+        try {
+            val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+            val outline = shown.awaitResult()
+            outline.splitter.proportion = 0.6f
+            outline.panel.minimiseAction.actionPerformed(TestActionEvent.createTestEvent(outline.panel.minimiseAction))
+
+            val next = shown.show(history(KOTLIN_OLD, KOTLIN_NEW, "Greeter.kt"))
+            next.awaitResult()
+            assertTrue("the next file in the window starts minimised", next.outline.isMinimised)
+            assertTrue(UIUtil.isAncestor(next.viewer.component, next.outline.strip))
+            assertEquals("the next diff keeps the width", 0.6f, next.outline.splitter.proportion, 0.01f)
+
+            val another = open(history(JAVA_OLD, JAVA_NEW, "Other.java"))
+            another.awaitResult()
+            assertTrue("a new diff window starts minimised", another.outline.isMinimised)
+        } finally {
+            settings.outlineMinimised = false
+            if (saved == null) properties.unsetValue(key) else properties.setValue(key, saved)
+        }
     }
 
     fun `test the outline starts hidden when the setting is off`() {

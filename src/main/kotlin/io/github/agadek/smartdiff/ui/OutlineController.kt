@@ -21,7 +21,9 @@ import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.api.compareSafely
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
 import io.github.agadek.smartdiff.engine.registry.EngineSelection
+import java.awt.BorderLayout
 import java.util.concurrent.CancellationException
+import javax.swing.JPanel
 import javax.swing.Timer
 
 /** What the outline of one diff shows. */
@@ -48,7 +50,7 @@ class OutlineController internal constructor(
     private val project: Project,
     val viewer: TwosideTextDiffViewer,
     private val context: DiffContext,
-    private val splitter: OnePixelSplitter,
+    internal val splitter: OnePixelSplitter,
     private val languageId: String,
     private val fileName: String?,
     private val oldDocument: Document,
@@ -59,6 +61,7 @@ class OutlineController internal constructor(
 
     val panel = OutlinePanel(this)
     internal val navigator = OutlineNavigator(viewer)
+    internal val strip = OutlineStrip { setMinimised(false) }
 
     var state: OutlineState = OutlineState.Hidden
         private set
@@ -68,6 +71,13 @@ class OutlineController internal constructor(
      * shown for a diff opened to show a row of it.
      */
     override var isOutlineVisible: Boolean = reveal != null || (context.getUserData(OutlineVisibility.VISIBLE) ?: SmartDiffSettings.getInstance().showOutline)
+        private set
+
+    /**
+     * Whether the visible outline is its strip (outline/02 R8 to R11). Starts from the last choice; a diff opened to show
+     * a row of the outline opens the full panel, so the row is visible.
+     */
+    var isMinimised: Boolean = reveal == null && SmartDiffSettings.getInstance().outlineMinimised
         private set
 
     private var running: Job? = null
@@ -85,6 +95,7 @@ class OutlineController internal constructor(
         oldDocument.addDocumentListener(listener, this)
         if (newDocument !== oldDocument) newDocument.addDocumentListener(listener, this)
         applyVisibility()
+        if (isOutlineVisible) refresh()
     }
 
     /** Shows or hides the outline in this diff window only; the editors stay as they are (§10). */
@@ -93,21 +104,60 @@ class OutlineController internal constructor(
         isOutlineVisible = visible
         context.putUserData(OutlineVisibility.VISIBLE, visible)
         applyVisibility()
+        if (visible) refresh()
+    }
+
+    /**
+     * Minimises the visible outline to its strip or restores the panel, without comparing again; the result stays
+     * computed while minimised (outline/02 R8 to R11).
+     */
+    fun setMinimised(minimised: Boolean) {
+        if (disposed || !isOutlineVisible || minimised == isMinimised) return
+        isMinimised = minimised
+        SmartDiffSettings.getInstance().outlineMinimised = minimised
+        applyVisibility()
     }
 
     private fun applyVisibility() {
-        if (isOutlineVisible) {
-            splitter.secondComponent = panel
-            refresh()
-        } else {
-            cancel()
-            navigator.clear()
-            (viewer as? FilteringDiffViewer)?.hide(HiddenLines.NONE)
+        if (!isOutlineVisible) {
+            hideOutline()
+        } else if (isMinimised) {
             splitter.secondComponent = null
-            show(OutlineState.Hidden)
+            addStrip()
+            strip.show((state as? OutlineState.Shown)?.summary)
+        } else {
+            removeStrip()
+            splitter.secondComponent = panel
         }
         splitter.revalidate()
         splitter.repaint()
+        viewer.component.revalidate()
+        viewer.component.repaint()
+    }
+
+    private fun hideOutline() {
+        cancel()
+        navigator.clear()
+        (viewer as? FilteringDiffViewer)?.hide(HiddenLines.NONE)
+        removeStrip()
+        splitter.secondComponent = null
+        show(OutlineState.Hidden)
+    }
+
+    /**
+     * Adds the strip to the viewer's right edge while the splitter keeps its proportion, so restoring the panel returns
+     * it to the width the user last chose (outline/02 R9, R10, R14).
+     */
+    private fun addStrip() {
+        val container = viewer.component as? JPanel ?: return
+        if (strip.parent !== container) container.add(strip, BorderLayout.EAST)
+    }
+
+    private fun removeStrip() {
+        val container = strip.parent as? JPanel ?: return
+        container.remove(strip)
+        container.revalidate()
+        container.repaint()
     }
 
     /** Stores [engineId] as the language's default, as the dropdown does (§4), and compares again with it. */
@@ -212,12 +262,14 @@ class OutlineController internal constructor(
         if (state !is OutlineState.Shown) shownRequest = null
         this.state = state
         panel.show(state)
+        strip.show((state as? OutlineState.Shown)?.summary)
     }
 
     override fun dispose() {
         disposed = true
         cancel()
         navigator.clear()
+        removeStrip()
         state = OutlineState.Hidden
         panel.show(OutlineState.Hidden)
         viewer.component.putClientProperty(CONTROLLER, null)

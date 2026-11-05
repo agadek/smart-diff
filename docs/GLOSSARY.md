@@ -285,8 +285,13 @@ _Avoid_: hide filter, outline filter
 
 ### Outline toggle
 
-The Structural Outline toolbar button that shows or hides the structural outline in one diff window.
+The Structural Outline toolbar button or the outline's Hide button that shows or hides the structural outline in one diff window.
 _Avoid_: outline switch, show outline button
+
+### Minimised outline
+
+The structural outline reduced to a thin strip at the right edge of a diff; it keeps its result and comes back when the strip is clicked.
+_Avoid_: collapsed outline, hidden outline
 
 ### Engine dropdown
 
