@@ -213,7 +213,7 @@ _Avoid_: probability, certainty, score
 
 ### Evidence
 
-The facts a relationship rests on, such as the old and new names, the shared code or the containers, with the ranges they compare.
+The facts a relationship rests on, such as the old and new names, the shared code, the containers, the positions or the engine's score; only content evidence carries source ranges.
 _Avoid_: reason, proof
 
 ### Usage

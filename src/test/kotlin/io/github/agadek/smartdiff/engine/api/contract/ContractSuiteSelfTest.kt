@@ -198,6 +198,22 @@ class ContractSuiteSelfTest {
     }
 
     @Test
+    fun `the relationship checks reject a content range outside the text R17`() {
+        // relationships/02-relationship-model R17, R23
+        val bad = result(
+            ChangeNode(Subject.Region("all"), TextRange(0, 3), TextRange(0, 3), Presence.MATCHED, content = Content.CHANGED),
+        ).copy(
+            relationships = listOf(
+                rename(TextRange(0, 3), "all", TextRange(0, 3), "all").copy(
+                    evidence = listOf(Evidence.Content(1, 2, TextRange(0, 4), TextRange(0, 3)), Evidence.Score(0.5)),
+                ),
+            ),
+        )
+
+        assertThrows(AssertionError::class.java) { RelationshipChecks.rangesInsideText(CASE, bad) }
+    }
+
+    @Test
     fun `the relationship checks reject a relationship listed twice R18`() {
         // relationships/02-relationship-model R18, R23
         val duplicate = rename(TextRange(0, 3), "a", TextRange(0, 3), "b")
