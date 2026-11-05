@@ -126,7 +126,7 @@ The two runs go through `compareSafely` in parallel, one on the calling thread a
 
 ### 6.1 Three-sided diffs
 
-`OutlineDiffExtension` today returns early unless the viewer is a `TwosideTextDiffViewer` with two document contents. It gains a second branch for a `ThreesideTextDiffViewer` with three document contents of one language: the middle content is the base, the left and right contents are the sides. The viewer's component is a `DiffPanelBase` as well (ADR 0005), so the same splitter works. Navigation scrolls all three editors and pauses synchronized scrolling, as for two sides.
+`OutlineDiffExtension` today returns early unless the viewer is a `TwosideTextDiffViewer` with two document contents. It gains a second branch for a `ThreesideTextDiffViewer` with three document contents of one language: the middle content is the base, the left and right contents are the sides. The viewer's component is a `DiffPanelBase` as well (ADR 0005), so the same splitter works. Navigation scrolls all three editors. While the selected row's ranges are in view, synchronized scrolling stays paused and the outline keeps the three frames aligned by the same piecewise mapping as the two-sided outline ([technical specification §10](TECHNICAL-SPECIFICATION.md#10-structural-outline)); it releases the pause when a frame leaves view, the selection changes or clears, a document changes or the viewer is disposed.
 
 ### 6.2 The merge window
 
