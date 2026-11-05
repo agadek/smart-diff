@@ -81,6 +81,7 @@ notes: "A second method with the same body exists on purpose."
 - Confidence is optional in a label and is recorded for later; it is not compared until the engine reports a confidence value.
 - The label set is closed: every relationship the engine reports that is not listed is wrong, unless the case lists it under `ambiguous`.
 - `ambiguous` lists the declarations for which no pair is correct; any pair reported for them is a forced pair.
+- A rename relationship may carry `usages`: a list of `old` and `new` range pairs, one per grouped usage ([relationships/04](04-rename-grouping.md) R18, R44). The list is added with relationships/04; no label has it today. `usages: []` means the label was reviewed and the rename has no usages; an absent list means the label was not reviewed for usages. A reported reference on a rename without `usages` is listed as `usage-unlabelled` and is not scored, so an incomplete corpus is visible. A reported reference that does not match a listed pair is a wrong usage and fails the `no-new-wrong-pairs` gate; a listed usage that is not reported is a missed usage and is listed, not gated by default.
 
 ### Real commits
 
@@ -138,7 +139,7 @@ A draft is a starting point only. The labeller checks every relationship and cla
 
 ### Case categories
 
-Every category needs at least 3 cases per language where the language has the construct: method rename, class rename, field rename, rename with body change, rename with signature change, move in the file, move with rename, move with body change, kind change, signature change, overloads with the same body, duplicate bodies in one container, extraction, extraction from several sources, extraction to several targets, inlining, statement reorder, formatting-only, comment-only, string literal change, parse error on one side, malformed on both sides, empty and identical files, large file, ambiguous rename group.
+Every category needs at least 3 cases per language where the language has the construct: method rename, class rename, field rename, rename with body change, rename with signature change, usage grouping (at least 4 cases, as [relationships/04](04-rename-grouping.md) R18 asks), move in the file, move with rename, move with body change, kind change, signature change, overloads with the same body, duplicate bodies in one container, extraction, extraction from several sources, extraction to several targets, inlining, statement reorder, formatting-only, comment-only, string literal change, parse error on one side, malformed on both sides, empty and identical files, large file, ambiguous rename group.
 
 Expected classifications follow the current model: a comment-only change is `CHANGED`; malformed input on both sides is `FAILED` only when no declaration was found, otherwise `PARTIAL`.
 
@@ -149,6 +150,7 @@ Expected classifications follow the current model: a comment-only change is `CHA
 - A pair reported for a declaration listed under `ambiguous` is counted as forced only (R14, R39). It is not a false positive, so it does not lower precision, and the `no-new-wrong-pairs` gate still fails on it.
 - Every count and metric is grouped by corpus (`java`, `kotlin`, `scala2`, `scala3`), never by language alone, so Scala 2 and Scala 3 get separate rows (R33).
 - Extraction and inlining links are counted per link, so a target with three sources counts three.
+- Usages are counted per reference range pair, separately from relationship pairs: a reported reference that matches a labelled usage is a true positive, one with no matching pair is a wrong usage, and a labelled usage with no reference is a missed usage. A rename with no `usages` list has its reported references counted as `usage-unlabelled`, not scored.
 - Results are micro-averaged over links per language, and also given per category, with the category rows in `report.md` and `report.json`.
 - A precision or recall with nothing to divide is shown as `n/a`, not as `1.000`, in `report.md`, `summary.tsv` and the baseline table; `report.json` keeps the number for the gate and adds the reported-pair count beside it.
 - Presence and content accuracy, and the accuracy of `moved`, signature change and kind change.
@@ -166,7 +168,7 @@ Expected classifications follow the current model: a comment-only change is `CHA
 | `precision` | precision falls below the baseline for any kind and language |
 | `tolerance` | precision or recall falls more than `-Psmartdiff.relationships.tolerance=<points>` below the baseline |
 
-In every mode a nothing-hidden violation, a file over the 5 s limit or an exception fails the run. Inlining's recall starts at zero, so its gate applies from [relationships/05](05-inlining-detection.md).
+In every mode a nothing-hidden violation, a file over the 5 s limit or an exception fails the run. Inlining's recall starts at zero, so its gate applies from [relationships/05](05-inlining-detection.md). A wrongly grouped usage is a wrong pair for `no-new-wrong-pairs` (R44); the baseline has no usages, so any wrong usage is new. The usage precision and recall baseline is recorded after [relationships/04](04-rename-grouping.md), and the 2026-11-02 baseline is not replaced.
 
 - A `-Psmartdiff.relationships.baseline` path that is not a file fails the run with `baseline not found: <path>` (R40).
 - A baseline whose `report.json` has `"smoke": true` fails the run with `baseline is a smoke run: <path>` (R32); a smoke run is not the R29 baseline.
@@ -174,7 +176,7 @@ In every mode a nothing-hidden violation, a file over the 5 s limit or an except
 
 ### Report contents
 
-- `report.md` lists every wrong pair, forced pair, missed relationship and misclassified declaration, each with its case, both endpoints or both classifications, and the label's path (R18, R42). Its wrong and forced pairs are under the heading `Wrong and forced relationships`; missed relationships have their own section.
+- `report.md` lists every wrong pair, forced pair, wrong usage, missed relationship, missed usage and misclassified declaration, each with its case, both endpoints or both classifications, and the label's path (R18, R42, R44). Its wrong and forced pairs are under the heading `Wrong and forced relationships`; missed relationships and usages have their own sections.
 - `report.md` and `report.json` give the metrics per corpus, per split, per category and overall.
 - `report.json` has the engine version, IDE build, Scala plugin version, corpus revision, gate mode, smoke flag and shortfalls, the metrics per corpus, per split, per category and overall, the skipped and unlabelled files, and every list of `report.md` (R19, R20).
 - The corpus revision is a hash of the corpus list and of every case and label file it reaches, in path order, plus the commit hash of each real-commit line's clone (R43). Editing a checked-in real-commit label or moving a clone's HEAD changes it.
@@ -214,6 +216,7 @@ In every mode a nothing-hidden violation, a file over the 5 s limit or an except
 | R41 | A baseline missing one `(corpus, kind)` pair passes and lists it as new; a lower precision in one pair fails |
 | R42 | A case with a wrong classification is listed with both values; two same-identity changes cannot claim one node |
 | R43 | Editing a case label, editing a real-commit label, or moving a clone's HEAD changes the corpus revision |
+| R44 | `RelationshipBenchmarkTest`: a usage label matches a `Reference`; a reference with no matching pair fails `no-new-wrong-pairs`; an absent `usages` lists the rename as `usage-unlabelled` and does not score it |
 | Adapter (not a requirement) | A cross-container move names its old container from the old tree; a provider that throws on the second old-side parse falls back to the new-side path and the run still reports the file; two extractions that differ only by range stay two links; the signature simplification is pinned by a test |
 
 ## Open questions

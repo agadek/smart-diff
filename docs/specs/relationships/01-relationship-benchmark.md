@@ -15,7 +15,7 @@ Status: implemented, 2026-11-02
 - **R5** An endpoint in a label is named by its path, [kind](../../GLOSSARY.md#kind), name and [signature](../../GLOSSARY.md#signature), as the outline names it.
 - **R6** A range is added to an endpoint only to tell apart declarations with the same name.
 - **R7** A label can say that a case is ambiguous, and that no relationship is correct.
-- **R8** The cases cover renames, moves, kind changes, signature changes, extraction, inlining, overloads, duplicate bodies, formatting-only and comment-only changes, parse errors, empty files and large files.
+- **R8** The cases cover renames, grouped usages, moves, kind changes, signature changes, extraction, inlining, overloads, duplicate bodies, formatting-only and comment-only changes, parse errors, empty files and large files.
 - **R9** Each case category has at least 3 cases for each of Java, Kotlin, Scala 2 and Scala 3, where the language has the construct.
 - **R10** The corpus list can also name real commits, as the [corpus validation](../../VALIDATION.md) does, with at least 30 labelled commits per language.
 - **R11** The cases are split into a tuning set and a held-out set, and the report gives the held-out results separately.
@@ -51,6 +51,7 @@ Status: implemented, 2026-11-02
 - **R41** The `precision` and `tolerance` gates compare each relationship kind in each language on its own, and the report lists the kinds and languages the baseline lacks.
 - **R42** The report lists every declaration whose presence or content classification differs from its label, with both values.
 - **R43** The corpus revision changes when any case file or label changes.
+- **R44** A rename label may list the usages it groups with both ranges, and a wrongly grouped usage fails the gate as a wrong pair.
 
 ## Out of scope
 

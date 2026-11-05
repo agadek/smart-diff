@@ -8,19 +8,20 @@ Status: implemented, 2026-11-04
 
 ## Requirements
 
-- **R1** A change shows every label that applies: `added`, `removed`, `changed`, `moved`, `formatting-only`, `signature changed`, `rename candidate`, `uncertain` or `unanalyzed`.
+- **R1** A change shows every label that applies: `added`, `removed`, `changed`, `moved`, `formatting-only`, `signature changed`, `rename candidate`, `usages renamed`, `uncertain` or `unanalyzed`.
 - **R2** A signature change also carries `changed`.
 - **R3** A [kind change](../../GLOSSARY.md#kind-change) shows both kinds in the row title, such as `trait → class Shape`, and carries `signature changed`.
-- **R4** A [rename candidate](../../GLOSSARY.md#rename-candidate) shows the old name before the new one, such as `method total → sum(int)`.
+- **R4** A [rename candidate](../../GLOSSARY.md#rename-candidate) shows the old name before the new one, such as `method total → sum(int)`, and the number of grouped [usages](../../GLOSSARY.md#usage) after it, such as `method total → sum(int), 12 usages`.
 - **R5** An [extraction](../../GLOSSARY.md#extraction) stays `added` and gets the note `extracted from <source>`; its [source](../../GLOSSARY.md#extraction-source) gets `code extracted to <declaration>`.
-- **R6** The summary line counts `changed`, `extracted`, `added`, `removed`, `moved`, `formatting-only`, `rename candidate`, `uncertain` and `unanalyzed`, in that order, and leaves out a count of zero.
+- **R6** The summary line counts `changed`, `extracted`, `added`, `removed`, `moved`, `formatting-only`, `rename candidate`, `usages renamed`, `uncertain` and `unanalyzed`, in that order, and leaves out a count of zero.
 - **R7** An extraction counts as `extracted` instead of `added`.
 - **R8** A signature change and a kind change count as `changed`.
-- **R9** The summary counts every change, hidden or not, and ends with the number hidden, such as `· 2 hidden`.
+- **R9** The summary counts every change, hidden or not, and ends with the number hidden, such as `· 2 hidden`; a declaration whose only changes are grouped usages counts as `usages renamed` instead of `changed`.
 - **R10** The filter can hide `changed` (including signature changes), `added`, `removed`, `moved` and `formatting-only`.
-- **R11** `rename candidate`, `uncertain` and `unanalyzed` are never hidden.
+- **R11** `rename candidate`, `usages renamed`, `uncertain` and `unanalyzed` are never hidden.
 - **R12** A change is hidden only when every label it shows is of a hidden type.
 - **R13** Labels are text, not color alone, and each row's accessible name is its label.
+- **R14** A grouped usage is never hidden, and its declaration stays a change in the summary and the native diff.
 
 ## Out of scope
 

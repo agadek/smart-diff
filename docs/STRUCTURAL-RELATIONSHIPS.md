@@ -122,7 +122,7 @@ Content and signature changes stay `ChangeNode` attributes; they are not relatio
 | Position | old and new source order or nearest siblings |
 | Reference | a resolved symbol use and the ranges it connects |
 
-Content evidence ranges are offsets into the request texts, as for every other range in the result.
+Content and reference evidence ranges are offsets into the request texts, as for every other range in the result.
 
 ### 5.3 Combined changes
 
@@ -268,7 +268,7 @@ The engine contract gains checks:
 - `old == null` means the old side is absent, `new == null` means the new side is absent;
 - at least one endpoint exists;
 - confidence is within its declared range and high-confidence relationships satisfy the engine's documented minimum evidence;
-- every content evidence range is within bounds;
+- every content or reference evidence range is within bounds;
 - a relationship endpoint is not hidden; it names a subject that appears in the result tree, or it is an explicitly unreported navigation node;
 - one-to-many links are symmetric where required: an `EXTRACT` source and target agree on each other;
 - relationship order is deterministic;

@@ -32,6 +32,7 @@ sealed interface Evidence {
     data class Content(val shared: Int, val total: Int, val oldRange: TextRange, val newRange: TextRange) : Evidence
     data class Structure(val oldPath: String, val newPath: String, val oldKind: DeclarationKind?, val newKind: DeclarationKind?) : Evidence
     data class Position(val oldIndex: Int, val newIndex: Int) : Evidence
+    data class Reference(val symbol: Subject.Declaration, val oldRange: TextRange, val newRange: TextRange) : Evidence
     data class Score(val value: Double) : Evidence
 }
 
@@ -43,7 +44,8 @@ data class ConfidencePolicy(val high: Double = 0.82, val medium: Double = 0.7) {
 
 - Every relationship has at least one endpoint on each side, and every endpoint is a declaration (R2, R16). An inlining, from [relationships/05](05-inlining-detection.md), follows the same rule: the removed declaration on the old side, the declarations it was inlined into on the new side.
 - An endpoint's `subject` is the subject of the node on its own side: the old subject for an old endpoint, so a rename's old endpoint carries the old name and a kind change's old endpoint the old kind. The benchmark adapter rebuilt the old subject from `renamedFrom` and `kindChangedFrom`; the model stores it.
-- `Content` is the only evidence type with ranges, because it is the only one that refers to source text: `oldRange` is the extracted code's old range and `newRange` is the target declaration's range (R5). `Name`, `Structure`, `Position` and `Score` carry no ranges. Every `Content` in this step has a target range, so `newRange` is not nullable; a later content evidence with no new-side range would need a spec change.
+- `Content` is the only evidence type the engine produces with ranges, because it is the only one that refers to source text: `oldRange` is the extracted code's old range and `newRange` is the target declaration's range (R5). `Reference` is the second range type; the [reference pass](04-rename-grouping.md) adds it to a rename relationship, and its `oldRange` and `newRange` are one usage on each side. `Name`, `Structure`, `Position` and `Score` carry no ranges. Every `Content` in this step has a target range, so `newRange` is not nullable; a later content evidence with no new-side range would need a spec change.
+- `Reference.symbol` is the new-side declaration subject the usage resolves to, so it is one of the relationship's new endpoints' subjects. Reference evidence never adds an endpoint: a usage is not a declaration and has no node in the result tree, so R16 stays as it is. The reference evidence and R34 arrive with [rename grouping](04-rename-grouping.md); until that step the engine and the contract see none.
 - `RelationshipKind`, `Confidence`, `Relationship`, `RelationshipEndpoint`, `Evidence` and `ConfidencePolicy` go in `engine.api`, next to `ComparisonResult`, so every engine and the UI see the same types.
 - Content and signature changes stay `ChangeNode` attributes. They are not relationship kinds.
 - A relationship is not a presence: it never replaces `MATCHED`, `ADDED`, `REMOVED` or `UNCERTAIN`.
@@ -63,6 +65,7 @@ data class ConfidencePolicy(val high: Double = 0.82, val medium: Double = 0.7) {
 - A relationship with several kinds takes the lowest of its kinds' confidence (R26), so a renamed and reordered declaration takes the rename's confidence.
 - Overload pairs from rule M3 are same-name matches with a changed signature. They are not relationships, as today.
 - Uncertain nodes from rule M4 keep `candidates` (R29). Their ambiguity stays a presence state: [relationships/03](03-relationship-matching.md) R6 adds low-confidence relationships for ties in its own assignment, not for rule M4 uncertainty.
+- The engine adds no `Reference` evidence (R34). Only the [reference pass](04-rename-grouping.md) adds it, to a `RENAME` relationship, after the engine returns.
 
 ### Confidence policy
 
@@ -88,14 +91,15 @@ The fields keep their types and are marked `@Deprecated` with a pointer to `rela
 
 ### Order
 
-Relationships are sorted by the start of the first old endpoint, then the start of the first new endpoint, then the first kind in enum order. Endpoints are sorted by range start. Kinds are built as an `EnumSet`, so iteration is in enum order by construction rather than by insertion order. Evidence is sorted by type in the order of the sealed interface: `Name`, `Content`, `Structure`, `Position`, `Score` (R19).
+Relationships are sorted by the start of the first old endpoint, then the start of the first new endpoint, then the first kind in enum order. Endpoints are sorted by range start. Kinds are built as an `EnumSet`, so iteration is in enum order by construction rather than by insertion order. Evidence is sorted by type in the order of the sealed interface: `Name`, `Content`, `Structure`, `Position`, `Reference`, `Score` (R19). Several `Reference` entries on one relationship are sorted by old range start, then new range start.
 
 ### Contract rules
 
 `ComparisonEngineContract` gains these checks for every engine (R23):
 
 - every endpoint names a subject in the result tree, on its own side, at its range (R16);
-- every endpoint and content evidence range lies inside its side's text (R17);
+- every endpoint and content or reference evidence range lies inside its side's text (R17);
+- a reference's `symbol` equals one of the relationship's new endpoints' subjects, and `Reference` evidence appears only on a `RENAME` (R5, R16);
 - an extraction's `extractedFrom` and `extractedTo` fields agree with one `EXTRACT` relationship, and no relationship is listed twice (R18);
 - the list is in the order above, and two runs on the same request give equal lists (R19);
 - nothing-hidden gives the same answer with the relationships removed (R20).
@@ -145,7 +149,7 @@ The first run must pass with no new wrong pair. The second must pass with no low
 
 | Requirement | Check |
 | --- | --- |
-| R1–R6 | `RelationshipModelTest` (new, `engine/api`): defaults, kinds, endpoints, evidence with ranges only on content, and the score kept in evidence |
+| R1–R6 | `RelationshipModelTest` (new, `engine/api`): defaults, kinds, endpoints, evidence with ranges only on content and reference, and the score kept in evidence |
 | R7, R8, R18 | `DeclarationEngineTest`: over the golden fixtures, every computed field equals the field the engine set before this step (record the old fields from `main` once into the test as expected values, or compare against a copy of the old code kept in the test) |
 | R9, R10 | `GoldenFixturesTest`, `MergeFixturesTest`, `OutlineModelTest` and the Changes tree tests pass with no fixture change |
 | R11–R13 | `DeclarationMatcherTest` with policies that move one rename pair across each threshold: high and medium set `renamedFrom`, low leaves it added and removed with the relationship listed, the pair set is identical under every policy, and a low composite sets none of the computed fields. `DeclarationAnalysisTest`: a low container pair stays added and removed while its members keep their pairs, get `MOVE` and stay under the new container (R13, [relationships/03](03-relationship-matching.md) R19) |
@@ -159,3 +163,4 @@ The first run must pass with no new wrong pair. The second must pass with no low
 | R28 | `OutlineModelTest`: a high and a medium rename show the same row |
 | R29 | `DeclarationMatcherTest`: a rule M4 ambiguity has candidates and no relationship |
 | R31–R33 | `RelationshipBenchmarkTest`: a result with a repeated relationship fails the gate; a low relationship is counted by confidence and not scored as a pair; the confidence counts appear in both reports; the full-corpus gate run above |
+| R34 | `DeclarationEngineTest` and `RelationshipMatchingTest`: no engine result contains `Reference` evidence; `ReferencePassTest`: the reference pass is the only producer and adds it only to a `RENAME` |
