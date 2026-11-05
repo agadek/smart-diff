@@ -110,6 +110,33 @@ class RelationshipMatchingTest {
     }
 
     @Test
+    fun `B1 the search finds the largest feasible assignment in a 3 by 4 counterexample`() {
+        // relationships/03-relationship-matching B1: solve-review-drop returns nothing, the exact search returns 2.50.
+        val scores = arrayOf(
+            doubleArrayOf(0.95, 0.80, 0.90, 0.65),
+            doubleArrayOf(0.75, 0.80, 0.80, 0.95),
+            doubleArrayOf(0.00, 0.50, 0.60, 0.90),
+        )
+        assertEquals(
+            listOf(0 to 0, 1 to 3, 2 to 2),
+            GlobalAssignment.solve(scores, 0.5, null, Cancellation.NONE),
+        )
+    }
+
+    @Test
+    fun `B2 a reordered rename with body change content 075 still pairs`() {
+        // relationships/03-relationship-matching B2: `total` is reordered and its body changes to content 0.75.
+        val old = tree { cls("A") { method("other", "", "{ a(); b(); c(); }"); method("total", "int", BODY) } }
+        val new = tree { cls("A") { method("sum", "int", BODY.replace("x", "y")); method("other", "", "{ a(); b(); c(); }") } }
+
+        val relationship = match(old, new).matching.relationships.single { RelationshipKind.RENAME in it.kinds }
+
+        assertEquals(setOf(RelationshipKind.RENAME, RelationshipKind.MOVE), relationship.kinds)
+        val score = relationship.evidence.filterIsInstance<Evidence.Score>().single().value
+        assertTrue("the original fixture pairs again at $score", score >= 0.7)
+    }
+
+    @Test
     fun `R4 a global assignment pairs both where greedy leaves one out`() {
         // relationships/03-relationship-matching R4
         val scores = arrayOf(

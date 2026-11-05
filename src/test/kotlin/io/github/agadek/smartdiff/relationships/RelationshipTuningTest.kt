@@ -3,6 +3,7 @@ package io.github.agadek.smartdiff.relationships
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import io.github.agadek.smartdiff.engine.api.ConfidencePolicy
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import java.nio.file.Files
 
 /**
@@ -35,6 +36,10 @@ class RelationshipTuningTest : BasePlatformTestCase() {
                 minimum = 0,
                 commitMinimum = 0,
             )
+            assertTrue(
+                "the tuning run scores tuning cases only",
+                report.cases.isNotEmpty() && report.cases.all { it.label.split == RelationshipBenchmark.Split.TUNING },
+            )
             val metrics = report.overall
             println(
                 "RELATIONSHIPS TUNING cases=${report.cases.size} precision=${metrics.precision} recall=${metrics.recall} " +
@@ -60,6 +65,14 @@ class RelationshipTuningTest : BasePlatformTestCase() {
         } finally {
             output.deleteRecursively()
         }
+    }
+
+    fun `test R20 a failed held-out check leaves the high threshold unchanged`() {
+        // relationships/03-relationship-matching R20: a held-out failure is a release-gate failure, not a re-tune.
+        val fixed = ConfidencePolicy.DEFAULT.high
+        val heldOutFailure = listOf(RelationshipBenchmark.TuningRow(0.83, high = 10, correctHigh = 8, correctPairs = 10))
+        assertEquals("the failed table has no value that meets both rules", null, RelationshipBenchmark.tunedHigh(heldOutFailure))
+        assertEquals("a failed held-out check does not change the tuned value", fixed, ConfidencePolicy.DEFAULT.high, 0.0)
     }
 
 }

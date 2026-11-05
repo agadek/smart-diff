@@ -1239,7 +1239,8 @@ object RelationshipBenchmark {
         File(report.reportDirectory, "summary.tsv").writeText(buildString {
             appendLine("corpus\tkind\ttp\tfp\tfn\tprecision\trecall\twrong-share")
             for ((language, metrics) in report.metricsByLanguage) {
-                for ((kind, counts) in metrics.perKind) {
+                for (kind in kinds(metrics)) {
+                    val counts = metrics.perKind[kind] ?: PairCounts()
                     appendLine(listOf(language, kind, counts.tp, counts.fp, counts.fn, formatPrecision(counts), formatRecall(counts), format(counts.wrongShare)).joinToString("\t"))
                 }
             }
@@ -1301,7 +1302,8 @@ object RelationshipBenchmark {
             appendLine("| --- | --- | --- | --- | --- | --- | --- |")
             for (corpus in CORPORA) {
                 val metrics = report.metricsByLanguage[corpus] ?: continue
-                for ((kind, counts) in metrics.perKind) {
+                for (kind in kinds(metrics)) {
+                    val counts = metrics.perKind[kind] ?: PairCounts()
                     appendLine("| $corpus | $kind | ${counts.tp} | ${counts.fp} | ${counts.fn} | ${formatPrecision(counts)} | ${formatRecall(counts)} |")
                 }
             }
@@ -1313,7 +1315,7 @@ object RelationshipBenchmark {
             appendLine("| --- | --- | --- | --- | --- |")
             for (corpus in CORPORA) {
                 val metrics = report.metricsByLanguage[corpus] ?: continue
-                for (kind in metrics.perKind.keys) {
+                for (kind in kinds(metrics)) {
                     val counts = metrics.confidenceByKind[kind].orEmpty()
                     appendLine(
                         "| $corpus | $kind | ${counts[Confidence.HIGH] ?: 0} | ${counts[Confidence.MEDIUM] ?: 0} | " +
@@ -1397,6 +1399,10 @@ object RelationshipBenchmark {
         println("RELATIONSHIPS ${report.cases.size} cases, precision ${format(report.overall.precision)}, recall ${format(report.overall.recall)}${if (report.smoke) ", smoke run" else ""}; report in ${report.reportDirectory.absolutePath}")
     }
 
+    /** Every kind the run saw, paired or low-only, in [Kind] order so the reports stay deterministic (R33). */
+    private fun kinds(metrics: Metrics): List<String> =
+        (metrics.perKind.keys + metrics.confidenceByKind.keys).distinct().sortedBy { Kind.valueOf(it).ordinal }
+
     private fun metricsJson(metrics: Metrics): Map<String, Any> = mapOf(
         "precision" to metrics.precision,
         "recall" to metrics.recall,
@@ -1415,7 +1421,8 @@ object RelationshipBenchmark {
         "medianMillis" to metrics.medianMillis,
         "p95Millis" to metrics.p95Millis,
         "slowestMillis" to metrics.slowestMillis,
-        "perKind" to metrics.perKind.mapValues { (kind, counts) ->
+        "perKind" to kinds(metrics).associateWith { kind ->
+            val counts = metrics.perKind[kind] ?: PairCounts()
             mapOf(
                 "tp" to counts.tp, "fp" to counts.fp, "fn" to counts.fn,
                 "reportedPairs" to (counts.tp + counts.fp),

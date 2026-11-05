@@ -467,7 +467,7 @@ class DeclarationMatcherTest {
     fun `R11 R12 R13 a policy classifies a rename pair without changing the pairs found`() {
         // relationships/02-relationship-model R11, R12, R13, R25
         val old = tree { cls("A") { method("other", "", "{ a(); b(); c(); }"); method("total", "int", BODY) } }
-        val new = tree { cls("A") { method("sum", "int", BODY.replace("2", "3")); method("other", "", "{ a(); b(); c(); }") } }
+        val new = tree { cls("A") { method("sum", "int", BODY.replace("x", "y")); method("other", "", "{ a(); b(); c(); }") } }
         val score = match(old, new).relationships.single { RelationshipKind.RENAME in it.kinds }
             .evidence.filterIsInstance<Evidence.Score>().single().value
         assertTrue("the fixture scores between the floor and 1.0: $score", score >= 0.7 && score < 1.0)
@@ -502,7 +502,7 @@ class DeclarationMatcherTest {
         // relationships/02-relationship-model R13, R26
         // `total` is renamed to `sum` and is outside the longest common subsequence, so it is moved as well.
         val old = tree { cls("A") { method("other", "", "{ a(); b(); c(); }"); method("total", "int", BODY) } }
-        val new = tree { cls("A") { method("sum", "int", BODY.replace("2", "3")); method("other", "", "{ a(); b(); c(); }") } }
+        val new = tree { cls("A") { method("sum", "int", BODY.replace("x", "y")); method("other", "", "{ a(); b(); c(); }") } }
         val composed = match(old, new).relationships.single { it.kinds.containsAll(listOf(RelationshipKind.RENAME, RelationshipKind.MOVE)) }
         assertEquals(RelationshipKind.RENAME, composed.kinds.first())
 

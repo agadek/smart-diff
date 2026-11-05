@@ -61,7 +61,7 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
         val key = Registry.get(SmartDiffSettings.CONFIDENCE_KEY)
         val previous = key.asString()
         try {
-            assertEquals("the declared default is the policy's default", "0.81,0.7", previous)
+            assertEquals("the declared default is the policy's default", "0.82,0.7", previous)
             assertEquals(ConfidencePolicy.DEFAULT, settings.confidence)
 
             key.setValue("0.9,0.8")

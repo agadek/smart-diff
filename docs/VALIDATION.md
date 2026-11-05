@@ -99,8 +99,9 @@ The report is in `build/reports/smartdiff-relationships/summary.tsv`, `report.md
 
 [relationships/03](specs/relationships/03-relationship-matching.md) replaces the greedy rename pass with a scored,
 whole-file assignment (R1 to R13). `DeclarationEngine.VERSION` is 8. The rename weights are
-`content 0.82, name 0.04, parameter types 0.04, context 0.03, order 0.07`, and the default confidence policy is
-`high = 0.81, medium = 0.7`.
+`content 0.83, name 0.03, parameter types 0.05, context 0.03, order 0.06`, and the default confidence policy is
+`high = 0.82, medium = 0.7`. The 2026-11-05 retune restores the original rename-plus-reorder fixture (`total` reordered,
+body changed with content 0.75); the earlier weights left it below the floor, so they were rejected.
 
 ### Tuning run
 
@@ -116,14 +117,14 @@ baseline's. The full 0.70 to 1.00 table is in the pull request; the rows that de
 | 0.73 | 51 | 51 | 1.000 | 0.895 |
 | 0.74 | 49 | 49 | 1.000 | 0.860 |
 | 0.79 | 45 | 45 | 1.000 | 0.789 |
-| 0.80 | 45 | 45 | 1.000 | 0.789 |
-| **0.81** | **43** | **43** | **1.000** | **0.754** |
-| 0.82 | 41 | 41 | 1.000 | 0.719 |
-| 0.90 | 33 | 33 | 1.000 | 0.579 |
-| 0.96 to 1.00 | 0 | 0 | 1.000 | 0.000 |
+| 0.81 | 45 | 45 | 1.000 | 0.789 |
+| **0.82** | **43** | **43** | **1.000** | **0.754** |
+| 0.83 | 41 | 41 | 1.000 | 0.719 |
+| 0.91 | 33 | 33 | 1.000 | 0.579 |
+| 0.97 to 1.00 | 0 | 0 | 1.000 | 0.000 |
 
-`0.81` is the highest value that keeps precision at least 95% and three quarters of the 57 correct tuning renames high;
-`0.82` is below three quarters. The value replaces the starting `0.85`.
+`0.82` is the highest value that keeps precision at least 95% and three quarters of the 57 correct tuning renames high;
+`0.83` is below three quarters. The value replaces the starting `0.85`.
 
 The weight runs are tuning-only too. The first column is content, name, parameter types, context and order:
 
@@ -134,9 +135,10 @@ The weight runs are tuning-only too. The first column is content, name, paramete
 | 0.85, 0.05, 0.05, 0.025, 0.025 | 53/4 | rejected: one signature-change case stays below the floor |
 | 0.75, 0.05, 0.05, 0.05, 0.10 | 53/4 | rejected: Kotlin and Scala 3 signature-change cases stay below the floor |
 | 0.80, 0.04, 0.04, 0.04, 0.08 | 55/2 | rejected: the Kotlin signature-change cases stay below the floor |
-| 0.82, 0.03, 0.03, 0.04, 0.08 | 57/0 | keeps every tuning rename; content lower than the chosen set |
-| **0.82, 0.04, 0.04, 0.03, 0.07** | **57/0** | **chosen**: every tuning rename, with more name and parameter weight than the other full-coverage sets |
-| 0.81, 0.04, 0.04, 0.02, 0.09 | 57/0 | rejected: order 0.09 in a duplicate-body group produces 8 forced ambiguous pairs |
+| 0.82, 0.03, 0.03, 0.04, 0.08 | 57/0 | rejected: keeps the tuning renames but the original content-0.75 fixture stays below the floor |
+| 0.82, 0.04, 0.04, 0.03, 0.07 | 57/0 | rejected: the original content-0.75 fixture stays below the floor |
+| 0.90, 0.02, 0.02, 0.02, 0.04 | 57/0 | rejected: pairs an unrelated removed and added property in the corpus validation |
+| **0.83, 0.03, 0.05, 0.03, 0.06** | **57/0** | **chosen**: every tuning rename, the original content-0.75 fixture, and no changed corpus pair outside the intended two files |
 
 ### Relationship benchmark, both gates
 
@@ -184,7 +186,7 @@ the same as the [2026-11-04 relationship model run](#reported-relationships-by-c
 `CorpusValidationTest` over `two-sided-2026-11-04.txt`: 1970 files from 386 commits, 1968 `ANALYZED` and 2 `PARTIAL`,
 no fallback, no `hidden` or `empty` flag. 125 files are flagged, with the same counts as the
 [2026-11-04 two-sided rerun](#2026-11-04-two-sided-corpus-rerun) except `rename` 26 (was 29) and `rename-candidate`
-61 (was 59). Comparing every `summary.tsv` row with that run, six fields changed in four rows, on two files:
+61 (was 59). Comparing every `summary.tsv` row with that run, six fields changed in three rows, on two files:
 
 | File | Commit | Change | Review |
 | --- | --- | --- | --- |
@@ -195,10 +197,10 @@ no fallback, no `hidden` or `empty` flag. 125 files are flagged, with the same c
 No other row changed its status, hunks, reported count, formatting-only count, flags or dialect. The rename notes on
 the remaining rows are the recorded ones; no wrong row or pair was found.
 
-**Time:** the overall median is 6 ms and the 95th percentile 71 ms, against 7 ms and 80 ms recorded. The slowest file
-takes 587 ms (zio `ZIO.scala`), against 599 ms. All 1970 files take 40.1 s, against 43.0 s. By dialect, the median is
-4 ms for Java and Kotlin, 23 ms for Scala 2 and 15 ms for Scala 3; the slowest file in every group is below the 5 s
-analysis limit (140 ms, 587 ms and 371 ms).
+**Time:** the overall median is 7 ms and the 95th percentile 74 ms, against 7 ms and 80 ms recorded. The slowest file
+takes 572 ms (zio `ZIO.scala`), against 599 ms. All 1970 files take 41.0 s, against 43.0 s. By dialect, the median is
+4 ms for Java and Kotlin, 23 ms for Scala 2 and 16 ms for Scala 3; the slowest file in every group is below the 5 s
+analysis limit (140 ms, 572 ms and 352 ms).
 
 ### Merge validation
 
@@ -206,7 +208,7 @@ analysis limit (140 ms, 587 ms and 371 ms).
 or the base. Flags: 49 `both-sides-clean`, 12 `conflict-one-side`, 6 `status`; coverage Java 50, Kotlin 67, Scala 2
 117 and Scala 3 41 files. The `summary.tsv` matches the
 [2026-11-04 relationship model run](#2026-11-04-relationship-model-migration): the same files, flags, hunk counts and
-diagnostics, apart from the timings (merge median 27 ms, against 29 ms). The one-file difference from the
+diagnostics, apart from the timings (merge median 29 ms, the same as the recorded 29 ms). The one-file difference from the
 [2026-11-02 rerun](#2026-11-02-merge-validation-rerun), `commons-lang` `StringEscapeUtilsTest.java` not being
 `both-sides-clean`, is the one that section already explains: later merge-validation commits judge moved sides and
 unchanged children, and the fix is not part of the matcher. Reports in `build/reports/smartdiff-validation/merge/`.
@@ -440,8 +442,12 @@ no pair was wrong or forced. Precision is 1.000 and recall 0.826 overall. The 42
 | Kotlin | 106 | 1.000 | 0.836 | 0.000 | 0.986 | 0.986 | 1.000 | 1.000 | 1.000 | 0 ms | 29 ms | 85 ms |
 | Scala 2 | 106 | 1.000 | 0.847 | 0.000 | 1.000 | 0.986 | 0.824 | 1.000 | 1.000 | 0 ms | 55 ms | 209 ms |
 | Scala 3 | 106 | 1.000 | 0.887 | 0.000 | 1.000 | 0.970 | 1.000 | 1.000 | 1.000 | 0 ms | 146 ms | 273 ms |
-| tuning | 153 | 1.000 | 0.884 | 0.000 | 1.000 | 0.990 | 1.000 | 1.000 | 1.000 | 0 ms | 1 ms | 70 ms |
-| held-out | 271 | 1.000 | 0.748 | 0.000 | 0.991 | 0.980 | 0.864 | 1.000 | 1.000 | 2 ms | 91 ms | 273 ms |
+| tuning | 202 | 1.000 | 0.884 | 0.000 | 1.000 | 0.990 | 1.000 | 1.000 | 1.000 | 0 ms | 1 ms | 70 ms |
+| held-out | 222 | 1.000 | 0.748 | 0.000 | 0.991 | 0.980 | 0.864 | 1.000 | 1.000 | 2 ms | 91 ms | 273 ms |
+
+The case counts in the original table were recorded as 153 tuning and 271 held-out; that was wrong. The labels mark 202
+checked-in cases tuning and 222 held-out (102 checked-in plus the 120 real-commit labels). The labelled-pair counts
+(138 tuning and 103 held-out) and every metric above are unchanged. No held-out case was used for tuning.
 
 ### Per kind
 

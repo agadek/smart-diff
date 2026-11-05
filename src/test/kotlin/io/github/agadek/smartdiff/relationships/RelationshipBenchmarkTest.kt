@@ -924,6 +924,41 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         assertTrue(RelationshipBenchmark.forcedPairs(listOf(result)).isEmpty())
     }
 
+    fun `test R33 a low-only kind appears in both reports`() {
+        // relationships/03-relationship-matching B6; relationships/02-relationship-model R33
+        val directory = Files.createTempDirectory("relationship-low-only").toFile()
+        try {
+            val metrics = RelationshipBenchmark.Metrics(
+                perKind = emptyMap(),
+                forcedPairs = 0,
+                classificationCorrect = 0,
+                classificationTotal = 0,
+                hidden = 0,
+                fallback = 0,
+                times = listOf(1),
+                confidenceByKind = mapOf(
+                    "RENAME" to mapOf(RelationshipBenchmark.Confidence.LOW to 1),
+                ),
+            )
+            RelationshipBenchmark.write(
+                RelationshipBenchmark.Report(
+                    emptyList(), mapOf("java" to metrics), mapOf(RelationshipBenchmark.Split.TUNING to metrics), metrics,
+                    "no-new-wrong-pairs", emptyList(), "abc", directory,
+                ),
+            )
+
+            val markdown = File(directory, "report.md").readText()
+            assertTrue("the per-kind table has the low-only kind", markdown.contains("| java | RENAME | 0 | 0 | 0 |"))
+            assertTrue("the confidence table has the low-only count", markdown.contains("| java | RENAME | 0 | 0 | 1 |"))
+            val json = File(directory, "report.json").readText()
+            assertTrue("the JSON has the kind with no scored pair", json.contains("\"RENAME\""))
+            assertTrue("the JSON counts the low relationship", json.contains("\"LOW\": 1"))
+            assertTrue(File(directory, "summary.tsv").readText().contains("java\tRENAME\t0\t0\t0"))
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
     fun `test a differing confidence does not change scoring`() {
         // relationships/01-relationship-benchmark-details.md: confidence is not compared until the engine reports one
         fun metricsFor(confidence: RelationshipBenchmark.Confidence?): RelationshipBenchmark.Metrics {

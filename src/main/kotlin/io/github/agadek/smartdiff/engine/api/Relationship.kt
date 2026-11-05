@@ -105,7 +105,7 @@ internal object EvidenceOrder {
  * The request carries a policy, as it carries its [Limits], so tests and the benchmark set one directly; a registry key
  * sets it in a running IDE (R15).
  */
-data class ConfidencePolicy(val high: Double = 0.81, val medium: Double = 0.7) {
+data class ConfidencePolicy(val high: Double = 0.82, val medium: Double = 0.7) {
     init {
         require(medium in 0.0..1.0 && high in medium..1.0) { "invalid confidence policy: $this" }
     }

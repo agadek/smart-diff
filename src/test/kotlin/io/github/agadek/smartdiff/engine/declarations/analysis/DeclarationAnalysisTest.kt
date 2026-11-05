@@ -412,7 +412,7 @@ class DeclarationAnalysisTest {
         // R26: a renamed and moved declaration is one relationship with both kinds, at the rename's confidence.
         val composite = compare(
             tree { cls("A") { method("other", "", "{ a(); b(); c(); }"); method("total", "int", BODY) } },
-            tree { cls("A") { method("sum", "int", BODY.replace("2", "3")); method("other", "", "{ a(); b(); c(); }") } },
+            tree { cls("A") { method("sum", "int", BODY.replace("x", "y")); method("other", "", "{ a(); b(); c(); }") } },
         ).relationships.single { RelationshipKind.RENAME in it.kinds }
         assertEquals(listOf(RelationshipKind.RENAME, RelationshipKind.MOVE), composite.kinds.toList())
         assertTrue(composite.confidence == Confidence.HIGH || composite.confidence == Confidence.MEDIUM)
