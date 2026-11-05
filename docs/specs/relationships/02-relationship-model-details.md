@@ -1,6 +1,6 @@
 # Relationship model: details
 
-Status: implemented, 2026-11-04
+Status: implemented, 2026-11-04; reference evidence (R5, R17, R19 and R34) arrives with [rename grouping](04-rename-grouping.md), 2026-11-05.
 
 Feature: [Relationship model](02-relationship-model.md)
 

@@ -1,6 +1,6 @@
 # Relationship benchmark: details
 
-Status: implemented, 2026-11-02
+Status: implemented, 2026-11-02; the usage labels (R8, R9), the reference pass version in R19 and R44 arrive with [rename grouping](04-rename-grouping.md), 2026-11-05.
 
 Feature: [Relationship benchmark](01-relationship-benchmark.md)
 
@@ -11,6 +11,7 @@ Feature: [Relationship benchmark](01-relationship-benchmark.md)
 `RelationshipBenchmarkTest` is an opt-in test next to `CorpusValidationTest` and `LimitsBenchmarkTest`. It reuses the existing parts:
 
 - `compareSafely` with the default limits, so a case runs as it does in the IDE;
+- `ReferencePass.runForBenchmark` after the engine for usage labels, so the benchmark resolves usages without a project file ([relationships/04](04-rename-grouping.md) R18);
 - `ComparisonEngineContract` for the shared rules;
 - `NothingHidden` for the nothing-hidden check;
 - `Rendering` for the readable parts of the report.
@@ -65,6 +66,9 @@ expected:
     - kinds: [RENAME]
       old: { path: "class Order", kind: METHOD, name: total, signature: "()" }
       new: { path: "class Order", kind: METHOD, name: sum, signature: "()" }
+      usages:
+        - old: "118..123"
+          new: "116..121"
   changes:
     - subject: { path: "class Order", kind: METHOD, name: sum, signature: "()" }
       presence: MATCHED
@@ -81,7 +85,7 @@ notes: "A second method with the same body exists on purpose."
 - Confidence is optional in a label and is recorded for later; it is not compared until the engine reports a confidence value.
 - The label set is closed: every relationship the engine reports that is not listed is wrong, unless the case lists it under `ambiguous`.
 - `ambiguous` lists the declarations for which no pair is correct; any pair reported for them is a forced pair.
-- A rename relationship may carry `usages`: a list of `old` and `new` range pairs, one per grouped usage ([relationships/04](04-rename-grouping.md) R18, R44). The list is added with relationships/04; no label has it today. `usages: []` means the label was reviewed and the rename has no usages; an absent list means the label was not reviewed for usages. A reported reference on a rename without `usages` is listed as `usage-unlabelled` and is not scored, so an incomplete corpus is visible. A reported reference that does not match a listed pair is a wrong usage and fails the `no-new-wrong-pairs` gate; a listed usage that is not reported is a missed usage and is listed, not gated by default.
+- A rename relationship carries `usages`: a list of `old` and `new` range pairs, one per grouped usage ([relationships/04](04-rename-grouping.md) R18, R44). The list is added with relationships/04. In the first step every rename label in the full corpus is reviewed, including all 120 real commits; the 89 renames are 69 high and 20 medium. A range is `start..end`, as for an endpoint. `usages: []` means the label was reviewed and the rename has no usages. An absent list is allowed only in a draft; in a gate run it is a `usage-unlabelled` rename and fails completeness. A reported reference on a rename without `usages` is listed as `usage-unlabelled` and is not scored, so an incomplete corpus stays visible. A reported reference that does not match a listed pair is a wrong usage and fails the `no-new-wrong-pairs` gate; a listed usage that is not reported is a missed usage and is listed, not gated by default.
 
 ### Real commits
 
@@ -121,6 +125,7 @@ expected:
 - Every selected file is compared with its first parent, labelled or not (R34). A nothing-hidden violation, a file over the 5 s limit or an exception in an unlabelled file still fails the run (R26).
 - An unlabelled Scala file is counted under the dialect it parses in (R33). If no Scala provider is loaded, or reading the dialect throws, the file is listed with the reason `unknown dialect` and is not counted under Scala 2 or Scala 3, so a sandbox without the Scala plugin cannot file a Scala 3 file as Scala 2 or let the commit count toward R10.
 - A labelled commit counts toward R10 when every Java, Kotlin or Scala file it *modified* has a reviewed label. Added and deleted files are listed as skipped and do not block the count, so a commit that extracts a class into a new file can still be one of the 30. A commit that modifies no Java, Kotlin or Scala file, or has a file with `unknown dialect`, does not count.
+- The first step reviews usages for every rename in all 120 real-commit labels (30 per corpus), not only for the 16 usage-grouping cases. A real-commit label with no rename needs no `usages` list; every rename relationship in it gets one, including `usages: []` when the review finds no usage.
 
 ### Draft labels
 
@@ -150,7 +155,7 @@ Expected classifications follow the current model: a comment-only change is `CHA
 - A pair reported for a declaration listed under `ambiguous` is counted as forced only (R14, R39). It is not a false positive, so it does not lower precision, and the `no-new-wrong-pairs` gate still fails on it.
 - Every count and metric is grouped by corpus (`java`, `kotlin`, `scala2`, `scala3`), never by language alone, so Scala 2 and Scala 3 get separate rows (R33).
 - Extraction and inlining links are counted per link, so a target with three sources counts three.
-- Usages are counted per reference range pair, separately from relationship pairs: a reported reference that matches a labelled usage is a true positive, one with no matching pair is a wrong usage, and a labelled usage with no reference is a missed usage. A rename with no `usages` list has its reported references counted as `usage-unlabelled`, not scored.
+- Usages are counted per reference range pair, separately from relationship pairs. A reference matches a label when its relationship endpoints and both ranges equal the label's; a reported reference that matches a labelled usage is a true positive, one with no matching pair is a wrong usage, and a labelled usage with no reference is a missed usage. A rename with no `usages` list has its reported references counted as `usage-unlabelled`, not scored. The first step counts usages for all 424 cases, including all 120 real commits.
 - Results are micro-averaged over links per language, and also given per category, with the category rows in `report.md` and `report.json`.
 - A precision or recall with nothing to divide is shown as `n/a`, not as `1.000`, in `report.md`, `summary.tsv` and the baseline table; `report.json` keeps the number for the gate and adds the reported-pair count beside it.
 - Presence and content accuracy, and the accuracy of `moved`, signature change and kind change.
@@ -168,7 +173,7 @@ Expected classifications follow the current model: a comment-only change is `CHA
 | `precision` | precision falls below the baseline for any kind and language |
 | `tolerance` | precision or recall falls more than `-Psmartdiff.relationships.tolerance=<points>` below the baseline |
 
-In every mode a nothing-hidden violation, a file over the 5 s limit or an exception fails the run. Inlining's recall starts at zero, so its gate applies from [relationships/05](05-inlining-detection.md). A wrongly grouped usage is a wrong pair for `no-new-wrong-pairs` (R44); the baseline has no usages, so any wrong usage is new. The usage precision and recall baseline is recorded after [relationships/04](04-rename-grouping.md), and the 2026-11-02 baseline is not replaced.
+In every mode a nothing-hidden violation, a file over the 5 s limit or an exception fails the run. Inlining's recall starts at zero, so its gate applies from [relationships/05](05-inlining-detection.md). The first usage gate is the full corpus: all 304 checked-in cases and all 120 real commits, every rename usage-reviewed, not only the 16 usage-grouping cases. A wrongly grouped usage is a wrong pair for `no-new-wrong-pairs` (R44); the baseline has no usages, so any wrong usage is new. A `usage-unlabelled` rename in that run also fails completeness. The usage precision and recall baseline is recorded from this run after [relationships/04](04-rename-grouping.md), and the 2026-11-02 baseline is not replaced.
 
 - A `-Psmartdiff.relationships.baseline` path that is not a file fails the run with `baseline not found: <path>` (R40).
 - A baseline whose `report.json` has `"smoke": true` fails the run with `baseline is a smoke run: <path>` (R32); a smoke run is not the R29 baseline.
@@ -178,7 +183,8 @@ In every mode a nothing-hidden violation, a file over the 5 s limit or an except
 
 - `report.md` lists every wrong pair, forced pair, wrong usage, missed relationship, missed usage and misclassified declaration, each with its case, both endpoints or both classifications, and the label's path (R18, R42, R44). Its wrong and forced pairs are under the heading `Wrong and forced relationships`; missed relationships and usages have their own sections.
 - `report.md` and `report.json` give the metrics per corpus, per split, per category and overall.
-- `report.json` has the engine version, IDE build, Scala plugin version, corpus revision, gate mode, smoke flag and shortfalls, the metrics per corpus, per split, per category and overall, the skipped and unlabelled files, and every list of `report.md` (R19, R20).
+- The `report.md` header shows the engine version and the reference pass version next to the IDE build, Scala plugin version and corpus revision.
+- `report.json` has the engine version, the reference pass version, the IDE build, the Scala plugin version, the corpus revision, gate mode, smoke flag and shortfalls, the metrics per corpus, per split, per category and overall, the skipped and unlabelled files, and every list of `report.md` (R19, R20; the pass version arrives with [relationships/04](04-rename-grouping.md) R18).
 - The corpus revision is a hash of the corpus list and of every case and label file it reaches, in path order, plus the commit hash of each real-commit line's clone (R43). Editing a checked-in real-commit label or moving a clone's HEAD changes it.
 - The R29 baseline's `report.json` is checked in at `src/test/testData/relationships-baseline/report.json`, so a later gate compares against a file rather than a rerun (R21, R29, R40).
 
@@ -202,7 +208,7 @@ In every mode a nothing-hidden violation, a file over the 5 s limit or an except
 | R8–R10 | A check that lists the cases per category and language and fails when a minimum is not met |
 | R11 | A test that tuning and held-out cases are reported apart |
 | R12–R18 | Report tests over a small fixed corpus with known true and false positives, including a per-category row and `n/a` for a kind with no reported pairs |
-| R19–R21 | The report header test, and a comparison with a saved baseline |
+| R19–R21 | The report header test, including `referencePassVersion`, and a comparison with a saved baseline (the pass version arrives with [relationships/04](04-rename-grouping.md) R18) |
 | R22–R27 | One test per gate mode with a baseline that should pass and one that should fail |
 | R28 | Two runs on the same cases give equal reports apart from times |
 | R29 | Manual: the baseline section in VALIDATION.md comes from a run with no shortfall; a test checks that `src/test/testData/relationships-baseline/report.json` exists, is not a smoke run and carries the revision VALIDATION.md records |
@@ -216,10 +222,9 @@ In every mode a nothing-hidden violation, a file over the 5 s limit or an except
 | R41 | A baseline missing one `(corpus, kind)` pair passes and lists it as new; a lower precision in one pair fails |
 | R42 | A case with a wrong classification is listed with both values; two same-identity changes cannot claim one node |
 | R43 | Editing a case label, editing a real-commit label, or moving a clone's HEAD changes the corpus revision |
-| R44 | `RelationshipBenchmarkTest`: a usage label matches a `Reference`; a reference with no matching pair fails `no-new-wrong-pairs`; an absent `usages` lists the rename as `usage-unlabelled` and does not score it |
+| R44 | `RelationshipBenchmarkTest`: `ReferencePass.runForBenchmark` runs without a file; every rename relationship in the 120 real-commit labels has a `usages` list; a usage label matches a `Reference`; a reference with no matching pair fails `no-new-wrong-pairs`; an absent `usages` lists the rename as `usage-unlabelled`, fails completeness in a gate run and does not score it; the report records `referencePassVersion` |
 | Adapter (not a requirement) | A cross-container move names its old container from the old tree; a provider that throws on the second old-side parse falls back to the new-side path and the run still reports the file; two extractions that differ only by range stay two links; the signature simplification is pinned by a test |
 
 ## Open questions
 
 - When, if ever, does the corpus include relationships across files?
-- Which commits are labelled first: those the corpus validation flagged with a rename, move or extraction, or a random sample of each repository? A mix of both, about half each, is proposed, so precision is measured on likely refactorings and recall on ordinary commits.

@@ -1,6 +1,6 @@
 # Relationship model
 
-Status: implemented, 2026-11-04
+Status: implemented, 2026-11-04; reference evidence (R5, R17, R19 and R34) arrives with [rename grouping](04-rename-grouping.md), 2026-11-05.
 
 **Description:** Adds a list of [relationships](../../GLOSSARY.md#relationship) to every comparison result: which old declarations and new declarations belong together, how sure the engine is, and why.
 
@@ -12,7 +12,7 @@ Status: implemented, 2026-11-04
 - **R2** A relationship links one old-side declaration to one new-side declaration, or one declaration to several on the other side.
 - **R3** A relationship has one or more kinds: rename, move, kind change, extraction or inlining.
 - **R4** A relationship has a confidence of high, medium or low.
-- **R5** A relationship has a list of evidence: name, content, structure, position, reference or score; content and reference evidence carry the old and new ranges they connect, and name, structure, position and score evidence carry no ranges.
+- **R5** (reference evidence with [rename grouping](04-rename-grouping.md)) A relationship has a list of evidence: name, content, structure, position, reference or score; content and reference evidence carry the old and new ranges they connect, and name, structure, position and score evidence carry no ranges.
 - **R6** The engine's numeric score is kept in the evidence and is never shown as a percentage.
 - **R7** The list of relationships is the only source for renames, moves, kind changes and extraction links.
 - **R8** The rename, move, kind change and extraction fields of a change are computed from the relationships.
@@ -41,7 +41,7 @@ Status: implemented, 2026-11-04
 - **R31** The [relationship benchmark](01-relationship-benchmark.md) reads the result's high and medium relationships instead of deriving them from today's fields; a low relationship is not scored as a pair.
 - **R32** The benchmark counts a repeated relationship as a wrong pair.
 - **R33** The benchmark report counts the reported relationships of each kind by confidence.
-- **R34** The engine returns no reference evidence; the reference pass of [rename grouping](04-rename-grouping.md) adds it to a rename relationship.
+- **R34** (with [rename grouping](04-rename-grouping.md)) The engine returns no reference evidence; the reference pass adds it to a rename relationship.
 
 ## Out of scope
 

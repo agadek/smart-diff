@@ -1,6 +1,6 @@
 # Change labels
 
-Status: implemented, 2026-11-04
+Status: implemented, 2026-11-04; the `usages renamed` additions (R1, R6, R9, R11 and R14) arrive with [rename grouping](../relationships/04-rename-grouping.md), 2026-11-05.
 
 **Description:** One set of user-facing [labels](../../GLOSSARY.md#label) says how each change is classified, how the [summary line](../../GLOSSARY.md#summary-line) counts it, and whether the [change type filter](../../GLOSSARY.md#change-type-filter) can hide it.
 
@@ -11,7 +11,7 @@ Status: implemented, 2026-11-04
 - **R1** A change shows every label that applies: `added`, `removed`, `changed`, `moved`, `formatting-only`, `signature changed`, `rename candidate`, `usages renamed`, `uncertain` or `unanalyzed`.
 - **R2** A signature change also carries `changed`.
 - **R3** A [kind change](../../GLOSSARY.md#kind-change) shows both kinds in the row title, such as `trait → class Shape`, and carries `signature changed`.
-- **R4** A [rename candidate](../../GLOSSARY.md#rename-candidate) shows the old name before the new one, such as `method total → sum(int)`, and the number of grouped [usages](../../GLOSSARY.md#usage) after it, such as `method total → sum(int), 12 usages`.
+- **R4** A [rename candidate](../../GLOSSARY.md#rename-candidate) shows the old name before the new one, such as `method total → sum(int)  rename candidate`, and the number of grouped [usages](../../GLOSSARY.md#usage) after it, such as `method total → sum(int)  rename candidate, 12 usages`.
 - **R5** An [extraction](../../GLOSSARY.md#extraction) stays `added` and gets the note `extracted from <source>`; its [source](../../GLOSSARY.md#extraction-source) gets `code extracted to <declaration>`.
 - **R6** The summary line counts `changed`, `extracted`, `added`, `removed`, `moved`, `formatting-only`, `rename candidate`, `usages renamed`, `uncertain` and `unanalyzed`, in that order, and leaves out a count of zero.
 - **R7** An extraction counts as `extracted` instead of `added`.
@@ -21,7 +21,7 @@ Status: implemented, 2026-11-04
 - **R11** `rename candidate`, `usages renamed`, `uncertain` and `unanalyzed` are never hidden.
 - **R12** A change is hidden only when every label it shows is of a hidden type.
 - **R13** Labels are text, not color alone, and each row's accessible name is its label.
-- **R14** A grouped usage is never hidden, and its declaration stays a change in the summary and the native diff.
+- **R14** (with [rename grouping](../relationships/04-rename-grouping.md)) A declaration with grouped usages is never hidden, even when its other labels are of a hidden type, and it stays a change in the summary and the native diff.
 
 ## Out of scope
 

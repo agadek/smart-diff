@@ -1,6 +1,6 @@
 # Relationship benchmark
 
-Status: implemented, 2026-11-02
+Status: implemented, 2026-11-02; the usage labels (R8, R9), the reference pass version in R19 and R44 arrive with [rename grouping](04-rename-grouping.md), 2026-11-05.
 
 **Description:** Measures how well the declaration engine pairs declarations across two versions, against labelled ground truth, so a matcher change is accepted or rejected by its numbers.
 
@@ -16,7 +16,7 @@ Status: implemented, 2026-11-02
 - **R6** A range is added to an endpoint only to tell apart declarations with the same name.
 - **R7** A label can say that a case is ambiguous, and that no relationship is correct.
 - **R8** The cases cover renames, grouped usages, moves, kind changes, signature changes, extraction, inlining, overloads, duplicate bodies, formatting-only and comment-only changes, parse errors, empty files and large files.
-- **R9** Each case category has at least 3 cases for each of Java, Kotlin, Scala 2 and Scala 3, where the language has the construct.
+- **R9** Each case category has at least 3 cases for each of Java, Kotlin, Scala 2 and Scala 3, where the language has the construct; usage grouping has at least 4.
 - **R10** The corpus list can also name real commits, as the [corpus validation](../../VALIDATION.md) does, with at least 30 labelled commits per language.
 - **R11** The cases are split into a tuning set and a held-out set, and the report gives the held-out results separately.
 - **R12** For each relationship kind, the report gives precision, recall and the share of wrong pairs, per language and overall, and `n/a` in place of a precision or recall with nothing to divide.
@@ -26,7 +26,7 @@ Status: implemented, 2026-11-02
 - **R16** The report gives the median and slowest time per language, against the 5 s [analysis limit](../../GLOSSARY.md#analysis-limits).
 - **R17** The report counts files that broke the nothing-hidden rule, and files that fell back to the native diff.
 - **R18** The report lists every wrong and missed relationship for review.
-- **R19** The report records the engine version, the IDE build, the Scala plugin version and the corpus revision.
+- **R19** The report records the engine version, the reference pass version, the IDE build, the Scala plugin version and the corpus revision.
 - **R20** The report goes to `build/reports/smartdiff-relationships/` as `summary.tsv`, `report.md` and `report.json`.
 - **R21** A run can be compared with a saved baseline report.
 - **R22** The gate is chosen with `-Psmartdiff.relationships.gate=<mode>`: `no-new-wrong-pairs` by default, `precision`, or `tolerance`.
@@ -51,7 +51,7 @@ Status: implemented, 2026-11-02
 - **R41** The `precision` and `tolerance` gates compare each relationship kind in each language on its own, and the report lists the kinds and languages the baseline lacks.
 - **R42** The report lists every declaration whose presence or content classification differs from its label, with both values.
 - **R43** The corpus revision changes when any case file or label changes.
-- **R44** A rename label may list the usages it groups with both ranges, and a wrongly grouped usage fails the gate as a wrong pair.
+- **R44** (with [rename grouping](04-rename-grouping.md)) Every rename label, including every one in the 120 real commits, lists the usages it groups with both ranges, and a wrongly grouped usage fails the gate as a wrong pair.
 
 ## Out of scope
 
