@@ -46,7 +46,7 @@ A nothing-hidden check cheap enough for large files, so the corpus validation co
 
 ## 0.2.0: three-way merge outline, released 2026-11-05
 
-Decided 2026-10-30. It came before everything else under [Later](#later), and its [structural outline for three-way merges](#structural-outline-for-three-way-merges) for Java, Kotlin, Scala 2 and Scala 3 is prepared for this release. Its features are specified in [docs/specs/merge/](specs/README.md#merges).
+Decided 2026-10-30. It came before everything else under [Later](#later), and its [structural outline for three-way merges](#structural-outline-for-three-way-merges) for Java, Kotlin, Scala 2 and Scala 3 ships in this release. Its features are specified in [docs/specs/merge/](specs/README.md#merges).
 
 | Work | Spec | State |
 | --- | --- | --- |
