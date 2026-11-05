@@ -117,10 +117,24 @@ class RelationshipMatchingTest {
             doubleArrayOf(0.75, 0.80, 0.80, 0.95),
             doubleArrayOf(0.00, 0.50, 0.60, 0.90),
         )
-        assertEquals(
-            listOf(0 to 0, 1 to 3, 2 to 2),
-            GlobalAssignment.solve(scores, 0.5, null, Cancellation.NONE),
+        val result = GlobalAssignment.solve(scores, 0.5, null, Cancellation.NONE)
+        assertEquals(listOf(0 to 0, 1 to 3, 2 to 2), result)
+        assertEquals("the exhaustive maximum is the same total", 2.50, bruteForceMaximum(scores, 0.5), 1e-9)
+        assertEquals(2.50, result.sumOf { (i, j) -> scores[i][j] }, 1e-9)
+    }
+
+    @Test
+    fun `B1 the search takes the 2 point 52 assignment with only n0 unmatched`() {
+        // relationships/03-relationship-matching B1: (0,3),(1,2),(2,1) is feasible with only new column 0 unmatched.
+        val scores = arrayOf(
+            doubleArrayOf(0.72, 0.10, 0.10, 0.90),
+            doubleArrayOf(0.60, 0.10, 0.72, 0.10),
+            doubleArrayOf(0.60, 0.90, 0.10, 0.10),
         )
+        val result = GlobalAssignment.solve(scores, 0.5, null, Cancellation.NONE)
+        assertEquals(listOf(0 to 3, 1 to 2, 2 to 1), result)
+        assertEquals("the exhaustive maximum is 2.52", 2.52, bruteForceMaximum(scores, 0.5), 1e-9)
+        assertEquals(2.52, result.sumOf { (i, j) -> scores[i][j] }, 1e-9)
     }
 
     @Test
@@ -354,6 +368,52 @@ class RelationshipMatchingTest {
     private fun io.github.agadek.smartdiff.engine.api.Subject.name(): String = when (this) {
         is Subject.Declaration -> name
         is Subject.Region -> description
+    }
+
+    /**
+     * An independent exhaustive reference for the 3 by 4 B1 fixtures: every row may be unpaired or take one free allowed
+     * column, and an assignment counts only when every chosen edge passes the margin rule.
+     */
+    private fun bruteForceMaximum(scores: Array<DoubleArray>, floor: Double): Double {
+        val olds = scores.size
+        val news = scores[0].size
+        val partner = IntArray(olds) { -1 }
+        val used = BooleanArray(news)
+        var best = 0.0
+
+        fun feasible(): Boolean {
+            val pairedNew = BooleanArray(news)
+            for (column in partner) if (column >= 0) pairedNew[column] = true
+            val unpairedOld = BooleanArray(olds) { partner[it] < 0 }
+            for (i in 0 until olds) {
+                val j = partner[i]
+                if (j < 0) continue
+                val close = scores[i][j] - ASSIGNMENT_MARGIN
+                if ((0 until olds).any { it != i && unpairedOld[it] && scores[it][j] > close }) return false
+                if ((0 until news).any { it != j && !pairedNew[it] && scores[i][it] > close }) return false
+            }
+            return true
+        }
+
+        fun search(row: Int, total: Double) {
+            if (row == olds) {
+                if (feasible()) best = maxOf(best, total)
+                return
+            }
+            partner[row] = -1
+            search(row + 1, total)
+            for (column in 0 until news) {
+                if (used[column] || scores[row][column] < floor) continue
+                used[column] = true
+                partner[row] = column
+                search(row + 1, total + scores[row][column])
+                used[column] = false
+                partner[row] = -1
+            }
+        }
+
+        search(0, 0.0)
+        return best
     }
 
     private companion object {
