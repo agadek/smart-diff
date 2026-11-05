@@ -7,6 +7,7 @@ import com.intellij.diff.DiffManager
 import com.intellij.diff.DiffRequestPanel
 import com.intellij.diff.FrameDiffTool
 import com.intellij.diff.chains.DiffRequestChain
+import com.intellij.diff.contents.DocumentContent
 import com.intellij.diff.merge.MergeRequest
 import com.intellij.diff.requests.DiffRequest
 import com.intellij.diff.requests.SimpleDiffRequest
@@ -182,16 +183,35 @@ class ChangesSummaryTest : BasePlatformTestCase() {
         assertNull("the request selects the row once", request.getUserData(OutlinePath.KEY))
     }
 
-    fun `test a declaration click is left to the platform when the diff action cannot be loaded`() {
+    fun `test a declaration click opens the file's diff without context when the diff action cannot be loaded`() {
+        // changes-tree/02-changes-tree-declarations R16
         val change = modified("Cart.java", OLD_CART, NEW_CART)
         summaryNode(change)
         ChangesSummaryService.getInstance(project).waitForSummaries()
         val added = summaryNode(change)!!.preorderEnumeration().toList().filterIsInstance<DeclarationNode>().last()
+        val requests = mutableListOf<DiffRequest>()
+        val recording = Disposer.newDisposable(testRootDisposable)
+        ApplicationManager.getApplication().replaceService(DiffManager::class.java, RecordingDiffManager(shownRequests = requests), recording)
         val action = DeclarationNodeAction(project) { p, changes, index, key, value ->
             ChangesDiff.show(p, changes, index, key, value, "smartdiff.test.MissingAction", "smartdiff.test.MissingContext")
         }
 
-        assertFalse("the platform's own action can open the row", action.handleDoubleClick(added))
+        assertTrue("the fallback opens the file's diff", action.handleDoubleClick(added))
+        Disposer.dispose(recording)
+
+        val request = requests.single()
+        assertNull("the fallback has no declaration context", request.getUserData(OutlinePath.KEY))
+        assertTrue("the request is the file's own diff", request is SimpleDiffRequest)
+        val contents = (request as SimpleDiffRequest).contents.map { it as DocumentContent }
+        assertEquals(listOf(OLD_CART, NEW_CART), contents.map { it.document.text })
+        assertTrue("the title names the file", request.title.orEmpty().contains("Cart.java"))
+    }
+
+    fun `test the diff action is looked up through the platform and plugin classloaders`() {
+        val loaders = ChangesDiff.classLoaders()
+
+        assertSame("the Changes view's platform loader is tried first", ChangesViewModifier::class.java.classLoader, loaders.first())
+        assertTrue("the plugin's loader is next", loaders.contains(ChangesDiff::class.java.classLoader))
     }
 
     fun `test the version of a local file is its modification stamp`() {
@@ -460,13 +480,23 @@ class ChangesSummaryTest : BasePlatformTestCase() {
     }
 
     /** Records the diffs the platform's diff action shows instead of opening windows. */
-    private class RecordingDiffManager(private val shown: MutableList<DiffRequestChain>) : DiffManager() {
+    private class RecordingDiffManager(
+        private val shownChains: MutableList<DiffRequestChain> = mutableListOf(),
+        private val shownRequests: MutableList<DiffRequest> = mutableListOf(),
+    ) : DiffManager() {
 
-        override fun showDiff(project: Project?, request: DiffRequest) { error("unexpected") }
-        override fun showDiff(project: Project?, request: DiffRequest, hints: DiffDialogHints) { error("unexpected") }
-        override fun showDiff(project: Project?, requests: DiffRequestChain, hints: DiffDialogHints) {
-            shown += requests
+        override fun showDiff(project: Project?, request: DiffRequest) {
+            shownRequests += request
         }
+
+        override fun showDiff(project: Project?, request: DiffRequest, hints: DiffDialogHints) {
+            shownRequests += request
+        }
+
+        override fun showDiff(project: Project?, requests: DiffRequestChain, hints: DiffDialogHints) {
+            shownChains += requests
+        }
+
         override fun createRequestPanel(project: Project?, parent: Disposable, window: Window?): DiffRequestPanel = error("unexpected")
         override fun showMerge(project: Project?, request: MergeRequest) { error("unexpected") }
     }

@@ -23,6 +23,7 @@ Status: implemented, 2026-11-01
 - **R13** The outline is shown in that diff even if it starts off by default.
 - **R14** Double-click on a declaration row opens it the same way, whether or not it has children.
 - **R15** A declaration row with children expands through the tree's expansion control.
+- **R16** When the file's diff with the declaration selected cannot be opened, the row opens the file's diff without a declaration selected instead.
 
 ## References
 

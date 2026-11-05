@@ -140,8 +140,8 @@ class DeclarationNode internal constructor(val item: OutlineItem) : ChangesBrows
  * Opens a [DeclarationNode] on double-click or Enter: the file's diff, with the other changes of the tree next to it as
  * the platform's own diff action does, and the declaration selected in the outline once it is shown.
  *
- * [openDiff] is the platform action; it returns false when the action cannot be loaded, and then the click is left to
- * the platform instead of being swallowed.
+ * [openDiff] is the platform action. When the action cannot be loaded, it opens the file's own diff without the
+ * declaration context, so the click still shows a diff; it returns false only when no diff could be shown.
  */
 class DeclarationNodeAction @JvmOverloads constructor(
     private val project: Project,
