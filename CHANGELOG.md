@@ -4,6 +4,7 @@
 
 ### Added
 
+- The SMART Diff viewer has its own side-by-side-with-filter icon in the diff's viewer switcher, with light and dark variants, so it can be told apart from the native viewer at a glance.
 - Renamed or reordered methods and functions whose body also changed are more often shown as one `rename candidate` row, for example two tests renamed in the same commit, instead of one removed and one added row. When several renames or reordered declarations compete, the outline chooses over the whole file and leaves a genuine tie as two changes.
 
 ## [0.2.0] - 2026-11-05
