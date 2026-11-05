@@ -84,9 +84,9 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
         val ID = EngineId("smartdiff.declarations")
 
         /** Raise when a change to a provider, matching or classification can change results. */
-        const val VERSION = "8"
+        const val VERSION = "9"
 
-        /** The result's engine version: `8 (251.26927.53)`, or with the Scala plugin, `8 (251.26927.53; Scala 2025.1.32)`. */
+        /** The result's engine version: `9 (251.26927.53)`, or with the Scala plugin, `9 (251.26927.53; Scala 2025.1.32)`. */
         internal fun formatVersion(platformBuild: String, scalaPluginVersion: String?): String =
             if (scalaPluginVersion == null) "$VERSION ($platformBuild)" else "$VERSION ($platformBuild; Scala $scalaPluginVersion)"
 

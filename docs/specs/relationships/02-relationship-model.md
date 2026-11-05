@@ -20,7 +20,7 @@ Status: implemented, 2026-11-04
 - **R10** The golden fixtures pass unchanged.
 - **R11** A high-confidence relationship pairs its declarations.
 - **R12** A medium-confidence relationship still pairs its declarations, not as one added and one removed.
-- **R13** A low-confidence relationship leaves both declarations added and removed.
+- **R13** A low-confidence relationship leaves both declarations added and removed, and its containers count as unmatched for their members.
 - **R14** The thresholds for each confidence level are set in the request, as the [analysis limits](../../GLOSSARY.md#analysis-limits) are.
 - **R15** A registry key sets the thresholds in a running IDE, and tests and the benchmark set them directly.
 - **R16** Every endpoint names a declaration that appears in the result tree.

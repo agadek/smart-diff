@@ -252,12 +252,23 @@ object DeclarationMatcher {
             }
         }
 
-        // Both top level, or the old container is matched to the new one.
+        // A pair the policy calls low is shown as added and removed (relationships/02 R13). For its members it is an
+        // unmatched container: they keep the pair M1 to M5 found and get a MOVE when their container differs, instead of
+        // appearing unchanged under the added container. Only the pair's own fields and presence are low.
+        val lowRenames = identitySet()
+        for ((o, pair) in pairs) {
+            val score = renameScores[o]
+            if (pair.second == MatchRule.RENAME_CANDIDATE && score != null && confidence.classify(score) == Confidence.LOW) {
+                lowRenames += o
+            }
+        }
+
+        // Both top level, or the old container is matched to the new one at high or medium confidence.
         fun containersMatch(o: Declaration, n: Declaration): Boolean {
             val oldParent = oldSide.parent(o)
             val newParent = newSide.parent(n)
             return if (oldParent == null || newParent == null) oldParent == null && newParent == null
-            else pairs[oldParent]?.first === newParent
+            else pairs[oldParent]?.first === newParent && oldParent !in lowRenames
         }
         val orderChanged = orderChanges(old, new, pairs, cancellation)
 
