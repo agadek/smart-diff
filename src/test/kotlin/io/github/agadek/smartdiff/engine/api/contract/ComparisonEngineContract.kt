@@ -88,7 +88,7 @@ class ComparisonEngineContract(private val newEngine: () -> ComparisonEngine) {
         for (case in relationshipCases()) RelationshipChecks.endpointsInResultTree(case, compare(case))
     }
 
-    /** R17: every endpoint and evidence range lies inside its side's text. */
+    /** R17: every endpoint and content evidence range lies inside its side's text. */
     fun `relationship ranges lie inside their side`() {
         for (case in relationshipCases()) RelationshipChecks.rangesInsideText(case, compare(case))
     }

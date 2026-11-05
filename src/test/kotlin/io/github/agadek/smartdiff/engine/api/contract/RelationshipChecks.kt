@@ -43,7 +43,7 @@ object RelationshipChecks {
         }
     }
 
-    /** R17: every endpoint and evidence range lies inside its side's text. */
+    /** R17: every endpoint and content evidence range lies inside its side's text. */
     fun rangesInsideText(case: ContractCase, result: ComparisonResult) {
         for (relationship in result.relationships) {
             relationship.old.forEach { check(case, it.range.end <= case.oldText.length) { "old endpoint ${it.range} of $relationship is outside ${case.oldText.length} characters" } }

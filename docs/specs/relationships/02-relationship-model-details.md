@@ -43,7 +43,7 @@ data class ConfidencePolicy(val high: Double = 0.82, val medium: Double = 0.7) {
 
 - Every relationship has at least one endpoint on each side, and every endpoint is a declaration (R2, R16). An inlining, from [relationships/05](05-inlining-detection.md), follows the same rule: the removed declaration on the old side, the declarations it was inlined into on the new side.
 - An endpoint's `subject` is the subject of the node on its own side: the old subject for an old endpoint, so a rename's old endpoint carries the old name and a kind change's old endpoint the old kind. The benchmark adapter rebuilt the old subject from `renamedFrom` and `kindChangedFrom`; the model stores it.
-- `Content.newRange` is the target declaration's range. Every relationship in this step has one, so it is not nullable; a later relationship with no new-side range would need a spec change.
+- `Content` is the only evidence type with ranges, because it is the only one that refers to source text: `oldRange` is the extracted code's old range and `newRange` is the target declaration's range (R5). `Name`, `Structure`, `Position` and `Score` carry no ranges. Every `Content` in this step has a target range, so `newRange` is not nullable; a later content evidence with no new-side range would need a spec change.
 - `RelationshipKind`, `Confidence`, `Relationship`, `RelationshipEndpoint`, `Evidence` and `ConfidencePolicy` go in `engine.api`, next to `ComparisonResult`, so every engine and the UI see the same types.
 - Content and signature changes stay `ChangeNode` attributes. They are not relationship kinds.
 - A relationship is not a presence: it never replaces `MATCHED`, `ADDED`, `REMOVED` or `UNCERTAIN`.
@@ -95,7 +95,7 @@ Relationships are sorted by the start of the first old endpoint, then the start 
 `ComparisonEngineContract` gains these checks for every engine (R23):
 
 - every endpoint names a subject in the result tree, on its own side, at its range (R16);
-- every endpoint and evidence range lies inside its side's text (R17);
+- every endpoint and content evidence range lies inside its side's text (R17);
 - an extraction's `extractedFrom` and `extractedTo` fields agree with one `EXTRACT` relationship, and no relationship is listed twice (R18);
 - the list is in the order above, and two runs on the same request give equal lists (R19);
 - nothing-hidden gives the same answer with the relationships removed (R20).
@@ -145,7 +145,7 @@ The first run must pass with no new wrong pair. The second must pass with no low
 
 | Requirement | Check |
 | --- | --- |
-| R1–R6 | `RelationshipModelTest` (new, `engine/api`): defaults, kinds, endpoints, evidence and the score kept in evidence |
+| R1–R6 | `RelationshipModelTest` (new, `engine/api`): defaults, kinds, endpoints, evidence with ranges only on content, and the score kept in evidence |
 | R7, R8, R18 | `DeclarationEngineTest`: over the golden fixtures, every computed field equals the field the engine set before this step (record the old fields from `main` once into the test as expected values, or compare against a copy of the old code kept in the test) |
 | R9, R10 | `GoldenFixturesTest`, `MergeFixturesTest`, `OutlineModelTest` and the Changes tree tests pass with no fixture change |
 | R11–R13 | `DeclarationMatcherTest` with policies that move one rename pair across each threshold: high and medium set `renamedFrom`, low leaves it added and removed with the relationship listed, the pair set is identical under every policy, and a low composite sets none of the computed fields |
