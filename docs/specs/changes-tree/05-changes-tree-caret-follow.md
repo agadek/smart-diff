@@ -19,13 +19,15 @@ the tree. This is the reverse of opening a declaration from the tree.
 - **R3** The caret maps to the [new side](../../GLOSSARY.md#new-side) range in a plain editor and on the new side of a
   two-sided diff, and to the [old side](../../GLOSSARY.md#old-side) range on the old side.
 - **R4** The setting "Follow the caret in the Changes tree" turns this on and off, and it is on by default.
-- **R5** Following never moves focus out of the editor, opens a diff or changes what is included in the commit.
+- **R5** Following never moves focus out of the editor, opens a diff itself or changes what is included in the commit,
+  though the platform's own single-click preview may follow the new selection as it does for any selection.
 - **R6** Following does not change the tree while the tree has focus, a selection made in the tree is not overwritten by a
   later caret event, and caret moves are debounced so typing and arrow keys stay smooth.
 - **R7** While a file's [summary line](../../GLOSSARY.md#summary-line) is recomputed after an edit, the tree keeps its
   current selection until the new summary arrives.
-- **R8** A file without a summary, because it is pending, not analyzed or in an
-  [unsupported language](../../GLOSSARY.md#supported-language), gets only its file row selected.
+- **R8** A file without a summary, because it is pending, not analyzed, in an
+  [unsupported language](../../GLOSSARY.md#supported-language), added, deleted or after the 500-file limit, gets only its
+  file row selected.
 - **R9** Following reads no revision content on the UI thread and uses no internal, experimental or deprecated platform
   API.
 

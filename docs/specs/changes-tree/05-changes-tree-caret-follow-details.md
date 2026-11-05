@@ -74,8 +74,9 @@ All of this runs on the EDT, except the summary comparison that already runs in 
 1. **Take the editor and the offset.** A caret event gives the editor and its caret offset. A file-editor selection
    change uses the selected text editor and its current caret offset.
 2. **Find the side and the file.**
-   - Read `DiffDataKeys.DIFF_VIEWER` from the editor's data context, `as? TwosideTextDiffViewer`. A three-sided viewer
-     is ignored (out of scope).
+   - Read `DiffDataKeys.DIFF_VIEWER` from the editor's data context. If a viewer is present and is not a
+     `TwosideTextDiffViewer`, return without touching the tree; a three-sided diff or merge window is out of scope.
+   - If no viewer is present, treat the editor as a plain editor. Otherwise use the `TwosideTextDiffViewer`.
    - If `viewer.editor2 === editor`, the side is the new side and the file is `viewer.content2.highlightFile`.
    - If `viewer.editor1 === editor`, the side is the old side and the file is `viewer.content1.highlightFile`.
    - Otherwise the editor is a plain editor: the side is the new side and the file is
@@ -94,10 +95,10 @@ All of this runs on the EDT, except the summary comparison that already runs in 
    source offset. A row is a candidate only when it is a change itself (`kind == ItemKind.CHANGE` and `tags.isNotEmpty()`);
    groups, candidates, container-only rows and the `File region` row are not. A row contains the caret when its side range
    contains the offset: `item.newRange` on the new side, `item.oldRange` on the old side; a null range does not contain.
-   The range is start-inclusive and end-exclusive, and a zero-length range contains only its start. Recurse through all
-   children, including a container that is not a candidate, so a changed method inside an unchanged class is found. Keep
-   the deepest candidate on the way down; at the same depth, the first row in outline order wins. With no candidate, fall
-   back to the file row.
+   The check is `offset in range`, the same half-open check as `TextRange.contains`, so a zero-length range contains no
+   offset. Recurse through all children, including a container that is not a candidate, so a changed method inside an
+   unchanged class is found. Keep the deepest candidate on the way down; at the same depth, the first row in outline order
+   wins. With no candidate, fall back to the file row.
 6. **Select and expand.** Build the target row's `OutlinePath` from the rows on the path. Under the file node, find the
    `DeclarationNode` whose `path` has the same steps (the same kind and title at each level, groups matched by kind as
    `OutlinePath.find` does). Call `TreeUtil.selectPath(tree, TreePath(target))`: it makes the file and the rows above the
@@ -120,8 +121,9 @@ summary says it was not analyzed, the language has no engine, the file is added 
   and reattached when the model property changes, so the retry runs against the rebuilt tree, not the old one. The retry
   goes through the same 100 ms timer, so a burst of model events follows once.
   If the new summary still contains the row, it is selected; if it does not, the file row is selected. While the summary
-  is stale the follower never picks a row from it; if an unrelated rebuild removes the old row first, the platform's own
-  selection restoration applies. This is R7.
+  is stale the follower never picks a row from it. R7 is about what the follower chooses, not about preserving a row
+  through a platform rebuild: if an unrelated rebuild removes the old row first, the platform's own selection restoration
+  applies, and the follower retries when the new summary arrives.
 - A rebuild restores the user's expanded rows through the platform. Following after a rebuild re-expands only the rows it
   needs to show the target.
 - The service installs one `TreeSelectionListener` and one mouse/key listener on the live tree. A mouse press or key press
@@ -142,12 +144,16 @@ release. Its `SelectInChangesViewTarget` serves the manual Select In action only
 Opened File" belongs to a different tree. The feature therefore gets its own application setting,
 `followChangesTreeCaret`, in `SmartDiffSettings.SettingsState`, copied in `update` and shown as the checkbox "Follow the
 caret in the Changes tree" in `SmartDiffConfigurable`. It is on by default because it does not fight any platform
-behavior for this tree. Turning it off cancels a pending follow and leaves the tree as it is.
+behavior for this tree. The toggle is display-only with respect to the tree's content: changing it does not call
+`ChangesSummaryService.clear()` and does not publish `ChangesViewModifier.TOPIC`. The summary settings listener ignores a
+change that only touches `followChangesTreeCaret`, by comparing the new settings state with the previous one; any other
+settings change keeps the existing clear-and-rebuild behavior (settings/01 R13, R14). Turning the follow toggle off only
+cancels a pending follow and leaves the tree as it is.
 
 ### Debounce
 
 Caret and editor-selection events restart a `javax.swing.Timer` of 100 ms on the EDT. The timer fires once after the
-last event. The value matches the platform's `ide.autoscroll.to.source.delay`, which is the feel users already know from
+last event. The value matches the platform's `ide.autoscroll.from.source.delay`, which is the feel users already know from
 autoscroll from source, and it coalesces typing and held arrow keys. No comparison is started by the timer; it only reads
 the cached summary and changes the tree selection.
 
@@ -158,9 +164,10 @@ the cached summary and changes the tree selection.
   they are (R5).
 - Declaration rows are helper nodes (changes-tree/02), so selecting one selects no change. Selecting the file row is a
   tree selection, not a checkbox change, so the commit's inclusion and count stay the same (R5). The test asserts the
-  selected and included changes before and after following.
-- No diff is opened. If the user has enabled the platform's own single-click diff preview, the platform may react to the
-  new selection as it reacts to any selection; the plugin does not open a diff itself.
+  included changes and the commit count before and after following, not the selected row.
+- The follower opens no diff itself. If the platform's own single-click diff preview is on, selecting a file row may show
+  that preview exactly as a click would; with the preview off, no diff opens. This is the platform reacting to a selection,
+  not the follower opening a diff.
 
 ### No EDT revision reads and only public API
 
@@ -188,7 +195,7 @@ from the mapping are logged once and do not show a dialog; the tree keeps its se
 | --- | --- | --- |
 | Caret debounce | 100 ms | Matches the platform's autoscroll-from-source delay and coalesces typing and held arrow keys |
 | Declaration search | The file's cached outline rows only | No new analysis and no work proportional to the project; files without a live tree row are skipped |
-| Range boundary | Start inclusive, end exclusive | Same convention as `TextRange`; adjacent declarations do not both contain a caret at their shared boundary |
+| Range boundary | `offset in range`, half-open | Same check as `TextRange.contains`; adjacent declarations do not both contain a caret at their shared boundary, and a zero-length range contains no offset |
 | Summary freshness | Exact cache key match | A summary for another document version must not select a row at a stale offset |
 
 ## Tests
@@ -198,6 +205,12 @@ tree with the platform's `TreeModelBuilder` as `ChangesSummaryTest` does, and us
 recording focus owner to check the side effects. The diff-side mapping is also checked in `OutlineIntegrationTest`, which
 already opens real two-sided diff panels.
 
+The test seam is internal to the plugin: a `@TestOnly` `followNow(editor, offset)` method runs the same mapping and
+selection path as the debounce timer, and `waitForPendingFollow()` drains the timer and any queued model retry. The test
+installs the live `ChangesListView` and `ChangesSummaryService` through package-private constructor parameters, while
+production finds the tree through `ChangesViewContentManager`. This keeps global caret events, focus and timer delays out
+of the assertions.
+
 The fixtures are the `ChangesSummaryTest` Cart text (a class with a changed method and an added method), a file with
 unchanged code between changes, a changed class header, an added file, a deleted file, a plain-text file in an unsupported
 language, a file over the size limit and a file with a timed-out or failed summary.
@@ -206,12 +219,12 @@ language, a file over the size limit and a file with a timed-out or failed summa
 | --- | --- |
 | R1 | `ChangesCaretFollowTest` `test the innermost changed declaration under the caret is selected and the file expands`: a caret in a changed method selects the method, not its class; a caret in a changed class outside its methods selects the class; the file row is expanded and the row is visible |
 | R2 | `ChangesCaretFollowTest` `test the caret outside every changed declaration selects the file row`: a caret in unchanged code of a changed file selects the file row and no declaration row |
-| R3 | `ChangesCaretFollowTest` `test a plain editor maps to the new side range`; `ChangesCaretFollowTest` `test the old and new sides of a two-sided diff map to their own ranges`; `OutlineIntegrationTest` `test the caret in each diff editor follows on that side` |
-| R4 | `SmartDiffSettingsTest` `test defaults` (the new setting is on); `ChangesCaretFollowTest` `test the setting turns following off`: with the setting off, a caret event leaves the tree selection unchanged |
-| R5 | `ChangesCaretFollowTest` `test following leaves focus, commit inclusion and diffs alone`: the editor keeps focus, the selected and included changes are unchanged, and the recording `DiffManager` receives no request |
+| R3 | `ChangesCaretFollowTest` `test a plain editor maps to the new side range`; `ChangesCaretFollowTest` `test the old and new sides of a two-sided diff map to their own ranges`; `OutlineIntegrationTest` `test the caret in each diff editor follows on that side`; `MergeOutlineIntegrationTest` `test the caret in a three-sided diff does not move the Changes tree` |
+| R4 | `SmartDiffSettingsTest` `test defaults` (settings/01 R13, the new setting is on); `ChangesCaretFollowTest` `test the setting turns following off` (settings/01 R14): with the setting off, a caret event leaves the tree selection unchanged; `ChangesSummaryTest` `test changing only the follow setting keeps the summary cache and does not rebuild the tree` |
+| R5 | `ChangesCaretFollowTest` `test following leaves focus and commit inclusion alone with the platform preview off and on`: the editor keeps focus, the included changes and the commit count are unchanged, with preview off the recording `DiffManager` receives no request, and with preview on only the platform's own preview may open, as for a click |
 | R6 | `ChangesCaretFollowTest` `test following leaves the tree alone while the tree has focus`; `ChangesCaretFollowTest` `test a tree selection is not overwritten by a late caret event`: click a row while a caret follow is pending, then let the timer fire; the clicked row stays; `ChangesCaretFollowTest` `test caret moves are debounced`: several events in a row produce one follow after the delay |
 | R7 | `ChangesCaretFollowTest` `test a stale summary keeps the current row until the new summary arrives`: after an edit, a caret event before the rebuild leaves the row selected; after the rebuild the row under the caret is selected |
-| R8 | `ChangesCaretFollowTest` `test a file without a summary selects only the file row`: pending, not analyzed, unsupported language, added and deleted files each select the file row |
+| R8 | `ChangesCaretFollowTest` `test a file without a summary selects only the file row`: pending, not analyzed, unsupported language, added and deleted files, and a file after the 500-file limit each select the file row |
 | R9 | `ChangesCaretFollowTest` `test following reads no revision content on the UI thread`: a `ContentRevision` whose `content` fails when read on the EDT is never read; Plugin Verifier report: no new internal, experimental or deprecated usage from the follower, and the existing usages stay unchanged |
 | R1–R9 | Manual check: run the steps below on IntelliJ IDEA 2025.1 and the latest release |
 
@@ -223,16 +236,18 @@ Run this on IntelliJ IDEA 2025.1 and the latest release, in the Local Changes vi
    unchanged code in the same file, and into a changed class header. The tree expands the file and selects the method,
    then the file row, then the class row.
 2. Open the file's two-sided diff and repeat in the new and old editors. Each side selects the row for its own range.
+   Open a three-sided diff or merge window and move the caret in each pane; the Changes tree does not move.
 3. Hold an arrow key and type quickly. The tree follows after the pause, not on every key.
 4. Click another row in the tree while a caret follow is pending. The clicked row stays selected.
 5. Edit a changed method and move the caret before the summary finishes. The old row stays selected until the new summary
    arrives, then the row under the caret is selected.
-6. Open an added file, a file in an unsupported language, a file over the size limit and the old side of a deleted file's
-   diff. Only the file row is selected, and the tree shows no declaration row.
+6. Open an added file, a file in an unsupported language, a file over the size limit, a file after the 500-file limit and
+   the old side of a deleted file's diff. Only the file row is selected, and the tree shows no declaration row.
 7. Turn "Follow the caret in the Changes tree" off and move the caret. The tree does not change. Turn it on and move the
-   caret again; it follows.
-8. Throughout, the caret stays in the editor, no diff opens by itself, and the file checkboxes and the commit count do
-   not change.
+   caret again; it follows. Confirm that toggling it does not clear the summaries or rebuild the tree.
+8. Repeat with the platform's single-click diff preview off and on. With it off, no diff opens. With it on, only the
+   platform's own preview follows the selection, as it does for a click; the follower opens no diff itself.
+9. Throughout, the caret stays in the editor, and the file checkboxes and the commit count do not change.
 
 ## Open questions
 
