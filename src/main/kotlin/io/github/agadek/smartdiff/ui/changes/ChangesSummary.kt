@@ -10,6 +10,7 @@ import com.intellij.openapi.fileTypes.LanguageFileType
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.vcs.VcsException
 import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vcs.changes.ChangesViewModifier
@@ -138,8 +139,14 @@ class DeclarationNode internal constructor(val item: OutlineItem) : ChangesBrows
 /**
  * Opens a [DeclarationNode] on double-click or Enter: the file's diff, with the other changes of the tree next to it as
  * the platform's own diff action does, and the declaration selected in the outline once it is shown.
+ *
+ * [openDiff] is the platform action; it returns false when the action cannot be loaded, and then the click is left to
+ * the platform instead of being swallowed.
  */
-class DeclarationNodeAction(private val project: Project) : ChangesViewNodeAction {
+class DeclarationNodeAction @JvmOverloads constructor(
+    private val project: Project,
+    private val openDiff: (Project, List<Change>, Int, Key<*>, Any) -> Boolean = ChangesDiff::show,
+) : ChangesViewNodeAction {
 
     override fun createNodeHoverIcon(node: ChangesBrowserNode<*>): HoverIcon? = null
 
@@ -148,8 +155,7 @@ class DeclarationNodeAction(private val project: Project) : ChangesViewNodeActio
         val change = declaration.fileNode?.userObject ?: return false
         val root = declaration.root as? ChangesBrowserNode<*> ?: return false
         val changes = VcsTreeModelData.allUnder(root).userObjects(Change::class.java).distinct()
-        ChangesDiff.show(project, changes, changes.indexOf(change).coerceAtLeast(0), OutlinePath.KEY, declaration.path)
-        return true
+        return openDiff(project, changes, changes.indexOf(change).coerceAtLeast(0), OutlinePath.KEY, declaration.path)
     }
 }
 
@@ -241,15 +247,6 @@ class ChangesSummaryService(private val project: Project) {
         val engine = EngineRegistry.getInstance(project).select(languageId).selected ?: return null
         val key = Key(old.file.path, new.file.path, version(old), version(new), engine.id.value, SmartDiffSettings.getInstance().confidence.format())
         return Request(key, change, languageId, fileName)
-    }
-
-    /** A local file's version is its unsaved or saved state, so a summary is recomputed after every edit. */
-    private fun version(revision: ContentRevision): String {
-        // The current content of a local file has the null revision number; other revisions name their commit.
-        if (revision.revisionNumber !== VcsRevisionNumber.NULL) return revision.revisionNumber.asString()
-        val file = revision.file.virtualFile ?: return "local"
-        val stamp = FileDocumentManager.getInstance().getCachedDocument(file)?.modificationStamp ?: file.modificationStamp
-        return "local:$stamp"
     }
 
     private fun compute(request: Request, retry: Boolean = false) {
@@ -348,6 +345,20 @@ class ChangesSummaryService(private val project: Project) {
         internal const val RETRY_DELAY_MILLIS = 1_000L
 
         fun getInstance(project: Project): ChangesSummaryService = project.service()
+
+        /**
+         * The version key of [revision]: its revision number, or for the current content of a local file its modification
+         * stamp, so a summary is recomputed after every edit. A local file that is gone has no state to compare, so it
+         * is just `local`.
+         */
+        internal fun version(revision: ContentRevision): String {
+            // The current content of a local file has the null revision number; other revisions name their commit.
+            if (revision.revisionNumber !== VcsRevisionNumber.NULL) return revision.revisionNumber.asString()
+            // CurrentContentRevision hid an invalid file behind a null VirtualFile; a ContentRevision's path does not.
+            val file = revision.file.virtualFile?.takeIf { it.isValid } ?: return "local"
+            val stamp = FileDocumentManager.getInstance().getCachedDocument(file)?.modificationStamp ?: file.modificationStamp
+            return "local:$stamp"
+        }
 
         /**
          * The text shown after a file: the outline's summary line, such as `2 changed · 1 added`, or why the engine did
