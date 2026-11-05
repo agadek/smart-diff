@@ -83,6 +83,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [01 Changes tree summary](changes-tree/01-changes-tree-summary.md) | implemented, 2026-10-22 |
 | [02 Declarations in the Changes tree](changes-tree/02-changes-tree-declarations.md) | implemented, 2026-11-01 |
 | [03 Coverage and scale](changes-tree/03-coverage-and-scale.md) | implemented, 2026-11-04 |
+| [05 Changes tree caret follow](changes-tree/05-changes-tree-caret-follow.md) | proposed, 2026-11-05 |
 
 ## Settings
 

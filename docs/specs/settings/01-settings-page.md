@@ -17,6 +17,8 @@ Status: implemented, 2026-10-22
 - **R7** "Default Comparison Engine" has one row per language with an engine, with a choice of the engines that support it.
 - **R8** A language without a chosen engine uses the first registered one.
 - **R9** The [analysis limits](../../GLOSSARY.md#analysis-limits) can be changed: largest file, most declarations per side and analysis time.
+- **R10** "Follow the caret in the Changes tree" is on by default.
+- **R11** When it is off, moving the caret does not change the Changes tree selection.
 
 ## References
 

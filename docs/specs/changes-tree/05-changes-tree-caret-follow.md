@@ -1,0 +1,46 @@
+# Changes tree caret follow
+
+Status: proposed, 2026-11-05
+
+**Description:** When the caret moves in a file shown in the [Changes tree](../../GLOSSARY.md#changes-tree), the tree
+expands the file and selects the innermost changed [declaration](../../GLOSSARY.md#declaration) under the caret, or the
+file's row when the caret is outside every changed declaration.
+
+**Use case:** A developer reviews Local Changes while reading or editing a file. They put the caret in a method, and the
+tree opens that file and marks the method, so the tree and the editor show the same place without the developer searching
+the tree. This is the reverse of opening a declaration from the tree.
+
+## Requirements
+
+- **R1** When the caret is inside a changed declaration of a file shown in the Changes tree, the tree expands the file
+  and selects the innermost declaration containing the caret, and scrolls it into view.
+- **R2** When the caret is in the file but outside every changed declaration, the tree selects the file's row and no
+  declaration row.
+- **R3** The caret maps to the [new side](../../GLOSSARY.md#new-side) range in a plain editor and on the new side of a
+  two-sided diff, and to the [old side](../../GLOSSARY.md#old-side) range on the old side.
+- **R4** The setting "Follow the caret in the Changes tree" turns this on and off, and it is on by default.
+- **R5** Following never moves focus out of the editor, opens a diff or changes what is included in the commit.
+- **R6** Following does not change the tree while the tree has focus, a selection made in the tree is not overwritten by a
+  later caret event, and caret moves are debounced so typing and arrow keys stay smooth.
+- **R7** While a file's [summary line](../../GLOSSARY.md#summary-line) is recomputed after an edit, the tree keeps its
+  current selection until the new summary arrives.
+- **R8** A file without a summary, because it is pending, not analyzed or in an
+  [unsupported language](../../GLOSSARY.md#supported-language), gets only its file row selected.
+- **R9** Following reads no revision content on the UI thread and uses no internal, experimental or deprecated platform
+  API.
+
+## Out of scope
+
+- Three-sided diffs and merge windows.
+- The modal commit dialog and the Git log's commit details, which have no Changes tree hook.
+- Opening or focusing a diff; following only moves the tree's selection.
+- The future change type filter for the Changes tree, which is specified separately.
+
+## References
+
+- [Details: design and tests](05-changes-tree-caret-follow-details.md)
+- [Changes tree summary](01-changes-tree-summary.md)
+- [Declarations in the Changes tree](02-changes-tree-declarations.md)
+- [Settings page](../settings/01-settings-page.md)
+- [ADR 0006](../../adr/0006-changes-tree-summary-through-changes-view-modifier.md)
+- [Technical specification §9.4](../../TECHNICAL-SPECIFICATION.md#94-changes-tree-summary)
