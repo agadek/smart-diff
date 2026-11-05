@@ -23,14 +23,22 @@ internal const val ASSIGNMENT_TIEBREAK_MARGIN = 0.2
  *
  * The unrestricted maximum-weight matching is the upper bound. When it passes every chosen edge, it is the answer.
  * Otherwise the search branches over the rows, in deterministic order, and keeps the best assignment whose chosen edges
- * all pass. It stops after [MAX_SEARCH_NODES] nodes and returns the best feasible assignment found; the empty assignment
- * is always feasible, and the greedy-style repair supplies a feasible start, which can be the empty assignment. This cap
- * is the only case where the result is not proved largest, and it is stated in the details.
+ * all pass. It stops after [MAX_SEARCH_NODES] nodes, and every phase stops when [MAX_ASSIGNMENT_WORK] work units are
+ * spent. A group that runs out of work is left unpaired, as a group over the matcher's pair limit is (relationships/03
+ * R12). When neither [MAX_SEARCH_NODES] nor [MAX_ASSIGNMENT_WORK] is reached, the result is exact. The empty assignment
+ * is always feasible, and the greedy-style repair supplies a feasible start, which can be the empty assignment.
  */
 internal object GlobalAssignment {
 
     /** The search cap for an infeasible group; a larger search keeps the best feasible assignment found. */
     const val MAX_SEARCH_NODES = 20_000
+
+    /**
+     * Work units for one group: one per repair round, cost-matrix cell, Hungarian cell and search bound check. A group
+     * that spends more is left unpaired (R12), so a dense near-tied group cannot delay the analysis. The limit is high
+     * enough for ordinary groups that need several million units; only a pathological near-tied group reaches it.
+     */
+    const val MAX_ASSIGNMENT_WORK = 10_000_000L
 
     /**
      * The pairs of [scores] indices, old first, that the assignment takes. [scores] holds every possible edge, below the
@@ -44,6 +52,8 @@ internal object GlobalAssignment {
         cancellation: Cancellation,
         /** The search cap; tests pass a small value to exercise the cap without a long search. */
         maxNodes: Int = MAX_SEARCH_NODES,
+        /** The work cap; tests pass a small value to exercise the budget without a large group. */
+        maxWork: Long = MAX_ASSIGNMENT_WORK,
     ): List<Pair<Int, Int>> {
         val olds = scores.size
         val news = if (olds == 0) 0 else scores[0].size
@@ -51,66 +61,72 @@ internal object GlobalAssignment {
         val allowed = Array(olds) { i -> BooleanArray(news) { j -> scores[i][j] >= floor } }
         if (allowed.all { row -> row.none { it } }) return emptyList()
 
-        val upper = maximum(scores, allowed, cancellation)
-        if (isFeasible(upper, scores, tiebreak)) return pairsOf(upper)
+        val budget = WorkBudget(maxWork, cancellation)
+        try {
+            val upper = maximum(scores, allowed, budget)
+            if (isFeasible(upper, scores, tiebreak)) return pairsOf(upper)
 
-        var best = repairFeasible(scores, allowed, tiebreak, cancellation)
-        var bestTotal = total(best, scores)
-        val allowedColumns = Array(olds) { i ->
-            (0 until news).filter { allowed[i][it] }.sortedWith(compareByDescending<Int> { scores[i][it] }.thenBy { it })
-        }
-        val partner = IntArray(olds) { -1 }
-        val used = BooleanArray(news)
-        var nodes = 0
-        var stopped = false
+            var best = repairFeasible(scores, allowed, tiebreak, budget)
+            var bestTotal = total(best, scores)
+            val allowedColumns = Array(olds) { i ->
+                (0 until news).filter { allowed[i][it] }.sortedWith(compareByDescending<Int> { scores[i][it] }.thenBy { it })
+            }
+            val partner = IntArray(olds) { -1 }
+            val used = BooleanArray(news)
+            var nodes = 0
+            var stopped = false
 
-        fun remainingBound(row: Int): Double {
-            var bound = 0.0
-            for (r in row until olds) {
-                for (column in allowedColumns[r]) {
-                    if (!used[column]) {
-                        bound += scores[r][column]
-                        break
+            fun remainingBound(row: Int): Double {
+                var bound = 0.0
+                for (r in row until olds) {
+                    for (column in allowedColumns[r]) {
+                        budget.spend(1)
+                        if (!used[column]) {
+                            bound += scores[r][column]
+                            break
+                        }
                     }
                 }
+                return bound
             }
-            return bound
-        }
 
-        fun search(row: Int, accumulated: Double) {
-            cancellation.checkCanceled()
-            if (stopped) return
-            nodes++
-            if (nodes > maxNodes) {
-                stopped = true
-                return
-            }
-            if (accumulated + remainingBound(row) < bestTotal) return
-            if (row == olds) {
-                if (isFeasible(partner, scores, tiebreak)) {
-                    val candidate = pairsOf(partner)
-                    if (accumulated > bestTotal || (accumulated == bestTotal && lexicographicallySmaller(candidate, best))) {
-                        best = candidate
-                        bestTotal = accumulated
-                    }
-                }
-                return
-            }
-            for (column in allowedColumns[row]) {
-                if (used[column]) continue
-                used[column] = true
-                partner[row] = column
-                search(row + 1, accumulated + scores[row][column])
-                used[column] = false
-                partner[row] = -1
+            fun search(row: Int, accumulated: Double) {
+                budget.spend(1)
                 if (stopped) return
+                nodes++
+                if (nodes > maxNodes) {
+                    stopped = true
+                    return
+                }
+                if (accumulated + remainingBound(row) < bestTotal) return
+                if (row == olds) {
+                    if (isFeasible(partner, scores, tiebreak)) {
+                        val candidate = pairsOf(partner)
+                        if (accumulated > bestTotal || (accumulated == bestTotal && lexicographicallySmaller(candidate, best))) {
+                            best = candidate
+                            bestTotal = accumulated
+                        }
+                    }
+                    return
+                }
+                for (column in allowedColumns[row]) {
+                    if (used[column]) continue
+                    used[column] = true
+                    partner[row] = column
+                    search(row + 1, accumulated + scores[row][column])
+                    used[column] = false
+                    partner[row] = -1
+                    if (stopped) return
+                }
+                partner[row] = -1
+                search(row + 1, accumulated)
             }
-            partner[row] = -1
-            search(row + 1, accumulated)
-        }
 
-        search(0, 0.0)
-        return best
+            search(0, 0.0)
+            return best
+        } catch (e: OverBudget) {
+            return emptyList()
+        }
     }
 
     /**
@@ -121,11 +137,12 @@ internal object GlobalAssignment {
         scores: Array<DoubleArray>,
         initial: Array<BooleanArray>,
         tiebreak: Array<DoubleArray>?,
-        cancellation: Cancellation,
+        budget: WorkBudget,
     ): List<Pair<Int, Int>> {
         val allowed = Array(initial.size) { initial[it].copyOf() }
         while (true) {
-            val partner = maximum(scores, allowed, cancellation)
+            budget.spend(1)
+            val partner = maximum(scores, allowed, budget)
             val failing = failingEdges(partner, scores, tiebreak)
             if (failing.isEmpty()) return pairsOf(partner)
             for ((i, j) in failing) allowed[i][j] = false
@@ -215,7 +232,7 @@ internal object GlobalAssignment {
      * declaration may stay unpaired through a zero-weight dummy. The Hungarian algorithm runs on the smaller side, with
      * a lexicographic pair of score and pair-order bit vector as its cost, so equal totals follow R11.
      */
-    private fun maximum(scores: Array<DoubleArray>, allowed: Array<BooleanArray>, cancellation: Cancellation): IntArray {
+    private fun maximum(scores: Array<DoubleArray>, allowed: Array<BooleanArray>, budget: WorkBudget): IntArray {
         val olds = scores.size
         val news = scores[0].size
         val transposed = olds > news
@@ -223,6 +240,7 @@ internal object GlobalAssignment {
         val realColumns = if (transposed) olds else news
         val totalColumns = realColumns + rows
         val totalEdges = olds * news
+        budget.spend(rows.toLong() * totalColumns)
         val costs = Array(rows) { row ->
             Array(totalColumns) { column ->
                 if (column >= realColumns) {
@@ -239,7 +257,7 @@ internal object GlobalAssignment {
                 }
             }
         }
-        val assignment = hungarian(costs, cancellation)
+        val assignment = hungarian(costs, budget)
         val partner = IntArray(olds) { -1 }
         for (row in 0 until rows) {
             val column = assignment[row]
@@ -255,7 +273,7 @@ internal object GlobalAssignment {
      * The minimum-cost perfect matching of a [rows] by [columns] matrix with [rows] at most [columns], as the column of
      * each row. The last [rows] columns are dummies, so every row has a zero option.
      */
-    private fun hungarian(costs: Array<Array<Cost>>, cancellation: Cancellation): IntArray {
+    private fun hungarian(costs: Array<Array<Cost>>, budget: WorkBudget): IntArray {
         val rows = costs.size
         val columns = costs[0].size
         val u = Array(rows + 1) { Cost.ZERO }
@@ -263,7 +281,7 @@ internal object GlobalAssignment {
         val p = IntArray(columns + 1)
         val way = IntArray(columns + 1)
         for (i in 1..rows) {
-            cancellation.checkCanceled()
+            budget.spend(1)
             p[0] = i
             var j0 = 0
             val minv = Array(columns + 1) { Cost.INFINITY }
@@ -274,6 +292,7 @@ internal object GlobalAssignment {
                 var delta = Cost.INFINITY
                 var j1 = 0
                 for (j in 1..columns) {
+                    budget.spend(1)
                     if (used[j]) continue
                     val current = costs[i0 - 1][j - 1] - u[i0] - v[j]
                     if (current < minv[j]) {
@@ -286,6 +305,7 @@ internal object GlobalAssignment {
                     }
                 }
                 for (j in 0..columns) {
+                    budget.spend(1)
                     if (used[j]) {
                         u[p[j]] = u[p[j]] + delta
                         v[j] = v[j] - delta
@@ -332,4 +352,18 @@ internal object GlobalAssignment {
             val INFINITY = Cost(Double.POSITIVE_INFINITY, BigInteger.ZERO)
         }
     }
+
+    /** Counts the work of one group and checks cancellation as it goes; over [limit] the group is left unpaired (R12). */
+    private class WorkBudget(private val limit: Long, private val cancellation: Cancellation) {
+        private var spent = 0L
+
+        fun spend(work: Long) {
+            cancellation.checkCanceled()
+            spent += work
+            if (spent > limit) throw OverBudget()
+        }
+    }
+
+    /** A group that spent its work budget; [solve] turns it into the unpaired result R12 requires. */
+    private class OverBudget : RuntimeException(null, null, false, false)
 }

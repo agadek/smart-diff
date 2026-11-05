@@ -19,7 +19,7 @@ Status: implemented, 2026-11-04
 - **R9** A declaration that is renamed and reordered, or changed in kind and reordered, gives one relationship with all its kinds.
 - **R10** A paired rename's confidence follows the thresholds of the request, and a tied option is low.
 - **R11** Ties in the score go to the order on the [old side](../../GLOSSARY.md#old-side), then on the [new side](../../GLOSSARY.md#new-side).
-- **R12** A group with more possible pairs than the limit is left unpaired.
+- **R12** A group with more possible pairs than the pair limit, or more assignment work than the work limit, is left unpaired.
 - **R13** Matching stops promptly when the comparison is cancelled.
 - **R14** The median and slowest time per language stay within the [analysis limits](../../GLOSSARY.md#analysis-limits).
 - **R15** The change passes the [benchmark](01-relationship-benchmark.md) gate `no-new-wrong-pairs` against the recorded baseline.

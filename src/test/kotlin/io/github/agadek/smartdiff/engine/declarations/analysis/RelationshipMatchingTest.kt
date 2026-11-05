@@ -18,6 +18,7 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.CancellationException
+import kotlin.random.Random
 
 /** Relationships/03: the rename score, the whole-file assignment, ties and the limits, on hand-built trees. */
 class RelationshipMatchingTest {
@@ -351,6 +352,53 @@ class RelationshipMatchingTest {
         assertEquals("the oversized M3 group goes to M4", 101, overload.uncertainOld.size)
         assertEquals(100, overload.uncertainNew.size)
         assertTrue(overload.relationships.isEmpty())
+    }
+
+    @Test
+    fun `R12 a large near-tied group spends its work budget and returns promptly`() {
+        // relationships/03-relationship-matching R12: before the work budget, 100 by 99 near-tied scores took ~12 s.
+        val random = Random(99)
+        val scores = Array(100) { DoubleArray(99) { 0.70 + random.nextDouble() * 0.25 } }
+
+        val start = System.nanoTime()
+        val pairs = GlobalAssignment.solve(scores, 0.7, null, Cancellation.NONE)
+        val millis = (System.nanoTime() - start) / 1_000_000
+
+        assertTrue("the group is left unpaired when its work runs out: $pairs", pairs.isEmpty())
+        assertTrue("the group returns within the analysis limit, took ${millis}ms", millis < 4_000)
+    }
+
+    @Test
+    fun `R12 the default work budget keeps a moderate group's pair`() {
+        // relationships/03-relationship-matching R12: this 50 by 40 group needs about 3.6M work and returns in about
+        // 0.13 s; the earlier 2M default left it unpaired.
+        val random = Random(1)
+        val scores = Array(50) { i ->
+            DoubleArray(40) { j ->
+                if (i == 0 && j == 0) 1.0 else 0.70 + random.nextDouble() * 0.15
+            }
+        }
+        for (j in 1 until 40) scores[0][j] = 0.0
+        for (i in 1 until 50) scores[i][0] = 0.0
+
+        assertEquals(listOf(0 to 0), GlobalAssignment.solve(scores, 0.7, null, Cancellation.NONE))
+    }
+
+    @Test
+    fun `R12 a group over the work limit is left unpaired and below it stays exact`() {
+        // relationships/03-relationship-matching R12: the work limit changes only groups that exceed it.
+        val scores = arrayOf(
+            doubleArrayOf(0.90, 0.85),
+            doubleArrayOf(0.85, 0.00),
+        )
+        assertEquals(
+            setOf(0 to 1, 1 to 0),
+            GlobalAssignment.solve(scores, 0.7, null, Cancellation.NONE, maxWork = Long.MAX_VALUE).toSet(),
+        )
+        assertTrue(
+            "a group over its work limit is left unpaired",
+            GlobalAssignment.solve(scores, 0.7, null, Cancellation.NONE, maxWork = 1).isEmpty(),
+        )
     }
 
     @Test(expected = CancellationException::class)

@@ -369,6 +369,40 @@ class DeclarationAnalysisTest {
     }
 
     @Test
+    fun `R13 R19 a low container pair moves its members`() {
+        // relationships/02-relationship-model R13, relationships/03-relationship-matching R19
+        val old = tree {
+            cls("Parser") {
+                method("parse", "", "{ return first(); }")
+                method("other", "", "{ return second(); }")
+            }
+        }
+        val new = tree {
+            cls("Reader") {
+                method("parse", "", "{ return first(); }")
+                method("other", "", "{ return second(); }")
+            }
+        }
+        val low = ConfidencePolicy(high = 1.0, medium = 1.0)
+
+        val result = DeclarationAnalysis(ENGINE, "1").compare(old, new, 5_000, Cancellation.NONE, low)
+
+        assertEquals(
+            "CLASS Parser REMOVED\nCLASS Reader ADDED\n  METHOD parse() moved\n  METHOD other() moved\n",
+            outline(result),
+        )
+        val rename = result.relationships.single { RelationshipKind.RENAME in it.kinds }
+        assertEquals(Confidence.LOW, rename.confidence)
+        val moves = result.relationships.filter { RelationshipKind.MOVE in it.kinds }
+        assertEquals("both members keep their pair and say they moved", 2, moves.size)
+        assertTrue(moves.all { it.confidence == Confidence.HIGH })
+        val reader = result.changes.single { (it.subject as Subject.Declaration).name == "Reader" }
+        assertTrue("the added container holds its matched members", reader.children.all { it.moved })
+        val parser = result.changes.single { (it.subject as Subject.Declaration).name == "Parser" }
+        assertTrue("the removed container holds no matched member", parser.children.isEmpty())
+    }
+
+    @Test
     fun `labels use the display signature and receiver`() {
         val old = tree()
         val new = DeclarationTree(
