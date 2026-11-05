@@ -1,10 +1,10 @@
 # SMART Diff Roadmap
 
-Status: 2026-11-04. Items after the shipped baseline are candidates, not commitments; their order is a proposal. Scope details live in the [product scope](specs/README.md#product-scope), the [feature specifications](specs/README.md) and the [technical specification](TECHNICAL-SPECIFICATION.md).
+Status: 2026-11-05. Items after the shipped baseline are candidates, not commitments; their order is a proposal. Scope details live in the [product scope](specs/README.md#product-scope), the [feature specifications](specs/README.md) and the [technical specification](TECHNICAL-SPECIFICATION.md).
 
 ## Shipped baseline
 
-0.1.0 and 0.1.1 are released; 0.2.0 is validated on 2026-11-04, ready for the release steps.
+0.1.0, 0.1.1 and 0.2.0 (2026-11-05) are released.
 
 - Structural outline for two-sided diffs, attached to the native diff, per file only. It opens by default, with a setting to turn it off and a toolbar button in every diff to switch to the plain native diff.
 - Comparison engine interface, registry, per-language default, and engine dropdown ([ADR 0004](adr/0004-pluggable-comparison-engines.md)).
@@ -44,9 +44,9 @@ Keep a single space where the source separates words in a type (`Class<out Annot
 
 A nothing-hidden check cheap enough for large files, so the corpus validation covers every file (414 of 1279 were too large for the current one).
 
-## 0.2.0: three-way merge outline, validated 2026-11-04
+## 0.2.0: three-way merge outline, released 2026-11-05
 
-Decided 2026-10-30. It came before everything else under [Later](#later), and its [structural outline for three-way merges](#structural-outline-for-three-way-merges) for Java, Kotlin, Scala 2 and Scala 3 is prepared for this release. Its features are specified in [docs/specs/merge/](specs/README.md#merges).
+Decided 2026-10-30. It came before everything else under [Later](#later), and its [structural outline for three-way merges](#structural-outline-for-three-way-merges) for Java, Kotlin, Scala 2 and Scala 3 ships in this release. Its features are specified in [docs/specs/merge/](specs/README.md#merges).
 
 | Work | Spec | State |
 | --- | --- | --- |
@@ -57,7 +57,7 @@ Decided 2026-10-30. It came before everything else under [Later](#later), and it
 | Validation on real merge commits | [merge/06](specs/merge/06-merge-validation.md) | Implemented, PR #48; results and review in [VALIDATION.md](VALIDATION.md) |
 | Outline for languages without an engine, and the "not analyzed" reason in the Changes tree | [outline/01](specs/outline/01-structural-outline.md), [changes-tree/01](specs/changes-tree/01-changes-tree-summary.md) | Implemented, PR #37 |
 
-0.2.0 is validated on 2026-11-04, ready for the release steps. The merge gate passes: the [2026-11-02 rerun](VALIDATION.md#2026-11-02-merge-validation-rerun) meets merge/06 R15 to R17 and R32, and the flagged files are reviewed. The two-sided corpus gate passes too: the [2026-11-04 rerun](VALIDATION.md#2026-11-04-two-sided-corpus-rerun) covers the Java and Kotlin list and the Scala list, zio included, with every clone's HEAD pinned; it has 1970 files, 1968 `ANALYZED` and 2 `PARTIAL`, no fallback and no `hidden` or `empty` flag, and the Java and Kotlin half reproduces the [2026-10-23 run](VALIDATION.md#2026-10-23-extraction-detection) exactly. The Scala half's zio and scala3 windows differ from the recorded run, and each of its 28 flagged files is reviewed in that section. The requirement-named tests for the features accepted on 2026-11-01 (outline/05, declarations/06 and changes-tree/03) are done, and those features are implemented. The tag and release are still to do.
+0.2.0 was released on 2026-11-05. The merge gate passes: the [2026-11-02 rerun](VALIDATION.md#2026-11-02-merge-validation-rerun) meets merge/06 R15 to R17 and R32, and the flagged files are reviewed. The two-sided corpus gate passes too: the [2026-11-04 rerun](VALIDATION.md#2026-11-04-two-sided-corpus-rerun) covers the Java and Kotlin list and the Scala list, zio included, with every clone's HEAD pinned; it has 1970 files, 1968 `ANALYZED` and 2 `PARTIAL`, no fallback and no `hidden` or `empty` flag, and the Java and Kotlin half reproduces the [2026-10-23 run](VALIDATION.md#2026-10-23-extraction-detection) exactly. The Scala half's zio and scala3 windows differ from the recorded run, and each of its 28 flagged files is reviewed in that section. The requirement-named tests for the features accepted on 2026-11-01 (outline/05, declarations/06 and changes-tree/03) are done, and those features are implemented. The tag and GitHub release are published with the signed plugin attached.
 
 ## After 0.2.0: structural relationships
 
@@ -117,7 +117,7 @@ It comes right after the [Changes tree level 2](#multi-file-summary-in-the-chang
 - **Approach:** run the selected comparison engine twice, base → left and base → right, and join both results on base-side ranges. No change to the engine interface; the request gains an optional hint so the Scala dialect is chosen from all three texts.
 - **Groups:** changed on both sides (likely conflicts), changed only on one side, uncertain; the same change on both sides is marked as such.
 - **Integration:** a `DiffExtension` for three-sided diffs, and for the merge window a `MergeTool` registered first that decorates the platform's own merge viewer, decided by spike S6 ([ADR 0007](adr/0007-merge-outline-attaches-through-a-delegating-merge-tool.md)). Base ranges are tracked into the editable result pane.
-- **Phases:** spike S6 (done 2026-10-23, [THREE-WAY-MERGE.md §12](THREE-WAY-MERGE.md#12-spike-s6-results)), the join, three-sided diffs, the merge window and the merge fixtures (done 2026-11-01), then a validation on replayed merge commits. Tracked in [0.2.0](#020-three-way-merge-outline-validated-2026-11-04).
+- **Phases:** spike S6 (done 2026-10-23, [THREE-WAY-MERGE.md §12](THREE-WAY-MERGE.md#12-spike-s6-results)), the join, three-sided diffs, the merge window and the merge fixtures (done 2026-11-01), then a validation on replayed merge commits. Tracked in [0.2.0](#020-three-way-merge-outline-released-2026-11-05).
 - **Decided 2026-10-23** ([THREE-WAY-MERGE.md §10](THREE-WAY-MERGE.md#10-decisions)): grouped by side with a toggle to the container tree; sides named by the merge window's titles, shortened; rows changed on both sides that merged without a conflict marked as such; the outline follows the existing setting; the item comes right after the Changes tree level 2.
 
 ### More languages

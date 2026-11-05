@@ -358,8 +358,8 @@ nothing-hidden rule, and no changed text was left unreported. Every flagged file
 found, and the two `rename` prompts that do not name a rename are the coarse heuristic described above. Both 0.2.0 gates
 in [RELEASING.md](RELEASING.md) step 3 are therefore met: this section records the corpus validation, and the
 [2026-11-04 relationship model run](#2026-11-04-relationship-model-migration) records the relationship benchmark with both
-of its gates passing. 0.2.0 is validated and ready for the release steps; the tag, the GitHub release and any Marketplace
-upload remain the maintainer's steps.
+of its gates passing. 0.2.0 was released on 2026-11-05; the tag and GitHub release are published with the signed plugin attached.
+Marketplace publishing remains off.
 
 The report is in `build/reports/smartdiff-validation/summary.tsv` and `report.md`.
 

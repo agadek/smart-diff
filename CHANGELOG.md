@@ -6,7 +6,7 @@
 
 - Renamed or reordered methods and functions whose body also changed are more often shown as one `rename candidate` row, for example two tests renamed in the same commit, instead of one removed and one added row. When several renames or reordered declarations compete, the outline chooses over the whole file and leaves a genuine tie as two changes.
 
-## [0.2.0] - 2026-11-04
+## [0.2.0] - 2026-11-05
 
 ### Added
 
