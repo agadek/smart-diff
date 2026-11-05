@@ -19,6 +19,7 @@ import com.intellij.openapi.util.BooleanGetter
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.UserDataHolder
 import com.intellij.openapi.util.UserDataHolderBase
+import com.intellij.openapi.vcs.FilePath
 import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vcs.changes.ChangesViewModifier
 import com.intellij.openapi.vcs.changes.ChangesViewNodeAction
@@ -31,6 +32,8 @@ import com.intellij.openapi.vcs.changes.ui.ChangesBrowserNodeRenderer
 import com.intellij.openapi.vcs.changes.ui.NoneChangesGroupingFactory
 import com.intellij.openapi.vcs.changes.ui.TreeModelBuilder
 import com.intellij.openapi.vcs.changes.ui.VcsTreeModelData
+import com.intellij.openapi.vcs.history.VcsRevisionNumber
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -177,6 +180,37 @@ class ChangesSummaryTest : BasePlatformTestCase() {
         assertTrue("the outline is shown even when it is off by default", outline.isOutlineVisible)
         assertEquals("method isEmpty()  added", outline.panel.selectedItem()?.label)
         assertNull("the request selects the row once", request.getUserData(OutlinePath.KEY))
+    }
+
+    fun `test a declaration click is left to the platform when the diff action cannot be loaded`() {
+        val change = modified("Cart.java", OLD_CART, NEW_CART)
+        summaryNode(change)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        val added = summaryNode(change)!!.preorderEnumeration().toList().filterIsInstance<DeclarationNode>().last()
+        val action = DeclarationNodeAction(project) { p, changes, index, key, value ->
+            ChangesDiff.show(p, changes, index, key, value, "smartdiff.test.MissingAction", "smartdiff.test.MissingContext")
+        }
+
+        assertFalse("the platform's own action can open the row", action.handleDoubleClick(added))
+    }
+
+    fun `test the version of a local file is its modification stamp`() {
+        val file = myFixture.addFileToProject("Local.java", "class Local {}").virtualFile
+        val revision = SimpleContentRevision("class Local {}", path(file), VcsRevisionNumber.NULL)
+
+        val version = ChangesSummaryService.version(revision)
+
+        assertTrue("a local file has a state to compare: $version", version.startsWith("local:"))
+        assertFalse("a local file is not just its missing state", version == "local")
+    }
+
+    fun `test the version of a deleted local file is local`() {
+        val file = myFixture.addFileToProject("Deleted.java", "class Deleted {}").virtualFile
+        ApplicationManager.getApplication().runWriteAction { file.delete(testRootDisposable) }
+        assertFalse(file.isValid)
+        val revision = SimpleContentRevision("class Deleted {}", path(file), VcsRevisionNumber.NULL)
+
+        assertEquals("local", ChangesSummaryService.version(revision))
     }
 
     fun `test the summary is the outline's summary line, or the reason it was not analyzed`() {
@@ -344,6 +378,12 @@ class ChangesSummaryTest : BasePlatformTestCase() {
         val path = VcsUtil.getFilePath("/repo/$fileName", false)
         return Change(SimpleContentRevision(oldText, path, "1"), SimpleContentRevision(newText, path, "2"))
     }
+
+    /** A path that resolves to [file], which the local path of a light test file does not. */
+    private fun path(file: VirtualFile): FilePath =
+        object : FilePath by VcsUtil.getFilePath(file.path, false) {
+            override fun getVirtualFile(): VirtualFile = file
+        }
 
     /** Builds the tree for [changes] as the Changes view does and returns the row of [change] if it has a summary. */
     private fun summaryNode(change: Change, changes: List<Change> = listOf(change)): SummaryChangeNode? {
