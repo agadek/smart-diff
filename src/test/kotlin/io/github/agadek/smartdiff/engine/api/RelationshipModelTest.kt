@@ -54,7 +54,7 @@ class RelationshipModelTest {
     }
 
     @Test
-    fun `R5 evidence is name, content, structure, position or score with the ranges it compares`() {
+    fun `R5 evidence is name, content, structure, position or score, and only content carries ranges`() {
         val content = Evidence.Content(shared = 12, total = 20, oldRange = TextRange(3, 9), newRange = TextRange(10, 18))
         val evidence = listOf(
             Evidence.Name("total", "sum"),
