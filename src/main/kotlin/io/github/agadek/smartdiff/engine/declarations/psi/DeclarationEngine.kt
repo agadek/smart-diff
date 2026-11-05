@@ -123,8 +123,9 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
             }
             if (version == UNKNOWN) {
                 Logger.getInstance(DeclarationEngine::class.java).debug(
-                    "Scala plugin version is $UNKNOWN: no $PLUGIN_DESCRIPTOR on the Scala language classloader names " +
-                        "$SCALA_PLUGIN_ID, so the engine version cannot name its parser (relationships/02 R24)",
+                    "Scala plugin version is $UNKNOWN: no $PLUGIN_DESCRIPTOR on the Scala language classloader gives " +
+                        "a usable <version> for $SCALA_PLUGIN_ID, so the engine version cannot name its parser " +
+                        "(relationships/02 R24)",
                 )
             }
             return version
