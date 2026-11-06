@@ -32,22 +32,37 @@ import java.awt.RenderingHints
 internal class OutlineNavigator(private val viewer: TwosideTextDiffViewer) {
 
     private val highlighters = mutableListOf<RangeHighlighter>()
+    private val frames = mutableListOf<RangeHighlighter>()
+    private var frameSync: FrameScrollSync? = null
 
     /**
-     * Highlights [item] on both sides and scrolls each side to it. Synchronized scrolling is paused meanwhile, so a moved
-     * declaration shows on both sides; the user's next scroll synchronizes the editors again.
+     * Highlights [item] on both sides and scrolls each side to it. When both ranges are present while Synchronize
+     * scrolling is on, the platform's sync stays paused and [frameSync] keeps the frames aligned until one leaves view
+     * or the selection is released; otherwise the row is only framed.
      */
     fun select(item: OutlineItem?) {
         clear()
         if (item == null || item.isGroup) return
-        val sync = viewer.syncScrollSupport
-        sync?.enterDisableScrollSection()
-        try {
-            show(viewer.editor1, item.oldRange, item.details.mapNotNull { it.old })
-            show(viewer.editor2, item.newRange, item.details.mapNotNull { it.new })
-        } finally {
-            sync?.exitDisableScrollSection()
+        val oldRange = item.oldRange
+        val newRange = item.newRange
+        val follows = oldRange != null && newRange != null && followsSynchronizedScrolling()
+        withSyncDisabled {
+            show(viewer.editor1, oldRange, item.details.mapNotNull { it.old })
+            show(viewer.editor2, newRange, item.details.mapNotNull { it.new })
         }
+        if (follows && frames.size == 2) {
+            frameSync = FrameScrollSync(
+                listOf(viewer.editor1, viewer.editor2),
+                frames.toList(),
+                viewer.syncScrollSupport?.asScrollPause(),
+            ).also { it.start() }
+        }
+    }
+
+    /** Stops keeping the pair aligned, for a document change; the highlighters stay until the next result. */
+    fun releaseScrollSync() {
+        frameSync?.stop()
+        frameSync = null
     }
 
     /** Moves the caret into the new side's editor, or the old side's when the item is only there (Enter or double-click). */
@@ -66,8 +81,27 @@ internal class OutlineNavigator(private val viewer: TwosideTextDiffViewer) {
     val shown: List<RangeHighlighter> get() = highlighters.toList()
 
     fun clear() {
+        releaseScrollSync()
         highlighters.forEach { it.dispose() }
         highlighters.clear()
+        frames.clear()
+    }
+
+    /** Runs [action] with synchronized scrolling paused, for this selection's own scrolls. */
+    private fun withSyncDisabled(action: () -> Unit) {
+        val sync = viewer.syncScrollSupport
+        sync?.enterDisableScrollSection()
+        try {
+            action()
+        } finally {
+            sync?.exitDisableScrollSection()
+        }
+    }
+
+    /** Whether the platform is currently synchronizing this viewer's scrolling for the user. */
+    private fun followsSynchronizedScrolling(): Boolean {
+        val sync = viewer.syncScrollSupport ?: return false
+        return sync.scrollable.isSyncScrollEnabled
     }
 
     private fun show(editor: Editor, range: TextRange?, details: List<TextRange>) {
@@ -84,6 +118,7 @@ internal class OutlineNavigator(private val viewer: TwosideTextDiffViewer) {
         highlighter.customRenderer = Frame
         highlighter.setErrorStripeMarkColor(FRAME_COLOR)
         highlighter.isThinErrorStripeMark = false
+        frames += highlighter
     }
 
     private fun highlight(editor: Editor, range: TextRange, key: TextAttributesKey, area: HighlighterTargetArea) {

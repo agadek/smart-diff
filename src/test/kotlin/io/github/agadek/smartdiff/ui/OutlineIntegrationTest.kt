@@ -14,16 +14,21 @@ import com.intellij.diff.tools.simple.SimpleDiffChange
 import com.intellij.diff.tools.util.DiffDataKeys
 import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
 import com.intellij.diff.util.Side
+import com.intellij.icons.AllIcons
+import com.intellij.ide.util.PropertiesComponent
 import com.intellij.lang.Language
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.IdeActions
+import com.intellij.openapi.actionSystem.KeyboardShortcut
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import com.intellij.testFramework.EditorTestUtil
 import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.TestActionEvent
@@ -47,6 +52,10 @@ import io.github.agadek.smartdiff.engine.lines.LineEngine
 import io.github.agadek.smartdiff.engine.lines.LineEngineFactory
 import io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory
 import io.github.agadek.smartdiff.engine.registry.EngineDefaults
+import java.awt.event.ActionEvent
+import java.awt.event.FocusEvent
+import java.awt.event.KeyEvent
+import javax.swing.KeyStroke
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.TreePath
 
@@ -106,6 +115,156 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
 
         outline.navigator.navigate(outline.panel.selectedItem()!!)
         assertEquals(JAVA_NEW.indexOf("void bye()"), shown.viewer.editor2.caretModel.offset)
+    }
+
+    fun `test a selected moved row keeps its frames aligned while scrolling`() {
+        // outline/01-structural-outline R25
+        val shown = open(history(MOVED_OLD, MOVED_NEW, "Moved.java"))
+        val outline = shown.awaitResult()
+        show(shown.viewer.editor1)
+        show(shown.viewer.editor2)
+        val item = selectItem(outline) { it.title == "method moved()" }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        val sync = requireNotNull(shown.viewer.syncScrollSupport) { "the native viewer has no synchronized scrolling" }
+        assertTrue("the selection holds synchronized scrolling", sync.isDuringSyncScroll)
+
+        val old = shown.viewer.editor1
+        val new = shown.viewer.editor2
+        val oldFrame = scrollFrame(old, requireNotNull(item.oldRange))
+        val newFrame = scrollFrame(new, requireNotNull(item.newRange))
+        old.scrollingModel.scrollVertically(old.scrollingModel.visibleArea.y + old.lineHeight * 3)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+
+        assertTrue("a small scroll keeps both frames in view", sync.isDuringSyncScroll)
+        assertEquals(
+            "the old frame keeps the same place in view",
+            old.scrollingModel.visibleArea.y - oldFrame.start,
+            new.scrollingModel.visibleArea.y - newFrame.start,
+            1.0,
+        )
+    }
+
+    fun `test a fold inside a selected frame keeps the frames aligned`() {
+        // outline/01-structural-outline R25
+        val shown = open(history(MOVED_OLD, MOVED_NEW, "Moved.java"))
+        val outline = shown.awaitResult()
+        show(shown.viewer.editor1)
+        show(shown.viewer.editor2)
+        val item = selectItem(outline) { it.title == "method moved()" }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        val sync = requireNotNull(shown.viewer.syncScrollSupport) { "the native viewer has no synchronized scrolling" }
+        assertTrue(sync.isDuringSyncScroll)
+
+        val old = shown.viewer.editor1
+        val new = shown.viewer.editor2
+        val before = scrollFrame(old, requireNotNull(item.oldRange))
+        old.foldingModel.runBatchFoldingOperation {
+            old.foldingModel.addFoldRegion(
+                old.document.getLineStartOffset(62),
+                old.document.getLineEndOffset(63),
+                "...",
+            )?.isExpanded = false
+        }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        val folded = scrollFrame(old, requireNotNull(item.oldRange))
+        assertTrue("the fold shortened the old frame", folded.end < before.end)
+        assertTrue("the fold keeps the hold", sync.isDuringSyncScroll)
+
+        old.scrollingModel.disableAnimation()
+        try {
+            old.scrollingModel.scrollVertically(old.scrollingModel.verticalScrollOffset + old.lineHeight * 5)
+        } finally {
+            old.scrollingModel.enableAnimation()
+        }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+
+        val oldFrame = scrollFrame(old, requireNotNull(item.oldRange))
+        val newFrame = scrollFrame(new, requireNotNull(item.newRange))
+        val oldProgress = (old.scrollingModel.visibleArea.y - oldFrame.start) / (oldFrame.end - oldFrame.start)
+        val newProgress = (new.scrollingModel.visibleArea.y - newFrame.start) / (newFrame.end - newFrame.start)
+        assertEquals("the frames keep the same progress after the fold", oldProgress, newProgress, 0.05)
+    }
+
+    fun `test a selected moved row releases synchronized scrolling when a frame leaves view`() {
+        // outline/01-structural-outline R26
+        val shown = open(history(MOVED_OLD, MOVED_NEW, "Moved.java"))
+        val outline = shown.awaitResult()
+        show(shown.viewer.editor1)
+        show(shown.viewer.editor2)
+        selectItem(outline) { it.title == "method moved()" }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        val sync = requireNotNull(shown.viewer.syncScrollSupport) { "the native viewer has no synchronized scrolling" }
+        assertTrue(sync.isDuringSyncScroll)
+
+        shown.viewer.editor1.scrollingModel.scrollVertically(0)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+
+        assertFalse("the pause ends with the frame out of view", sync.isDuringSyncScroll)
+    }
+
+    fun `test changing or clearing the selection replaces or releases the scroll hold`() {
+        // outline/01-structural-outline R26
+        val shown = open(history(MOVED_OLD, MOVED_NEW, "Moved.java"))
+        val outline = shown.awaitResult()
+        show(shown.viewer.editor1)
+        show(shown.viewer.editor2)
+        selectItem(outline) { it.title == "method moved()" }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        val sync = requireNotNull(shown.viewer.syncScrollSupport) { "the native viewer has no synchronized scrolling" }
+        assertTrue(sync.isDuringSyncScroll)
+
+        selectItem(outline) { it.title == "class Moved" }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        assertTrue("the hold moves to the new selection", sync.isDuringSyncScroll)
+
+        outline.panel.tree.selectionPath = null
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        assertFalse("clearing the selection releases the hold", sync.isDuringSyncScroll)
+    }
+
+    fun `test an edit releases the scroll hold`() {
+        // outline/01-structural-outline R26
+        val local = myFixture.addFileToProject("local/Moved.java", MOVED_NEW).virtualFile
+        val shown = open(
+            SimpleDiffRequest(
+                "local",
+                DiffContents.vcsRevision(project, MOVED_OLD, "/repo/Moved.java"),
+                DiffContents.localFile(project, local),
+                "HEAD",
+                "Current",
+            ),
+        )
+        val outline = shown.awaitResult()
+        show(shown.viewer.editor1)
+        show(shown.viewer.editor2)
+        selectItem(outline) { it.title == "method moved()" }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        val sync = requireNotNull(shown.viewer.syncScrollSupport) { "the native viewer has no synchronized scrolling" }
+        assertTrue(sync.isDuringSyncScroll)
+
+        val document = shown.viewer.editor2.document
+        WriteCommandAction.runWriteCommandAction(project) {
+            document.insertString(0, "// edited\n")
+        }
+
+        assertFalse("the edit releases the hold before the next result", sync.isDuringSyncScroll)
+    }
+
+    fun `test disposing the diff releases the scroll hold`() {
+        // outline/01-structural-outline R26
+        val shown = open(history(MOVED_OLD, MOVED_NEW, "Moved.java"))
+        val outline = shown.awaitResult()
+        show(shown.viewer.editor1)
+        show(shown.viewer.editor2)
+        selectItem(outline) { it.title == "method moved()" }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        val sync = requireNotNull(shown.viewer.syncScrollSupport) { "the native viewer has no synchronized scrolling" }
+        assertTrue(sync.isDuringSyncScroll)
+
+        Disposer.dispose(shown.disposable)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+
+        assertFalse("closing the diff releases the hold", sync.isDuringSyncScroll)
     }
 
     fun `test hiding a change type rebuilds the outline and is remembered`() {
@@ -242,6 +401,190 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         action.setSelected(TestActionEvent.createTestEvent(action, SimpleDataContext.getSimpleContext(DiffDataKeys.DIFF_VIEWER, next.viewer)), true)
         assertTrue(UIUtil.isAncestor(next.viewer.component, next.outline.panel))
         next.awaitResult()
+    }
+
+    fun `test outline 02 R7 the header hide button turns the outline off for this diff window`() {
+        // outline/02-outline-toggle R7
+        val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+        val outline = shown.awaitResult()
+        assertEquals(AllIcons.General.HideToolWindow, outline.panel.hideAction.templatePresentation.icon)
+
+        outline.panel.hideAction.actionPerformed(TestActionEvent.createTestEvent(outline.panel.hideAction))
+
+        assertFalse(outline.isOutlineVisible)
+        assertEquals(OutlineState.Hidden, outline.state)
+        assertFalse(UIUtil.isAncestor(shown.viewer.component, outline.panel))
+        assertFalse(UIUtil.isAncestor(shown.viewer.component, outline.strip))
+
+        // The window keeps the choice for its next file; another window keeps its own.
+        val next = shown.show(history(KOTLIN_OLD, KOTLIN_NEW, "Greeter.kt"))
+        assertFalse(next.outline.isOutlineVisible)
+        assertTrue(open(history(JAVA_OLD, JAVA_NEW, "Other.java")).outline.isOutlineVisible)
+    }
+
+    fun `test outline 02 R8 R9 R11 the minimise button shows the summary strip and restores the same result`() {
+        // outline/02-outline-toggle R8, R9, R11
+        val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+        val outline = shown.awaitResult()
+
+        outline.panel.minimiseAction.actionPerformed(TestActionEvent.createTestEvent(outline.panel.minimiseAction))
+
+        assertTrue(outline.isMinimised)
+        assertTrue(outline.isOutlineVisible)
+        assertTrue(UIUtil.isAncestor(shown.viewer.component, outline.strip))
+        assertFalse(UIUtil.isAncestor(shown.viewer.component, outline.panel))
+        assertTrue(outline.strip.toolTipText, outline.strip.toolTipText.contains("1 changed · 1 added"))
+        assertTrue(
+            outline.strip.restoreButton.accessibleContext.accessibleName.orEmpty().contains("1 changed · 1 added"),
+        )
+
+        val shownState = outline.state
+        outline.strip.restoreButton.doClick()
+
+        assertFalse(outline.isMinimised)
+        assertTrue(UIUtil.isAncestor(shown.viewer.component, outline.panel))
+        assertFalse(UIUtil.isAncestor(shown.viewer.component, outline.strip))
+        assertSame("restoring reuses the computed result", shownState, outline.state)
+        assertEquals("1 changed · 1 added", outline.panel.summary.text)
+    }
+
+    fun `test outline 02 R9 minimising before a fallback result arrives names the fallback`() {
+        // outline/02-outline-toggle R9
+        val engine = DelayedFallbackEngine()
+        ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(engine)), testRootDisposable)
+        val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+        val outline = shown.outline
+        assertEquals(OutlineState.Loading, outline.state)
+
+        outline.panel.minimiseAction.actionPerformed(TestActionEvent.createTestEvent(outline.panel.minimiseAction))
+        assertTrue(outline.isMinimised)
+        assertTrue(outline.strip.toolTipText, outline.strip.toolTipText.contains("Comparing"))
+
+        engine.finish()
+        awaitResult(outline) { it.result.status == Status.FAILED }
+
+        assertTrue(
+            "the strip names the fallback: ${outline.strip.toolTipText}",
+            outline.strip.toolTipText.contains("Analysis failed: analysis failed after a delay"),
+        )
+        assertFalse(outline.strip.toolTipText, outline.strip.toolTipText.contains("No structural changes"))
+    }
+
+    fun `test outline 02 R9 minimising after a fallback result names the fallback`() {
+        // outline/02-outline-toggle R9
+        val engine = ResultEngine()
+        maskEngines(engine)
+        for ((status, reason, expected) in listOf(
+            Triple(Status.UNSUPPORTED, "not a source file", "Not supported: not a source file"),
+            Triple(Status.TOO_LARGE, "file has 100 characters", "Too large to analyze: file has 100 characters"),
+            Triple(Status.FAILED, "could not read the file", "Analysis failed: could not read the file"),
+        )) {
+            engine.status = status
+            engine.reason = reason
+            val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+
+            outline.panel.minimiseAction.actionPerformed(TestActionEvent.createTestEvent(outline.panel.minimiseAction))
+
+            assertTrue("$status: ${outline.strip.toolTipText}", outline.strip.toolTipText.contains(expected))
+            assertFalse("$status: ${outline.strip.toolTipText}", outline.strip.toolTipText.contains("No structural changes"))
+        }
+    }
+
+    fun `test outline 02 R10 Enter restores the strip and focus is visible`() {
+        // outline/02-outline-toggle R10
+        val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+        val outline = shown.awaitResult()
+        outline.panel.minimiseAction.actionPerformed(TestActionEvent.createTestEvent(outline.panel.minimiseAction))
+        val button = outline.strip.restoreButton
+
+        val idle = button.border
+        button.focusListeners.forEach { it.focusGained(FocusEvent(button, FocusEvent.FOCUS_GAINED)) }
+        assertNotSame("focus shows a visible border for Tab", idle, button.border)
+
+        val actionKey = button.inputMap.get(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0))
+        assertNotNull("Enter is bound to the strip", actionKey)
+        requireNotNull(button.actionMap.get(actionKey))
+            .actionPerformed(ActionEvent(button, ActionEvent.ACTION_PERFORMED, actionKey.toString()))
+
+        assertFalse(outline.isMinimised)
+        assertTrue(UIUtil.isAncestor(shown.viewer.component, outline.panel))
+    }
+
+    fun `test outline 02 R10 clicking the strip restores the panel at its previous width`() {
+        // outline/02-outline-toggle R10
+        val key = "smartdiff.outline.proportion"
+        val properties = PropertiesComponent.getInstance()
+        val saved = properties.getValue(key)
+        try {
+            val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+            outline.splitter.proportion = 0.6f
+            val width = outline.splitter.proportion
+
+            outline.panel.minimiseAction.actionPerformed(TestActionEvent.createTestEvent(outline.panel.minimiseAction))
+            outline.strip.restoreButton.doClick()
+
+            assertEquals(width, outline.splitter.proportion, 0.001f)
+        } finally {
+            if (saved == null) properties.unsetValue(key) else properties.setValue(key, saved)
+        }
+    }
+
+    fun `test outline 02 R12 the toggle has a default shortcut that does not clash and Keymap lists it`() {
+        // outline/02-outline-toggle R12
+        val action = ActionManager.getInstance().getAction("SmartDiff.ToggleOutline")!!
+        val actionId = ActionManager.getInstance().getId(action) ?: "SmartDiff.ToggleOutline"
+        val expected = listOf(KeyStroke.getKeyStroke("control alt shift O"), KeyStroke.getKeyStroke("meta alt shift O"))
+        val keymap = KeymapManager.getInstance().activeKeymap
+        val shortcuts = keymap.getShortcuts(actionId).filterIsInstance<KeyboardShortcut>()
+
+        assertTrue(
+            "the toggle's default shortcut is missing from ${keymap.name}: $shortcuts",
+            shortcuts.any { it.firstKeyStroke in expected },
+        )
+        for (shortcut in shortcuts) {
+            assertEquals(
+                "no other action is bound to ${shortcut.firstKeyStroke} in ${keymap.name}",
+                listOf(actionId),
+                keymap.getActionIds(shortcut.firstKeyStroke).toList(),
+            )
+        }
+    }
+
+    fun `test outline 02 R13 the toggle is placed first in the diff toolbar`() {
+        // outline/02-outline-toggle R13
+        val action = ActionManager.getInstance().getAction("SmartDiff.ToggleOutline") as ToggleOutlineAction
+        val toolbar = ActionManager.getInstance().getAction(IdeActions.DIFF_VIEWER_TOOLBAR) as DefaultActionGroup
+
+        val order = toolbar.childActionsOrStubs.map { ActionManager.getInstance().getId(it) }
+        assertEquals("SmartDiff.ToggleOutline", ActionManager.getInstance().getId(action))
+        assertEquals("the first toolbar action stays visible in a narrow diff; order is $order", "SmartDiff.ToggleOutline", order.first())
+    }
+
+    fun `test outline 02 R14 the minimised state and width are remembered for the next diff`() {
+        // outline/02-outline-toggle R14
+        val key = "smartdiff.outline.proportion"
+        val properties = PropertiesComponent.getInstance()
+        val saved = properties.getValue(key)
+        try {
+            val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+            val outline = shown.awaitResult()
+            outline.splitter.proportion = 0.6f
+            outline.panel.minimiseAction.actionPerformed(TestActionEvent.createTestEvent(outline.panel.minimiseAction))
+
+            val next = shown.show(history(KOTLIN_OLD, KOTLIN_NEW, "Greeter.kt"))
+            next.awaitResult()
+            assertTrue("the next file in the window starts minimised", next.outline.isMinimised)
+            assertTrue(UIUtil.isAncestor(next.viewer.component, next.outline.strip))
+            assertEquals("the next diff keeps the width", 0.6f, next.outline.splitter.proportion, 0.01f)
+
+            val another = open(history(JAVA_OLD, JAVA_NEW, "Other.java"))
+            another.awaitResult()
+            assertTrue("a new diff window starts minimised", another.outline.isMinimised)
+            assertEquals("a new diff window keeps the width", 0.6f, another.outline.splitter.proportion, 0.01f)
+        } finally {
+            settings.outlineMinimised = false
+            if (saved == null) properties.unsetValue(key) else properties.setValue(key, saved)
+        }
     }
 
     fun `test the outline starts hidden when the setting is off`() {
@@ -548,6 +891,21 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         outline.panel.tree.selectionPath = TreePath(node.path)
     }
 
+    /** Selects the first row matching [predicate] and returns it. */
+    private fun selectItem(outline: OutlineController, predicate: (OutlineItem) -> Boolean): OutlineItem {
+        val root = outline.panel.tree.model.root as DefaultMutableTreeNode
+        val node = root.depthFirstEnumeration().toList().map { it as DefaultMutableTreeNode }
+            .first { (it.userObject as? OutlineItem)?.let(predicate) == true }
+        outline.panel.tree.selectionPath = TreePath(node.path)
+        return node.userObject as OutlineItem
+    }
+
+    /** Gives [editor] a viewport small enough for a scroll to leave a frame, as a diff window does. */
+    private fun show(editor: Editor) {
+        EditorTestUtil.setEditorVisibleSize(editor, 100, 14)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+    }
+
     private fun assertHighlightedAt(editor: Editor, offset: Int) {
         assertTrue("offset $offset not found in the text", offset >= 0)
         val starts = editor.markupModel.allHighlighters.map { it.startOffset }
@@ -598,6 +956,30 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
             error("the outline must not call an engine for a language it does not support")
     }
 
+    /** Waits until [finish] is called, then reports a failed analysis, so a fallback arrives after the user minimises. */
+    private class DelayedFallbackEngine : ComparisonEngine {
+        override val id = EngineId("smartdiff.test.delayedFallback")
+        override val displayName = "Delayed fallback (test)"
+        override val version = "1"
+
+        @Volatile
+        private var finished = false
+
+        fun finish() {
+            finished = true
+        }
+
+        override fun supports(languageId: String) = true
+
+        override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult {
+            while (!finished) {
+                cancellation.checkCanceled()
+                Thread.sleep(5)
+            }
+            return ComparisonResult(id, version, Status.FAILED, fallbackReason = "analysis failed after a delay")
+        }
+    }
+
     /** Never finishes; it checks for cancellation until it is canceled. */
     private class SlowEngine : ComparisonEngine {
         override val id = EngineId("smartdiff.test.slow")
@@ -627,6 +1009,24 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
     }
 
     private companion object {
+        /** A declaration that moves far up the new side, so the native sync would map its frames apart. */
+        val MOVED_OLD: String = buildString {
+            append("class Moved {\n")
+            repeat(60) { append("    int before$it() { return $it; }\n") }
+            append(MOVED_METHOD)
+            repeat(60) { append("    int after$it() { return $it; }\n") }
+            append("}\n")
+        }
+        val MOVED_NEW: String = buildString {
+            append("class Moved {\n")
+            repeat(20) { append("    int before$it() { return $it; }\n") }
+            append(MOVED_METHOD)
+            repeat(40) { append("    int before${it + 20}() { return ${it + 20}; }\n") }
+            repeat(60) { append("    int after$it() { return $it; }\n") }
+            append("}\n")
+        }
+        const val MOVED_METHOD = "    int moved() {\n        int value = 1;\n        return value;\n    }\n"
+
         const val JAVA_OLD = "class Greeter {\n    String hello() { return \"hi\"; }\n}\n"
         const val JAVA_NEW = "class Greeter {\n    String hello() { return \"hello\"; }\n\n    void bye() {}\n}\n"
         const val FORMATTED_OLD = "class Counter {\n    int a() { return 1; }\n\n    int b() { return 2; }\n}\n"

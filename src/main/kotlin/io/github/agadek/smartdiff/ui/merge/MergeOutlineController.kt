@@ -310,6 +310,7 @@ class MergeOutlineController private constructor(
     private fun documentChanged() {
         if (disposed || !isOutlineVisible) return
         cancel()
+        selection.releaseScrollSync()
         debounce.restart()
     }
 
