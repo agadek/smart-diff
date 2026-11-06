@@ -21,6 +21,92 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-06: Changes tree manual check on 2025.1 and 2026.3
+
+This run checked #108, #111 and #112 (PR #124) in running IDEs. `./gradlew buildPlugin` produced
+`build/distributions/smart-diff-0.2.0.zip`, installed in isolated `idea.plugins.path` directories. The IDEs were
+IntelliJ IDEA Community 2025.1.3 (`IC-251.26927.53`) through `runIde`, and IntelliJ IDEA Ultimate 2026.3
+(`IU-263.7307.200`) from the `idea-2026.3-aarch64.dmg` in the Gradle cache. The test project was a real Git repository
+with an unstaged `Cart.java` change (`class Cart` changed, `method total()` changed, `method isEmpty()` added), a staged
+`Order.java` change and an unstaged plain `notes.txt`. The Commit and Local Changes trees showed the summarized rows.
+
+The check used a temporary startup probe and a `DiffExtension` in the built plugin; both were removed before this change
+was committed. The probe used `java.awt.Robot` when macOS allowed it (`ROBOT ... moved=true`) and otherwise dispatched
+the same Swing mouse and key events to the tree. The desktop was unlocked, but macOS accessibility was inconsistent:
+Robot moved the pointer in some launches and not others, and `osascript`/`CGEventPost` from the shell were not permitted.
+A Robot click that produced no visible result is recorded as inconclusive, not as a pass.
+
+### #108: declaration double-click path on 2026.3
+
+When the declaration handler ran, 2026.3 took the platform `ShowDiffAction` path. The temporary `DiffExtension` recorded
+`request=LocalChangeListDiffRequest outlinePath=class Cart`, and the outline reported `state=Shown selected=class Cart`.
+The log had no `Cannot call the platform's Changes diff action` warning, so the fallback did not run. The same path was
+seen on 2025.1, with the same declaration context and no warning.
+
+A physical Robot double-click on the declaration row did not produce a visible diff within the probe window: the tree
+received `pressed count=2 consumed=true` (the plugin's press listener consumed it) and `open=none`, while Enter on the
+same row opened the diff with the declaration selected. The platform path is confirmed, but the physical double-click
+path is not; #108 stays open for a click-through with the log check.
+
+### #111: summarized file rows
+
+- **B1, B2 (double-click and Enter).** On 2025.1, with the preview setting on, the summarized row opened
+  `Changes[PreviewDiffFile]` and the plain row opened `TabPreviewDiffVirtualFile`; with the preview setting off and
+  the diff setting on, both rows opened their source files. Enter on the summarized row opened no editor in the final
+  2025.1 preview run while the plain row opened its preview, so B2 is only partly verified there. On 2026.3, the
+  physical double-click on the summarized row opened the editor preview (a `SimpleDiffRequest` and a snapshot titled
+  `project – Changes`), and the plain row opened its own preview (`Commit: notes.txt`); both previews appeared about
+  8–10 seconds after the click, after the probe's first 4-second check. Enter on the summarized and plain rows opened
+  the same previews.
+- **B3 (single-click preview).** Not verified. With
+  `show.diff.preview.as.editor.tab.with.single.click=true`, a single click opened no preview for the summarized row
+  or for the plain row on either IDE. This may be a tool-window mode or focus issue rather than a product difference,
+  but the probe cannot tell.
+- **B4 (arrow expansion).** Right expanded and Left collapsed the summarized row on both IDEs
+  (`right expanded=true`, `left expanded=false`).
+- **B5 (declaration rows).** Enter on `class Cart` opened the Changes diff with `outlinePath=class Cart` and the
+  outline row selected on both IDEs.
+- **Directory and changelist rows.** The default tree grouped by changelist only, so there were no directory rows.
+  Enabling directory grouping in the probe caused a tree-UI assertion, and a physical double-click on the changelist
+  row left it collapsed (`expanded=false`); neither is a confirmed pass.
+
+The summarized row follows the plain row for double-click in both settings, and for Enter on 2026.3; arrow and
+declaration rows pass. Single-click preview, directory rows, the changelist-row expansion and Enter on 2025.1 remain to
+be checked by hand, so #111 stays open.
+
+### #112 / PR #124: tree hide and filter
+
+PR #124 was built from its branch (commit `27c6dff`) in the same worktree and checked with a second temporary probe; it
+was not merged. The probe used a `Parser.java` change with `method parse() changed` and `method count() added`.
+
+- **M1 (View Options vs toolbar fallback).** On 2025.1, `ChangesView.ViewOptions` existed and the `SmartDiff.ChangesTree`
+  group was in it (`inViewOptions=true`, `inToolbar=false`). On IU-263.7307.200 the same View Options group also
+  existed and the group was again placed there (`inViewOptions=true`, `inToolbar=false`). The expected 2026.3 toolbar
+  fallback was **not** exercised in this build, contrary to the PR description. This needs a manual look at the eye
+  icon and a PR #124 follow-up.
+- **M6 (toggles, persistence, no re-comparison).** `analysisRevision` stayed `0` while `showChangesSummary` and
+  `showChangesDeclarations` were toggled, so the display toggles do not mark analysis stale. The probe's tree dumps did
+  not change after the toggles and the explicit rebuild calls, so the visible rebuild and persistence were not
+  confirmed. Pending manual.
+- **M7 (filter, shown parent with hidden children).** Setting `hiddenChangesTreeChangeTypes={ADDED}` left the `Parser`
+  summary `1 changed · 1 added` and both rows (`class Parser`, `method parse() changed`, `method count() added`).
+  The expected `1 changed · 1 added · 1 hidden`, with `class Parser` kept and `method count() added` hidden, was not
+  observed. Pending manual.
+
+Because M1 contradicts PR #124 and M6/M7 are unverified, #112 and PR #124 stay open; PR #124 is not merged.
+
+### Manual steps still needed
+
+1. Start 2025.1 with `./gradlew runIde --args=<project>` and 2026.3 with the built zip installed; open the Git project.
+2. **#108:** in Local Changes, expand the summarized Java file and double-click `class Cart`. Expect the Changes diff
+   with that outline row selected. Check `idea.log` for `Cannot call the platform's Changes diff action`.
+3. **#111:** repeat with the preview setting on and off, on the summarized row and a plain row: double-click, Enter,
+   single click, Right/Left, and the declaration rows. Also check a directory row and a changelist row.
+4. **#112:** on 2025.1 click the eye icon and confirm Structural Summary, Declarations and Hide Change Types appear
+   below the platform options; on 2026.3 check whether they are in the View Options menu or the toolbar fallback.
+   Toggle both settings and restart to check persistence. Hide `ADDED` and confirm the `Parser` summary
+   `1 changed · 1 added · 1 hidden`, with `class Parser` still shown and `method count() added` hidden.
+
 ## 2026-11-05: engine 9 relationship benchmark
 
 `DeclarationEngine.VERSION` 9 includes the assignment and container fixes, so the engine-8 confidence counts are not
