@@ -181,6 +181,21 @@ internal object ChangesDiff {
                 throw DiffRequestProducerException(e)
             }
         }
+
+    /** The file's own diff request, without a declaration context. */
+    fun request(project: Project, change: Change): SimpleDiffRequest? {
+        val before = change.beforeRevision
+        val after = change.afterRevision
+        val file = after?.file ?: before?.file ?: return null
+        val oldContent = content(project, before) ?: return null
+        val newContent = content(project, after) ?: return null
+        return SimpleDiffRequest(
+            file.path,
+            oldContent,
+            newContent,
+            revisionTitle(before),
+            revisionTitle(after),
+        )
     }
 
     /**

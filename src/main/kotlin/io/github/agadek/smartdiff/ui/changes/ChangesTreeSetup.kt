@@ -1,9 +1,19 @@
 package io.github.agadek.smartdiff.ui.changes
 
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.diff.editor.DiffEditorTabFilesManager
+import com.intellij.diff.editor.DiffViewerVirtualFile
+import com.intellij.diff.impl.CacheDiffRequestProcessor
+import com.intellij.diff.impl.DiffEditorViewer
+import com.intellij.diff.impl.DiffRequestProcessor
+import com.intellij.diff.requests.DiffRequest
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
+import com.intellij.openapi.vcs.VcsApplicationSettings
 import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vcs.changes.ui.ChangesBrowserNode
 import com.intellij.openapi.vcs.changes.ui.ChangesListView
@@ -40,6 +50,14 @@ internal object ChangesTreeSetup {
     /** The tree's toggle click count before the setup changed it. */
     private val SAVED_TOGGLE_CLICK_COUNT = Key.create<Int>("smartdiff.changes.tree.savedToggleClickCount")
 
+    /** Whether the tree is in Local Changes or in the Commit tool window. */
+    private val ROW_CONTEXT = Key.create<RowContext>("smartdiff.changes.tree.rowContext")
+
+    /** The public editor preview used for the Commit tool window's preview-on-double-click setting. */
+    private val PREVIEW = Key.create<PreviewSession>("smartdiff.changes.tree.preview")
+
+    internal enum class RowContext { LOCAL, COMMIT }
+
     /** Applies the setup to the project's Changes tree after the tree has been built, on the EDT. */
     fun schedule(project: Project, suppressExpansion: Boolean) {
         ApplicationManager.getApplication().invokeLater({
@@ -52,9 +70,10 @@ internal object ChangesTreeSetup {
         val manager = ToolWindowManager.getInstance(project)
         for (id in listOf(ToolWindowId.VCS, ToolWindowId.COMMIT)) {
             val toolWindow = manager.getToolWindow(id) ?: continue
+            val context = if (id == ToolWindowId.COMMIT) RowContext.COMMIT else RowContext.LOCAL
             for (content in toolWindow.contentManager.contents) {
                 findChangesTree(content.component)?.let {
-                    configure(it, suppressExpansion)
+                    configure(it, suppressExpansion, context)
                     return
                 }
             }
@@ -62,7 +81,8 @@ internal object ChangesTreeSetup {
     }
 
     /** Applies or removes the setup on [tree]; safe to call more than once. */
-    fun configure(tree: ChangesListView, suppressExpansion: Boolean) {
+    fun configure(tree: ChangesListView, suppressExpansion: Boolean, context: RowContext = RowContext.LOCAL) {
+        tree.putClientProperty(ROW_CONTEXT, context)
         if (suppressExpansion) {
             if (tree.getClientProperty(SAVED_TOGGLE_CLICK_COUNT) == null) {
                 tree.putClientProperty(SAVED_TOGGLE_CLICK_COUNT, tree.toggleClickCount)
@@ -141,6 +161,77 @@ internal object ChangesTreeSetup {
         return ChangesDiff.show(tree.project, changes, changes.indexOf(change).coerceAtLeast(0))
     }
 
+    /** The platform's double-click/Enter choice for a summarized file row in its current tool window. */
+    private fun activateSummary(tree: ChangesListView, node: SummaryChangeNode, requestFocus: Boolean): Boolean {
+        val settings = VcsApplicationSettings.getInstance()
+        val context = tree.getClientProperty(ROW_CONTEXT) ?: RowContext.LOCAL
+        return when {
+            context == RowContext.COMMIT && settings.SHOW_EDITOR_PREVIEW_ON_DOUBLE_CLICK -> openPreview(tree, node)
+            context == RowContext.LOCAL && settings.SHOW_DIFF_ON_DOUBLE_CLICK -> openFile(tree, node)
+            else -> openSource(tree, node, requestFocus)
+        }
+    }
+
+    private fun openSource(tree: ChangesListView, node: SummaryChangeNode, requestFocus: Boolean): Boolean {
+        val change = node.userObject as? Change ?: return false
+        val file = (change.afterRevision ?: change.beforeRevision)?.file?.virtualFile ?: return false
+        FileEditorManager.getInstance(tree.project).openFile(file, requestFocus, false)
+        return true
+    }
+
+    /** Releases the editor-preview session, for tests. */
+    internal fun disposePreview(tree: ChangesListView) {
+        (tree.getClientProperty(PREVIEW) as? PreviewSession)?.let {
+            Disposer.dispose(it)
+            tree.putClientProperty(PREVIEW, null)
+        }
+    }
+
+    private fun openPreview(tree: ChangesListView, node: SummaryChangeNode): Boolean {
+        val change = node.userObject as? Change ?: return false
+        val preview = tree.getClientProperty(PREVIEW) as? PreviewSession ?: createPreview(tree)
+        return preview.show(change)
+    }
+
+    private fun createPreview(tree: ChangesListView): PreviewSession {
+        val preview = PreviewSession(tree)
+        Disposer.register(tree.project, preview)
+        tree.putClientProperty(PREVIEW, preview)
+        return preview
+    }
+
+    /** An editor-tab preview of the selected file, using the public diff editor API. */
+    private class PreviewSession(private val tree: ChangesListView) : com.intellij.openapi.Disposable {
+        private var change: Change? = null
+        private val processor = SingleRequestProcessor(tree.project) { change?.let { ChangesDiff.request(tree.project, it) } }
+        private val file = PreviewDiffFile(processor)
+
+        fun show(change: Change): Boolean {
+            this.change = change
+            if (ChangesDiff.request(tree.project, change) == null) return false
+            DiffEditorTabFilesManager.getInstance(tree.project).showDiffFile(file, true)
+            processor.updateRequest(true, null)
+            return true
+        }
+
+        override fun dispose() {
+            Disposer.dispose(processor)
+        }
+    }
+
+    private class PreviewDiffFile(private val processor: DiffRequestProcessor) : DiffViewerVirtualFile("Changes") {
+        override fun createViewer(project: Project): DiffEditorViewer = processor
+    }
+
+    private class SingleRequestProcessor(
+        project: Project,
+        private val request: () -> DiffRequest?,
+    ) : CacheDiffRequestProcessor<DiffRequest>(project, "Changes") {
+        override fun getRequestName(provider: DiffRequest): String? = provider.title
+        override fun getCurrentRequestProvider(): DiffRequest? = request()
+        override fun loadRequest(provider: DiffRequest, indicator: ProgressIndicator): DiffRequest = provider
+    }
+
     /**
      * The second press of a double-click on a SMART row is consumed before `BasicTreeUI` can toggle the row. The first
      * press still selects the row and the release still reaches the platform's double-click handler.
@@ -179,7 +270,7 @@ internal object ChangesTreeSetup {
 
             val node = path.lastPathComponent
             if (node is DeclarationNode) return openDeclaration(tree, node)
-            if (node is SummaryChangeNode) return openFile(tree, node) || (platform?.process(e) ?: false)
+            if (node is SummaryChangeNode) return activateSummary(tree, node, requestFocus = true) || (platform?.process(e) ?: false)
             return platform?.process(e) ?: false
         }
     }
@@ -201,7 +292,7 @@ internal object ChangesTreeSetup {
                         return
                     }
                     is SummaryChangeNode -> if (!tree.model.isLeaf(node)) {
-                        if (openFile(tree, node) || tree.enterKeyHandler?.process(e) == true) e.consume()
+                        if (activateSummary(tree, node, requestFocus = false)) e.consume()
                         return
                     }
                 }
