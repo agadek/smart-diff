@@ -31,11 +31,12 @@ The outline and the Changes tree use one set of [labels](../GLOSSARY.md#label). 
 | moved | The container or order among siblings differs | moved | yes |
 | formatting-only | Only whitespace the language treats as insignificant differs | formatting-only | yes |
 | extraction | An added declaration linked to code removed from a changed declaration | extracted, not added | as added |
-| rename candidate | A removed and an added declaration paired by similar content | rename candidate | never |
+| rename candidate | A removed and an added declaration paired by similar content; with grouped usages, `rename total → sum  rename candidate, 12 usages` | rename candidate | never |
+| usages renamed | A declaration whose only changes are usages renamed with it | usages renamed | never; a declaration with grouped usages is also never hidden |
 | uncertain | The counterpart cannot be determined unambiguously | uncertain | never |
 | unanalyzed | The content could not be classified, though presence and kind are known | unanalyzed | never |
 
-The summary counts every change, hidden or not, and ends with how many are hidden. The outline and the Changes tree each remember their own filter. Signature changes and kind changes count as changed; an extraction counts as extracted instead of added. The [relationship model](relationships/02-relationship-model.md) keeps these labels when it replaces the extraction and rename fields.
+The summary counts every change, hidden or not, and ends with how many are hidden. The outline and the Changes tree each remember their own filter. Signature changes and kind changes count as changed; an extraction counts as extracted instead of added. A declaration with grouped usages is never hidden, even when its other labels are a hidden type: a declaration whose only changes are grouped usages counts as `usages renamed`, and the rename row shows `12 usages`. The [relationship model](relationships/02-relationship-model.md) keeps these labels when it replaces the extraction and rename fields, and [rename grouping](relationships/04-rename-grouping.md) adds the usage count and `usages renamed` without hiding a change.
 
 
 ## Engines
@@ -55,7 +56,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [03 Rename candidates](declarations/03-rename-candidates.md) | implemented, 2026-10-22 |
 | [04 Kind changes](declarations/04-kind-changes.md) | implemented, 2026-10-23 |
 | [05 Extraction detection](declarations/05-extraction-detection.md) | implemented, 2026-10-23 |
-| [06 Change labels](declarations/06-change-labels.md) | implemented, 2026-11-04 |
+| [06 Change labels](declarations/06-change-labels.md) | implemented, 2026-11-04 (`usages renamed` with 04) |
 
 ## Languages
 
@@ -106,10 +107,10 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 
 | Feature | Status |
 | --- | --- |
-| [01 Relationship benchmark](relationships/01-relationship-benchmark.md) | implemented, 2026-11-02 |
-| [02 Relationship model](relationships/02-relationship-model.md) | implemented, 2026-11-04 |
+| [01 Relationship benchmark](relationships/01-relationship-benchmark.md) | implemented, 2026-11-02 (usage labels and R44 with 04) |
+| [02 Relationship model](relationships/02-relationship-model.md) | implemented, 2026-11-04 (reference evidence with 04) |
 | [03 Relationship matching](relationships/03-relationship-matching.md) | implemented, 2026-11-04 |
-| [04 Rename grouping](relationships/04-rename-grouping.md) | proposed, 2026-11-01 |
+| [04 Rename grouping](relationships/04-rename-grouping.md) | accepted, 2026-11-05 |
 | [05 Inlining detection](relationships/05-inlining-detection.md) | proposed, 2026-11-01 |
 | [06 Refactorings view](relationships/06-refactorings-view.md) | proposed, 2026-11-01 |
 | [07 Relationship validation](relationships/07-relationship-validation.md) | proposed, 2026-11-01 |

@@ -483,7 +483,7 @@ Application-level, under *Settings → Tools → SMART Diff*:
 ### 12.1 Build and CI
 
 - Build target: IntelliJ IDEA Community 2025.1.3 (`platformVersion` in `gradle.properties`), `since-build` 251, no `until-build`. Bundled `com.intellij.java` and `org.jetbrains.kotlin` plugins, the pinned Scala plugin (`scalaPluginVersion` in `gradle.properties`, currently 2025.1.32, not bundled), IntelliJ Platform test framework with the Java test framework, JUnit 4 and ArchUnit.
-- GitHub Actions (`.github/workflows/build.yml`) on every push to `main` and every pull request: `buildPlugin check` (build and all tests), and `verifyPlugin` with Plugin Verifier on IntelliJ IDEA Community 2025.1.3 and the latest IntelliJ IDEA release. The verifier does not install the Scala plugin, so Scala PSI use is covered by the provider's tests rather than the verifier report.
+- GitHub Actions (`.github/workflows/build.yml`) on every push to `main` and every pull request: `buildPlugin check` (build and all tests), and `verifyPlugin` with Plugin Verifier on IntelliJ IDEA Community 2025.1.3 and the latest IntelliJ IDEA release. The verifier resolves the optional `org.intellij.scala` dependency and installs a compatible Scala plugin for each target; the 2026-11-05 run used `org.intellij.scala:2025.1.32` on 2025.1.3 and `org.intellij.scala:2026.3.26` on 2026.3, and each run's report records the resolved version. Scala PSI use is therefore in the verifier's internal- and experimental-API report, as [relationships/04](specs/relationships/04-rename-grouping.md) R15 requires.
 
 ## 13. Prototype spikes
 

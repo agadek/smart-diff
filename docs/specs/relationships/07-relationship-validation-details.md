@@ -23,7 +23,7 @@ A link in the corpus validation is wrong when a reviewer marks it so in the repo
 
 A dated VALIDATION.md section has:
 
-- the engine version, IDE build, Scala plugin version and corpus revision;
+- the engine version, the reference pass version, IDE build, Scala plugin version and corpus revision;
 - the benchmark's held-out precision and recall per kind and language, next to the baseline;
 - the forced-pair count;
 - the corpus validation flags, next to the previous release;

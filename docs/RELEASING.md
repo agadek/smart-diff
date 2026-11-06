@@ -42,7 +42,7 @@ These steps need the maintainer's own accounts and keys; nothing in the reposito
 5. With Marketplace publishing on, the workflow then publishes the same zip. The Marketplace reviews each update before
    it appears; the notes shown there come from the version's section of `CHANGELOG.md`.
 
-Plugin Verifier runs on both target IDEs. It does not install the Scala plugin, so the Scala provider's use of the plugin's non-public PSI is not in its internal- or experimental-API report; that use is covered by the provider's tests. Installing the pinned Scala plugin in `pluginVerification` is a possible follow-up. See [ROADMAP.md](ROADMAP.md#scala).
+Plugin Verifier runs on both target IDEs and resolves the optional Scala dependency for each, installing `org.intellij.scala:2025.1.32` on 2025.1.3 and `org.intellij.scala:2026.3.26` on 2026.3 in the 2026-11-05 run. The Scala provider's and the reference resolver's use of the plugin's non-public PSI is therefore in the internal- or experimental-API report and is reviewed there. See [ROADMAP.md](ROADMAP.md#scala).
 
 Before publishing, check that `CHANGELOG.md` and `ROADMAP.md` use the same release labels: work still marked as planned in the roadmap must not appear as released in the changelog, and the other way around. `./gradlew patchChangelog` moves the notes, so check the roadmap by hand.
 
