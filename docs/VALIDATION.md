@@ -21,6 +21,29 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-05: engine 9 relationship benchmark
+
+`DeclarationEngine.VERSION` 9 includes the assignment and container fixes, so the engine-8 confidence counts are not
+assumed to carry over. `RelationshipBenchmarkTest` was run over the existing corpus on this branch:
+
+```shell
+./gradlew test --tests '*RelationshipBenchmarkTest*' \
+  -Psmartdiff.relationships.corpus=src/test/testData/relationships-corpus-full.txt \
+  -Psmartdiff.relationships.gate=no-new-wrong-pairs \
+  -Psmartdiff.relationships.baseline=src/test/testData/relationships-baseline/report.json
+```
+
+**Result:** 424 cases (304 checked-in cases and 120 real commits), precision 1.000 and recall 0.826, with no wrong or
+forced pair; the gate passed. The 89 rename relationships are 69 high (77.5%), 20 medium and 0 low: Java 19 high and 5
+medium, Kotlin 18 and 3, Scala 2 17 and 6, Scala 3 15 and 6. The engine-9 counts therefore equal the engine-8 record on
+this corpus.
+
+This run is **not** the [relationships/04](specs/relationships/04-rename-grouping.md) R18 first gate: the list has no
+usage-grouping cases, so by R9/R18 it is a smoke run for the usage gate. The current harness does not count that category
+yet, which is why its own report says complete; the first gate is the 440-case corpus with the 16 usage-grouping
+fixtures (320 checked-in cases and 120 real commits), and each fixture adds one high rename, so that gate has 105
+renames: 85 high, 20 medium and 0 low. The report is in `build/reports/smartdiff-relationships/`.
+
 ## 2026-11-05: Scala plugin version in the engine version
 
 [relationships/02](specs/relationships/02-relationship-model.md) R24 adds the Scala plugin's version to the declaration
