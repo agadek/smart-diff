@@ -1,6 +1,7 @@
 package io.github.agadek.smartdiff.ui
 
 import com.intellij.diff.tools.util.base.DiffPanelBase
+import com.intellij.ide.util.PropertiesComponent
 import com.intellij.ui.OnePixelSplitter
 import java.awt.BorderLayout
 import javax.swing.JComponent
@@ -18,12 +19,17 @@ internal fun insertOutlineSplitter(component: JComponent, proportionKey: String)
     val layout = panel.layout as? BorderLayout ?: return null
     val editors = layout.getLayoutComponent(BorderLayout.CENTER) as? JComponent ?: return null
 
-    val splitter = OnePixelSplitter(false, proportionKey, 0.75f)
+    val splitter = OnePixelSplitter(false, proportionKey, DEFAULT_PROPORTION)
+    // Load the remembered width now, not only in addNotify, so a new diff starts at the last width in every host.
+    splitter.proportion = PropertiesComponent.getInstance().getFloat(proportionKey, DEFAULT_PROPORTION)
     splitter.firstComponent = editors
     panel.remove(editors)
     panel.add(splitter, BorderLayout.CENTER)
     return splitter
 }
+
+/** The share of the diff width the editors get when no width was remembered; the outline gets the rest. */
+internal const val DEFAULT_PROPORTION = 0.75f
 
 /** Puts the editors back when the outline cannot attach after [insertOutlineSplitter] changed the viewer. */
 internal fun removeOutlineSplitter(splitter: OnePixelSplitter) {

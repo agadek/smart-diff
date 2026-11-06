@@ -15,10 +15,11 @@ Status: implemented, 2026-10-22
 - **R5** [Uncertain](../../GLOSSARY.md#uncertain), [rename candidate](../../GLOSSARY.md#rename-candidate) and [unanalyzed](../../GLOSSARY.md#unanalyzed) changes are never hidden.
 - **R6** The [summary line](../../GLOSSARY.md#summary-line) still counts hidden changes, and ends with how many are hidden: `· 2 hidden`.
 - **R7** When every change is hidden, the outline says "All changes are hidden by the filter".
-- **R8** The filter is remembered and applies to every outline.
-- **R9** Changing the filter updates the outline without comparing the file again.
+- **R8** The outline's filter is remembered and applies to every outline.
+- **R9** Changing the outline's filter updates the outline without comparing the file again.
 
 ## References
 
+- [Hide and filter in the Changes tree](../changes-tree/04-hide-and-filter.md)
 - [ADR 0003](../../adr/0003-conservative-classification.md)
 - [Technical specification §10](../../TECHNICAL-SPECIFICATION.md#10-structural-outline)

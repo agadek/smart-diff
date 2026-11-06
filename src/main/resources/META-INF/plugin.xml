@@ -76,8 +76,11 @@
                 text="Structural Outline"
                 description="Show or hide the SMART Diff structural outline in this diff"
                 icon="AllIcons.Toolwindows.ToolWindowStructure">
-            <add-to-group group-id="Diff.ViewerToolbar" anchor="last"/>
+            <!-- Registered first so a narrow diff toolbar keeps it visible instead of moving it into the overflow. -->
+            <add-to-group group-id="Diff.ViewerToolbar" anchor="first"/>
             <add-to-group group-id="Diff.Conflicts.Additional.Actions" anchor="last"/>
+            <!-- Ctrl+Alt+Shift+O is free in the platform's default and diff keymaps; Keymap lists it under SMART Diff. -->
+            <keyboard-shortcut keymap="$default" first-keystroke="control alt shift O"/>
         </action>
     </actions>
 

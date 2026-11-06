@@ -33,10 +33,20 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
         settings.loadState(SmartDiffSettings.SettingsState())
 
         assertTrue("the outline opens by default", settings.showOutline)
+        assertFalse("the outline opens full by default", settings.outlineMinimised)
         assertTrue("the Changes tree shows summaries by default", settings.showChangesSummary)
         assertFalse("formatting-only changes are grouped by default", settings.formattingOnlyInline)
         assertEquals(Limits.DEFAULT, settings.limits)
         assertEquals("nothing is hidden by default", emptySet<ChangeType>(), settings.hiddenChangeTypes)
+    }
+
+    fun `test outline 02 R14 the minimised state is stored`() {
+        // outline/02-outline-toggle R14
+        settings.loadState(SmartDiffSettings.SettingsState())
+        settings.outlineMinimised = true
+
+        assertTrue(settings.state.outlineMinimised)
+        assertTrue(settings.outlineMinimised)
     }
 
     fun `test hidden change types are stored by name and unknown names are ignored`() {
