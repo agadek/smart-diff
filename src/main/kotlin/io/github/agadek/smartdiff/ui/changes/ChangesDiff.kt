@@ -181,6 +181,7 @@ internal object ChangesDiff {
                 throw DiffRequestProducerException(e)
             }
         }
+    }
 
     /** The file's own diff request, without a declaration context. */
     fun request(project: Project, change: Change): SimpleDiffRequest? {

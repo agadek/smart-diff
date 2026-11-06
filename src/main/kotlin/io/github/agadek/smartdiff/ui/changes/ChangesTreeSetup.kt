@@ -50,13 +50,10 @@ internal object ChangesTreeSetup {
     /** The tree's toggle click count before the setup changed it. */
     private val SAVED_TOGGLE_CLICK_COUNT = Key.create<Int>("smartdiff.changes.tree.savedToggleClickCount")
 
-    /** Whether the tree is in Local Changes or in the Commit tool window. */
-    private val ROW_CONTEXT = Key.create<RowContext>("smartdiff.changes.tree.rowContext")
-
     /** The public editor preview used for the Commit tool window's preview-on-double-click setting. */
     private val PREVIEW = Key.create<PreviewSession>("smartdiff.changes.tree.preview")
 
-    internal enum class RowContext { LOCAL, COMMIT }
+    private enum class RowContext { LOCAL, COMMIT }
 
     /** Applies the setup to the project's Changes tree after the tree has been built, on the EDT. */
     fun schedule(project: Project, suppressExpansion: Boolean) {
@@ -70,10 +67,9 @@ internal object ChangesTreeSetup {
         val manager = ToolWindowManager.getInstance(project)
         for (id in listOf(ToolWindowId.VCS, ToolWindowId.COMMIT)) {
             val toolWindow = manager.getToolWindow(id) ?: continue
-            val context = if (id == ToolWindowId.COMMIT) RowContext.COMMIT else RowContext.LOCAL
             for (content in toolWindow.contentManager.contents) {
                 findChangesTree(content.component)?.let {
-                    configure(it, suppressExpansion, context)
+                    configure(it, suppressExpansion)
                     return
                 }
             }
@@ -81,8 +77,7 @@ internal object ChangesTreeSetup {
     }
 
     /** Applies or removes the setup on [tree]; safe to call more than once. */
-    fun configure(tree: ChangesListView, suppressExpansion: Boolean, context: RowContext = RowContext.LOCAL) {
-        tree.putClientProperty(ROW_CONTEXT, context)
+    fun configure(tree: ChangesListView, suppressExpansion: Boolean) {
         if (suppressExpansion) {
             if (tree.getClientProperty(SAVED_TOGGLE_CLICK_COUNT) == null) {
                 tree.putClientProperty(SAVED_TOGGLE_CLICK_COUNT, tree.toggleClickCount)
@@ -164,12 +159,21 @@ internal object ChangesTreeSetup {
     /** The platform's double-click/Enter choice for a summarized file row in its current tool window. */
     private fun activateSummary(tree: ChangesListView, node: SummaryChangeNode, requestFocus: Boolean): Boolean {
         val settings = VcsApplicationSettings.getInstance()
-        val context = tree.getClientProperty(ROW_CONTEXT) ?: RowContext.LOCAL
+        val context = rowContext(tree)
         return when {
             context == RowContext.COMMIT && settings.SHOW_EDITOR_PREVIEW_ON_DOUBLE_CLICK -> openPreview(tree, node)
             context == RowContext.LOCAL && settings.SHOW_DIFF_ON_DOUBLE_CLICK -> openFile(tree, node)
             else -> openSource(tree, node, requestFocus)
         }
+    }
+
+    private fun rowContext(tree: ChangesListView): RowContext {
+        val commit = ToolWindowManager.getInstance(tree.project).getToolWindow(ToolWindowId.COMMIT)
+        val inCommit = commit?.contentManager?.contents?.any {
+            val component = it.component ?: return@any false
+            SwingUtilities.isDescendingFrom(tree, component)
+        } == true
+        return if (inCommit) RowContext.COMMIT else RowContext.LOCAL
     }
 
     private fun openSource(tree: ChangesListView, node: SummaryChangeNode, requestFocus: Boolean): Boolean {

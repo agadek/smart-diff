@@ -83,9 +83,9 @@ probe found the real Changes tree with the plugin's tree setup installed and the
 **2025.1 double-click note:** `ChangesViewToolWindowPanel` calls
 `EditSourceOnDoubleClickHandler.isToggleEvent` before its diff handler. On a non-leaf summarized row that returns
 true, because `ChangesListView.getToggleClickCount()` is 2, so the platform handler cannot open the diff even when
-the tree's own toggle is suppressed. The plugin now opens summarized and declaration rows directly through
-`ChangesDiff` and `DeclarationNodeAction`; the physical double-click on 2025.1 remains for the unlocked-desktop
-click-through. The probe recorded:
+the tree's own toggle is suppressed. The plugin now opens a summarized row through the platform setting (Changes
+diff, editor preview or source) and a declaration row through `DeclarationNodeAction`; the physical double-click on
+2025.1 remains for the unlocked-desktop click-through. The probe recorded:
 
 ```text
 PROBE ready handler=ChangesTreeSetup$ChangesDoubleClickHandler platform=ChangesViewManager$ChangesViewToolWindowPanel$$Lambda

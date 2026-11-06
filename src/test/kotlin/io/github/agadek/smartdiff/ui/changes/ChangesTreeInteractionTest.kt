@@ -267,22 +267,73 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
 
     fun `test a summarized row matches a plain row in Local Changes with diff on`() {
         // changes-tree/02-changes-tree-declarations R17: the platform choice, compared with a plain row
-        assertSummaryMatchesPlain("local-diff", ChangesTreeSetup.RowContext.LOCAL, showDiff = true, showPreview = false)
+        assertSummaryMatchesPlain("local-diff", TestContext.LOCAL, showDiff = true, showPreview = false)
     }
 
     fun `test a summarized row matches a plain row in Local Changes with diff off`() {
         // changes-tree/02-changes-tree-declarations R17: the platform choice, compared with a plain row
-        assertSummaryMatchesPlain("local-source", ChangesTreeSetup.RowContext.LOCAL, showDiff = false, showPreview = false)
+        assertSummaryMatchesPlain("local-source", TestContext.LOCAL, showDiff = false, showPreview = false)
     }
 
     fun `test a summarized row matches a plain row in the Commit tool window with preview on`() {
         // changes-tree/02-changes-tree-declarations R17: the editor preview, compared with a plain row
-        assertSummaryMatchesPlain("commit-preview", ChangesTreeSetup.RowContext.COMMIT, showDiff = false, showPreview = true)
+        assertSummaryMatchesPlain("commit-preview", TestContext.COMMIT, showDiff = false, showPreview = true)
     }
 
     fun `test a summarized row matches a plain row in the Commit tool window with preview off`() {
         // changes-tree/02-changes-tree-declarations R17: the source fallback, compared with a plain row
-        assertSummaryMatchesPlain("commit-source", ChangesTreeSetup.RowContext.COMMIT, showDiff = false, showPreview = false)
+        assertSummaryMatchesPlain("commit-source", TestContext.COMMIT, showDiff = false, showPreview = false)
+    }
+
+    fun `test moving the tree between tool windows uses the new setting`() {
+        // changes-tree/02-changes-tree-declarations R17: the context is resolved at click time
+        VcsApplicationSettings.getInstance().let {
+            it.SHOW_DIFF_ON_DOUBLE_CLICK = true
+            it.SHOW_EDITOR_PREVIEW_ON_DOUBLE_CLICK = false
+        }
+        val (javaChange, _) = realChange("move-context/Cart.java", OLD_CART, NEW_CART)
+        val (textChange, _) = realChange("move-context/notes.txt", "old\n", "new\n")
+        val tree = summarizedTree(javaChange, textChange)
+        val summaryPath = TreePath(summaryRow(tree).path)
+        reveal(tree, summaryPath)
+
+        val manager = ToolWindowManager.getInstance(project)
+        val existingLocal = manager.getToolWindow(ToolWindowId.VCS)
+        val local = existingLocal ?: manager.registerToolWindow(RegisterToolWindowTask.notClosable(ToolWindowId.VCS, ToolWindowAnchor.LEFT))
+        val existingCommit = manager.getToolWindow(ToolWindowId.COMMIT)
+        val commit = existingCommit ?: manager.registerToolWindow(RegisterToolWindowTask.notClosable(ToolWindowId.COMMIT, ToolWindowAnchor.LEFT))
+        val content = ContentFactory.getInstance().createContent(tree, "Changes", false)
+        local.contentManager.addContent(content)
+        try {
+            ChangesTreeSetup.configure(tree, suppressExpansion = true)
+            val shown = recordDiffs()
+            try {
+                tree.doubleClick(summaryPath)
+                assertTrue("Local Changes opens the diff first", shown.chains.isNotEmpty())
+            } finally {
+                Disposer.dispose(shown)
+            }
+
+            local.contentManager.removeContent(content, false)
+            commit.contentManager.addContent(content)
+            VcsApplicationSettings.getInstance().let {
+                it.SHOW_DIFF_ON_DOUBLE_CLICK = false
+                it.SHOW_EDITOR_PREVIEW_ON_DOUBLE_CLICK = true
+            }
+            val previewManager = RecordingDiffEditorTabFilesManager()
+            val previewDisposable = Disposer.newDisposable(testRootDisposable)
+            project.replaceService(DiffEditorTabFilesManager::class.java, previewManager, previewDisposable)
+            try {
+                tree.doubleClick(summaryPath)
+                assertNotNull("the moved tree uses the Commit preview setting", previewManager.shown)
+            } finally {
+                ChangesTreeSetup.disposePreview(tree)
+                Disposer.dispose(previewDisposable)
+            }
+        } finally {
+            if (existingLocal == null) manager.unregisterToolWindow(ToolWindowId.VCS) else local.contentManager.removeContent(content, true)
+            if (existingCommit == null) manager.unregisterToolWindow(ToolWindowId.COMMIT) else commit.contentManager.removeContent(content, true)
+        }
     }
 
     fun `test configuring twice keeps Enter working for ordinary and declaration rows`() {
@@ -406,11 +457,13 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
         assertFalse("double-click on the row does not expand it", tree.isExpanded(path))
     }
 
+    private enum class TestContext { LOCAL, COMMIT }
+
     private enum class Action { DIFF, PREVIEW, SOURCE }
 
     private fun assertSummaryMatchesPlain(
         name: String,
-        context: ChangesTreeSetup.RowContext,
+        context: TestContext,
         showDiff: Boolean,
         showPreview: Boolean,
     ) {
@@ -431,32 +484,47 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
         reveal(tree, plainPath)
 
         val plainChoice = when {
-            context == ChangesTreeSetup.RowContext.COMMIT && showPreview -> Action.PREVIEW
-            context == ChangesTreeSetup.RowContext.LOCAL && showDiff -> Action.DIFF
+            context == TestContext.COMMIT && showPreview -> Action.PREVIEW
+            context == TestContext.LOCAL && showDiff -> Action.DIFF
             else -> Action.SOURCE
         }
         val plainActions = mutableListOf<Action>()
         tree.doubleClickHandler = Processor { plainActions += plainChoice; true }
-        ChangesTreeSetup.configure(tree, suppressExpansion = true, context)
-        val previewManager = RecordingDiffEditorTabFilesManager()
-        val previewDisposable = Disposer.newDisposable(testRootDisposable)
-        project.replaceService(DiffEditorTabFilesManager::class.java, previewManager, previewDisposable)
-        val shown = if (plainChoice == Action.DIFF) recordDiffs() else null
-        try {
-            tree.doubleClick(summaryPath)
-            val observed = when {
-                shown?.chains?.isNotEmpty() == true -> Action.DIFF
-                previewManager.shown != null -> Action.PREVIEW
-                FileEditorManager.getInstance(project).isFileOpen(javaFile) -> Action.SOURCE
-                else -> error("the summarized row did neither diff, preview nor source")
+        withToolWindow(tree, if (context == TestContext.COMMIT) ToolWindowId.COMMIT else ToolWindowId.VCS) {
+            ChangesTreeSetup.configure(tree, suppressExpansion = true)
+            val previewManager = RecordingDiffEditorTabFilesManager()
+            val previewDisposable = Disposer.newDisposable(testRootDisposable)
+            project.replaceService(DiffEditorTabFilesManager::class.java, previewManager, previewDisposable)
+            val shown = if (plainChoice == Action.DIFF) recordDiffs() else null
+            try {
+                tree.doubleClick(summaryPath)
+                val observed = when {
+                    shown?.chains?.isNotEmpty() == true -> Action.DIFF
+                    previewManager.shown != null -> Action.PREVIEW
+                    FileEditorManager.getInstance(project).isFileOpen(javaFile) -> Action.SOURCE
+                    else -> error("the summarized row did neither diff, preview nor source")
+                }
+                tree.doubleClick(plainPath)
+                assertEquals("the plain row uses one platform choice", listOf(plainChoice), plainActions)
+                assertEquals("the summarized row follows the plain row's platform choice", plainChoice, observed)
+            } finally {
+                ChangesTreeSetup.disposePreview(tree)
+                shown?.let(Disposer::dispose)
+                Disposer.dispose(previewDisposable)
             }
-            tree.doubleClick(plainPath)
-            assertEquals("the plain row uses one platform choice", listOf(plainChoice), plainActions)
-            assertEquals("the summarized row follows the plain row's platform choice", plainChoice, observed)
+        }
+    }
+
+    private fun <T> withToolWindow(tree: TestChangesListView, id: String, block: () -> T): T {
+        val manager = ToolWindowManager.getInstance(project)
+        val existing = manager.getToolWindow(id)
+        val window = existing ?: manager.registerToolWindow(RegisterToolWindowTask.notClosable(id, ToolWindowAnchor.LEFT))
+        val content = ContentFactory.getInstance().createContent(tree, "Changes", false)
+        window.contentManager.addContent(content)
+        try {
+            return block()
         } finally {
-            ChangesTreeSetup.disposePreview(tree)
-            shown?.let(Disposer::dispose)
-            Disposer.dispose(previewDisposable)
+            if (existing == null) manager.unregisterToolWindow(id) else window.contentManager.removeContent(content, true)
         }
     }
 
