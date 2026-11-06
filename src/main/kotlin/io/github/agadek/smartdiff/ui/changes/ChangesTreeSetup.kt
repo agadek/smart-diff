@@ -4,8 +4,10 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
+import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vcs.changes.ui.ChangesBrowserNode
 import com.intellij.openapi.vcs.changes.ui.ChangesListView
+import com.intellij.openapi.vcs.changes.ui.VcsTreeModelData
 import com.intellij.openapi.wm.ToolWindowId
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.util.Processor
@@ -100,19 +102,28 @@ internal object ChangesTreeSetup {
      * for a summarized file or a declaration. The platform's listener is private, so it is recognised by its class.
      */
     private fun installEnterHandler(tree: ChangesListView) {
-        val ours = tree.keyListeners.filterIsInstance<ChangesEnterListener>().singleOrNull()
-        val platform = tree.keyListeners.firstOrNull(::isPlatformEnterListener)
-        if (ours != null && !ours.wrapped && platform == null && tree.keyListeners.firstOrNull() === ours) return
+        val listeners = tree.keyListeners
+        val ours = listeners.filterIsInstance<ChangesEnterListener>().singleOrNull()
+        val platform = listeners.firstOrNull(::isPlatformEnterListener)
 
-        val others = tree.keyListeners.filterNot { it is ChangesEnterListener || isPlatformEnterListener(it) }
+        if (ours != null && (ours.wrapped || platform == null)) {
+            platform?.let(tree::removeKeyListener)
+            if (tree.keyListeners.firstOrNull() !== ours) moveToFront(tree, ours)
+            return
+        }
+
+        val others = listeners.filterNot { it is ChangesEnterListener || isPlatformEnterListener(it) }
         others.forEach(tree::removeKeyListener)
         ours?.let(tree::removeKeyListener)
         platform?.let(tree::removeKeyListener)
-        val listener = when {
-            platform != null -> ChangesEnterListener(tree, wrapped = true)
-            ours != null && !ours.wrapped -> ours
-            else -> ChangesEnterListener(tree, wrapped = false)
-        }
+        tree.addKeyListener(ChangesEnterListener(tree, wrapped = ours?.wrapped == true || platform != null))
+        others.forEach(tree::addKeyListener)
+    }
+
+    private fun moveToFront(tree: ChangesListView, listener: KeyListener) {
+        val others = tree.keyListeners.filterNot { it === listener }
+        others.forEach(tree::removeKeyListener)
+        tree.removeKeyListener(listener)
         tree.addKeyListener(listener)
         others.forEach(tree::addKeyListener)
     }
@@ -122,6 +133,13 @@ internal object ChangesTreeSetup {
 
     private fun openDeclaration(tree: ChangesListView, node: DeclarationNode): Boolean =
         DeclarationNodeAction(tree.project).handleDoubleClick(node)
+
+    private fun openFile(tree: ChangesListView, node: SummaryChangeNode): Boolean {
+        val change = node.userObject as? Change ?: return false
+        val root = node.root as? ChangesBrowserNode<*> ?: return false
+        val changes = VcsTreeModelData.allUnder(root).userObjects(Change::class.java).distinct()
+        return ChangesDiff.show(tree.project, changes, changes.indexOf(change).coerceAtLeast(0))
+    }
 
     /**
      * The second press of a double-click on a SMART row is consumed before `BasicTreeUI` can toggle the row. The first
@@ -161,6 +179,7 @@ internal object ChangesTreeSetup {
 
             val node = path.lastPathComponent
             if (node is DeclarationNode) return openDeclaration(tree, node)
+            if (node is SummaryChangeNode) return openFile(tree, node) || (platform?.process(e) ?: false)
             return platform?.process(e) ?: false
         }
     }
@@ -176,13 +195,13 @@ internal object ChangesTreeSetup {
             if (tree.selectionCount == 1) {
                 when (val node = tree.selectionPath?.lastPathComponent) {
                     is DeclarationNode -> {
-                        // Without the platform's listener, leave declarations to it: handling them here could
-                        // open the same diff twice.
-                        if (wrapped && openDeclaration(tree, node)) e.consume()
+                        // Without the platform listener, a non-leaf declaration would be skipped by its leaf-only
+                        // guard; a leaf one must still be left to that listener to avoid opening it twice.
+                        if ((wrapped || !tree.model.isLeaf(node)) && openDeclaration(tree, node)) e.consume()
                         return
                     }
                     is SummaryChangeNode -> if (!tree.model.isLeaf(node)) {
-                        if (tree.enterKeyHandler?.process(e) == true) e.consume()
+                        if (openFile(tree, node) || tree.enterKeyHandler?.process(e) == true) e.consume()
                         return
                     }
                 }

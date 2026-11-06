@@ -78,7 +78,14 @@ before the change was committed.
 **2025.1:** `./gradlew runIde` started IntelliJ IDEA Community 2025.1.3 (IC-251.26927.53) with the built plugin. The
 probe found the real Changes tree with the plugin's tree setup installed and the platform's
 `ChangesViewToolWindowPanel` handler wrapped. Enter on the summarized file row opened the editor diff preview
-(`TabPreviewDiffVirtualFile`), and Enter on a declaration row opened the Changes diff. `idea.log` recorded:
+(`TabPreviewDiffVirtualFile`), and Enter on a declaration row opened the Changes diff.
+
+**2025.1 double-click note:** `ChangesViewToolWindowPanel` calls
+`EditSourceOnDoubleClickHandler.isToggleEvent` before its diff handler. On a non-leaf summarized row that returns
+true, because `ChangesListView.getToggleClickCount()` is 2, so the platform handler cannot open the diff even when
+the tree's own toggle is suppressed. The plugin now opens summarized and declaration rows directly through
+`ChangesDiff` and `DeclarationNodeAction`; the physical double-click on 2025.1 remains for the unlocked-desktop
+click-through. The probe recorded:
 
 ```text
 PROBE ready handler=ChangesTreeSetup$ChangesDoubleClickHandler platform=ChangesViewManager$ChangesViewToolWindowPanel$$Lambda

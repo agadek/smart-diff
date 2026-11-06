@@ -45,13 +45,17 @@ internal object ChangesDiff {
     fun show(project: Project, changes: List<Change>, index: Int, key: Key<*>, value: Any): Boolean =
         show(project, changes, index, key, value, ACTION, CONTEXT)
 
+    /** Opens the file's diff without a declaration context, as the platform does for a file without declarations. */
+    fun show(project: Project, changes: List<Change>, index: Int): Boolean =
+        show(project, changes, index, null, null, ACTION, CONTEXT)
+
     /** [show], with the platform class names injectable so a test can make the lookup fail. */
     internal fun show(
         project: Project,
         changes: List<Change>,
         index: Int,
-        key: Key<*>,
-        value: Any,
+        key: Key<*>?,
+        value: Any?,
         actionClassName: String,
         contextClassName: String,
         classLoaders: List<ClassLoader> = classLoaders(),
@@ -69,8 +73,8 @@ internal object ChangesDiff {
         project: Project,
         changes: List<Change>,
         index: Int,
-        key: Key<*>,
-        value: Any,
+        key: Key<*>?,
+        value: Any?,
         actionClassName: String,
         contextClassName: String,
         classLoaders: List<ClassLoader>,
@@ -79,9 +83,11 @@ internal object ChangesDiff {
         return try {
             val contextClass = Class.forName(contextClassName, true, loader)
             val context = contextClass.getDeclaredConstructor().newInstance()
-            contextClass
-                .getMethod("putChangeContext", Change::class.java, Key::class.java, Any::class.java)
-                .invoke(context, changes[index], key, value)
+            if (key != null) {
+                contextClass
+                    .getMethod("putChangeContext", Change::class.java, Key::class.java, Any::class.java)
+                    .invoke(context, changes[index], key, value)
+            }
             Class.forName(actionClassName, true, loader)
                 .getMethod("showDiffForChange", Project::class.java, Iterable::class.java, Int::class.javaPrimitiveType, contextClass)
                 .invoke(null, project, changes, index, context)

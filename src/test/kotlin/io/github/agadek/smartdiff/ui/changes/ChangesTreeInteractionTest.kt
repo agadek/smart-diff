@@ -24,6 +24,7 @@ import com.intellij.openapi.vcs.changes.LocalChangeListImpl
 import com.intellij.openapi.vcs.changes.SimpleContentRevision
 import com.intellij.openapi.vcs.changes.ui.ChangeListRemoteState
 import com.intellij.openapi.vcs.changes.ui.ChangesBrowserChangeListNode
+import com.intellij.openapi.vcs.changes.ui.ChangesBrowserChangeNode
 import com.intellij.openapi.vcs.changes.ui.ChangesBrowserNode
 import com.intellij.openapi.vcs.changes.ui.ChangesListView
 import com.intellij.openapi.vcs.changes.ui.ChangesTree
@@ -77,15 +78,13 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test a double-click on a summarized file row reaches the platform handler`() {
+    fun `test a double-click on a summarized file row opens its diff directly`() {
         // changes-tree/02-changes-tree-declarations R17
         val tree = summarizedTree(modified("Cart.java"))
         val summary = summaryRow(tree)
         val path = TreePath(summary.path)
         reveal(tree, path)
-
-        val handled = mutableListOf<MouseEvent>()
-        tree.doubleClickHandler = Processor { handled += it; true }
+        tree.doubleClickHandler = Processor { error("the platform handler must not handle a summarized row") }
         ChangesTreeSetup.configure(tree, suppressExpansion = true)
 
         val press = tree.pressOnly(tree.centerOf(path), clickCount = 2)
@@ -93,29 +92,33 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
         assertSame("the suppressed press selects the summarized row", summary, tree.selectionPath?.lastPathComponent)
         assertFalse("the suppressed press does not expand the row", tree.isExpanded(path))
 
-        tree.doubleClick(path)
-
-        assertEquals("the platform's double-click handler runs once", 1, handled.size)
+        val shown = recordDiffs()
+        try {
+            tree.doubleClick(path)
+        } finally {
+            Disposer.dispose(shown)
+        }
+        assertTrue("the file diff opens directly", shown.chains.isNotEmpty())
         assertFalse("the setup does not expand the row", tree.isExpanded(path))
     }
 
-    fun `test Enter on a summarized file row reaches the platform handler`() {
+    fun `test Enter on a summarized file row opens its diff directly`() {
         // changes-tree/02-changes-tree-declarations R18
         val tree = summarizedTree(modified("Cart.java"))
         val summary = summaryRow(tree)
         val path = TreePath(summary.path)
         reveal(tree, path)
-
-        val handled = mutableListOf<KeyEvent>()
-        tree.enterKeyHandler = Processor { handled += it; true }
-        tree.selectionPath = path
-        tree.pressKey(KeyEvent.VK_ENTER)
-        assertTrue("the platform skips Enter for a non-leaf row without the setup", handled.isEmpty())
-
+        tree.enterKeyHandler = Processor { error("the platform handler must not handle a summarized row") }
         ChangesTreeSetup.configure(tree, suppressExpansion = true)
-        tree.pressKey(KeyEvent.VK_ENTER)
+        tree.selectionPath = path
 
-        assertEquals("the platform's Enter handler runs once", 1, handled.size)
+        val shown = recordDiffs()
+        try {
+            tree.pressKey(KeyEvent.VK_ENTER)
+        } finally {
+            Disposer.dispose(shown)
+        }
+        assertTrue("Enter opens the file diff directly", shown.chains.isNotEmpty())
     }
 
     fun `test a single-click selection reaches the preview handler`() {
@@ -244,6 +247,36 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
         assertTrue("the row stays expanded", tree.isExpanded(path))
     }
 
+    fun `test configuring twice keeps Enter working for ordinary and declaration rows`() {
+        // changes-tree/02-changes-tree-declarations R9, R18 robustness: configure is idempotent
+        val tree = summarizedTree(modified("Cart.java"), modified("notes.txt"))
+        val declaration = declarationRows(tree).last { it.childCount == 0 }
+        val declarationPath = TreePath((declaration as DefaultMutableTreeNode).path)
+        val ordinary = VcsTreeModelData.all(tree).iterateNodes()
+            .filterIsInstance<ChangesBrowserChangeNode>()
+            .first { it !is SummaryChangeNode }
+        val ordinaryPath = TreePath(ordinary.path)
+        reveal(tree, declarationPath)
+
+        var ordinaryCalls = 0
+        tree.enterKeyHandler = Processor { ordinaryCalls++; true }
+        ChangesTreeSetup.configure(tree, suppressExpansion = true)
+        ChangesTreeSetup.configure(tree, suppressExpansion = true)
+
+        tree.selectionPath = ordinaryPath
+        tree.pressKey(KeyEvent.VK_ENTER)
+        assertEquals("ordinary Enter still reaches the platform handler once", 1, ordinaryCalls)
+
+        tree.selectionPath = declarationPath
+        val shown = recordDiffs()
+        try {
+            tree.pressKey(KeyEvent.VK_ENTER)
+        } finally {
+            Disposer.dispose(shown)
+        }
+        assertTrue("declaration Enter still opens its diff once", shown.chains.size == 1)
+    }
+
     fun `test an unrecognized platform Enter listener is not taken over for declarations`() {
         // changes-tree/02 changes-tree-declarations R9 robustness: fail soft when the platform listener changes
         val tree = summarizedTree(modified("Cart.java"))
@@ -267,6 +300,28 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
         }
         assertEquals("the stand-in platform handler runs once", 1, platformCalls)
         assertTrue("the plugin does not open the declaration itself", shown.chains.isEmpty())
+    }
+
+    fun `test an unrecognized platform Enter listener still opens a non-leaf declaration`() {
+        // changes-tree/02 changes-tree-declarations R9 robustness: the platform guard skips non-leaf rows
+        val tree = summarizedTree(modified("Cart.java"))
+        val declaration = declarationRows(tree).first { it.childCount > 0 }
+        val path = TreePath((declaration as DefaultMutableTreeNode).path)
+        reveal(tree, path)
+        tree.keyListeners.filter { it.javaClass.name.endsWith("ChangesTreeHandlers\$MyEnterListener") }
+            .forEach(tree::removeKeyListener)
+        tree.enterKeyHandler = Processor { error("the platform listener skips non-leaf rows") }
+        tree.addKeyListener(StandInPlatformEnterListener(tree, tree.enterKeyHandler!!))
+        ChangesTreeSetup.configure(tree, suppressExpansion = true)
+        tree.selectionPath = path
+
+        val shown = recordDiffs()
+        try {
+            tree.pressKey(KeyEvent.VK_ENTER)
+        } finally {
+            Disposer.dispose(shown)
+        }
+        assertTrue("the plugin opens the non-leaf declaration itself", shown.chains.isNotEmpty())
     }
 
     fun `test Enter on a declaration row opens its diff through the selected path`() {
