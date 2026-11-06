@@ -1,6 +1,6 @@
 # Hide and filter in the Changes tree
 
-Status: proposed, 2026-11-05
+Status: implemented, 2026-11-06
 
 **Description:** The [Changes tree](../../GLOSSARY.md#changes-tree) has its own View Options toggles for the [summary line](../../GLOSSARY.md#summary-line) and the [declaration](../../GLOSSARY.md#declaration) rows, and its own [change type filter](../../GLOSSARY.md#change-type-filter) for the declaration rows, separate from the outline's.
 
@@ -36,6 +36,7 @@ Status: proposed, 2026-11-05
 
 ## References
 
+- [Details: design and tests](04-hide-and-filter-details.md)
 - [Change type filter in the outline](../outline/03-change-type-filter.md)
 - [Settings page](../settings/01-settings-page.md)
 - [Technical specification §9.4](../../TECHNICAL-SPECIFICATION.md#94-changes-tree-summary)

@@ -35,9 +35,69 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
         assertTrue("the outline opens by default", settings.showOutline)
         assertFalse("the outline opens full by default", settings.outlineMinimised)
         assertTrue("the Changes tree shows summaries by default", settings.showChangesSummary)
+        assertTrue("the Changes tree shows declarations by default", settings.showChangesDeclarations)
         assertFalse("formatting-only changes are grouped by default", settings.formattingOnlyInline)
         assertEquals(Limits.DEFAULT, settings.limits)
         assertEquals("nothing is hidden by default", emptySet<ChangeType>(), settings.hiddenChangeTypes)
+        assertEquals("the tree filter starts with nothing hidden", emptySet<ChangeType>(), settings.hiddenChangesTreeChangeTypes)
+    }
+
+    fun `test the changes tree toggles share the settings page values`() {
+        // changes-tree/04-hide-and-filter R5
+        settings.loadState(SmartDiffSettings.SettingsState())
+
+        settings.showChangesSummary = false
+        settings.showChangesDeclarations = false
+
+        assertFalse("the summary toggle writes the settings page value", settings.state.showChangesSummary)
+        assertFalse("the declarations toggle writes the settings page value", settings.state.showChangesDeclarations)
+        assertFalse(settings.showChangesSummary)
+        assertFalse(settings.showChangesDeclarations)
+    }
+
+    fun `test the two filters are separate settings`() {
+        // changes-tree/04-hide-and-filter R16
+        settings.loadState(SmartDiffSettings.SettingsState())
+
+        settings.hiddenChangeTypes = setOf(ChangeType.ADDED)
+        settings.hiddenChangesTreeChangeTypes = setOf(ChangeType.MOVED)
+
+        assertEquals("the outline filter keeps its own value", setOf(ChangeType.ADDED), settings.hiddenChangeTypes)
+        assertEquals("the tree filter keeps its own value", setOf(ChangeType.MOVED), settings.hiddenChangesTreeChangeTypes)
+    }
+
+    fun `test the changes tree filter is stored separately and starts empty`() {
+        // changes-tree/04-hide-and-filter R17
+        settings.loadState(SmartDiffSettings.SettingsState())
+        assertEquals(emptySet<ChangeType>(), settings.hiddenChangesTreeChangeTypes)
+
+        settings.hiddenChangeTypes = setOf(ChangeType.ADDED)
+        settings.hiddenChangesTreeChangeTypes = setOf(ChangeType.MOVED, ChangeType.FORMATTING_ONLY)
+
+        assertEquals("MOVED,FORMATTING_ONLY", settings.state.hiddenChangesTreeChangeTypes)
+        assertEquals("the outline value is untouched", "ADDED", settings.state.hiddenChangeTypes)
+
+        settings.loadState(SmartDiffSettings.SettingsState().apply { hiddenChangesTreeChangeTypes = "RENAMED, REMOVED" })
+        assertEquals("unknown names are ignored", setOf(ChangeType.REMOVED), settings.hiddenChangesTreeChangeTypes)
+        assertEquals("the outline filter is still empty", emptySet<ChangeType>(), settings.hiddenChangeTypes)
+    }
+
+    fun `test only analysis settings move the analysis revision`() {
+        // changes-tree/04-hide-and-filter R6, R18: display toggles and filters keep the summary cache
+        settings.loadState(SmartDiffSettings.SettingsState())
+        val before = settings.analysisRevision
+
+        settings.showChangesSummary = false
+        settings.showChangesDeclarations = false
+        settings.hiddenChangesTreeChangeTypes = setOf(ChangeType.MOVED)
+        settings.hiddenChangeTypes = setOf(ChangeType.ADDED)
+        assertEquals("display settings keep the revision", before, settings.analysisRevision)
+
+        settings.formattingOnlyInline = true
+        assertEquals("the formatting-only layout moves the revision", before + 1, settings.analysisRevision)
+
+        settings.limits = Limits.DEFAULT.copy(maxChars = Limits.DEFAULT.maxChars - 1)
+        assertEquals("an analysis limit moves the revision", before + 2, settings.analysisRevision)
     }
 
     fun `test outline 02 R14 the minimised state is stored`() {

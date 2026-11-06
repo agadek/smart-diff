@@ -29,6 +29,9 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         /** Whether the Local Changes and Commit tree shows each file's structural summary. */
         var showChangesSummary: Boolean = true
 
+        /** Whether the Local Changes and Commit tree shows each file's declaration rows. */
+        var showChangesDeclarations: Boolean = true
+
         /** Show formatting-only changes inline instead of in a collapsed group per container. */
         var formattingOnlyInline: Boolean = false
 
@@ -40,6 +43,9 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
 
         /** The [ChangeType] names hidden from the outline, comma-separated. */
         var hiddenChangeTypes: String = ""
+
+        /** The [ChangeType] names hidden from the Changes tree, comma-separated and separate from the outline's. */
+        var hiddenChangesTreeChangeTypes: String = ""
         var maxChars: Int = Limits.DEFAULT.maxChars
         var maxDeclarations: Int = Limits.DEFAULT.maxDeclarations
         var timeoutMillis: Long = Limits.DEFAULT.timeoutMillis
@@ -47,6 +53,11 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
 
     @Volatile
     private var current = SettingsState()
+
+    /** Moves when a setting that changes what a summary contains changes; display toggles and filters do not move it. */
+    @Volatile
+    var analysisRevision: Long = 0
+        private set
 
     /** The last malformed registry value that was logged, so one bad value logs one warning (R30). */
     @Volatile
@@ -71,6 +82,11 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         get() = current.showChangesSummary
         set(value) = update { showChangesSummary = value }
 
+    /** Whether the Changes tree shows its declaration rows under each summarized file; the tree's "Declarations" toggle. */
+    var showChangesDeclarations: Boolean
+        get() = current.showChangesDeclarations
+        set(value) = update { showChangesDeclarations = value }
+
     var formattingOnlyInline: Boolean
         get() = current.formattingOnlyInline
         set(value) = update { formattingOnlyInline = value }
@@ -87,6 +103,11 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
     var hiddenChangeTypes: Set<ChangeType>
         get() = current.hiddenChangeTypes.split(',').mapNotNullTo(LinkedHashSet()) { name -> ChangeType.entries.firstOrNull { it.name == name.trim() } }
         set(value) = update { hiddenChangeTypes = ChangeType.entries.filter { it in value }.joinToString(",") { it.name } }
+
+    /** The change types hidden from the Changes tree only; a stored name that is no longer a type is ignored. */
+    var hiddenChangesTreeChangeTypes: Set<ChangeType>
+        get() = current.hiddenChangesTreeChangeTypes.split(',').mapNotNullTo(LinkedHashSet()) { name -> ChangeType.entries.firstOrNull { it.name == name.trim() } }
+        set(value) = update { hiddenChangesTreeChangeTypes = ChangeType.entries.filter { it in value }.joinToString(",") { it.name } }
 
     /** The limits passed to engines; a stored value that is out of range falls back to its default. */
     var limits: Limits
@@ -126,20 +147,28 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
     /** Replaces the state rather than changing it, so a reader on another thread sees either the old or the new values. */
     private fun update(change: SettingsState.() -> Unit) {
         val old = current
-        current = SettingsState().also {
+        val next = SettingsState().also {
             it.showOutline = old.showOutline
             it.outlineMinimised = old.outlineMinimised
             it.showChangesSummary = old.showChangesSummary
+            it.showChangesDeclarations = old.showChangesDeclarations
             it.formattingOnlyInline = old.formattingOnlyInline
             it.mergeGroupedBySide = old.mergeGroupedBySide
             it.mergeHideBothSides = old.mergeHideBothSides
             it.hiddenChangeTypes = old.hiddenChangeTypes
+            it.hiddenChangesTreeChangeTypes = old.hiddenChangesTreeChangeTypes
             it.maxChars = old.maxChars
             it.maxDeclarations = old.maxDeclarations
             it.timeoutMillis = old.timeoutMillis
             it.change()
         }
+        current = next
+        if (old.analysisSignature() != next.analysisSignature()) analysisRevision++
     }
+
+    /** The settings that change what a summary contains; display toggles, filters and merge options do not. */
+    private fun SettingsState.analysisSignature(): List<Any> =
+        listOf(maxChars, maxDeclarations, timeoutMillis, formattingOnlyInline)
 
     /** Told after the settings page is applied, so views that show results outside a diff can update. */
     fun interface Listener {

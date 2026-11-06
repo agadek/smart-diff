@@ -35,6 +35,7 @@ import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.api.Limits
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.compareSafely
+import io.github.agadek.smartdiff.engine.registry.EngineDefaults
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
 import io.github.agadek.smartdiff.ui.OutlineItem
 import io.github.agadek.smartdiff.ui.OutlineModel
@@ -60,7 +61,11 @@ import javax.swing.tree.TreeNode
 class ChangesSummaryModifier(private val project: Project) : ChangesViewModifier {
 
     override fun modifyTreeModelBuilder(builder: ChangesViewModelBuilder) {
-        if (!SmartDiffSettings.getInstance().showChangesSummary) {
+        ChangesTreeActions.install()
+        val settings = SmartDiffSettings.getInstance()
+        val showSummary = settings.showChangesSummary
+        val showDeclarations = settings.showChangesDeclarations
+        if (!showSummary && !showDeclarations) {
             ChangesTreeSetup.schedule(project, suppressExpansion = false)
             return
         }
@@ -70,11 +75,15 @@ class ChangesSummaryModifier(private val project: Project) : ChangesViewModifier
         var hasDeclarationRows = false
         for ((node, summary) in nodes.zip(summaries)) {
             if (summary == null) continue
+            val filtered = ChangesTreeFilter.filter(summary.items, settings.hiddenChangesTreeChangeTypes)
+            val rows = if (showDeclarations) filtered.items else emptyList()
+            if (!showSummary && rows.isEmpty()) continue
             val parent = node.parent as? ChangesBrowserNode<*> ?: continue
             val index = parent.getIndex(node)
+            val text = if (showSummary) ChangesTreeFilter.summary(summary.text, filtered) else ""
             parent.remove(index)
-            parent.insert(SummaryChangeNode(project, node, summary.text).apply { summary.items.forEach { add(DeclarationNode(it)) } }, index)
-            hasDeclarationRows = hasDeclarationRows || summary.items.isNotEmpty()
+            parent.insert(SummaryChangeNode(project, node, text).apply { rows.forEach { add(DeclarationNode(it)) } }, index)
+            hasDeclarationRows = hasDeclarationRows || rows.isNotEmpty()
         }
         ChangesTreeSetup.schedule(project, suppressExpansion = hasDeclarationRows)
     }
@@ -109,7 +118,7 @@ class SummaryChangeNode internal constructor(
 
     override fun render(renderer: ChangesBrowserNodeRenderer, selected: Boolean, expanded: Boolean, hasFocus: Boolean) {
         original.render(renderer, selected, expanded, hasFocus)
-        renderer.append(FontUtil.spaceAndThinSpace() + summary, SimpleTextAttributes.GRAYED_ATTRIBUTES)
+        if (summary.isNotEmpty()) renderer.append(FontUtil.spaceAndThinSpace() + summary, SimpleTextAttributes.GRAYED_ATTRIBUTES)
     }
 
     override fun shouldExpandByDefault(): Boolean = false
@@ -389,9 +398,9 @@ class ChangesSummaryService(private val project: Project) {
 
 /**
  * What the Changes tree shows for a file: its summary line, such as `2 changed · 1 added`, or the reason it was not
- * analyzed, and its outline's top-level rows. The rows are the outline's own (§10) without the change type filter,
- * which applies to outlines only, as the summary counts every change. A row that carries a reason has no declaration
- * rows. A [retryable] summary stays visible while one retry is pending.
+ * analyzed, and its outline's top-level rows. The rows are the outline's own (§10) without either change type filter,
+ * so the tree can apply its own filter and the summary can count every change. A row that carries a reason has no
+ * declaration rows. A [retryable] summary stays visible while one retry is pending.
  */
 class FileSummary(val text: String, val items: List<OutlineItem>, val retryable: Boolean = false)
 
@@ -402,11 +411,28 @@ internal fun refreshChangesView(project: Project) {
 
 /** Shows or hides the summaries in every open project when the SMART Diff settings change. */
 class ChangesSummarySettingsListener : SmartDiffSettings.Listener {
+    private var lastAnalysis: AnalysisStamp = currentAnalysis()
+
     override fun settingsChanged() {
+        val analysis = currentAnalysis()
+        val analysisChanged = analysis != lastAnalysis
+        lastAnalysis = analysis
         for (project in ProjectManager.getInstance().openProjects) {
             if (project.isDisposed) continue
-            project.serviceIfCreated<ChangesSummaryService>()?.clear()
+            if (analysisChanged) project.serviceIfCreated<ChangesSummaryService>()?.clear()
             refreshChangesView(project)
         }
     }
+
+    private fun currentAnalysis(): AnalysisStamp {
+        val settings = SmartDiffSettings.getInstance()
+        return AnalysisStamp(
+            settings.analysisRevision,
+            EngineDefaults.getInstance().revision,
+            settings.confidence.format(),
+        )
+    }
+
+    /** The values that change what a summary contains, as opposed to how the tree displays it. */
+    private data class AnalysisStamp(val settingsRevision: Long, val engineRevision: Long, val confidence: String)
 }

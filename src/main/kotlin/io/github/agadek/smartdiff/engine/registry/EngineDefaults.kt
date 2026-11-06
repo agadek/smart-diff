@@ -23,6 +23,11 @@ class EngineDefaults : PersistentStateComponent<EngineDefaults.DefaultsState> {
     @Volatile
     private var current = DefaultsState()
 
+    /** Moves when a language's engine changes, so cached summaries computed with another engine are cleared. */
+    @Volatile
+    var revision: Long = 0
+        private set
+
     override fun getState(): DefaultsState = current
 
     override fun loadState(state: DefaultsState) {
@@ -32,9 +37,11 @@ class EngineDefaults : PersistentStateComponent<EngineDefaults.DefaultsState> {
     fun get(languageId: String): EngineId? = current.byLanguage[languageId]?.let(::EngineId)
 
     fun set(languageId: String, engineId: EngineId?) {
+        if (current.byLanguage[languageId] == engineId?.value) return
         val byLanguage = LinkedHashMap(current.byLanguage)
         if (engineId == null) byLanguage.remove(languageId) else byLanguage[languageId] = engineId.value
         current = DefaultsState().also { it.byLanguage = byLanguage }
+        revision++
     }
 
     companion object {

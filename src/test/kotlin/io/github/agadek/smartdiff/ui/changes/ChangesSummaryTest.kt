@@ -340,13 +340,21 @@ class ChangesSummaryTest : BasePlatformTestCase() {
     }
 
     fun `test no summary is shown when the setting is off`() {
+        // changes-tree/01-changes-tree-summary R12; changes-tree/04-hide-and-filter R3
         val change = modified("Cart.java", OLD_CART, NEW_CART)
         summaryNode(change)
         ChangesSummaryService.getInstance(project).waitForSummaries()
 
         settings.showChangesSummary = false
+        val node = summaryNode(change)
 
-        assertNull(summaryNode(change))
+        assertTrue("the row has no summary text", node == null || node.summary.isEmpty())
+        if (node != null) {
+            val renderer = ChangesBrowserNodeRenderer(project, BooleanGetter { false }, false)
+            node.render(renderer, false, false, false)
+            assertFalse("no summary or reason is drawn", renderer.getCharSequence(false).toString().contains("changed"))
+            assertTrue("the declaration rows are still there", node.childCount > 0)
+        }
     }
 
     fun `test the first 500 file nodes are summarized and the rest keep the platform row`() {

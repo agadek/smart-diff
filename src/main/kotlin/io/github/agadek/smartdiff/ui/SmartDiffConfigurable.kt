@@ -35,6 +35,11 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                     .bindSelected(settings::showChangesSummary)
                     .comment("Each changed file in Local Changes and the Commit tool window shows a summary such as \"2 changed · 1 added\".")
             }
+            row {
+                checkBox("Show declarations in the Changes tree")
+                    .bindSelected(settings::showChangesDeclarations)
+                    .comment("Each summarized file can be expanded to show its changed declarations.")
+            }
             buttonsGroup("Formatting-only changes:") {
                 row { radioButton("Collapsed in a group", false) }
                 row { radioButton("Inline", true) }
@@ -50,6 +55,19 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                 }
                 row {
                     comment("Hidden changes still count in the file summary. Uncertain and unanalyzed changes are always shown.")
+                }
+            }
+            buttonsGroup("Hide from the Changes tree:") {
+                for (type in ChangeType.entries) {
+                    row {
+                        checkBox(type.text).bindSelected(
+                            { type in settings.hiddenChangesTreeChangeTypes },
+                            { hide -> settings.hiddenChangesTreeChangeTypes = if (hide) settings.hiddenChangesTreeChangeTypes + type else settings.hiddenChangesTreeChangeTypes - type },
+                        )
+                    }
+                }
+                row {
+                    comment("The tree has its own filter, separate from the outline's. Hidden changes still count in its summary.")
                 }
             }
 
