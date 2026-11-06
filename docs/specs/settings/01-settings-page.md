@@ -20,6 +20,9 @@ Status: implemented, 2026-10-22
 - **R10** "Show declarations in the Changes tree" is on by default and is the tree's "Declarations" toggle.
 - **R11** "Hide from the Changes tree" has one checkbox per change type, all off by default, and matches the tree's own change type filter.
 - **R12** The Changes tree's two toggles and its filter are remembered and are the same settings as in its View Options menu.
+- **R13** "Follow the caret in the Changes tree" is on by default.
+- **R14** Changing it does not clear summaries or rebuild the tree.
+- **R15** When it is off, moving the caret does not change the Changes tree selection.
 
 ## References
 
