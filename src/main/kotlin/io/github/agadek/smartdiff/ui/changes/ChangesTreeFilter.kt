@@ -36,7 +36,9 @@ object ChangesTreeFilter {
                     children,
                 )
             }
-            if (item.children.isNotEmpty() && children.isEmpty()) return null
+            // A container with no labels of its own disappears when every child is filtered. A shown change with
+            // its own labels stays even when all of its children are hidden.
+            if (item.tags.isEmpty() && item.children.isNotEmpty() && children.isEmpty()) return null
             if (children == item.children) return item
             return OutlineItem(
                 item.kind,

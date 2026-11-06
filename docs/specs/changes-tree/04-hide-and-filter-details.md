@@ -112,9 +112,9 @@ The tests name the requirement they check, for example `// changes-tree/04-hide-
 | R4 | `ChangesTreeFilterTest` `test declarations off makes each file a leaf and leaves the row to the platform`: the file node is a leaf with no children, and `DeclarationNodeAction` leaves the row to the platform; M3 checks double-click and Enter after #111. |
 | R5 | `SmartDiffSettingsTest` `test the changes tree toggles share the settings page values`; `ChangesTreeFilterTest` `test a tree toggle writes the same setting as the settings page` |
 | R6 | `ChangesTreeFilterTest` `test toggling rebuilds without another comparison`: a counting engine runs once per file, and changing a toggle leaves the count unchanged; `test an analysis setting still compares again` |
-| R7 | `OutlineModelTest` `test the tree filter hides each change type` |
+| R7 | `OutlineModelTest` `test the tree filter hides each change type`; `test a shown change with a hidden child stays with its own labels in the tree`; `ChangesTreeFilterTest` `test a shown change with a hidden child stays with its own labels in the tree` |
 | R8 | `OutlineModelTest` `test hiding changed also hides a signature change from the tree` |
-| R9 | `OutlineModelTest` `test a change with one shown label stays in the tree` |
+| R9 | `OutlineModelTest` `test a change with one shown label stays in the tree`; the same shown-change regression above |
 | R10 | `OutlineModelTest` `test a hidden container with a shown child stays without labels in the tree` |
 | R11 | `OutlineModelTest` `test uncertain rename candidate and unanalyzed rows are never hidden from the tree` |
 | R12 | `ChangesTreeFilterTest` `test the filter is a hide change types submenu`: the group has one toggle per `ChangeType` and lives in the same action group as the toggles; M1 checks it in the running IDE. |

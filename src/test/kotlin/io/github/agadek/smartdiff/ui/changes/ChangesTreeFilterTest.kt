@@ -250,6 +250,21 @@ class ChangesTreeFilterTest : BasePlatformTestCase() {
         assertEquals("1 changed · 1 added · 1 moved · 1 formatting-only · 2 hidden", node.summary)
     }
 
+    fun `test a shown change with a hidden child stays with its own labels in the tree`() {
+        // changes-tree/04-hide-and-filter R7, R9
+        maskEngines(ScriptedEngine(parserResult()))
+        val change = modified("Parser.java")
+        summaryNode(change)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        settings.hiddenChangesTreeChangeTypes = setOf(ChangeType.ADDED)
+        val node = tree(listOf(change)).second.single() as SummaryChangeNode
+
+        assertEquals("1 changed · 1 added · 1 hidden", node.summary)
+        val rows = node.preorderEnumeration().toList().filterIsInstance<DeclarationNode>()
+        assertEquals(listOf("class Parser  changed"), rows.map { it.item.label })
+        assertTrue("the hidden added method is not in the tree", rows.none { it.item.title == "method added()" })
+    }
+
     fun `test a file whose changes are all hidden stays with all hidden in its summary and no rows`() {
         // changes-tree/04-hide-and-filter R14
         maskEngines(ScriptedEngine(cartResult()))
@@ -389,6 +404,23 @@ class ChangesTreeFilterTest : BasePlatformTestCase() {
                         method("format", TextRange(21, 30), TextRange(21, 30), content = Content.FORMATTING_ONLY),
                         method("moved", TextRange(31, 40), TextRange(41, 50), moved = true),
                     ),
+                ),
+            ),
+        )
+
+        /** A changed class with an added method, so a shown change has a hidden child. */
+        fun parserResult() = ComparisonResult(
+            ENGINE_ID,
+            "1",
+            Status.ANALYZED,
+            changes = listOf(
+                ChangeNode(
+                    Subject.Declaration(DeclarationKind.CLASS, "Parser", null),
+                    TextRange(0, 20),
+                    TextRange(0, 30),
+                    Presence.MATCHED,
+                    content = Content.CHANGED,
+                    children = listOf(method("added", null, TextRange(21, 30), presence = Presence.ADDED)),
                 ),
             ),
         )

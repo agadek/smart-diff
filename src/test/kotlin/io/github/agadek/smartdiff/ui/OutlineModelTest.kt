@@ -485,6 +485,26 @@ class OutlineModelTest {
     }
 
     @Test
+    fun `a shown change with a hidden child stays with its own labels in the tree`() {
+        // changes-tree/04-hide-and-filter R7, R9
+        val result = result(
+            node("Parser", content = Content.CHANGED, children = listOf(node("added", presence = Presence.ADDED, old = null))),
+        )
+
+        val filtered = ChangesTreeFilter.filter(
+            OutlineModel.build(result, "", "", formattingInline = false),
+            setOf(ChangeType.ADDED),
+        )
+
+        assertEquals("class Parser  changed", render(filtered.items))
+        assertEquals("the hidden child still counts", 1, filtered.hiddenCount)
+        assertEquals(
+            "1 changed · 1 added · 1 hidden",
+            ChangesTreeFilter.summary("1 changed · 1 added", filtered),
+        )
+    }
+
+    @Test
     fun `uncertain rename candidate and unanalyzed rows are never hidden from the tree`() {
         // changes-tree/04-hide-and-filter R11
         val result = ComparisonResult(
