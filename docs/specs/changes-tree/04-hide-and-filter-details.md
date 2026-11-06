@@ -17,7 +17,7 @@ Feature: [Hide and filter in the Changes tree](04-hide-and-filter.md)
 
 ### View Options actions
 
-The 2025.1 platform declares an empty group `ChangesView.ViewOptions` in `META-INF/VcsActions.xml`. `ChangesViewManager.createChangesToolbarActions` adds that group to the eye-icon View Options popup of the Local Changes and Commit tree. The plugin registers its actions in `smartdiff-vcs.xml` and puts them in one `SmartDiff.ChangesTree` group:
+The target IDEs, 2025.1 and 2026.3, both expose the public `ChangesView.ViewOptions` group. The 2025.1 platform declares it in `META-INF/VcsActions.xml`, and `ChangesViewManager.createChangesToolbarActions` adds that group to the eye-icon View Options popup of the Local Changes and Commit tree. The plugin registers its actions in `smartdiff-vcs.xml` and puts them in one `SmartDiff.ChangesTree` group:
 
 ```xml
 <action id="SmartDiff.ChangesTree.StructuralSummary" .../>
@@ -26,7 +26,7 @@ The 2025.1 platform declares an empty group `ChangesView.ViewOptions` in `META-I
 <group id="SmartDiff.ChangesTree"><reference .../>...</group>
 ```
 
-`ChangesTreeActions` adds that group to `ChangesView.ViewOptions` at runtime when the group exists, so the actions sit below the platform's own "Show" options. The 2026.3 Changes view no longer declares `ChangesView.ViewOptions`; there the same group goes into `ChangesViewToolbar` instead, which makes the actions toolbar buttons. The placement is idempotent, uses only public `ActionManager` and `DefaultActionGroup` API, and does not wrap the tree renderer or use `ChangesViewManager`'s internals. R1 accepts either placement.
+`ChangesTreeActions` adds that group to `ChangesView.ViewOptions` at runtime, so the actions sit below the platform's own "Show" options. Manual verification on IU 2025.1 and IU 2026.3 found the group on both and the SMART Diff group in it on both (`inViewOptions=true`, `inToolbar=false`). The `ChangesViewToolbar` fallback remains defensive: it is used only when the View Options group is absent or rejects plugin actions, and then the actions become toolbar buttons. The placement is idempotent, uses only public `ActionManager` and `DefaultActionGroup` API, and does not wrap the tree renderer or use `ChangesViewManager`'s internals. R1 accepts either placement.
 
 The two toggles are `DumbAwareToggleAction`s with stable action IDs. Their `isSelected` reads `SmartDiffSettings.showChangesSummary` and the new `showChangesDeclarations`. Their `setSelected` writes the setting and publishes `SmartDiffSettings.CHANGED`, whose listener rebuilds every open Changes tree. The "Hide Change Types" group holds one `DumbAwareToggleAction` per `ChangeType`, with the same labels as the outline's menu. A checked item means hidden, as in the outline. All actions use `ActionUpdateThread.BGT`, so reading the settings stays off the UI thread.
 
@@ -106,7 +106,7 @@ The tests name the requirement they check, for example `// changes-tree/04-hide-
 
 | Requirement | Check |
 | --- | --- |
-| R1 | `ChangesTreeFilterTest` `test the view options group has the smart diff toggles and filter`: the group is in `ChangesView.ViewOptions`, or in `ChangesViewToolbar` when the fallback is chosen; `test the toolbar is the fallback when the view options group is absent`: the placement rule itself; M1 checks the running IDE. |
+| R1 | `ChangesTreeFilterTest` `test the view options group has the smart diff toggles and filter`: the group is in `ChangesView.ViewOptions`; `test the toolbar is the fallback when the view options group is absent`: the defensive placement rule; M1 verifies the eye menu on both target IDEs. |
 | R2 | `ChangesTreeFilterTest` `test the summary and declaration toggles are independent`: all four combinations of the two settings give the expected summary and rows. |
 | R3 | `ChangesTreeFilterTest` `test the structural summary toggle hides the grey text and keeps the rows`: a rendered file row has no summary or reason text, and its declaration children remain. |
 | R4 | `ChangesTreeFilterTest` `test declarations off makes each file a leaf and leaves the row to the platform`: the file node is a leaf with no children, and `DeclarationNodeAction` leaves the row to the platform; M3 checks double-click and Enter after #111. |
@@ -127,11 +127,11 @@ The tests name the requirement they check, for example `// changes-tree/04-hide-
 
 ### Manual checks
 
-M1 and M2 are the View Options and toolbar checks; the rest cover behavior that a platform test cannot see end to end.
+M1 is the View Options placement check and M2 checks the toggles; the rest cover behavior that a platform test cannot see end to end.
 
 | Check | Steps |
 | --- | --- |
-| M1 View Options and toolbar placement | On 2025.1, in Local Changes and in the Commit tool window, click the eye icon and confirm "Structural Summary", "Declarations" and the "Hide Change Types" submenu appear below the platform's own options. On 2026.3, where that group is absent, confirm the same actions appear in the Changes view toolbar: the two toggles and the "Hide Change Types" submenu (R1, R12). |
+| M1 View Options placement | On IU 2025.1 and IU 2026.3, in Local Changes and in the Commit tool window, click the eye icon and confirm "Structural Summary", "Declarations" and the "Hide Change Types" submenu appear below the platform's own options. Verified on both: `inViewOptions=true`, `inToolbar=false`. The toolbar fallback is defensive only and is not expected when the group exists (R1, R12). |
 | M2 Toggles rebuild at once | Toggle each action and watch the tree change without a comparison progress bar or a recomputed summary. Confirm the other toggle and the filter keep their state (R2, R6). |
 | M3 Declarations off | Turn Declarations off: no file has an expand arrow; double-click and Enter on a summarized file row open its diff as for a file without a summary; selection, checkbox and commit include the file only. Turn it on: children return and the file row keeps its diff behavior (R4; after #111). |
 | M4 Structural Summary off | Turn Structural Summary off: no grey summary after any file, and a file with a reason shows no grey reason either; if Declarations is on, its rows remain (R3). |
@@ -141,4 +141,4 @@ M1 and M2 are the View Options and toolbar checks; the rest cover behavior that 
 | M8 Separate filters and persistence | Hide changed in the tree, then open a diff: its outline still shows changed rows. Hide moved in the outline, then reopen the tree: its rows are unchanged. Restart the IDE and confirm both filters and both toggles are remembered separately (R16, R17). |
 | M9 Speed search | Type a shown declaration's name in the tree: the row is found. Hide its type or turn Declarations off: the row is not found (R15). |
 
-The 2025.1 platform has the View Options group; the 2026.3 Changes view does not, so M1 checks the toolbar fallback there. The filter stays enabled while Declarations are off, so the user can set it before turning the rows on. Turning Declarations back on uses the rebuilt tree, with files and containers collapsed as changes-tree/02 R6 describes.
+Both target IDEs expose the View Options group, so M1 checks the eye menu on each; the toolbar fallback is only for a build where the group is absent or rejects the actions. The filter stays enabled while Declarations are off, so the user can set it before turning the rows on. Turning Declarations back on uses the rebuilt tree, with files and containers collapsed as changes-tree/02 R6 describes.

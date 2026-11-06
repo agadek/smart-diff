@@ -65,9 +65,9 @@ class ChangesTreeHideChangeTypesGroup : DefaultActionGroup("Hide Change Types", 
 }
 
 /**
- * Puts the tree's actions into the eye-icon View Options menu. The 2025.1 platform declares the public
- * `ChangesView.ViewOptions` group there; a build without that group, such as the 2026.3 Changes view, gets the same
- * group in `ChangesViewToolbar` instead (changes-tree/04 R1). The placement is idempotent and never wraps the tree.
+ * Puts the tree's actions into the eye-icon View Options menu. Both target IDEs, 2025.1 and 2026.3, expose the public
+ * `ChangesView.ViewOptions` group; a build without that group falls back to the same group in `ChangesViewToolbar`
+ * (changes-tree/04 R1). The placement is idempotent and never wraps the tree.
  */
 internal object ChangesTreeActions {
     const val GROUP_ID = "SmartDiff.ChangesTree"
