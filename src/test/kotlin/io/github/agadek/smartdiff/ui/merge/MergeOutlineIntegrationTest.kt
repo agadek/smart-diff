@@ -161,15 +161,27 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
 
     fun `test a row with an absent pane keeps the native synchronized scrolling`() {
         // merge/03-three-sided-diffs R12
-        val outline = open(right = RIGHT_ADDED).awaitShown()
+        val outline = open(base = RIGHT_ADDED, left = RIGHT_ADDED, right = RIGHT).awaitShown()
         val viewer = viewer(outline)
         val sync = syncSupport(viewer) ?: error("the viewer has no synchronized scrolling")
+        ThreeSide.values().forEach { EditorTestUtil.setEditorVisibleSize(viewer.getEditor(it), 80, 6) }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
         val row = rows(outline).first { it.contains("method extra()") }.trim()
 
         select(outline, row)
         PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
 
         assertFalse("an absent pane is not held by an incomplete pair", duringSyncScroll(sync))
+
+        val left = viewer.getEditor(ThreeSide.LEFT)
+        val base = viewer.getEditor(ThreeSide.BASE)
+        val leftBefore = left.scrollingModel.verticalScrollOffset
+        val baseBefore = base.scrollingModel.verticalScrollOffset
+        left.scrollingModel.scrollVertically(leftBefore + left.lineHeight * 2)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+
+        assertNotEquals("the left pane did not scroll", leftBefore, left.scrollingModel.verticalScrollOffset)
+        assertNotEquals("the base pane did not follow through native sync", baseBefore, base.scrollingModel.verticalScrollOffset)
     }
 
     fun `test an added row says which panes are absent`() {
