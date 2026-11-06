@@ -280,7 +280,7 @@ _Avoid_: change category
 
 ### Change type filter
 
-The outline's menu of change types to hide from the structural outline.
+The menu of change types to hide, in the structural outline or in the Changes tree. Each view remembers its own filter.
 _Avoid_: hide filter, outline filter
 
 ### Outline toggle
