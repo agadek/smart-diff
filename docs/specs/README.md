@@ -71,7 +71,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | Feature | Status |
 | --- | --- |
 | [01 Structural outline](outline/01-structural-outline.md) | implemented, 2026-10-22 |
-| [02 Outline toggle](outline/02-outline-toggle.md) | implemented, 2026-10-21 |
+| [02 Outline toggle](outline/02-outline-toggle.md) | implemented, 2026-11-05 |
 | [03 Change type filter](outline/03-change-type-filter.md) | implemented, 2026-10-22 |
 | [04 SMART Diff viewer](outline/04-smart-diff-viewer.md) | implemented, 2026-10-22 |
 | [05 Analysis fallback states](outline/05-analysis-fallback.md) | implemented, 2026-11-04 |

@@ -52,6 +52,20 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
     /** Says which side the selected item is absent from (§10). */
     internal val absence = JBLabel()
 
+    /** Hides the outline from this diff window, as the toolbar toggle off does (outline/02 R7). */
+    internal val hideAction = object : DumbAwareAction("Hide", "Hide the outline from this diff window", AllIcons.General.HideToolWindow) {
+        override fun actionPerformed(e: AnActionEvent) = controller.setOutlineVisible(false)
+    }
+
+    /** Minimises the outline to its strip without stopping the comparison (outline/02 R8). */
+    internal val minimiseAction = object : DumbAwareAction(
+        "Minimise",
+        "Minimise the outline to a strip at the right edge",
+        AllIcons.General.CollapseComponent,
+    ) {
+        override fun actionPerformed(e: AnActionEvent) = controller.setMinimised(true)
+    }
+
     private val body = JPanel(CardLayout())
     private var updatingEngines = false
 
@@ -67,7 +81,7 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
             templatePresentation.icon = AllIcons.General.Filter
             isPopup = true
         }
-        val toolbar = ActionManager.getInstance().createActionToolbar("SmartDiffOutline", DefaultActionGroup(filter, refresh), true)
+        val toolbar = ActionManager.getInstance().createActionToolbar("SmartDiffOutline", DefaultActionGroup(filter, refresh, minimiseAction, hideAction), true)
         toolbar.targetComponent = this
 
         engines.renderer = object : SimpleListCellRenderer<ComparisonEngine>() {
