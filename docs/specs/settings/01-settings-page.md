@@ -11,13 +11,17 @@ Status: implemented, 2026-10-22
 - **R1** The settings apply to the whole IDE, not to one project.
 - **R2** "Show structural outline automatically" is on by default.
 - **R3** When it is off, every diff starts with the outline hidden, and the [outline toggle](../../GLOSSARY.md#outline-toggle) still shows it.
-- **R4** "Show structural summary in the Changes tree" is on by default.
+- **R4** "Show structural summary in the Changes tree" is on by default and is the tree's "Structural Summary" toggle.
 - **R5** "Formatting-only changes" chooses between a collapsed group, the default, and inline rows.
-- **R6** "Hide from the outline" has one checkbox per [change type](../../GLOSSARY.md#change-type), all off by default, and matches the [change type filter](../../GLOSSARY.md#change-type-filter).
+- **R6** "Hide from the outline" has one checkbox per [change type](../../GLOSSARY.md#change-type), all off by default, and matches the outline's [change type filter](../../GLOSSARY.md#change-type-filter).
 - **R7** "Default Comparison Engine" has one row per language with an engine, with a choice of the engines that support it.
 - **R8** A language without a chosen engine uses the first registered one.
 - **R9** The [analysis limits](../../GLOSSARY.md#analysis-limits) can be changed: largest file, most declarations per side and analysis time.
+- **R10** "Show declarations in the Changes tree" is on by default and is the tree's "Declarations" toggle.
+- **R11** "Hide from the Changes tree" has one checkbox per change type, all off by default, and matches the tree's own change type filter.
+- **R12** The Changes tree's two toggles and its filter are remembered and are the same settings as in its View Options menu.
 
 ## References
 
+- [Hide and filter in the Changes tree](../changes-tree/04-hide-and-filter.md)
 - [Technical specification §11](../../TECHNICAL-SPECIFICATION.md#11-settings)
