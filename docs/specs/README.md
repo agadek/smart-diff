@@ -36,7 +36,7 @@ The outline and the Changes tree use one set of [labels](../GLOSSARY.md#label). 
 | uncertain | The counterpart cannot be determined unambiguously | uncertain | never |
 | unanalyzed | The content could not be classified, though presence and kind are known | unanalyzed | never |
 
-The summary counts every change, hidden or not, and ends with how many are hidden. Signature changes and kind changes count as changed; an extraction counts as extracted instead of added. A declaration with grouped usages is never hidden, even when its other labels are a hidden type: a declaration whose only changes are grouped usages counts as `usages renamed`, and the rename row shows `12 usages`. The [relationship model](relationships/02-relationship-model.md) keeps these labels when it replaces the extraction and rename fields, and [rename grouping](relationships/04-rename-grouping.md) adds the usage count and `usages renamed` without hiding a change.
+The summary counts every change, hidden or not, and ends with how many are hidden. The outline and the Changes tree each remember their own filter. Signature changes and kind changes count as changed; an extraction counts as extracted instead of added. A declaration with grouped usages is never hidden, even when its other labels are a hidden type: a declaration whose only changes are grouped usages counts as `usages renamed`, and the rename row shows `12 usages`. The [relationship model](relationships/02-relationship-model.md) keeps these labels when it replaces the extraction and rename fields, and [rename grouping](relationships/04-rename-grouping.md) adds the usage count and `usages renamed` without hiding a change.
 
 
 ## Engines
@@ -84,6 +84,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [01 Changes tree summary](changes-tree/01-changes-tree-summary.md) | implemented, 2026-10-22 |
 | [02 Declarations in the Changes tree](changes-tree/02-changes-tree-declarations.md) | implemented, 2026-11-01 |
 | [03 Coverage and scale](changes-tree/03-coverage-and-scale.md) | implemented, 2026-11-04 |
+| [04 Hide and filter](changes-tree/04-hide-and-filter.md) | proposed, 2026-11-05 |
 
 ## Settings
 

@@ -18,9 +18,9 @@ Status: implemented, 2026-10-22
 - **R8** Summaries are computed in the background, one file at a time, with the usual [analysis limits](../../GLOSSARY.md#analysis-limits).
 - **R9** An edit to a file, or a change of engine, gives it a new summary.
 - **R10** The tree is rebuilt at most once every 300 ms while summaries arrive.
-- **R11** The summary counts every change, and the [change type filter](../../GLOSSARY.md#change-type-filter) does not apply to it.
-- **R12** The setting "Show structural summary in the Changes tree" turns it off.
-- **R13** Changing any SMART Diff setting computes the summaries again.
+- **R11** The summary counts every change, including changes the Changes tree's own [change type filter](../../GLOSSARY.md#change-type-filter) hides.
+- **R12** The tree's "Structural Summary" toggle and the setting "Show structural summary in the Changes tree" turn it off.
+- **R13** Changing an analysis setting, such as an engine or a limit, computes the summaries again.
 
 ## Out of scope
 
@@ -28,5 +28,6 @@ Status: implemented, 2026-10-22
 
 ## References
 
+- [Hide and filter in the Changes tree](04-hide-and-filter.md)
 - [ADR 0006](../../adr/0006-changes-tree-summary-through-changes-view-modifier.md)
 - [Technical specification §9.4](../../TECHNICAL-SPECIFICATION.md#94-changes-tree-summary)
