@@ -112,10 +112,9 @@ internal object ChangesTreeSetup {
             val node = path.lastPathComponent
             if (node is DeclarationNode) return openDeclaration(tree, node)
             if (node is SummaryChangeNode) return platform?.process(e) ?: false
-            // Structural rows are helper nodes; their double-click navigation stays the platform's.
+            // Keep expansion for every other container, including helper directory and changelist rows.
             if (tree.getClientProperty(EXPANSION_SUPPRESSED) == true &&
                 node is ChangesBrowserNode<*> &&
-                node.isMeaningfulNode &&
                 !tree.model.isLeaf(node)
             ) {
                 if (tree.isExpanded(path)) tree.collapsePath(path) else tree.expandPath(path)

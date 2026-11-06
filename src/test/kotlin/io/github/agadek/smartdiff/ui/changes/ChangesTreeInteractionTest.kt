@@ -325,6 +325,7 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
     private fun groupedTree(): TestChangesListView {
         val root = ChangesBrowserNode.createRoot()
         val directory = ChangesBrowserNode.createFilePath(VcsUtil.getFilePath("/repo/src", true))
+        directory.markAsHelperNode()
         directory.add(ChangesBrowserNode.createChange(project, modified("Cart.java")))
         root.add(directory)
 
@@ -333,6 +334,7 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
             LocalChangeListImpl.createEmptyChangeListImpl(project, "Changes", null),
             ChangeListRemoteState(),
         )
+        changelist.markAsHelperNode()
         changelist.add(ChangesBrowserNode.createChange(project, modified("Other.java")))
         root.add(changelist)
 
