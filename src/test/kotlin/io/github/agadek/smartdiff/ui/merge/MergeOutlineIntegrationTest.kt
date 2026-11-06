@@ -40,6 +40,7 @@ import io.github.agadek.smartdiff.ui.ChangeType
 import io.github.agadek.smartdiff.ui.DiffContents
 import io.github.agadek.smartdiff.ui.SmartDiffSettings
 import io.github.agadek.smartdiff.ui.ToggleOutlineAction
+import io.github.agadek.smartdiff.ui.scrollFrame
 import java.awt.Component
 import java.awt.Container
 import java.awt.event.KeyEvent
@@ -158,6 +159,31 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
         assertTrue(rows(next).contains("class OrderService"))
     }
 
+    fun `test a row with an absent pane keeps the native synchronized scrolling`() {
+        // merge/03-three-sided-diffs R12
+        val outline = open(base = RIGHT_ADDED, left = RIGHT_ADDED, right = RIGHT).awaitShown()
+        val viewer = viewer(outline)
+        val sync = syncSupport(viewer) ?: error("the viewer has no synchronized scrolling")
+        ThreeSide.values().forEach { EditorTestUtil.setEditorVisibleSize(viewer.getEditor(it), 80, 6) }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        val row = rows(outline).first { it.contains("method extra()") }.trim()
+
+        select(outline, row)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+
+        assertFalse("an absent pane is not held by an incomplete pair", duringSyncScroll(sync))
+
+        val left = viewer.getEditor(ThreeSide.LEFT)
+        val base = viewer.getEditor(ThreeSide.BASE)
+        val leftBefore = left.scrollingModel.verticalScrollOffset
+        val baseBefore = base.scrollingModel.verticalScrollOffset
+        left.scrollingModel.scrollVertically(leftBefore + left.lineHeight * 2)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+
+        assertNotEquals("the left pane did not scroll", leftBefore, left.scrollingModel.verticalScrollOffset)
+        assertNotEquals("the base pane did not follow through native sync", baseBefore, base.scrollingModel.verticalScrollOffset)
+    }
+
     fun `test an added row says which panes are absent`() {
         // merge/02-merge-outline R17
         val outline = open(right = RIGHT_ADDED).awaitShown()
@@ -236,8 +262,8 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
         assertTrue("the engine was canceled", engine.canceled)
     }
 
-    fun `test selecting a row pauses and then resumes synchronized scrolling`() {
-        // merge/03-three-sided-diffs R6
+    fun `test selecting a row keeps the panes aligned while its frames are in view`() {
+        // merge/03-three-sided-diffs R6, R11
         val paddingBefore = (1..200).joinToString("\n") { "// before $it" }
         val paddingAfter = (1..200).joinToString("\n") { "// after $it" }
         val outline = open(
@@ -256,7 +282,7 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
         }
         val left = viewer.getEditor(ThreeSide.LEFT)
         left.scrollingModel.addVisibleAreaListener(listener)
-        try {
+        val item = try {
             selectFirstChange(outline)
         } finally {
             left.scrollingModel.removeVisibleAreaListener(listener)
@@ -264,18 +290,51 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
 
         assertTrue("the selection did not scroll a pane", duringSelection.isNotEmpty())
         assertTrue("a pane scrolled with synchronized scrolling active", duringSelection.all { it })
+        assertTrue("the selection holds synchronized scrolling", duringSyncScroll(sync))
 
         val base = viewer.getEditor(ThreeSide.BASE)
         val right = viewer.getEditor(ThreeSide.RIGHT)
-        val leftBefore = left.scrollingModel.verticalScrollOffset
-        val baseBefore = base.scrollingModel.verticalScrollOffset
-        val rightBefore = right.scrollingModel.verticalScrollOffset
-        left.scrollingModel.scrollVertically(leftBefore + left.lineHeight * 20)
+        val leftFrame = scrollFrame(left, requireNotNull(item.leftRange))
+        val baseFrame = scrollFrame(base, requireNotNull(item.baseRange))
+        val rightFrame = scrollFrame(right, requireNotNull(item.rightRange))
+        val leftBefore = left.scrollingModel.visibleArea.y
+        val baseBefore = base.scrollingModel.visibleArea.y
+        val rightBefore = right.scrollingModel.visibleArea.y
+        left.scrollingModel.scrollVertically(leftBefore + left.lineHeight * 3)
         PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
 
-        assertNotEquals("the left pane did not scroll", leftBefore, left.scrollingModel.verticalScrollOffset)
-        assertNotEquals("the base pane did not follow the next user scroll", baseBefore, base.scrollingModel.verticalScrollOffset)
-        assertNotEquals("the right pane did not follow the next user scroll", rightBefore, right.scrollingModel.verticalScrollOffset)
+        assertTrue("a small scroll keeps the frames in view", duringSyncScroll(sync))
+        assertNotEquals("the left pane did not scroll", leftBefore, left.scrollingModel.visibleArea.y)
+        assertEquals(
+            "the base frame stays in place",
+            left.scrollingModel.visibleArea.y - leftFrame.start,
+            base.scrollingModel.visibleArea.y - baseFrame.start,
+            1.0,
+        )
+        assertEquals(
+            "the right frame stays in place",
+            left.scrollingModel.visibleArea.y - leftFrame.start,
+            right.scrollingModel.visibleArea.y - rightFrame.start,
+            1.0,
+        )
+
+        left.scrollingModel.scrollVertically(0)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        assertFalse("the pause ends when a frame leaves view", duringSyncScroll(sync))
+
+        val baseAfterRelease = base.scrollingModel.verticalScrollOffset
+        left.scrollingModel.scrollVertically(left.lineHeight * 2)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        assertNotEquals("the platform sync resumes", baseAfterRelease, base.scrollingModel.verticalScrollOffset)
+
+        outline.panel.tree.selectionPath = null
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        selectFirstChange(outline)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        assertTrue("the new selection holds synchronized scrolling", duringSyncScroll(sync))
+        outline.panel.tree.selectionPath = null
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        assertFalse("clearing the selection releases the hold", duringSyncScroll(sync))
     }
 
     fun `test the outline never claims a merge is safe and never edits a pane`() {

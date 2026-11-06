@@ -18,7 +18,7 @@ Status: proposed, 2026-11-01
 - **R8** The golden fixtures and the engine contract suite pass.
 - **R9** Plugin Verifier passes on both target IDEs with the Scala plugin, and every internal API use is reviewed.
 - **R10** Every wrong relationship found is fixed or listed as a known issue in VALIDATION.md.
-- **R11** The results are in a dated section of VALIDATION.md, with the engine version, IDE build, Scala plugin version and corpus revision.
+- **R11** The results are in a dated section of VALIDATION.md, with the engine version, the reference pass version, IDE build, Scala plugin version and corpus revision.
 - **R12** The release follows RELEASING.md.
 
 ## Out of scope

@@ -213,7 +213,7 @@ _Avoid_: probability, certainty, score
 
 ### Evidence
 
-The facts a relationship rests on, such as the old and new names, the shared code, the containers, the positions or the engine's score; only content evidence carries source ranges.
+The facts a relationship rests on, such as the old and new names, the shared code, the containers, the positions, a resolved usage or the engine's score; content and reference evidence carry source ranges.
 _Avoid_: reason, proof
 
 ### Usage
@@ -285,8 +285,13 @@ _Avoid_: hide filter, outline filter
 
 ### Outline toggle
 
-The Structural Outline toolbar button that shows or hides the structural outline in one diff window.
+The Structural Outline toolbar button or the outline's Hide button that shows or hides the structural outline in one diff window.
 _Avoid_: outline switch, show outline button
+
+### Minimised outline
+
+The structural outline reduced to a thin strip at the right edge of a diff; it keeps its result and comes back when the strip is clicked.
+_Avoid_: collapsed outline, hidden outline
 
 ### Engine dropdown
 

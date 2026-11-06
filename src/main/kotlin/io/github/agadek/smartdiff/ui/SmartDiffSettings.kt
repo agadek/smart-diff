@@ -23,6 +23,9 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         /** Whether the outline toggle starts on in a new diff window. */
         var showOutline: Boolean = true
 
+        /** Whether a visible outline starts minimised to its strip in a new diff window (outline/02 R14). */
+        var outlineMinimised: Boolean = false
+
         /** Whether the Local Changes and Commit tree shows each file's structural summary. */
         var showChangesSummary: Boolean = true
 
@@ -58,6 +61,11 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
     var showOutline: Boolean
         get() = current.showOutline
         set(value) = update { showOutline = value }
+
+    /** Whether the next visible outline starts as its strip; the panel remembers the last choice (outline/02 R14). */
+    var outlineMinimised: Boolean
+        get() = current.outlineMinimised
+        set(value) = update { outlineMinimised = value }
 
     var showChangesSummary: Boolean
         get() = current.showChangesSummary
@@ -120,6 +128,7 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         val old = current
         current = SettingsState().also {
             it.showOutline = old.showOutline
+            it.outlineMinimised = old.outlineMinimised
             it.showChangesSummary = old.showChangesSummary
             it.formattingOnlyInline = old.formattingOnlyInline
             it.mergeGroupedBySide = old.mergeGroupedBySide

@@ -1,12 +1,22 @@
 package io.github.agadek.smartdiff.ui.changes
 
 import com.intellij.diff.DiffContentFactory
+import com.intellij.diff.DiffDialogHints
 import com.intellij.diff.DiffManager
+import com.intellij.diff.chains.DiffRequestProducer
+import com.intellij.diff.chains.DiffRequestProducerException
+import com.intellij.diff.chains.SimpleDiffRequestChain
 import com.intellij.diff.contents.DiffContent
+import com.intellij.diff.requests.DiffRequest
 import com.intellij.diff.requests.SimpleDiffRequest
 import com.intellij.openapi.diagnostic.thisLogger
+import com.intellij.openapi.fileTypes.FileType
+import com.intellij.openapi.progress.ProcessCanceledException
+import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
+import com.intellij.openapi.util.UserDataHolder
+import com.intellij.openapi.vcs.FilePath
 import com.intellij.openapi.vcs.changes.ByteBackedContentRevision
 import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vcs.changes.ChangesViewModifier
@@ -35,13 +45,17 @@ internal object ChangesDiff {
     fun show(project: Project, changes: List<Change>, index: Int, key: Key<*>, value: Any): Boolean =
         show(project, changes, index, key, value, ACTION, CONTEXT)
 
+    /** Opens the file's diff without a declaration context, as the platform does for a file without declarations. */
+    fun show(project: Project, changes: List<Change>, index: Int): Boolean =
+        show(project, changes, index, null, null, ACTION, CONTEXT)
+
     /** [show], with the platform class names injectable so a test can make the lookup fail. */
     internal fun show(
         project: Project,
         changes: List<Change>,
         index: Int,
-        key: Key<*>,
-        value: Any,
+        key: Key<*>?,
+        value: Any?,
         actionClassName: String,
         contextClassName: String,
         classLoaders: List<ClassLoader> = classLoaders(),
@@ -59,8 +73,8 @@ internal object ChangesDiff {
         project: Project,
         changes: List<Change>,
         index: Int,
-        key: Key<*>,
-        value: Any,
+        key: Key<*>?,
+        value: Any?,
         actionClassName: String,
         contextClassName: String,
         classLoaders: List<ClassLoader>,
@@ -69,9 +83,11 @@ internal object ChangesDiff {
         return try {
             val contextClass = Class.forName(contextClassName, true, loader)
             val context = contextClass.getDeclaredConstructor().newInstance()
-            contextClass
-                .getMethod("putChangeContext", Change::class.java, Key::class.java, Any::class.java)
-                .invoke(context, changes[index], key, value)
+            if (key != null) {
+                contextClass
+                    .getMethod("putChangeContext", Change::class.java, Key::class.java, Any::class.java)
+                    .invoke(context, changes[index], key, value)
+            }
             Class.forName(actionClassName, true, loader)
                 .getMethod("showDiffForChange", Project::class.java, Iterable::class.java, Int::class.javaPrimitiveType, contextClass)
                 .invoke(null, project, changes, index, context)
@@ -115,23 +131,16 @@ internal object ChangesDiff {
 
     /**
      * Opens the file's own diff when the platform action is unavailable: no tree context, no declaration path, but the
-     * two revisions of the change, built through the public diff API. Returns whether the diff was shown.
+     * two revisions of the change, built through the public diff API. The request is lazy, so the diff window reads the
+     * revisions under its own progress indicator off the UI thread. Returns whether the diff was shown.
      */
     private fun showWithoutContext(project: Project, change: Change): Boolean {
         return try {
             val before = change.beforeRevision
             val after = change.afterRevision
             val file = after?.file ?: before?.file ?: return false
-            val oldContent = content(project, before) ?: return false
-            val newContent = content(project, after) ?: return false
-            val request = SimpleDiffRequest(
-                file.path,
-                oldContent,
-                newContent,
-                revisionTitle(before),
-                revisionTitle(after),
-            )
-            DiffManager.getInstance().showDiff(project, request)
+            val producer = ChangeContentDiffProducer(project, file, before, after)
+            DiffManager.getInstance().showDiff(project, SimpleDiffRequestChain.fromProducer(producer), DiffDialogHints.DEFAULT)
             true
         } catch (e: Exception) {
             reportFallback(e)
@@ -140,6 +149,54 @@ internal object ChangesDiff {
             reportFallback(e)
             false
         }
+    }
+
+    /** Builds the file's two-sided diff when the platform asks for it, on the diff window's background thread. */
+    private class ChangeContentDiffProducer(
+        private val project: Project,
+        private val file: FilePath,
+        private val before: ContentRevision?,
+        private val after: ContentRevision?,
+    ) : DiffRequestProducer {
+
+        override fun getName(): String = file.path
+
+        override fun getContentType(): FileType? = file.fileType
+
+        override fun process(context: UserDataHolder, indicator: ProgressIndicator): DiffRequest {
+            try {
+                indicator.text = "Loading changes"
+                val oldContent = content(project, before) ?: throw DiffRequestProducerException("Cannot read ${before?.file?.path ?: file.path}")
+                val newContent = content(project, after) ?: throw DiffRequestProducerException("Cannot read ${after?.file?.path ?: file.path}")
+                return SimpleDiffRequest(
+                    file.path,
+                    oldContent,
+                    newContent,
+                    revisionTitle(before),
+                    revisionTitle(after),
+                )
+            } catch (e: ProcessCanceledException) {
+                throw e
+            } catch (e: Exception) {
+                throw DiffRequestProducerException(e)
+            }
+        }
+    }
+
+    /** The file's own diff request, without a declaration context. */
+    fun request(project: Project, change: Change): SimpleDiffRequest? {
+        val before = change.beforeRevision
+        val after = change.afterRevision
+        val file = after?.file ?: before?.file ?: return null
+        val oldContent = content(project, before) ?: return null
+        val newContent = content(project, after) ?: return null
+        return SimpleDiffRequest(
+            file.path,
+            oldContent,
+            newContent,
+            revisionTitle(before),
+            revisionTitle(after),
+        )
     }
 
     /**

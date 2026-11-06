@@ -21,6 +21,83 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-05: engine 9 relationship benchmark
+
+`DeclarationEngine.VERSION` 9 includes the assignment and container fixes, so the engine-8 confidence counts are not
+assumed to carry over. `RelationshipBenchmarkTest` was run over the existing corpus on this branch:
+
+```shell
+./gradlew test --tests '*RelationshipBenchmarkTest*' \
+  -Psmartdiff.relationships.corpus=src/test/testData/relationships-corpus-full.txt \
+  -Psmartdiff.relationships.gate=no-new-wrong-pairs \
+  -Psmartdiff.relationships.baseline=src/test/testData/relationships-baseline/report.json
+```
+
+**Result:** 424 cases (304 checked-in cases and 120 real commits), precision 1.000 and recall 0.826, with no wrong or
+forced pair; the gate passed. The 89 rename relationships are 69 high (77.5%), 20 medium and 0 low: Java 19 high and 5
+medium, Kotlin 18 and 3, Scala 2 17 and 6, Scala 3 15 and 6. The engine-9 counts therefore equal the engine-8 record on
+this corpus.
+
+This run is **not** the [relationships/04](specs/relationships/04-rename-grouping.md) R18 first gate: the list has no
+usage-grouping cases, so by R9/R18 it is a smoke run for the usage gate. The current harness does not count that category
+yet, which is why its own report says complete; the first gate is the 440-case corpus with the 16 usage-grouping
+fixtures (320 checked-in cases and 120 real commits), and each fixture adds one high rename, so that gate has 105
+renames: 85 high, 20 medium and 0 low. The report is in `build/reports/smartdiff-relationships/`.
+
+## 2026-11-05: Lazy fallback diff and the 2026.3 declaration path
+
+[changes-tree/02](specs/changes-tree/02-changes-tree-declarations.md) R16 now opens a lazy `DiffRequestProducer`, so the fallback reads revision content off the UI thread. The test `test the fallback loads revision content off the EDT` in `ChangesSummaryTest` uses a revision stub that fails if content is read on the EDT. Run it with:
+
+```shell
+./gradlew test --tests '*ChangesSummaryTest*'
+```
+
+**2026.3 sandbox:** the installed `idea-2026.3-aarch64.dmg` from the Gradle cache is IntelliJ IDEA Ultimate `IU-263.7307.200`. `./gradlew buildPlugin` produced `build/distributions/smart-diff-0.2.0.zip`; it was unpacked into an isolated `idea.plugins.path` and started with isolated `idea.config.path`, `idea.system.path` and `idea.log.path`. The log records the plugin:
+
+```text
+INFO - #c.i.p.i.b.AppStarter - Loaded custom plugins: SMART Diff (io.github.agadek.smartdiff, 0.2.0)
+```
+
+A temporary `com.intellij.postStartupActivity` (removed before the commit) ran on the EDT, built a `SummaryChangeNode` with a `DeclarationNode` for a synthetic change, and called `DeclarationNodeAction.handleDoubleClick`, the same handler a double-click and Enter reach. The log records:
+
+```text
+INFO - #io.github.agadek.smartdiff.ui.changes.ValidationProbe - VALIDATION_PROBE declaration double-click shown=true rootChildren=1
+INFO - #c.j.p.c.BeforeFileOpenLoggerListener - beforeFileOpened Diff
+INFO - #c.j.p.c.BeforeFileOpenLoggerListener - fileOpened Diff
+```
+
+There is no `Cannot call the platform's Changes diff action` warning, so the platform `ShowDiffAction` path ran rather than the R16 fallback, and the diff opened. This is a programmatic call of the same handler, not a mouse double-click: UI automation is not permitted in this environment, so a click-through of the tree on a local project is still a manual check. Issue #108 stays open for that check.
+
+## 2026-11-05: Changes tree file rows
+
+[changes-tree/02](specs/changes-tree/02-changes-tree-declarations.md) R17 to R20 make a summarized file row open like a
+file without a summary. The desktop session was locked, so the check was a temporary startup probe in the real IDE
+rather than a physical mouse click; the probe drove the same mouse and key events the platform receives and was removed
+before the change was committed.
+
+**2025.1:** `./gradlew runIde` started IntelliJ IDEA Community 2025.1.3 (IC-251.26927.53) with the built plugin. The
+probe found the real Changes tree with the plugin's tree setup installed and the platform's
+`ChangesViewToolWindowPanel` handler wrapped. Enter on the summarized file row opened the editor diff preview
+(`TabPreviewDiffVirtualFile`), and Enter on a declaration row opened the Changes diff.
+
+**2025.1 double-click note:** `ChangesViewToolWindowPanel` calls
+`EditSourceOnDoubleClickHandler.isToggleEvent` before its diff handler. On a non-leaf summarized row that returns
+true, because `ChangesListView.getToggleClickCount()` is 2, so the platform handler cannot open the diff even when
+the tree's own toggle is suppressed. The plugin now opens a summarized row through the platform setting (Changes
+diff, editor preview or source) and a declaration row through `DeclarationNodeAction`; the physical double-click on
+2025.1 remains for the unlocked-desktop click-through. The probe recorded:
+
+```text
+PROBE ready handler=ChangesTreeSetup$ChangesDoubleClickHandler platform=ChangesViewManager$ChangesViewToolWindowPanel$$Lambda
+PROBE result events=[STEP file-enter, handler-enter, viewer title=null, viewer title=Cart.java ... [Changes],
+  ... STEP declaration-enter, file TabPreviewDiffVirtualFile, viewer ... [Changes], file Diff ChainDiffVirtualFile]
+```
+
+**2026.3:** the installed IU-263.7307.200 IDE loaded the same plugin. The probe found the tree with the platform's
+`ChangesViewInputHandler` wrapped. Double-click reached that handler for both a summarized file row and a plain file
+row, and Enter on a declaration row opened the Changes diff. The locked session created no diff window for either file
+row; the plain row behaved the same, so the summarized row uses the same platform path.
+
 ## 2026-11-05: Scala plugin version in the engine version
 
 [relationships/02](specs/relationships/02-relationship-model.md) R24 adds the Scala plugin's version to the declaration
