@@ -3,6 +3,8 @@ package io.github.agadek.smartdiff.ui.changes
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Key
+import com.intellij.openapi.vcs.changes.ui.ChangesBrowserNode
 import com.intellij.openapi.vcs.changes.ui.ChangesListView
 import com.intellij.openapi.wm.ToolWindowId
 import com.intellij.openapi.wm.ToolWindowManager
@@ -20,40 +22,53 @@ import java.awt.event.MouseEvent
  * Makes a summarized file row behave like the platform's file rows.
  *
  * A row with children is not a leaf, so the Changes tree would expand it on a double-click and skip Enter for it.
- * Double-click expansion is turned off for the tree, and the tree's handlers open a [SummaryChangeNode] through the
- * platform and a [DeclarationNode] through [DeclarationNodeAction]. The declaration action cannot be reached through
- * `ChangesViewNodeAction` alone: the platform looks the selected node up with
+ * While the tree has declaration rows, double-click expansion is turned off for the tree and the handlers open a
+ * [SummaryChangeNode] through the platform and a [DeclarationNode] through [DeclarationNodeAction]. Other rows with
+ * children keep their double-click expansion through [ChangesDoubleClickHandler]. The declaration action cannot be
+ * reached through `ChangesViewNodeAction` alone: the platform looks the selected node up with
  * `VcsTreeModelData.selected(...).iterateNodes()`, which filters out helper nodes, so the handlers use the selected
  * path instead.
  */
 internal object ChangesTreeSetup {
 
+    /** The client property `ExpandOnDoubleClick` uses; there is no uninstall method to remove it again. */
+    private const val EXPAND_ON_DOUBLE_CLICK_KEY = "ide.tree.expand.on.double.click"
+
+    /** Our marker for the client property, so the handler knows whether ordinary rows need a manual toggle. */
+    private val EXPANSION_SUPPRESSED = Key.create<Boolean>("smartdiff.changes.tree.expansionSuppressed")
+
     /** Applies the setup to the project's Changes tree after the tree has been built, on the EDT. */
-    fun schedule(project: Project) {
+    fun schedule(project: Project, suppressExpansion: Boolean) {
         ApplicationManager.getApplication().invokeLater({
-            if (!project.isDisposed) installIn(project)
+            if (!project.isDisposed) installIn(project, suppressExpansion)
         }, ModalityState.nonModal(), project.disposed)
     }
 
     /** Finds the Local Changes or Commit tree and applies the setup to it. */
-    fun installIn(project: Project) {
+    fun installIn(project: Project, suppressExpansion: Boolean) {
         val manager = ToolWindowManager.getInstance(project)
         for (id in listOf(ToolWindowId.VCS, ToolWindowId.COMMIT)) {
             val toolWindow = manager.getToolWindow(id) ?: continue
             for (content in toolWindow.contentManager.contents) {
                 findChangesTree(content.component)?.let {
-                    install(it)
+                    configure(it, suppressExpansion)
                     return
                 }
             }
         }
     }
 
-    /** Applies the setup to [tree]; safe to call more than once. */
-    fun install(tree: ChangesListView) {
-        ExpandOnDoubleClick.NEVER.installOn(tree)
-        installEnterHandler(tree)
-        installDoubleClickHandler(tree)
+    /** Applies or removes the setup on [tree]; safe to call more than once. */
+    fun configure(tree: ChangesListView, suppressExpansion: Boolean) {
+        if (suppressExpansion) {
+            ExpandOnDoubleClick.NEVER.installOn(tree)
+            tree.putClientProperty(EXPANSION_SUPPRESSED, true)
+            installEnterHandler(tree)
+            installDoubleClickHandler(tree)
+        } else {
+            tree.putClientProperty(EXPAND_ON_DOUBLE_CLICK_KEY, null)
+            tree.putClientProperty(EXPANSION_SUPPRESSED, null)
+        }
     }
 
     private fun installDoubleClickHandler(tree: ChangesListView) {
@@ -96,8 +111,20 @@ internal object ChangesTreeSetup {
 
             val node = path.lastPathComponent
             if (node is DeclarationNode) return openDeclaration(tree, node)
+            if (node is SummaryChangeNode) return platform?.process(e) ?: false
+            if (tree.getClientProperty(EXPANSION_SUPPRESSED) == true &&
+                node is ChangesBrowserNode<*> &&
+                !tree.model.isLeaf(node) &&
+                !isStructural(node)
+            ) {
+                if (tree.isExpanded(path)) tree.collapsePath(path) else tree.expandPath(path)
+                return true
+            }
             return platform?.process(e) ?: false
         }
+
+        private fun isStructural(node: Any): Boolean =
+            node.javaClass.name.contains("ChangesBrowserStructuralNode")
     }
 
     private class ChangesEnterListener(

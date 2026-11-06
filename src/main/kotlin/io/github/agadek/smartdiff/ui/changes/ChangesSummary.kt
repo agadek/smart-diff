@@ -60,20 +60,23 @@ import javax.swing.tree.TreeNode
 class ChangesSummaryModifier(private val project: Project) : ChangesViewModifier {
 
     override fun modifyTreeModelBuilder(builder: ChangesViewModelBuilder) {
-        if (!SmartDiffSettings.getInstance().showChangesSummary) return
+        if (!SmartDiffSettings.getInstance().showChangesSummary) {
+            ChangesTreeSetup.schedule(project, suppressExpansion = false)
+            return
+        }
         val root = (builder as? TreeModelBuilder)?.myRoot ?: return
         val nodes = changeNodes(root)
         val summaries = ChangesSummaryService.getInstance(project).summaries(nodes.map { it.userObject })
-        var replaced = false
+        var hasDeclarationRows = false
         for ((node, summary) in nodes.zip(summaries)) {
             if (summary == null) continue
             val parent = node.parent as? ChangesBrowserNode<*> ?: continue
             val index = parent.getIndex(node)
             parent.remove(index)
             parent.insert(SummaryChangeNode(project, node, summary.text).apply { summary.items.forEach { add(DeclarationNode(it)) } }, index)
-            replaced = true
+            hasDeclarationRows = hasDeclarationRows || summary.items.isNotEmpty()
         }
-        if (replaced) ChangesTreeSetup.schedule(project)
+        ChangesTreeSetup.schedule(project, suppressExpansion = hasDeclarationRows)
     }
 
     /** The file nodes of the tree, at most [MAX_FILES]; a node with children, such as a changed directory, is left alone. */

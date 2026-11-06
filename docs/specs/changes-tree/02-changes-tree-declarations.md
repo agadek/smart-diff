@@ -1,6 +1,6 @@
 # Declarations in the Changes tree
 
-Status: implemented, 2026-11-01
+Status: implemented, 2026-11-06
 
 **Description:** A file with a summary in the [Changes tree](../../GLOSSARY.md#changes-tree) can be expanded to show its changed [declarations](../../GLOSSARY.md#declaration), the same rows as its [structural outline](../../GLOSSARY.md#structural-outline).
 
