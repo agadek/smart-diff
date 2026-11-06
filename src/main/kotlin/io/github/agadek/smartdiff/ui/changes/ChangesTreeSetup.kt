@@ -112,19 +112,17 @@ internal object ChangesTreeSetup {
             val node = path.lastPathComponent
             if (node is DeclarationNode) return openDeclaration(tree, node)
             if (node is SummaryChangeNode) return platform?.process(e) ?: false
+            // Structural rows are helper nodes; their double-click navigation stays the platform's.
             if (tree.getClientProperty(EXPANSION_SUPPRESSED) == true &&
                 node is ChangesBrowserNode<*> &&
-                !tree.model.isLeaf(node) &&
-                !isStructural(node)
+                node.isMeaningfulNode &&
+                !tree.model.isLeaf(node)
             ) {
                 if (tree.isExpanded(path)) tree.collapsePath(path) else tree.expandPath(path)
                 return true
             }
             return platform?.process(e) ?: false
         }
-
-        private fun isStructural(node: Any): Boolean =
-            node.javaClass.name.contains("ChangesBrowserStructuralNode")
     }
 
     private class ChangesEnterListener(

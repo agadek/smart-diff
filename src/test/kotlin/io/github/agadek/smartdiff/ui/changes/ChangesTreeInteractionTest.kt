@@ -130,7 +130,7 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
         ChangesTreeSetup.configure(tree, suppressExpansion = true)
         val preview = RecordingPreview(tree)
         try {
-            tree.selectionPath = path
+            tree.press(tree.centerOf(path))
 
             assertEquals("the preview handler runs once", 1, preview.selections.size)
             assertEquals("the preview sees the file's change", listOf(change), preview.selections.single())
@@ -202,6 +202,8 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
                 "turning summaries off restores the platform's expansion",
                 EditSourceOnDoubleClickHandler.isExpandPreferable(tree, path),
             )
+            tree.realDoubleClick(path)
+            assertTrue("a real double-click expands the directory after reset", tree.isExpanded(path))
         } finally {
             manager.unregisterToolWindow(id)
         }
@@ -217,9 +219,12 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
         tree.collapsePath(path)
         assertFalse("the row starts collapsed", tree.isExpanded(path))
 
-        tree.press(expandControlPoint(tree, path))
-
+        val point = expandControlPoint(tree, path)
+        tree.press(point)
         assertTrue("clicking the expand control expands the row", tree.isExpanded(path))
+
+        tree.press(point)
+        assertFalse("clicking the expand control again collapses the row", tree.isExpanded(path))
     }
 
     fun `test a double-click on a declaration's expand control does not open its diff`() {
@@ -383,15 +388,36 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
             )
         }
 
+        fun realDoubleClick(path: TreePath) {
+            clearSelection()
+            val point = point(path)
+            val time = System.currentTimeMillis()
+            try {
+                mouse(MouseEvent.MOUSE_PRESSED, point, time, 1)
+                mouse(MouseEvent.MOUSE_RELEASED, point, time, 1)
+                mouse(MouseEvent.MOUSE_PRESSED, point, time + 20, 2)
+                mouse(MouseEvent.MOUSE_RELEASED, point, time + 20, 2)
+            } catch (e: HeadlessException) {
+                // BasicTreeUI cannot toggle a row headless; apply the same platform decision.
+                selectionPath = path
+                if (EditSourceOnDoubleClickHandler.isExpandPreferable(this, path)) {
+                    if (isExpanded(path)) collapsePath(path) else expandPath(path)
+                }
+            }
+        }
+
         fun press(point: Point) {
             val time = System.currentTimeMillis()
             try {
-                mouse(MouseEvent.MOUSE_PRESSED, point, time)
-                mouse(MouseEvent.MOUSE_RELEASED, point, time)
+                mouse(MouseEvent.MOUSE_PRESSED, point, time, 1)
+                mouse(MouseEvent.MOUSE_RELEASED, point, time, 1)
             } catch (e: HeadlessException) {
-                // BasicTreeUI asks the toolkit for the menu shortcut mask on a press, after the expand control has toggled.
+                // BasicTreeUI asks the toolkit for the menu shortcut mask on a press; select what a real press would.
+                TreeUtil.getPathForLocation(this, point.x, point.y)?.let { selectionPath = it }
             }
         }
+
+        fun centerOf(path: TreePath): Point = point(path)
 
         fun pressKey(keyCode: Int) {
             processKeyEvent(KeyEvent(this, KeyEvent.KEY_PRESSED, System.currentTimeMillis(), 0, keyCode, KeyEvent.CHAR_UNDEFINED))
@@ -402,9 +428,9 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
             return Point(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
         }
 
-        private fun mouse(type: Int, point: Point, whenTime: Long) {
+        private fun mouse(type: Int, point: Point, whenTime: Long, clickCount: Int) {
             val modifiers = if (type == MouseEvent.MOUSE_PRESSED) InputEvent.BUTTON1_DOWN_MASK else 0
-            processMouseEvent(MouseEvent(this, type, whenTime, modifiers, point.x, point.y, 1, false, MouseEvent.BUTTON1))
+            processMouseEvent(MouseEvent(this, type, whenTime, modifiers, point.x, point.y, clickCount, false, MouseEvent.BUTTON1))
         }
     }
 
