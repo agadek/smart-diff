@@ -56,7 +56,8 @@ unverified; #108 stays open for a same-launch click-through with the log checked
   surfaces. The 2025.1 summarized Enter opened nothing, while the plain Enter opened its preview. On 2026.3, the
   physical summarized double-click opened an editor preview (a `SimpleDiffRequest`) and the plain row opened its own
   preview; the summarized preview appeared about 14 seconds after the click, after the first 4-second check missed it.
-  The 2026.3 Enter runs opened `Cart.java` for both. B1 and B2 are therefore partial, not a summary/plain match.
+  The 2026.3 preview-off/diff-on Enter runs opened `Cart.java` for both. B1 and B2 are therefore partial, not a
+  summary/plain match.
 - **B3 (single-click preview).** Not verified. With
   `show.diff.preview.as.editor.tab.with.single.click=true`, a single click opened no preview for the summarized row
   or for the plain row on either IDE. This may be a tool-window mode or focus issue rather than a product difference,
@@ -99,10 +100,10 @@ M1 passes; M2–M9 remain manual. #112 and PR #124 stay open; PR #124 is not mer
    `Cannot call the platform's Changes diff action`.
 3. **#111:** repeat with the preview setting on and off, on the summarized row and a plain row: double-click, Enter,
    single click, Right/Left, and the declaration rows with no diff open. Also check a directory row and a changelist row.
-4. **#112:** on both 2025.1 and 2026.3 click the eye icon and confirm Structural Summary, Declarations and Hide Change
-   Types appear below the platform options; PR #124's updated description says both use View Options. Then run M2–M9 from
-   PR #124's manual-check list, including the `Parser` summary `1 changed · 1 added · 1 hidden` with `class Parser` still
-   shown and `method count() added` hidden.
+4. **#112:** M1's action placement is covered by the probe and PR #124's updated description; the visual eye-icon
+   check is still outstanding. On both 2025.1 and 2026.3 click the eye icon and confirm Structural Summary, Declarations
+   and Hide Change Types appear below the platform options. Then run M2–M9 from PR #124's manual-check list, including
+   the `Parser` summary `1 changed · 1 added · 1 hidden` with `class Parser` still shown and `method count() added` hidden.
 
 ## 2026-11-05: engine 9 relationship benchmark
 
