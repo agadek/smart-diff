@@ -1,6 +1,6 @@
 # Declarations in the Changes tree
 
-Status: implemented, 2026-11-01
+Status: implemented, 2026-11-06
 
 **Description:** A file with a summary in the [Changes tree](../../GLOSSARY.md#changes-tree) can be expanded to show its changed [declarations](../../GLOSSARY.md#declaration), the same rows as its [structural outline](../../GLOSSARY.md#structural-outline).
 
@@ -24,6 +24,10 @@ Status: implemented, 2026-11-01
 - **R14** Double-click on a declaration row opens it the same way, whether or not it has children.
 - **R15** A declaration row with children expands through the tree's expansion control.
 - **R16** When the file's diff with the declaration selected cannot be opened, the row opens the file's diff without a declaration selected instead.
+- **R17** Double-click on a file row with a summary opens it as a file without a summary does.
+- **R18** Enter on a file row with a summary opens it as a file without a summary does.
+- **R19** The diff preview shows a file row with a summary as it does a file without a summary.
+- **R20** A file row with a summary expands and collapses through the tree's expansion control.
 
 ## References
 

@@ -68,6 +68,36 @@ INFO - #c.j.p.c.BeforeFileOpenLoggerListener - fileOpened Diff
 
 There is no `Cannot call the platform's Changes diff action` warning, so the platform `ShowDiffAction` path ran rather than the R16 fallback, and the diff opened. This is a programmatic call of the same handler, not a mouse double-click: UI automation is not permitted in this environment, so a click-through of the tree on a local project is still a manual check. Issue #108 stays open for that check.
 
+## 2026-11-05: Changes tree file rows
+
+[changes-tree/02](specs/changes-tree/02-changes-tree-declarations.md) R17 to R20 make a summarized file row open like a
+file without a summary. The desktop session was locked, so the check was a temporary startup probe in the real IDE
+rather than a physical mouse click; the probe drove the same mouse and key events the platform receives and was removed
+before the change was committed.
+
+**2025.1:** `./gradlew runIde` started IntelliJ IDEA Community 2025.1.3 (IC-251.26927.53) with the built plugin. The
+probe found the real Changes tree with the plugin's tree setup installed and the platform's
+`ChangesViewToolWindowPanel` handler wrapped. Enter on the summarized file row opened the editor diff preview
+(`TabPreviewDiffVirtualFile`), and Enter on a declaration row opened the Changes diff.
+
+**2025.1 double-click note:** `ChangesViewToolWindowPanel` calls
+`EditSourceOnDoubleClickHandler.isToggleEvent` before its diff handler. On a non-leaf summarized row that returns
+true, because `ChangesListView.getToggleClickCount()` is 2, so the platform handler cannot open the diff even when
+the tree's own toggle is suppressed. The plugin now opens a summarized row through the platform setting (Changes
+diff, editor preview or source) and a declaration row through `DeclarationNodeAction`; the physical double-click on
+2025.1 remains for the unlocked-desktop click-through. The probe recorded:
+
+```text
+PROBE ready handler=ChangesTreeSetup$ChangesDoubleClickHandler platform=ChangesViewManager$ChangesViewToolWindowPanel$$Lambda
+PROBE result events=[STEP file-enter, handler-enter, viewer title=null, viewer title=Cart.java ... [Changes],
+  ... STEP declaration-enter, file TabPreviewDiffVirtualFile, viewer ... [Changes], file Diff ChainDiffVirtualFile]
+```
+
+**2026.3:** the installed IU-263.7307.200 IDE loaded the same plugin. The probe found the tree with the platform's
+`ChangesViewInputHandler` wrapped. Double-click reached that handler for both a summarized file row and a plain file
+row, and Enter on a declaration row opened the Changes diff. The locked session created no diff window for either file
+row; the plain row behaved the same, so the summarized row uses the same platform path.
+
 ## 2026-11-05: Scala plugin version in the engine version
 
 [relationships/02](specs/relationships/02-relationship-model.md) R24 adds the Scala plugin's version to the declaration
