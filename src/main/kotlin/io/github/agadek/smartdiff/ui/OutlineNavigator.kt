@@ -32,6 +32,7 @@ import java.awt.RenderingHints
 internal class OutlineNavigator(private val viewer: TwosideTextDiffViewer) {
 
     private val highlighters = mutableListOf<RangeHighlighter>()
+    private val frames = mutableListOf<RangeHighlighter>()
     private var frameSync: FrameScrollSync? = null
 
     /**
@@ -45,16 +46,14 @@ internal class OutlineNavigator(private val viewer: TwosideTextDiffViewer) {
         val oldRange = item.oldRange
         val newRange = item.newRange
         val follows = oldRange != null && newRange != null && followsSynchronizedScrolling()
-        val oldFrame = if (follows) scrollFrame(viewer.editor1, oldRange!!) else null
-        val newFrame = if (follows) scrollFrame(viewer.editor2, newRange!!) else null
         withSyncDisabled {
             show(viewer.editor1, oldRange, item.details.mapNotNull { it.old })
             show(viewer.editor2, newRange, item.details.mapNotNull { it.new })
         }
-        if (oldFrame != null && newFrame != null) {
+        if (follows && frames.size == 2) {
             frameSync = FrameScrollSync(
                 listOf(viewer.editor1, viewer.editor2),
-                listOf(oldFrame, newFrame),
+                frames.toList(),
                 viewer.syncScrollSupport?.asScrollPause(),
             ).also { it.start() }
         }
@@ -85,6 +84,7 @@ internal class OutlineNavigator(private val viewer: TwosideTextDiffViewer) {
         releaseScrollSync()
         highlighters.forEach { it.dispose() }
         highlighters.clear()
+        frames.clear()
     }
 
     /** Runs [action] with synchronized scrolling paused, for this selection's own scrolls. */
@@ -118,6 +118,7 @@ internal class OutlineNavigator(private val viewer: TwosideTextDiffViewer) {
         highlighter.customRenderer = Frame
         highlighter.setErrorStripeMarkColor(FRAME_COLOR)
         highlighter.isThinErrorStripeMark = false
+        frames += highlighter
     }
 
     private fun highlight(editor: Editor, range: TextRange, key: TextAttributesKey, area: HighlighterTargetArea) {

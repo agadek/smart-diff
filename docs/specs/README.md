@@ -96,7 +96,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | --- | --- |
 | [01 Merge join](merge/01-merge-join.md) | implemented, 2026-10-31 |
 | [02 Merge outline](merge/02-merge-outline.md) | implemented, 2026-10-31 |
-| [03 Merge outline in three-sided diffs](merge/03-three-sided-diffs.md) | implemented, 2026-11-05 |
+| [03 Merge outline in three-sided diffs](merge/03-three-sided-diffs.md) | implemented, 2026-11-06 |
 | [04 Merge outline in the merge window](merge/04-merge-window.md) | implemented, 2026-10-31 |
 | [05 Scala merges and merge fixtures](merge/05-scala-merges.md) | implemented, 2026-11-01 |
 | [06 Merge validation](merge/06-merge-validation.md) | implemented, 2026-11-02 |

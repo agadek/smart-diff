@@ -5,6 +5,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.LogicalPosition
 import com.intellij.openapi.editor.event.VisibleAreaEvent
 import com.intellij.openapi.editor.event.VisibleAreaListener
+import com.intellij.openapi.editor.markup.RangeHighlighter
 import io.github.agadek.smartdiff.engine.api.TextRange
 import kotlin.math.roundToInt
 
@@ -72,11 +73,11 @@ internal fun SyncScrollSupport.Support.asScrollPause(): ScrollPause {
  */
 internal class FrameScrollSync(
     private val editors: List<Editor>,
-    private val frames: List<ScrollFrame>,
+    private val frameHighlighters: List<RangeHighlighter>,
     private val pause: ScrollPause?,
 ) {
     init {
-        require(editors.size == frames.size) { "every editor needs a frame" }
+        require(editors.size == frameHighlighters.size) { "every editor needs a frame" }
         require(editors.size >= 2) { "keeping frames aligned needs at least two editors" }
     }
 
@@ -93,6 +94,7 @@ internal class FrameScrollSync(
      */
     fun start() {
         stop()
+        val frames = currentFrames() ?: return
         if (editors.indices.any { !frames[it].intersects(editors[it]) }) return
         pause?.enter()
         following = true
@@ -109,6 +111,11 @@ internal class FrameScrollSync(
 
     private fun changed(event: VisibleAreaEvent) {
         if (!following || adjusting) return
+        val frames = currentFrames()
+        if (frames == null) {
+            stop()
+            return
+        }
         val master = editors.indexOf(event.editor)
         if (master < 0) return
         if (editors.indices.any { !frames[it].intersects(editors[it]) }) {
@@ -135,6 +142,17 @@ internal class FrameScrollSync(
             }
         } finally {
             adjusting = false
+        }
+    }
+
+    /**
+     * The frames at the current line heights, folding and inlays. Highlighters keep the document offsets through those
+     * changes, so their pixel positions are read again on every scroll instead of being kept from the selection.
+     */
+    private fun currentFrames(): List<ScrollFrame>? {
+        if (frameHighlighters.any { !it.isValid }) return null
+        return frameHighlighters.mapIndexed { index, highlighter ->
+            scrollFrame(editors[index], TextRange(highlighter.startOffset, highlighter.endOffset))
         }
     }
 

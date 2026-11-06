@@ -13,9 +13,7 @@ import com.intellij.openapi.editor.markup.RangeHighlighter
 import com.intellij.openapi.wm.IdeFocusManager
 import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.ui.FrameScrollSync
-import io.github.agadek.smartdiff.ui.ScrollFrame
 import io.github.agadek.smartdiff.ui.asScrollPause
-import io.github.agadek.smartdiff.ui.scrollFrame
 
 /**
  * Shows a selected merge outline row in the three panes (merge outline spec 02 R16, 03 R5): the left and right
@@ -24,35 +22,35 @@ import io.github.agadek.smartdiff.ui.scrollFrame
 internal class MergeOutlineNavigator(private val viewer: ThreesideTextDiffViewer) : MergeOutlineSelection {
 
     private val highlighters = mutableListOf<RangeHighlighter>()
+    private val frames = mutableListOf<RangeHighlighter>()
     private var frameSync: FrameScrollSync? = null
 
     override fun select(item: MergeOutlineItem?) {
         clear()
         if (item == null || item.isGroup) return
-        val panes = listOfNotNull(
-            pane(ThreeSide.LEFT, item.leftRange),
-            pane(ThreeSide.BASE, item.baseRange),
-            pane(ThreeSide.RIGHT, item.rightRange),
-        )
+        val allPresent = item.leftRange != null && item.baseRange != null && item.rightRange != null
         withSyncDisabled {
             show(viewer.getEditor(ThreeSide.LEFT), item.leftRange)
             show(viewer.getEditor(ThreeSide.BASE), item.baseRange)
             show(viewer.getEditor(ThreeSide.RIGHT), item.rightRange)
         }
         val pause = syncSupport()?.asScrollPause()
-        if (panes.size >= 2 && pause != null && followsSynchronizedScrolling()) {
-            frameSync = FrameScrollSync(panes.map { it.first }, panes.map { it.second }, pause).also { it.start() }
+        if (allPresent && frames.size == 3 && pause != null && followsSynchronizedScrolling()) {
+            frameSync = FrameScrollSync(
+                listOf(
+                    viewer.getEditor(ThreeSide.LEFT),
+                    viewer.getEditor(ThreeSide.BASE),
+                    viewer.getEditor(ThreeSide.RIGHT),
+                ),
+                frames.toList(),
+                pause,
+            ).also { it.start() }
         }
     }
 
     override fun releaseScrollSync() {
         frameSync?.stop()
         frameSync = null
-    }
-
-    private fun pane(side: ThreeSide, range: TextRange?): Pair<Editor, ScrollFrame>? {
-        val editor = viewer.getEditor(side)
-        return range?.let { editor to scrollFrame(editor, it) }
     }
 
     private fun followsSynchronizedScrolling(): Boolean =
@@ -102,6 +100,7 @@ internal class MergeOutlineNavigator(private val viewer: ThreesideTextDiffViewer
         releaseScrollSync()
         highlighters.forEach { it.dispose() }
         highlighters.clear()
+        frames.clear()
     }
 
     private fun show(editor: Editor, range: TextRange?) {
@@ -115,6 +114,7 @@ internal class MergeOutlineNavigator(private val viewer: ThreesideTextDiffViewer
         highlighter.customRenderer = MergeOutlineFrame
         highlighter.setErrorStripeMarkColor(MergeOutlineFrame.COLOR)
         highlighter.isThinErrorStripeMark = false
+        frames += highlighter
     }
 
     private fun add(editor: Editor, range: TextRange, key: TextAttributesKey?, area: HighlighterTargetArea): RangeHighlighter {

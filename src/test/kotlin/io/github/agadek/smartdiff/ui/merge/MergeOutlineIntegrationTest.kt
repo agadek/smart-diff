@@ -159,6 +159,19 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
         assertTrue(rows(next).contains("class OrderService"))
     }
 
+    fun `test a row with an absent pane keeps the native synchronized scrolling`() {
+        // merge/03-three-sided-diffs R12
+        val outline = open(right = RIGHT_ADDED).awaitShown()
+        val viewer = viewer(outline)
+        val sync = syncSupport(viewer) ?: error("the viewer has no synchronized scrolling")
+        val row = rows(outline).first { it.contains("method extra()") }.trim()
+
+        select(outline, row)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+
+        assertFalse("an absent pane is not held by an incomplete pair", duringSyncScroll(sync))
+    }
+
     fun `test an added row says which panes are absent`() {
         // merge/02-merge-outline R17
         val outline = open(right = RIGHT_ADDED).awaitShown()

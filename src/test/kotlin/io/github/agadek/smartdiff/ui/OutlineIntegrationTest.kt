@@ -136,6 +136,47 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         )
     }
 
+    fun `test a fold inside a selected frame keeps the frames aligned`() {
+        // outline/01-structural-outline R25
+        val shown = open(history(MOVED_OLD, MOVED_NEW, "Moved.java"))
+        val outline = shown.awaitResult()
+        show(shown.viewer.editor1)
+        show(shown.viewer.editor2)
+        val item = selectItem(outline) { it.title == "method moved()" }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        val sync = requireNotNull(shown.viewer.syncScrollSupport) { "the native viewer has no synchronized scrolling" }
+        assertTrue(sync.isDuringSyncScroll)
+
+        val old = shown.viewer.editor1
+        val new = shown.viewer.editor2
+        val before = scrollFrame(old, requireNotNull(item.oldRange))
+        old.foldingModel.runBatchFoldingOperation {
+            old.foldingModel.addFoldRegion(
+                old.document.getLineStartOffset(62),
+                old.document.getLineEndOffset(63),
+                "...",
+            )?.isExpanded = false
+        }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        val folded = scrollFrame(old, requireNotNull(item.oldRange))
+        assertTrue("the fold shortened the old frame", folded.end < before.end)
+        assertTrue("the fold keeps the hold", sync.isDuringSyncScroll)
+
+        old.scrollingModel.disableAnimation()
+        try {
+            old.scrollingModel.scrollVertically(old.scrollingModel.verticalScrollOffset + old.lineHeight * 5)
+        } finally {
+            old.scrollingModel.enableAnimation()
+        }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+
+        val oldFrame = scrollFrame(old, requireNotNull(item.oldRange))
+        val newFrame = scrollFrame(new, requireNotNull(item.newRange))
+        val oldProgress = (old.scrollingModel.visibleArea.y - oldFrame.start) / (oldFrame.end - oldFrame.start)
+        val newProgress = (new.scrollingModel.visibleArea.y - newFrame.start) / (newFrame.end - newFrame.start)
+        assertEquals("the frames keep the same progress after the fold", oldProgress, newProgress, 0.05)
+    }
+
     fun `test a selected moved row releases synchronized scrolling when a frame leaves view`() {
         // outline/01-structural-outline R26
         val shown = open(history(MOVED_OLD, MOVED_NEW, "Moved.java"))
