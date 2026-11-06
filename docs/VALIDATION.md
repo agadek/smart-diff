@@ -76,12 +76,12 @@ rather than a physical mouse click; the probe drove the same mouse and key event
 before the change was committed.
 
 **2025.1:** `./gradlew runIde` started IntelliJ IDEA Community 2025.1.3 (IC-251.26927.53) with the built plugin. The
-probe found the real Changes tree with `ExpandOnDoubleClick.NEVER` installed and the platform's
+probe found the real Changes tree with the plugin's tree setup installed and the platform's
 `ChangesViewToolWindowPanel` handler wrapped. Enter on the summarized file row opened the editor diff preview
 (`TabPreviewDiffVirtualFile`), and Enter on a declaration row opened the Changes diff. `idea.log` recorded:
 
 ```text
-PROBE ready handler=ChangesTreeSetup$ChangesDoubleClickHandler platform=ChangesViewManager$ChangesViewToolWindowPanel$$Lambda behavior=NEVER
+PROBE ready handler=ChangesTreeSetup$ChangesDoubleClickHandler platform=ChangesViewManager$ChangesViewToolWindowPanel$$Lambda
 PROBE result events=[STEP file-enter, handler-enter, viewer title=null, viewer title=Cart.java ... [Changes],
   ... STEP declaration-enter, file TabPreviewDiffVirtualFile, viewer ... [Changes], file Diff ChainDiffVirtualFile]
 ```

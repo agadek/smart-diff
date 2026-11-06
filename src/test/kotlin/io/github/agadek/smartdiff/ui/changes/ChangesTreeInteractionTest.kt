@@ -37,15 +37,16 @@ import com.intellij.ui.ClickListener.SyntheticClickEvent
 import com.intellij.ui.tree.ui.DefaultTreeUI
 import com.intellij.util.EditSourceOnDoubleClickHandler
 import com.intellij.util.Processor
-import com.intellij.util.ui.tree.TreeUtil
 import com.intellij.vcsUtil.VcsUtil
 import io.github.agadek.smartdiff.ui.SmartDiffSettings
 import java.awt.HeadlessException
 import java.awt.Point
 import java.awt.Window
 import java.awt.event.InputEvent
+import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
+import javax.swing.plaf.basic.BasicTreeUI
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreePath
@@ -83,18 +84,15 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
         val path = TreePath(summary.path)
         reveal(tree, path)
 
-        assertTrue(
-            "without the setup the platform would expand the row",
-            EditSourceOnDoubleClickHandler.isExpandPreferable(tree, path),
-        )
-
         val handled = mutableListOf<MouseEvent>()
         tree.doubleClickHandler = Processor { handled += it; true }
         ChangesTreeSetup.configure(tree, suppressExpansion = true)
-        assertFalse(
-            "the setup stops the platform expanding the row",
-            EditSourceOnDoubleClickHandler.isExpandPreferable(tree, path),
-        )
+
+        val press = tree.pressOnly(tree.centerOf(path), clickCount = 2)
+        assertTrue("the second press is suppressed", press.isConsumed)
+        assertSame("the suppressed press selects the summarized row", summary, tree.selectionPath?.lastPathComponent)
+        assertFalse("the suppressed press does not expand the row", tree.isExpanded(path))
+
         tree.doubleClick(path)
 
         assertEquals("the platform's double-click handler runs once", 1, handled.size)
@@ -168,9 +166,9 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
         listOf(directory, changelist).forEach { node ->
             val path = TreePath(node.path)
             reveal(tree, path)
-            tree.doubleClick(path)
+            tree.realDoubleClick(path)
             assertTrue("a double-click expands ${node.javaClass.simpleName}", tree.isExpanded(path))
-            tree.doubleClick(path)
+            tree.realDoubleClick(path)
             assertFalse("a second double-click collapses ${node.javaClass.simpleName}", tree.isExpanded(path))
         }
     }
@@ -182,10 +180,6 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
         val path = TreePath(directory.path)
         reveal(tree, path)
         ChangesTreeSetup.configure(tree, suppressExpansion = true)
-        assertFalse(
-            "the setup suppresses expansion while declaration rows exist",
-            EditSourceOnDoubleClickHandler.isExpandPreferable(tree, path),
-        )
 
         val manager = ToolWindowManager.getInstance(project)
         val id = listOf(ToolWindowId.VCS, ToolWindowId.COMMIT).firstOrNull { manager.getToolWindow(it) == null }
@@ -248,6 +242,31 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
         }
         assertTrue("the expand control does not open the declaration's diff", shown.chains.isEmpty())
         assertTrue("the row stays expanded", tree.isExpanded(path))
+    }
+
+    fun `test an unrecognized platform Enter listener is not taken over for declarations`() {
+        // changes-tree/02 changes-tree-declarations R9 robustness: fail soft when the platform listener changes
+        val tree = summarizedTree(modified("Cart.java"))
+        val declaration = declarationRows(tree).last { it.childCount == 0 }
+        val path = TreePath((declaration as DefaultMutableTreeNode).path)
+        reveal(tree, path)
+        tree.keyListeners.filter { it.javaClass.name.endsWith("ChangesTreeHandlers\$MyEnterListener") }
+            .forEach(tree::removeKeyListener)
+
+        var platformCalls = 0
+        tree.enterKeyHandler = Processor { platformCalls++; true }
+        tree.addKeyListener(StandInPlatformEnterListener(tree, tree.enterKeyHandler!!))
+        ChangesTreeSetup.configure(tree, suppressExpansion = true)
+        tree.selectionPath = path
+
+        val shown = recordDiffs()
+        try {
+            tree.pressKey(KeyEvent.VK_ENTER)
+        } finally {
+            Disposer.dispose(shown)
+        }
+        assertEquals("the stand-in platform handler runs once", 1, platformCalls)
+        assertTrue("the plugin does not open the declaration itself", shown.chains.isEmpty())
     }
 
     fun `test Enter on a declaration row opens its diff through the selected path`() {
@@ -347,11 +366,8 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
 
     private fun expandControlPoint(tree: TestChangesListView, path: TreePath): Point {
         val bounds = tree.getPathBounds(path) ?: error("row is not visible: $path")
-        val y = bounds.y + bounds.height / 2
-        for (x in 0..bounds.x + bounds.width) {
-            if (TreeUtil.isLocationInExpandControl(tree, path, x, y)) return Point(x, y)
-        }
-        error("no expand control for $path")
+        val ui = tree.ui as BasicTreeUI
+        return Point(bounds.x - ui.rightChildIndent + 1 - 4, bounds.y + bounds.height / 2)
     }
 
     private fun recordDiffs(): RecordingDiffs {
@@ -372,7 +388,7 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
         init {
             // DnD would take the press/release events before the click listeners in a test that has no real drag.
             setDragEnabled(false)
-            // The IDE's tree UI reads ExpandOnDoubleClick; the macOS default UI in the test does not.
+            // Use the IDE's tree UI so the expand control and toggle geometry match production.
             setUI(DefaultTreeUI())
         }
 
@@ -415,8 +431,21 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
                 mouse(MouseEvent.MOUSE_RELEASED, point, time, 1)
             } catch (e: HeadlessException) {
                 // BasicTreeUI asks the toolkit for the menu shortcut mask on a press; select what a real press would.
-                TreeUtil.getPathForLocation(this, point.x, point.y)?.let { selectionPath = it }
+                getPathForLocation(point.x, point.y)?.let { selectionPath = it }
             }
+        }
+
+        fun pressOnly(point: Point, clickCount: Int): MouseEvent {
+            val event = MouseEvent(
+                this, MouseEvent.MOUSE_PRESSED, System.currentTimeMillis(),
+                InputEvent.BUTTON1_DOWN_MASK, point.x, point.y, clickCount, false, MouseEvent.BUTTON1,
+            )
+            try {
+                processMouseEvent(event)
+            } catch (e: HeadlessException) {
+                // The platform's click listener asks the toolkit for the screen location after the press was handled.
+            }
+            return event
         }
 
         fun centerOf(path: TreePath): Point = point(path)
@@ -433,6 +462,19 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
         private fun mouse(type: Int, point: Point, whenTime: Long, clickCount: Int) {
             val modifiers = if (type == MouseEvent.MOUSE_PRESSED) InputEvent.BUTTON1_DOWN_MASK else 0
             processMouseEvent(MouseEvent(this, type, whenTime, modifiers, point.x, point.y, clickCount, false, MouseEvent.BUTTON1))
+        }
+    }
+
+    /** Mimics the platform's leaf-only Enter listener under a class name the plugin does not recognise. */
+    private class StandInPlatformEnterListener(
+        private val tree: ChangesListView,
+        private val handler: Processor<in KeyEvent>,
+    ) : KeyAdapter() {
+        override fun keyPressed(e: KeyEvent) {
+            if (e.keyCode != KeyEvent.VK_ENTER || e.modifiersEx != 0) return
+            val node = tree.lastSelectedPathComponent ?: return
+            if (tree.selectionCount <= 1 && !tree.model.isLeaf(node)) return
+            if (handler.process(e)) e.consume()
         }
     }
 
