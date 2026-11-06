@@ -24,6 +24,7 @@ import com.intellij.openapi.vcs.FilePath
 import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vcs.changes.ChangesViewModifier
 import com.intellij.openapi.vcs.changes.ChangesViewNodeAction
+import com.intellij.openapi.vcs.changes.ContentRevision
 import com.intellij.openapi.vcs.changes.SimpleContentRevision
 import com.intellij.openapi.vcs.changes.actions.diff.ChangeDiffRequestProducer
 import com.intellij.openapi.vcs.changes.actions.diff.ChangeDiffRequestProvider
@@ -55,6 +56,7 @@ import io.github.agadek.smartdiff.ui.OutlinePath
 import io.github.agadek.smartdiff.ui.OutlineState
 import io.github.agadek.smartdiff.ui.SmartDiffSettings
 import java.awt.Window
+import java.util.concurrent.TimeUnit
 
 /** The structural summary after each file in the Local Changes and Commit tree, and its declarations under it. */
 class ChangesSummaryTest : BasePlatformTestCase() {
@@ -193,9 +195,9 @@ class ChangesSummaryTest : BasePlatformTestCase() {
         summaryNode(change)
         ChangesSummaryService.getInstance(project).waitForSummaries()
         val added = summaryNode(change)!!.preorderEnumeration().toList().filterIsInstance<DeclarationNode>().last()
-        val requests = mutableListOf<DiffRequest>()
+        val chains = mutableListOf<DiffRequestChain>()
         val recording = Disposer.newDisposable(testRootDisposable)
-        ApplicationManager.getApplication().replaceService(DiffManager::class.java, RecordingDiffManager(shownRequests = requests), recording)
+        ApplicationManager.getApplication().replaceService(DiffManager::class.java, RecordingDiffManager(shownChains = chains), recording)
         val action = DeclarationNodeAction(project) { p, changes, index, key, value ->
             ChangesDiff.show(p, changes, index, key, value, "smartdiff.test.MissingAction", "smartdiff.test.MissingContext")
         }
@@ -203,12 +205,45 @@ class ChangesSummaryTest : BasePlatformTestCase() {
         assertTrue("the fallback opens the file's diff", action.handleDoubleClick(added))
         Disposer.dispose(recording)
 
-        val request = requests.single()
+        val request = process(chains.single())
         assertNull("the fallback has no declaration context", request.getUserData(OutlinePath.KEY))
         assertTrue("the request is the file's own diff", request is SimpleDiffRequest)
         val contents = (request as SimpleDiffRequest).contents.map { it as DocumentContent }
         assertEquals(listOf(OLD_CART, NEW_CART), contents.map { it.document.text })
         assertTrue("the title names the file", request.title.orEmpty().contains("Cart.java"))
+    }
+
+    fun `test the fallback loads revision content off the EDT`() {
+        // changes-tree/02-changes-tree-declarations R16
+        val path = VcsUtil.getFilePath("/repo/Cart.java", false)
+        val before = CheckedRevision(OLD_CART, path)
+        val after = CheckedRevision(NEW_CART, path)
+        val change = Change(before, after)
+        val chains = mutableListOf<DiffRequestChain>()
+        val recording = Disposer.newDisposable(testRootDisposable)
+        ApplicationManager.getApplication().replaceService(DiffManager::class.java, RecordingDiffManager(shownChains = chains), recording)
+
+        // The click runs on the EDT; the fallback must only build the lazy request there.
+        var shown = false
+        ApplicationManager.getApplication().invokeAndWait {
+            shown = ChangesDiff.show(
+                project,
+                listOf(change),
+                0,
+                OutlinePath.KEY,
+                "class Cart",
+                "smartdiff.test.MissingAction",
+                "smartdiff.test.MissingContext",
+            )
+        }
+        Disposer.dispose(recording)
+
+        assertTrue("the fallback opens the file's diff", shown)
+        assertFalse("opening the diff does not read the revisions", before.read || after.read)
+        val request = process(chains.single())
+        assertTrue("the diff window reads both revisions", before.read && after.read)
+        val contents = (request as SimpleDiffRequest).contents.map { it as DocumentContent }
+        assertEquals(listOf(OLD_CART, NEW_CART), contents.map { it.document.text })
     }
 
     fun `test the diff action is looked up through the platform and plugin classloaders`() {
@@ -382,6 +417,14 @@ class ChangesSummaryTest : BasePlatformTestCase() {
         return builder.myRoot to nodes
     }
 
+    /** Runs the lazy request on a pool thread, as the diff window does. */
+    private fun process(chain: DiffRequestChain): DiffRequest {
+        val producer = chain.requests.single()
+        return ApplicationManager.getApplication()
+            .executeOnPooledThread<DiffRequest> { producer.process(UserDataHolderBase(), EmptyProgressIndicator()) }
+            .get(10, TimeUnit.SECONDS)
+    }
+
     private fun summarized(nodes: List<ChangesBrowserChangeNode>): List<String> =
         nodes.filterIsInstance<SummaryChangeNode>()
             .map { (it.userObject as Change).afterRevision!!.file.name }
@@ -503,6 +546,26 @@ class ChangesSummaryTest : BasePlatformTestCase() {
 
         override fun createRequestPanel(project: Project?, parent: Disposable, window: Window?): DiffRequestPanel = error("unexpected")
         override fun showMerge(project: Project?, request: MergeRequest) { error("unexpected") }
+    }
+
+    /** A revision whose content can only be read off the EDT, as a committed revision in the Changes view is. */
+    private class CheckedRevision(private val text: String, file: FilePath) : ContentRevision {
+        private val delegate = SimpleContentRevision(text, file, "1")
+
+        @Volatile
+        var read = false
+
+        override fun getContent(): String {
+            if (ApplicationManager.getApplication().isDispatchThread) {
+                throw AssertionError("revision content is read on the EDT")
+            }
+            read = true
+            return text
+        }
+
+        override fun getFile(): FilePath = delegate.file
+
+        override fun getRevisionNumber(): VcsRevisionNumber = delegate.revisionNumber
     }
 
     private companion object {

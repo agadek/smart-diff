@@ -44,6 +44,30 @@ yet, which is why its own report says complete; the first gate is the 440-case c
 fixtures (320 checked-in cases and 120 real commits), and each fixture adds one high rename, so that gate has 105
 renames: 85 high, 20 medium and 0 low. The report is in `build/reports/smartdiff-relationships/`.
 
+## 2026-11-05: Lazy fallback diff and the 2026.3 declaration path
+
+[changes-tree/02](specs/changes-tree/02-changes-tree-declarations.md) R16 now opens a lazy `DiffRequestProducer`, so the fallback reads revision content off the UI thread. The test `test the fallback loads revision content off the EDT` in `ChangesSummaryTest` uses a revision stub that fails if content is read on the EDT. Run it with:
+
+```shell
+./gradlew test --tests '*ChangesSummaryTest*'
+```
+
+**2026.3 sandbox:** the installed `idea-2026.3-aarch64.dmg` from the Gradle cache is IntelliJ IDEA Ultimate `IU-263.7307.200`. `./gradlew buildPlugin` produced `build/distributions/smart-diff-0.2.0.zip`; it was unpacked into an isolated `idea.plugins.path` and started with isolated `idea.config.path`, `idea.system.path` and `idea.log.path`. The log records the plugin:
+
+```text
+INFO - #c.i.p.i.b.AppStarter - Loaded custom plugins: SMART Diff (io.github.agadek.smartdiff, 0.2.0)
+```
+
+A temporary `com.intellij.postStartupActivity` (removed before the commit) ran on the EDT, built a `SummaryChangeNode` with a `DeclarationNode` for a synthetic change, and called `DeclarationNodeAction.handleDoubleClick`, the same handler a double-click and Enter reach. The log records:
+
+```text
+INFO - #io.github.agadek.smartdiff.ui.changes.ValidationProbe - VALIDATION_PROBE declaration double-click shown=true rootChildren=1
+INFO - #c.j.p.c.BeforeFileOpenLoggerListener - beforeFileOpened Diff
+INFO - #c.j.p.c.BeforeFileOpenLoggerListener - fileOpened Diff
+```
+
+There is no `Cannot call the platform's Changes diff action` warning, so the platform `ShowDiffAction` path ran rather than the R16 fallback, and the diff opened. This is a programmatic call of the same handler, not a mouse double-click: UI automation is not permitted in this environment, so a click-through of the tree on a local project is still a manual check. Issue #108 stays open for that check.
+
 ## 2026-11-05: Scala plugin version in the engine version
 
 [relationships/02](specs/relationships/02-relationship-model.md) R24 adds the Scala plugin's version to the declaration
