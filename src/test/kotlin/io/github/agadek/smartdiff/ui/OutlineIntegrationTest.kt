@@ -28,6 +28,7 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import com.intellij.testFramework.EditorTestUtil
 import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.TestActionEvent
@@ -114,6 +115,156 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
 
         outline.navigator.navigate(outline.panel.selectedItem()!!)
         assertEquals(JAVA_NEW.indexOf("void bye()"), shown.viewer.editor2.caretModel.offset)
+    }
+
+    fun `test a selected moved row keeps its frames aligned while scrolling`() {
+        // outline/01-structural-outline R25
+        val shown = open(history(MOVED_OLD, MOVED_NEW, "Moved.java"))
+        val outline = shown.awaitResult()
+        show(shown.viewer.editor1)
+        show(shown.viewer.editor2)
+        val item = selectItem(outline) { it.title == "method moved()" }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        val sync = requireNotNull(shown.viewer.syncScrollSupport) { "the native viewer has no synchronized scrolling" }
+        assertTrue("the selection holds synchronized scrolling", sync.isDuringSyncScroll)
+
+        val old = shown.viewer.editor1
+        val new = shown.viewer.editor2
+        val oldFrame = scrollFrame(old, requireNotNull(item.oldRange))
+        val newFrame = scrollFrame(new, requireNotNull(item.newRange))
+        old.scrollingModel.scrollVertically(old.scrollingModel.visibleArea.y + old.lineHeight * 3)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+
+        assertTrue("a small scroll keeps both frames in view", sync.isDuringSyncScroll)
+        assertEquals(
+            "the old frame keeps the same place in view",
+            old.scrollingModel.visibleArea.y - oldFrame.start,
+            new.scrollingModel.visibleArea.y - newFrame.start,
+            1.0,
+        )
+    }
+
+    fun `test a fold inside a selected frame keeps the frames aligned`() {
+        // outline/01-structural-outline R25
+        val shown = open(history(MOVED_OLD, MOVED_NEW, "Moved.java"))
+        val outline = shown.awaitResult()
+        show(shown.viewer.editor1)
+        show(shown.viewer.editor2)
+        val item = selectItem(outline) { it.title == "method moved()" }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        val sync = requireNotNull(shown.viewer.syncScrollSupport) { "the native viewer has no synchronized scrolling" }
+        assertTrue(sync.isDuringSyncScroll)
+
+        val old = shown.viewer.editor1
+        val new = shown.viewer.editor2
+        val before = scrollFrame(old, requireNotNull(item.oldRange))
+        old.foldingModel.runBatchFoldingOperation {
+            old.foldingModel.addFoldRegion(
+                old.document.getLineStartOffset(62),
+                old.document.getLineEndOffset(63),
+                "...",
+            )?.isExpanded = false
+        }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        val folded = scrollFrame(old, requireNotNull(item.oldRange))
+        assertTrue("the fold shortened the old frame", folded.end < before.end)
+        assertTrue("the fold keeps the hold", sync.isDuringSyncScroll)
+
+        old.scrollingModel.disableAnimation()
+        try {
+            old.scrollingModel.scrollVertically(old.scrollingModel.verticalScrollOffset + old.lineHeight * 5)
+        } finally {
+            old.scrollingModel.enableAnimation()
+        }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+
+        val oldFrame = scrollFrame(old, requireNotNull(item.oldRange))
+        val newFrame = scrollFrame(new, requireNotNull(item.newRange))
+        val oldProgress = (old.scrollingModel.visibleArea.y - oldFrame.start) / (oldFrame.end - oldFrame.start)
+        val newProgress = (new.scrollingModel.visibleArea.y - newFrame.start) / (newFrame.end - newFrame.start)
+        assertEquals("the frames keep the same progress after the fold", oldProgress, newProgress, 0.05)
+    }
+
+    fun `test a selected moved row releases synchronized scrolling when a frame leaves view`() {
+        // outline/01-structural-outline R26
+        val shown = open(history(MOVED_OLD, MOVED_NEW, "Moved.java"))
+        val outline = shown.awaitResult()
+        show(shown.viewer.editor1)
+        show(shown.viewer.editor2)
+        selectItem(outline) { it.title == "method moved()" }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        val sync = requireNotNull(shown.viewer.syncScrollSupport) { "the native viewer has no synchronized scrolling" }
+        assertTrue(sync.isDuringSyncScroll)
+
+        shown.viewer.editor1.scrollingModel.scrollVertically(0)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+
+        assertFalse("the pause ends with the frame out of view", sync.isDuringSyncScroll)
+    }
+
+    fun `test changing or clearing the selection replaces or releases the scroll hold`() {
+        // outline/01-structural-outline R26
+        val shown = open(history(MOVED_OLD, MOVED_NEW, "Moved.java"))
+        val outline = shown.awaitResult()
+        show(shown.viewer.editor1)
+        show(shown.viewer.editor2)
+        selectItem(outline) { it.title == "method moved()" }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        val sync = requireNotNull(shown.viewer.syncScrollSupport) { "the native viewer has no synchronized scrolling" }
+        assertTrue(sync.isDuringSyncScroll)
+
+        selectItem(outline) { it.title == "class Moved" }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        assertTrue("the hold moves to the new selection", sync.isDuringSyncScroll)
+
+        outline.panel.tree.selectionPath = null
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        assertFalse("clearing the selection releases the hold", sync.isDuringSyncScroll)
+    }
+
+    fun `test an edit releases the scroll hold`() {
+        // outline/01-structural-outline R26
+        val local = myFixture.addFileToProject("local/Moved.java", MOVED_NEW).virtualFile
+        val shown = open(
+            SimpleDiffRequest(
+                "local",
+                DiffContents.vcsRevision(project, MOVED_OLD, "/repo/Moved.java"),
+                DiffContents.localFile(project, local),
+                "HEAD",
+                "Current",
+            ),
+        )
+        val outline = shown.awaitResult()
+        show(shown.viewer.editor1)
+        show(shown.viewer.editor2)
+        selectItem(outline) { it.title == "method moved()" }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        val sync = requireNotNull(shown.viewer.syncScrollSupport) { "the native viewer has no synchronized scrolling" }
+        assertTrue(sync.isDuringSyncScroll)
+
+        val document = shown.viewer.editor2.document
+        WriteCommandAction.runWriteCommandAction(project) {
+            document.insertString(0, "// edited\n")
+        }
+
+        assertFalse("the edit releases the hold before the next result", sync.isDuringSyncScroll)
+    }
+
+    fun `test disposing the diff releases the scroll hold`() {
+        // outline/01-structural-outline R26
+        val shown = open(history(MOVED_OLD, MOVED_NEW, "Moved.java"))
+        val outline = shown.awaitResult()
+        show(shown.viewer.editor1)
+        show(shown.viewer.editor2)
+        selectItem(outline) { it.title == "method moved()" }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        val sync = requireNotNull(shown.viewer.syncScrollSupport) { "the native viewer has no synchronized scrolling" }
+        assertTrue(sync.isDuringSyncScroll)
+
+        Disposer.dispose(shown.disposable)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+
+        assertFalse("closing the diff releases the hold", sync.isDuringSyncScroll)
     }
 
     fun `test hiding a change type rebuilds the outline and is remembered`() {
@@ -740,6 +891,21 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         outline.panel.tree.selectionPath = TreePath(node.path)
     }
 
+    /** Selects the first row matching [predicate] and returns it. */
+    private fun selectItem(outline: OutlineController, predicate: (OutlineItem) -> Boolean): OutlineItem {
+        val root = outline.panel.tree.model.root as DefaultMutableTreeNode
+        val node = root.depthFirstEnumeration().toList().map { it as DefaultMutableTreeNode }
+            .first { (it.userObject as? OutlineItem)?.let(predicate) == true }
+        outline.panel.tree.selectionPath = TreePath(node.path)
+        return node.userObject as OutlineItem
+    }
+
+    /** Gives [editor] a viewport small enough for a scroll to leave a frame, as a diff window does. */
+    private fun show(editor: Editor) {
+        EditorTestUtil.setEditorVisibleSize(editor, 100, 14)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+    }
+
     private fun assertHighlightedAt(editor: Editor, offset: Int) {
         assertTrue("offset $offset not found in the text", offset >= 0)
         val starts = editor.markupModel.allHighlighters.map { it.startOffset }
@@ -843,6 +1009,24 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
     }
 
     private companion object {
+        /** A declaration that moves far up the new side, so the native sync would map its frames apart. */
+        val MOVED_OLD: String = buildString {
+            append("class Moved {\n")
+            repeat(60) { append("    int before$it() { return $it; }\n") }
+            append(MOVED_METHOD)
+            repeat(60) { append("    int after$it() { return $it; }\n") }
+            append("}\n")
+        }
+        val MOVED_NEW: String = buildString {
+            append("class Moved {\n")
+            repeat(20) { append("    int before$it() { return $it; }\n") }
+            append(MOVED_METHOD)
+            repeat(40) { append("    int before${it + 20}() { return ${it + 20}; }\n") }
+            repeat(60) { append("    int after$it() { return $it; }\n") }
+            append("}\n")
+        }
+        const val MOVED_METHOD = "    int moved() {\n        int value = 1;\n        return value;\n    }\n"
+
         const val JAVA_OLD = "class Greeter {\n    String hello() { return \"hi\"; }\n}\n"
         const val JAVA_NEW = "class Greeter {\n    String hello() { return \"hello\"; }\n\n    void bye() {}\n}\n"
         const val FORMATTED_OLD = "class Counter {\n    int a() { return 1; }\n\n    int b() { return 2; }\n}\n"

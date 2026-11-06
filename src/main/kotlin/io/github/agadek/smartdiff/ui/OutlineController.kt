@@ -249,6 +249,7 @@ class OutlineController internal constructor(
     private fun documentChanged() {
         if (disposed || !isOutlineVisible) return
         cancel()
+        navigator.releaseScrollSync()
         (viewer as? FilteringDiffViewer)?.forgetHidden()
         debounce.restart()
     }

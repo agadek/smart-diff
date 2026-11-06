@@ -1,6 +1,6 @@
 # Structural outline
 
-Status: implemented, 2026-10-22
+Status: implemented, 2026-11-05
 
 **Description:** A [structural outline](../../GLOSSARY.md#structural-outline) beside the [native diff](../../GLOSSARY.md#native-diff) lists the [declarations](../../GLOSSARY.md#declaration) that changed in the file, with a [label](../../GLOSSARY.md#label) for how each changed.
 
@@ -32,6 +32,8 @@ Status: implemented, 2026-10-22
 - **R22** The refresh action compares the file again.
 - **R23** Labels are text, not color alone, and every row has an accessible name equal to its label.
 - **R24** Closing the diff stops its comparison.
+- **R25** While the selected row's old and new ranges are both in view, scrolling either side keeps them aligned, scaled when the ranges have different lengths.
+- **R26** When either selected range leaves view, the selection changes or clears, either document changes or the diff closes, synchronized scrolling resumes.
 
 ## Out of scope
 

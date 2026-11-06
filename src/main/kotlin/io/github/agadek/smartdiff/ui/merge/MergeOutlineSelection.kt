@@ -8,5 +8,8 @@ internal interface MergeOutlineSelection {
 
     fun clear()
 
+    /** Stops keeping the selected ranges aligned, for a document change; the frames stay until the next result. */
+    fun releaseScrollSync() {}
+
     fun dispose() {}
 }
