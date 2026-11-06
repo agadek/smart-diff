@@ -17,6 +17,7 @@ Status: implemented, 2026-10-22
 - **R7** Next and previous change skip faded changes.
 - **R8** Lines of shown changes and of [unanalyzed](../../GLOSSARY.md#unanalyzed) source are never faded.
 - **R9** Nothing is faded while an edit is compared again, or while the outline is off.
+- **R10** The viewer has its own 16×16 icon wherever the platform shows viewer icons: the native side-by-side mark with a filter funnel, with a light and a dark variant.
 
 ## References
 
