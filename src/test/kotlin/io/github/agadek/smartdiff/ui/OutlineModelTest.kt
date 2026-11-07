@@ -16,6 +16,7 @@ import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
+import io.github.agadek.smartdiff.ui.changes.ChangesTreeFilter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -406,6 +407,133 @@ class OutlineModelTest {
             val kept = if (type == ChangeType.CHANGED) "added" else "changed"
             assertTrue("$type keeps $kept", rows.lines().any { it.startsWith("method $kept()") })
         }
+    }
+
+    @Test
+    fun `the tree filter hides each change type`() {
+        // changes-tree/04-hide-and-filter R7
+        val result = result(
+            node("changed", content = Content.CHANGED),
+            node("signature", signatureChanged = true, content = Content.CHANGED),
+            node("added", presence = Presence.ADDED, old = null),
+            node("removed", presence = Presence.REMOVED, new = null),
+            node("moved", moved = true),
+            node("formatting", content = Content.FORMATTING_ONLY),
+        )
+        val hiddenRows = mapOf(
+            ChangeType.CHANGED to listOf("changed", "signature"),
+            ChangeType.ADDED to listOf("added"),
+            ChangeType.REMOVED to listOf("removed"),
+            ChangeType.MOVED to listOf("moved"),
+            ChangeType.FORMATTING_ONLY to listOf("formatting"),
+        )
+
+        for ((type, hidden) in hiddenRows) {
+            val filtered = ChangesTreeFilter.filter(OutlineModel.build(result, "", "", formattingInline = true), setOf(type))
+            val rows = render(filtered.items)
+            hidden.forEach { name ->
+                assertTrue("$type hides $name", rows.lines().none { it.startsWith("method $name()") })
+            }
+            val kept = if (type == ChangeType.CHANGED) "added" else "changed"
+            assertTrue("$type keeps $kept", rows.lines().any { it.startsWith("method $kept()") })
+            assertEquals("$type counts the hidden change", hidden.size, filtered.hiddenCount)
+        }
+    }
+
+    @Test
+    fun `hiding changed also hides a signature change from the tree`() {
+        // changes-tree/04-hide-and-filter R8
+        val result = result(node("signature", signatureChanged = true, content = Content.CHANGED))
+
+        val filtered = ChangesTreeFilter.filter(
+            OutlineModel.build(result, "", "", formattingInline = false),
+            setOf(ChangeType.CHANGED),
+        )
+
+        assertTrue("the signature change is hidden", filtered.items.isEmpty())
+        assertEquals(1, filtered.hiddenCount)
+    }
+
+    @Test
+    fun `a change with one shown label stays in the tree`() {
+        // changes-tree/04-hide-and-filter R9
+        val result = result(node("moved", moved = true, content = Content.FORMATTING_ONLY))
+
+        val filtered = ChangesTreeFilter.filter(
+            OutlineModel.build(result, "", "", formattingInline = false),
+            setOf(ChangeType.MOVED),
+        )
+
+        assertEquals("method moved()  moved, formatting-only", render(filtered.items))
+        assertEquals(0, filtered.hiddenCount)
+    }
+
+    @Test
+    fun `a hidden container with a shown child stays without labels in the tree`() {
+        // changes-tree/04-hide-and-filter R10
+        val result = result(
+            node("Parser", content = Content.CHANGED, children = listOf(node("added", presence = Presence.ADDED, old = null))),
+        )
+
+        val filtered = ChangesTreeFilter.filter(
+            OutlineModel.build(result, "", "", formattingInline = false),
+            setOf(ChangeType.CHANGED),
+        )
+
+        assertEquals("class Parser\n  method added()  added", render(filtered.items))
+        assertEquals("the hidden container still counts", 1, filtered.hiddenCount)
+    }
+
+    @Test
+    fun `a shown change with a hidden child stays with its own labels in the tree`() {
+        // changes-tree/04-hide-and-filter R7, R9
+        val result = result(
+            node("Parser", content = Content.CHANGED, children = listOf(node("added", presence = Presence.ADDED, old = null))),
+        )
+
+        val filtered = ChangesTreeFilter.filter(
+            OutlineModel.build(result, "", "", formattingInline = false),
+            setOf(ChangeType.ADDED),
+        )
+
+        assertEquals("class Parser  changed", render(filtered.items))
+        assertEquals("the hidden child still counts", 1, filtered.hiddenCount)
+        assertEquals(
+            "1 changed · 1 added · 1 hidden",
+            ChangesTreeFilter.summary("1 changed · 1 added", filtered),
+        )
+    }
+
+    @Test
+    fun `uncertain rename candidate and unanalyzed rows are never hidden from the tree`() {
+        // changes-tree/04-hide-and-filter R11
+        val result = ComparisonResult(
+            EngineId("e"), "1", Status.PARTIAL,
+            changes = listOf(
+                node("sum", renamedFrom = Subject.Declaration(DeclarationKind.METHOD, "total", "")),
+                node("uncertain", presence = Presence.UNCERTAIN, old = null),
+                node("unanalyzed", content = Content.UNANALYZED),
+            ),
+            unanalyzed = listOf(RangePair(TextRange(0, 1), null)),
+        )
+
+        val filtered = ChangesTreeFilter.filter(
+            OutlineModel.build(result, "a\n", "", formattingInline = false),
+            ChangeType.entries.toSet(),
+        )
+
+        assertEquals(
+            """
+            method total → sum()  rename candidate
+            method unanalyzed()  unanalyzed
+            Uncertain (1)
+              method uncertain()  uncertain
+            Unanalyzed (1)
+              Unanalyzed source, old line 1
+            """.trimIndent(),
+            render(filtered.items),
+        )
+        assertEquals("no never-hidden row is counted", 0, filtered.hiddenCount)
     }
 
     @Test

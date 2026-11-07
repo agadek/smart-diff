@@ -8,4 +8,25 @@
         <listener class="io.github.agadek.smartdiff.ui.changes.ChangesSummarySettingsListener"
                   topic="io.github.agadek.smartdiff.ui.SmartDiffSettings$Listener"/>
     </applicationListeners>
+    <actions>
+        <action id="SmartDiff.ChangesTree.StructuralSummary"
+                class="io.github.agadek.smartdiff.ui.changes.ChangesTreeStructuralSummaryAction"
+                text="Structural Summary"
+                description="Show the SMART Diff summary after each changed file"/>
+        <action id="SmartDiff.ChangesTree.Declarations"
+                class="io.github.agadek.smartdiff.ui.changes.ChangesTreeDeclarationsAction"
+                text="Declarations"
+                description="Show changed declarations under each file in the Changes tree"/>
+        <group id="SmartDiff.ChangesTree.HideChangeTypes"
+               class="io.github.agadek.smartdiff.ui.changes.ChangesTreeHideChangeTypesGroup"
+               text="Hide Change Types"
+               popup="true"/>
+        <!-- Added to the public ChangesView.ViewOptions group at runtime, or to ChangesViewToolbar when the build has
+             no such group. See changes-tree/04 R1. -->
+        <group id="SmartDiff.ChangesTree" text="SMART Diff" popup="false">
+            <reference ref="SmartDiff.ChangesTree.StructuralSummary"/>
+            <reference ref="SmartDiff.ChangesTree.Declarations"/>
+            <reference ref="SmartDiff.ChangesTree.HideChangeTypes"/>
+        </group>
+    </actions>
 </idea-plugin>

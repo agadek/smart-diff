@@ -35,6 +35,7 @@ import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.api.Limits
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.compareSafely
+import io.github.agadek.smartdiff.engine.registry.EngineDefaults
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
 import io.github.agadek.smartdiff.ui.OutlineItem
 import io.github.agadek.smartdiff.ui.OutlineModel
@@ -60,7 +61,11 @@ import javax.swing.tree.TreeNode
 class ChangesSummaryModifier(private val project: Project) : ChangesViewModifier {
 
     override fun modifyTreeModelBuilder(builder: ChangesViewModelBuilder) {
-        if (!SmartDiffSettings.getInstance().showChangesSummary) {
+        ChangesTreeActions.install()
+        val settings = SmartDiffSettings.getInstance()
+        val showSummary = settings.showChangesSummary
+        val showDeclarations = settings.showChangesDeclarations
+        if (!showSummary && !showDeclarations) {
             ChangesTreeSetup.schedule(project, suppressExpansion = false)
             return
         }
@@ -70,11 +75,15 @@ class ChangesSummaryModifier(private val project: Project) : ChangesViewModifier
         var hasDeclarationRows = false
         for ((node, summary) in nodes.zip(summaries)) {
             if (summary == null) continue
+            val filtered = ChangesTreeFilter.filter(summary.items, settings.hiddenChangesTreeChangeTypes)
+            val rows = if (showDeclarations) filtered.items else emptyList()
+            if (!showSummary && rows.isEmpty()) continue
             val parent = node.parent as? ChangesBrowserNode<*> ?: continue
             val index = parent.getIndex(node)
+            val text = if (showSummary) ChangesTreeFilter.summary(summary.text, filtered) else ""
             parent.remove(index)
-            parent.insert(SummaryChangeNode(project, node, summary.text).apply { summary.items.forEach { add(DeclarationNode(it)) } }, index)
-            hasDeclarationRows = hasDeclarationRows || summary.items.isNotEmpty()
+            parent.insert(SummaryChangeNode(project, node, text).apply { rows.forEach { add(DeclarationNode(it)) } }, index)
+            hasDeclarationRows = hasDeclarationRows || rows.isNotEmpty()
         }
         ChangesTreeSetup.schedule(project, suppressExpansion = hasDeclarationRows)
     }
@@ -109,7 +118,7 @@ class SummaryChangeNode internal constructor(
 
     override fun render(renderer: ChangesBrowserNodeRenderer, selected: Boolean, expanded: Boolean, hasFocus: Boolean) {
         original.render(renderer, selected, expanded, hasFocus)
-        renderer.append(FontUtil.spaceAndThinSpace() + summary, SimpleTextAttributes.GRAYED_ATTRIBUTES)
+        if (summary.isNotEmpty()) renderer.append(FontUtil.spaceAndThinSpace() + summary, SimpleTextAttributes.GRAYED_ATTRIBUTES)
     }
 
     override fun shouldExpandByDefault(): Boolean = false
@@ -166,8 +175,8 @@ class DeclarationNodeAction @JvmOverloads constructor(
 }
 
 /**
- * The structural summaries and outline rows of a project's changed files, computed one file at a time on a background thread and cached
- * by file, revisions and engine. A file edited since its summary gets a new one.
+ * The structural summaries and outline rows of a project's changed files, computed one file at a time on a background
+ * thread and cached by file, revisions, engine and analysis stamp. A file edited since its summary gets a new one.
  */
 @Service(Service.Level.PROJECT)
 class ChangesSummaryService(private val project: Project) {
@@ -188,9 +197,9 @@ class ChangesSummaryService(private val project: Project) {
     }
 
     /**
-     * What a summary was computed from: the file's paths, a version of each side, the engine and the confidence policy.
-     * The policy is part of the key, so a changed registry threshold does not leave summaries computed under the old one
-     * (relationships/02 R15).
+     * What a summary was computed from: the file's paths, a version of each side, the engine, the confidence policy and
+     * the analysis stamp. The stamp makes a result computed under older limits or an older engine layout land under an
+     * older key instead of the current cache.
      */
     private data class Key(
         val oldPath: String,
@@ -199,10 +208,12 @@ class ChangesSummaryService(private val project: Project) {
         val newVersion: String,
         val engineId: String,
         val confidence: String,
+        val analysis: AnalysisStamp,
     )
 
     private val executor = AppExecutorUtil.createBoundedApplicationPoolExecutor("SMART Diff Changes summary", 1)
     private val cache = ConcurrentHashMap<Key, Entry>()
+    private var cacheStamp: AnalysisStamp? = null
     private val refreshScheduled = AtomicBoolean()
 
     /**
@@ -213,7 +224,9 @@ class ChangesSummaryService(private val project: Project) {
      * are no longer in [changes] are forgotten.
      */
     fun summaries(changes: List<Change>): List<FileSummary?> {
-        val requests = changes.map(::request)
+        val stamp = currentAnalysisStamp()
+        useStamp(stamp)
+        val requests = changes.map { request(it, stamp) }
         cache.keys.retainAll(requests.mapNotNullTo(HashSet()) { it?.key })
         return requests.map { request ->
             if (request == null) return@map null
@@ -234,8 +247,38 @@ class ChangesSummaryService(private val project: Project) {
         }
     }
 
+    /** Applies the current analysis stamp; the cache is dropped when it differs from the stamp it was computed under. */
+    fun settingsChanged() = useStamp(currentAnalysisStamp())
+
     /** Forgets every summary, for example after the analysis limits changed. */
-    fun clear() = cache.clear()
+    fun clear() {
+        synchronized(cache) {
+            cache.clear()
+            cacheStamp = null
+        }
+    }
+
+    private fun useStamp(stamp: AnalysisStamp) {
+        synchronized(cache) {
+            if (cacheStamp != stamp) {
+                cache.clear()
+                cacheStamp = stamp
+            }
+        }
+    }
+
+    /** What the current summaries depend on, as opposed to how the tree displays them. */
+    private fun currentAnalysisStamp(): AnalysisStamp {
+        val settings = SmartDiffSettings.getInstance()
+        return AnalysisStamp(
+            settings.analysisRevision,
+            EngineDefaults.getInstance().revision,
+            settings.confidence.format(),
+        )
+    }
+
+    /** The values that change what a summary contains. A display toggle or filter does not move them. */
+    internal data class AnalysisStamp(val settingsRevision: Long, val engineRevision: Long, val confidence: String)
 
     /** Waits until every summary requested so far is computed. */
     @TestOnly
@@ -245,13 +288,21 @@ class ChangesSummaryService(private val project: Project) {
 
     private class Request(val key: Key, val change: Change, val languageId: String, val fileName: String)
 
-    private fun request(change: Change): Request? {
+    private fun request(change: Change, stamp: AnalysisStamp): Request? {
         val old = change.beforeRevision ?: return null
         val new = change.afterRevision ?: return null
         val fileName = new.file.name
         val languageId = (FileTypeRegistry.getInstance().getFileTypeByFileName(fileName) as? LanguageFileType)?.language?.id ?: return null
         val engine = EngineRegistry.getInstance(project).select(languageId).selected ?: return null
-        val key = Key(old.file.path, new.file.path, version(old), version(new), engine.id.value, SmartDiffSettings.getInstance().confidence.format())
+        val key = Key(
+            old.file.path,
+            new.file.path,
+            version(old),
+            version(new),
+            engine.id.value,
+            stamp.confidence,
+            stamp,
+        )
         return Request(key, change, languageId, fileName)
     }
 
@@ -389,9 +440,9 @@ class ChangesSummaryService(private val project: Project) {
 
 /**
  * What the Changes tree shows for a file: its summary line, such as `2 changed · 1 added`, or the reason it was not
- * analyzed, and its outline's top-level rows. The rows are the outline's own (§10) without the change type filter,
- * which applies to outlines only, as the summary counts every change. A row that carries a reason has no declaration
- * rows. A [retryable] summary stays visible while one retry is pending.
+ * analyzed, and its outline's top-level rows. The rows are the outline's own (§10) without either change type filter,
+ * so the tree can apply its own filter and the summary can count every change. A row that carries a reason has no
+ * declaration rows. A [retryable] summary stays visible while one retry is pending.
  */
 class FileSummary(val text: String, val items: List<OutlineItem>, val retryable: Boolean = false)
 
@@ -405,7 +456,7 @@ class ChangesSummarySettingsListener : SmartDiffSettings.Listener {
     override fun settingsChanged() {
         for (project in ProjectManager.getInstance().openProjects) {
             if (project.isDisposed) continue
-            project.serviceIfCreated<ChangesSummaryService>()?.clear()
+            project.serviceIfCreated<ChangesSummaryService>()?.settingsChanged()
             refreshChangesView(project)
         }
     }

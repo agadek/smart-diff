@@ -1,6 +1,6 @@
 # Hide and filter in the Changes tree: details
 
-Status: proposed, 2026-11-05
+Status: implemented, 2026-11-06
 
 Feature: [Hide and filter in the Changes tree](04-hide-and-filter.md)
 
@@ -11,20 +11,22 @@ Feature: [Hide and filter in the Changes tree](04-hide-and-filter.md)
 - `ChangesSummaryModifier`, the `vcs.changes.changesViewModifier` extension in `smartdiff-vcs.xml`, already runs while the platform builds the Local Changes and Commit trees. It reads the tree settings and decides what to put on each file row.
 - `SummaryChangeNode` renders the platform's file row and, when the setting is on, appends the grey summary or reason. `DeclarationNode` renders one outline row and already exposes its label through `getTextPresentation` for speed search.
 - `ChangesSummaryService` keeps the cache of computed `FileSummary` values. `FileSummary` keeps the summary text without a hidden suffix and the unfiltered outline rows, so the tree can filter and recount without asking an engine to compare again.
+- `ChangesTreeFilter` is the pure pass over those rows. It returns `FilteredRows(items, hiddenCount)` and appends the hidden suffix to the summary.
 - `SmartDiffSettings` holds the two toggles and the tree's own hidden types. `SmartDiffConfigurable` shows the same settings on the Settings page.
 - `smartdiff-vcs.xml` registers the new actions, so an IDE without VCS support does not load them.
 
 ### View Options actions
 
-The 2025.1 platform declares an empty group `ChangesView.ViewOptions` in `META-INF/VcsActions.xml`. `ChangesViewManager.createChangesToolbarActions` adds that group to the eye-icon View Options popup of the Local Changes and Commit tree. The plugin adds its actions to the group in `smartdiff-vcs.xml`:
+The target IDEs, 2025.1 and 2026.3, both expose the public `ChangesView.ViewOptions` group. The 2025.1 platform declares it in `META-INF/VcsActions.xml`, and `ChangesViewManager.createChangesToolbarActions` adds that group to the eye-icon View Options popup of the Local Changes and Commit tree. The plugin registers its actions in `smartdiff-vcs.xml` and puts them in one `SmartDiff.ChangesTree` group:
 
 ```xml
 <action id="SmartDiff.ChangesTree.StructuralSummary" .../>
 <action id="SmartDiff.ChangesTree.Declarations" .../>
 <group id="SmartDiff.ChangesTree.HideChangeTypes" popup="true" .../>
+<group id="SmartDiff.ChangesTree"><reference .../>...</group>
 ```
 
-Each action and the group use `<add-to-group group-id="ChangesView.ViewOptions" anchor="last"/>`. This is XML action registration, not an internal class, and it puts the actions below the platform's own "Show" options. The group is checked in a manual run on 2025.1 and the latest release. If it is absent or does not accept plugin actions on a supported build, the same actions are added to `ChangesViewToolbar` instead, which makes them toolbar buttons; R1 accepts either. The plugin does not wrap the tree renderer or use `ChangesViewManager`'s internals.
+`ChangesTreeActions` adds that group to `ChangesView.ViewOptions` at runtime, so the actions sit below the platform's own "Show" options. Manual verification on IU 2025.1 and IU 2026.3 found the group on both and the SMART Diff group in it on both (`inViewOptions=true`, `inToolbar=false`). The `ChangesViewToolbar` fallback remains defensive: it is used only when the View Options group is absent or rejects plugin actions, and then the actions become toolbar buttons. The placement is idempotent, uses only public `ActionManager` and `DefaultActionGroup` API, and does not wrap the tree renderer or use `ChangesViewManager`'s internals. R1 accepts either placement.
 
 The two toggles are `DumbAwareToggleAction`s with stable action IDs. Their `isSelected` reads `SmartDiffSettings.showChangesSummary` and the new `showChangesDeclarations`. Their `setSelected` writes the setting and publishes `SmartDiffSettings.CHANGED`, whose listener rebuilds every open Changes tree. The "Hide Change Types" group holds one `DumbAwareToggleAction` per `ChangeType`, with the same labels as the outline's menu. A checked item means hidden, as in the outline. All actions use `ActionUpdateThread.BGT`, so reading the settings stays off the UI thread.
 
@@ -85,7 +87,8 @@ Rebuilds go through `refreshChangesView`, which publishes `ChangesViewModifier.T
 
 - `SmartDiffSettings` marks a revision when an analysis-affecting setting changes: the limits and the formatting-only layout, which changes the cached rows. Display-only settings such as the two toggles, the two filters, the outline toggle and the merge settings do not mark it.
 - `EngineDefaults` marks a revision when a language's engine changes.
-- `ChangesSummarySettingsListener` remembers both revisions. On `SmartDiffSettings.CHANGED` it clears `ChangesSummaryService` only when one of them moved, then rebuilds every open project's tree.
+- `ChangesSummaryService` records the `AnalysisStamp` made from both revisions and the confidence policy with the cache entries it guards. Both `summaries()` and `settingsChanged()` compare the current stamp with the recorded one and clear the cache when it differs. A request also carries its stamp, so a comparison that finishes after the cache was cleared is not stored under the new stamp.
+- `ChangesSummarySettingsListener` is stateless. On `SmartDiffSettings.CHANGED` it asks each open project's existing service to apply the current stamp, then rebuilds every open project's tree.
 
 The toggle and filter actions publish the same `CHANGED` event, so they rebuild every open tree, but they do not move an analysis revision and do not clear the cache. A test with a counting engine checks that a toggle or filter change leaves the call count unchanged; an engine or limit change still recomputes.
 
@@ -100,36 +103,36 @@ The tree already asks each node for `getTextPresentation`; `DeclarationNode` ret
 
 ## Tests
 
-The tests name the requirement they check, for example `// changes-tree/04-hide-and-filter R7`. They build trees with `TreeModelBuilder` and the platform's `NoneChangesGroupingFactory`, as `ChangesSummaryTest` does, and use a counting test engine where a comparison must not run. The Java fixture is `Cart.java` from `ChangesSummaryTest`, extended with a signature change, a moved method and a formatting-only method so every filter type has a row.
+The tests name the requirement they check, for example `// changes-tree/04-hide-and-filter R7`. They build trees with `TreeModelBuilder` and the platform's `NoneChangesGroupingFactory`, as `ChangesSummaryTest` does. The tree tests use a scripted test engine that reports a changed, an added, a moved and a formatting-only method under an unchanged class, and a counting engine where a comparison must not run. The row rules are checked directly on `ChangesTreeFilter` in `OutlineModelTest`, which also covers removed changes.
 
 | Requirement | Check |
 | --- | --- |
-| R1 | `ChangesTreeFilterTest` `test the view options group has the smart diff toggles and filter`: the action IDs are registered in `ChangesView.ViewOptions`, or in `ChangesViewToolbar` when the fallback is chosen; M1 checks the eye menu in a running IDE. |
+| R1 | `ChangesTreeFilterTest` `test the view options group has the smart diff toggles and filter`: the group is in `ChangesView.ViewOptions`; `test the toolbar is the fallback when the view options group is absent`: the defensive placement rule; M1 verifies the eye menu on both target IDEs. |
 | R2 | `ChangesTreeFilterTest` `test the summary and declaration toggles are independent`: all four combinations of the two settings give the expected summary and rows. |
 | R3 | `ChangesTreeFilterTest` `test the structural summary toggle hides the grey text and keeps the rows`: a rendered file row has no summary or reason text, and its declaration children remain. |
 | R4 | `ChangesTreeFilterTest` `test declarations off makes each file a leaf and leaves the row to the platform`: the file node is a leaf with no children, and `DeclarationNodeAction` leaves the row to the platform; M3 checks double-click and Enter after #111. |
 | R5 | `SmartDiffSettingsTest` `test the changes tree toggles share the settings page values`; `ChangesTreeFilterTest` `test a tree toggle writes the same setting as the settings page` |
-| R6 | `ChangesTreeFilterTest` `test toggling rebuilds without another comparison`: a counting engine runs once per file, and changing a toggle leaves the count unchanged. |
-| R7 | `OutlineModelTest` `test the tree filter hides each change type`; `ChangesTreeFilterTest` `test each change type can be hidden from the tree` |
-| R8 | `OutlineModelTest` `test hiding changed also hides a signature change` |
-| R9 | `OutlineModelTest` `test a change with one shown label stays` |
-| R10 | `OutlineModelTest` `test a hidden container with a shown child stays without labels`; `ChangesTreeFilterTest` `test a hidden container stays as a container in the tree` |
-| R11 | `OutlineModelTest` `test uncertain rename candidate and unanalyzed rows are never hidden`; `ChangesTreeFilterTest` `test never hidden rows survive the tree filter` |
-| R12 | `ChangesTreeFilterTest` `test the filter is a hide change types submenu`: the group has one toggle per `ChangeType` and lives in the same action group as the toggles; M1 checks it in the eye menu. |
-| R13 | `ChangesSummaryTest` `test the tree summary counts hidden changes and ends with the hidden count`: `· 1 hidden`, `· 2 hidden`; the base counts do not change. |
-| R14 | `ChangesSummaryTest` `test a file whose changes are all hidden stays with all hidden in its summary and no rows`: the file remains in the tree, has no children, is still includable, and ends with `· all hidden`. |
-| R15 | `ChangesTreeFilterTest` `test speed search text of a declaration row is its label`: `getTextPresentation` equals the outline label for shown rows. |
+| R6 | `ChangesTreeFilterTest` `test toggling rebuilds without another comparison`: a counting engine runs once per file, and changing a toggle leaves the count unchanged; `test the first analysis setting change clears the cache`, `test a setting changed before the listener is created still clears the cache`, `test summaries clear the cache when the analysis stamp changes` |
+| R7 | `OutlineModelTest` `test the tree filter hides each change type`; `test a shown change with a hidden child stays with its own labels in the tree`; `ChangesTreeFilterTest` `test a shown change with a hidden child stays with its own labels in the tree` |
+| R8 | `OutlineModelTest` `test hiding changed also hides a signature change from the tree` |
+| R9 | `OutlineModelTest` `test a change with one shown label stays in the tree`; the same shown-change regression above |
+| R10 | `OutlineModelTest` `test a hidden container with a shown child stays without labels in the tree` |
+| R11 | `OutlineModelTest` `test uncertain rename candidate and unanalyzed rows are never hidden from the tree` |
+| R12 | `ChangesTreeFilterTest` `test the filter is a hide change types submenu`: the group has one toggle per `ChangeType` and lives in the same action group as the toggles; M1 checks it in the running IDE. |
+| R13 | `ChangesTreeFilterTest` `test the tree summary counts hidden changes and ends with the hidden count`: `· 2 hidden`; the base counts do not change. |
+| R14 | `ChangesTreeFilterTest` `test a file whose changes are all hidden stays with all hidden in its summary and no rows`: the file remains in the tree, has no children, is still includable, and ends with `· all hidden`. |
+| R15 | `ChangesTreeFilterTest` `test speed search text of a declaration row is its label`: `getTextPresentation` equals the outline label for shown rows, and a hidden row is absent. |
 | R16 | `ChangesTreeFilterTest` `test changing the tree filter leaves the outline filter unchanged`; `SmartDiffSettingsTest` `test the two filters are separate settings` |
-| R17 | `SmartDiffSettingsTest` `test the changes tree filter is stored separately and starts empty`: the default is empty, unknown names are ignored, and the outline's stored value is untouched. |
+| R17 | `SmartDiffSettingsTest` `test the changes tree filter is stored separately and starts empty`; `ChangesTreeFilterTest` `test the changes tree filter is stored separately and starts empty`: the default is empty, unknown names are ignored, and the outline's stored value is untouched. |
 | R18 | `ChangesTreeFilterTest` `test changing the filter rebuilds without another comparison`: a counting engine runs once per file, and changing the filter leaves the count unchanged. |
 
 ### Manual checks
 
-M1 and M2 are the View Options and toolbar checks; the rest cover behavior that a platform test cannot see end to end.
+M1 is the View Options placement check and M2 checks the toggles; the rest cover behavior that a platform test cannot see end to end.
 
 | Check | Steps |
 | --- | --- |
-| M1 View Options placement | In Local Changes and in the Commit tool window, click the eye icon. Confirm "Structural Summary", "Declarations" and the "Hide Change Types" submenu appear below the platform's own options. Repeat on 2025.1 and the latest release. If the group cannot be extended, confirm the same actions appear in the tree's toolbar (R1, R12). |
+| M1 View Options placement | On IU 2025.1 and IU 2026.3, in Local Changes and in the Commit tool window, click the eye icon and confirm "Structural Summary", "Declarations" and the "Hide Change Types" submenu appear below the platform's own options. Verified on both: `inViewOptions=true`, `inToolbar=false`. The toolbar fallback is defensive only and is not expected when the group exists (R1, R12). |
 | M2 Toggles rebuild at once | Toggle each action and watch the tree change without a comparison progress bar or a recomputed summary. Confirm the other toggle and the filter keep their state (R2, R6). |
 | M3 Declarations off | Turn Declarations off: no file has an expand arrow; double-click and Enter on a summarized file row open its diff as for a file without a summary; selection, checkbox and commit include the file only. Turn it on: children return and the file row keeps its diff behavior (R4; after #111). |
 | M4 Structural Summary off | Turn Structural Summary off: no grey summary after any file, and a file with a reason shows no grey reason either; if Declarations is on, its rows remain (R3). |
@@ -139,8 +142,4 @@ M1 and M2 are the View Options and toolbar checks; the rest cover behavior that 
 | M8 Separate filters and persistence | Hide changed in the tree, then open a diff: its outline still shows changed rows. Hide moved in the outline, then reopen the tree: its rows are unchanged. Restart the IDE and confirm both filters and both toggles are remembered separately (R16, R17). |
 | M9 Speed search | Type a shown declaration's name in the tree: the row is found. Hide its type or turn Declarations off: the row is not found (R15). |
 
-## Open questions
-
-- **Where the View Options actions attach.** 2025.1 declares `ChangesView.ViewOptions` as an empty public group and adds it to the eye popup, which is the preferred target. The latest release may differ. Options: (a) add to `ChangesView.ViewOptions` (inside the eye menu, preferred); (b) add to `ChangesViewToolbar` (always visible buttons); (c) add to both if the group is absent on some supported builds. The implementation checks 2025.1 and the latest release before choosing; R1 allows either visible placement.
-- **The filter while Declarations is off.** Options: (a) keep "Hide Change Types" enabled, so the user can set it before turning the rows on (simplest); (b) disable it while Declarations is off, because it has no visible effect. The spec does not require either.
-- **Expansion after turning Declarations back on.** Options: (a) the rebuilt tree starts as changes-tree/02 R6 describes, with files and containers collapsed (simplest); (b) remember the expanded declaration paths while the rows are off and restore them when the rows return. The spec does not require either.
+Both target IDEs expose the View Options group, so M1 checks the eye menu on each; the toolbar fallback is only for a build where the group is absent or rejects the actions. The filter stays enabled while Declarations are off, so the user can set it before turning the rows on. Turning Declarations back on uses the rebuilt tree, with files and containers collapsed as changes-tree/02 R6 describes.

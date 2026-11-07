@@ -125,6 +125,104 @@ M1 passes; M2–M9 remain manual. #112 and PR #124 stay open; PR #124 is not mer
    check is still outstanding. On both 2025.1 and 2026.3 click the eye icon and confirm Structural Summary, Declarations
    and Hide Change Types appear below the platform options. Then run M2–M9 from PR #124's manual-check list, including
    the `Parser` summary `1 changed · 1 added · 1 hidden` with `class Parser` still shown and `method count() added` hidden.
+## 2026-11-07: Changes tree hide and filter, M2-M9
+
+This run checked PR #124 at head `7a773ad` in both target IDEs with the real Changes tree and a real Git project. The
+plugin was built with `./gradlew buildPlugin` and installed in isolated `idea.plugins.path` directories. The IDEs were
+IntelliJ IDEA Community 2025.1.3 (`IC-251.26927.53`, `runIde`) and IntelliJ IDEA Ultimate 2026.3 (`IU-263.7307.200`,
+installed from the cached `idea-2026.3-aarch64.dmg`).
+
+The fixture had a changed and an added method under `Parser`, a signature change, a method moved between classes and
+changed, a removed method, an added method, a formatting-only change, and a plain text file. A temporary startup probe
+opened the eye icon and selected the real View Options actions; it was removed before this change was committed. The
+Settings-page check used the real `SmartDiffConfigurable` component. The desktop was unlocked. The eye menu itself was
+opened and its actions were selected through the popup's `ListPopupStep`; the "Hide Change Types" submenu could not be
+opened by the probe, so its child actions were invoked from the same registered action group. No product code changed.
+
+### Why the earlier probe saw no change
+
+The earlier probe set the settings directly and then called `tree.rebuildTree()` immediately after
+`notifyChangesTreeSettingsChanged()`. This trace shows that setting the value and publishing `SmartDiffSettings.CHANGED`
+alone rebuilds the real tree within about 0.5 s: `SummaryChangeNode.summary` became empty while the node and its rows
+stayed. The explicit `tree.rebuildTree()` is the difference in the earlier probe; it re-rendered the model built before
+the setting changed and masked the event-driven refresh. The working path is `SmartDiffSettings.CHANGED` ->
+`ChangesSummarySettingsListener` -> `refreshChangesView` -> `ChangesViewModifier.TOPIC`.
+
+### M1: View Options
+
+On both IDEs the eye button's action was `ChangesView.ViewOptions`, and the popup contained, in order:
+
+```text
+Directory
+Module
+Ignored Files
+Structural Summary
+Declarations
+Hide Change Types
+```
+
+The three SMART Diff entries were below the platform's own options on both IDEs. M1 passes.
+
+### M2 and M4: toggles
+
+Selecting **Structural Summary** turned the grey text off while the declaration rows stayed
+(`SummaryChangeNode summary= children=1`); selecting it again restored the text. Selecting **Declarations** removed the
+rows (`children=0`) while the summary text stayed; selecting it again restored the rows. The model root changed on each
+action and the analysis stamp stayed `0`; the rebuild was immediate and no comparison progress appeared. M2 and M4 pass.
+
+### M3: Declarations off
+
+With Declarations off every summarized file was a leaf (`children=0`) with its summary text still shown; turning it on
+restored the rows. The double-click and Enter behavior on the now-leaf row was not re-driven here; it depends on the
+open #111 checks. M3 is partial.
+
+### M5: Settings page
+
+`SmartDiffConfigurable` exposed the two checkboxes and the separate "Hide from the Changes tree" group. Clicking
+"Show structural summary in the Changes tree" changed `showChangesSummary` (`summaryOff=false`, `summaryOn=true` after
+the second click), and the second "Changed" checkbox set `hiddenChangesTreeChangeTypes=[CHANGED]` while
+`hiddenChangeTypes` stayed empty. M5 passes at the component level; the Settings dialog itself was not opened.
+
+### M6: filter rules
+
+- **Added:** `Parser` showed `1 changed · 1 added · 1 hidden`, kept `class Parser` and `method parse() changed`, and
+  hid `method count() added`; `MovedTarget` showed `1 added · all hidden` with no rows.
+- **Changed:** `Signature` showed `1 changed · all hidden` (the signature change is hidden with changed); `Parser`
+  kept the shown added child under the label-less `class Parser` container; the `AddRemove` row
+  `rename candidate, changed` stayed, as a rename candidate is never hidden; `MovedTwo` stayed because its
+  `moved, changed` row still has moved shown.
+- **Removed:** `MovedSource` showed `1 removed · all hidden`.
+- **Moved:** `MovedTwo` stayed because its `moved, changed` row still has changed shown; this covers "stays while
+  either type is shown". Hiding both moved and changed at once was not run.
+- **Formatting-only:** `Formatting` showed `2 formatting-only · all hidden`.
+
+The uncertain and unanalyzed never-hidden rows were not produced by this fixture; only the rename-candidate case was
+observed. M6 passes for changed, added, removed, moved and formatting-only, with those two cases still manual.
+
+### M7: hidden counts and all hidden
+
+The `Parser` summary was `1 changed · 1 added · 1 hidden` with its full counts. `MovedTarget` and `Formatting` kept
+their file rows, had no declaration rows, and ended with `· all hidden`. Commit inclusion of an all-hidden file was not
+checked. M7 is partial.
+
+### M8: separate filters and persistence
+
+On 2025.1, hiding `Added` in the tree left `hiddenChangeTypes` empty and persisted across a restart:
+`KEEP summary=true declarations=true hidden=[ADDED] outlineHidden=[] revision=0`, with the `Parser` row still
+`1 changed · 1 added · 1 hidden`. The 2026.3 restart and the visual outline comparison were not run. M8 is partial.
+
+### M9: speed search
+
+Not driven. Dispatching the search text to the tree selected no row in either the baseline or the filtered/declarations
+off states, so this run cannot tell whether the speed search works. M9 remains manual.
+
+### Remaining manual checks
+
+- M3 open behavior on a leaf row, after #111.
+- M6 uncertain/unanalyzed rows and hiding moved and changed together.
+- M7 commit inclusion of an all-hidden file.
+- M8 the 2026.3 restart and the outline visual comparison.
+- M9 speed search.
 
 ## 2026-11-05: engine 9 relationship benchmark
 
