@@ -3,5 +3,6 @@
 <idea-plugin>
     <extensions defaultExtensionNs="io.github.agadek.smartdiff">
         <declarationProvider implementation="io.github.agadek.smartdiff.engine.declarations.psi.kotlin.KotlinDeclarationProvider"/>
+        <referenceResolver implementation="io.github.agadek.smartdiff.references.KotlinReferenceResolver"/>
     </extensions>
 </idea-plugin>

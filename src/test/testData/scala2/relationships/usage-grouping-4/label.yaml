@@ -1,0 +1,25 @@
+case: usage-grouping-4
+language: Scala
+corpus: scala2
+category: usage-grouping
+split: held-out
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Order", kind: FUNCTION, name: "total" }
+      new: { path: "class Order", kind: FUNCTION, name: "sum" }
+      usages:
+        - old: "87..92"
+          new: "85..88"
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "sum" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "use", signature: "Order" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "The first usage is pure and groups; the second also changed, so it stays ordinary."

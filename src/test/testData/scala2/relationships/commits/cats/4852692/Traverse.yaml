@@ -13,6 +13,7 @@ expected:
     - kinds: [RENAME]
       old: { path: "object Traverse", kind: FUNCTION, name: "traverse_Directly", signature: "IterableOnce[A];A => G[B];implicit StackSafeMonad[G]" }
       new: { path: "object Traverse", kind: FUNCTION, name: "traverseVoidDirectly", signature: "IterableOnce[A];A => G[B];implicit StackSafeMonad[G]" }
+      usages: []
   changes:
     - subject: { path: "object Traverse", kind: FUNCTION, name: "traverseVoidDirectly", signature: "IterableOnce[A];A => G[B];implicit StackSafeMonad[G]" }
       presence: MATCHED

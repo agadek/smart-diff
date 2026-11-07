@@ -1,0 +1,28 @@
+case: usage-grouping-3
+language: Scala
+corpus: scala2
+category: usage-grouping
+split: held-out
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Order", kind: FUNCTION, name: "total" }
+      new: { path: "class Order", kind: FUNCTION, name: "sum" }
+      usages:
+        - old: "107..112"
+          new: "105..108"
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "sum" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "total", signature: "Int" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "use" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "A renamed call groups; an overload call and an unresolved call stay ordinary."

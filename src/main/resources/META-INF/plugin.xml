@@ -43,6 +43,10 @@
         <extensionPoint name="declarationProvider"
                         interface="io.github.agadek.smartdiff.engine.declarations.psi.DeclarationProvider"
                         dynamic="true"/>
+        <!-- Internal to the reference pass: one resolver per language, each in its language's optional descriptor. -->
+        <extensionPoint name="referenceResolver"
+                        interface="io.github.agadek.smartdiff.references.ReferenceResolver"
+                        dynamic="true"/>
     </extensionPoints>
 
     <!-- The Kotlin plugin reads this from the main descriptor only; without it, K2 mode skips smartdiff-kotlin.xml.

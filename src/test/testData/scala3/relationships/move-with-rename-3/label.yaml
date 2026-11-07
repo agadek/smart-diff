@@ -8,6 +8,7 @@ expected:
     - kinds: [RENAME, MOVE]
       old: { path: "class Basket", kind: FUNCTION, name: "price", signature: null }
       new: { path: "class Basket", kind: FUNCTION, name: "cost", signature: null }
+      usages: []
   changes:
     - subject: { path: "", kind: CLASS, name: "Basket", signature: null }
       presence: MATCHED

@@ -1,5 +1,6 @@
 package io.github.agadek.smartdiff.references
 
+import com.intellij.openapi.extensions.ExtensionPointName
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import io.github.agadek.smartdiff.engine.api.Cancellation
@@ -10,9 +11,9 @@ import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 /**
  * Resolves same-file usages for one language (relationships/04 R14). The reference pass parses both sides with the
  * declaration provider and asks the resolver for the declaration a relationship endpoint names, every usage that
- * resolves to it, and the smallest expression or statement around a usage.
- *
- * Step 1 adds the Java resolver; Kotlin K2 and Scala add their own resolver in step 2 without changing the pass.
+ * resolves to it, and the smallest expression or statement around a usage. One resolver exists per language, and each
+ * registers on the engine-internal `io.github.agadek.smartdiff.referenceResolver` extension point in the optional
+ * descriptor of its language plugin, so the plugin still loads when a language plugin is absent.
  */
 internal interface ReferenceResolver {
     /** Whether this resolver handles [languageId], an IntelliJ `Language.getID()`. */
@@ -46,4 +47,9 @@ internal interface ReferenceResolver {
 
     /** The language's whitespace policy, as the declaration engine built its tree with. */
     fun whitespacePolicy(file: PsiFile): WhitespacePolicy
+
+    companion object {
+        val EP_NAME: ExtensionPointName<ReferenceResolver> =
+            ExtensionPointName.create("io.github.agadek.smartdiff.referenceResolver")
+    }
 }

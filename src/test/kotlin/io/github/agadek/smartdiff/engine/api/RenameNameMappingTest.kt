@@ -44,6 +44,26 @@ class RenameNameMappingTest {
     }
 
     @Test
+    fun `R7 Kotlin backticks and Scala symbols and chars are tokens, not whitespace`() {
+        // Kotlin backtick identifiers may contain whitespace and comment markers.
+        assertFalse(RenameNameMapping.sameText("`a b`", "`a  b`", WhitespacePolicy.LINE_BREAKS_SIGNIFICANT))
+        assertTrue(RenameNameMapping.sameText("`a b`", "`a b`", WhitespacePolicy.LINE_BREAKS_SIGNIFICANT))
+        // A Scala symbol literal is code: whitespace after it is still layout.
+        assertTrue(RenameNameMapping.sameText("'foo  bar", "'foo bar", WhitespacePolicy.LINE_BREAKS_SIGNIFICANT))
+        assertFalse(RenameNameMapping.sameText("'foo", "'bar", WhitespacePolicy.LINE_BREAKS_SIGNIFICANT))
+        // A char literal is compared as written.
+        assertTrue(RenameNameMapping.sameText("'a'  x", "'a' x", WhitespacePolicy.LINE_BREAKS_SIGNIFICANT))
+        assertFalse(RenameNameMapping.sameText("'a'", "'b'", WhitespacePolicy.LINE_BREAKS_SIGNIFICANT))
+        // Kotlin and Scala nest block comments, so text after an inner close is still comment.
+        assertFalse(
+            RenameNameMapping.sameText("/* a /* b */  c */", "/* a /* b */ c */", WhitespacePolicy.LINE_BREAKS_SIGNIFICANT),
+        )
+        assertTrue(
+            RenameNameMapping.sameText("/* a /* b */ c */", "/* a /* b */ c */", WhitespacePolicy.LINE_BREAKS_SIGNIFICANT),
+        )
+    }
+
+    @Test
     fun `R7 a reference range outside the compared text is refused`() {
         val reference = Evidence.Reference(method("sum"), TextRange(0, 9), TextRange(0, 1))
         try {

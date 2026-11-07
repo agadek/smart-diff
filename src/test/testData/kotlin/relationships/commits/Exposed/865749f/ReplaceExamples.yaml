@@ -13,6 +13,9 @@ expected:
     - kinds: [RENAME]
       old: { path: "", kind: PROPERTY, name: "LOW_RAITING_THRESHOLD", signature: null }
       new: { path: "", kind: PROPERTY, name: "LOW_RATING_THRESHOLD", signature: null }
+      usages:
+        - old: "1692..1713"
+          new: "1691..1711"
   changes:
     - subject: { path: "", kind: PROPERTY, name: "LOW_RATING_THRESHOLD", signature: null }
       presence: MATCHED

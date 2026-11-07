@@ -48,6 +48,8 @@ sealed interface OutlineState {
         val hiddenCount: Int = 0,
         /** The grey note under the summary, such as `Resolving usages…`; null when there is none. */
         val usageNote: String? = null,
+        /** The policy the compare used for `usages renamed`; Scala 2 and Scala 3 differ (R10). */
+        val whitespacePolicy: WhitespacePolicy = WhitespacePolicy.INSIGNIFICANT,
     ) : OutlineState
 }
 
@@ -276,7 +278,7 @@ class OutlineController internal constructor(
         if (selection().selected?.id != job.engine.id) return refresh()
         running = null
         val note = if (outcome.notGrouped) USAGES_NOT_GROUPED else null
-        showResult(request, outcome.result, note, keepSelection = true)
+        showResult(request, outcome.result, note, keepSelection = true, policy = outcome.whitespacePolicy)
     }
 
     /** Hides or shows changes of [type] in every outline from now on, and rebuilds this one's rows without comparing again. */
@@ -285,7 +287,7 @@ class OutlineController internal constructor(
         settings.hiddenChangeTypes = if (hide) settings.hiddenChangeTypes + type else settings.hiddenChangeTypes - type
         val shown = state as? OutlineState.Shown ?: return
         val request = shownRequest ?: return
-        showResult(request, shown.result, shown.usageNote, keepSelection = true)
+        showResult(request, shown.result, shown.usageNote, keepSelection = true, policy = shown.whitespacePolicy)
     }
 
     private fun showResult(
@@ -293,20 +295,22 @@ class OutlineController internal constructor(
         result: ComparisonResult,
         note: String? = null,
         keepSelection: Boolean = false,
+        policy: WhitespacePolicy? = null,
     ) {
         val settings = SmartDiffSettings.getInstance()
         val hidden = settings.hiddenChangeTypes
-        val policy = whitespacePolicy(languageId)
+        val whitespacePolicy = policy ?: whitespacePolicy(languageId)
         val selection = if (keepSelection) panel.selectedPath() else null
-        val items = OutlineModel.build(result, request.oldText, request.newText, settings.formattingOnlyInline, hidden, policy)
+        val items = OutlineModel.build(result, request.oldText, request.newText, settings.formattingOnlyInline, hidden, whitespacePolicy)
         shownRequest = request
         show(
             OutlineState.Shown(
                 result,
-                OutlineModel.summary(result, hidden, request.oldText, request.newText, policy),
+                OutlineModel.summary(result, hidden, request.oldText, request.newText, whitespacePolicy),
                 items,
                 OutlineModel.hiddenCount(result, hidden),
                 note,
+                whitespacePolicy,
             ),
         )
         when {
@@ -396,7 +400,7 @@ class OutlineController internal constructor(
         const val RESOLVING = "Resolving usages…"
         const val USAGES_NOT_GROUPED = "usages not grouped"
 
-        /** The whitespace policy the outline compares a rename-only declaration with, by language. */
+        /** The fallback whitespace policy before the pass reports the parsed dialect; Scala keeps its stricter policy. */
         internal fun whitespacePolicy(languageId: String): WhitespacePolicy = when (languageId) {
             "JAVA" -> WhitespacePolicy.INSIGNIFICANT
             "kotlin" -> WhitespacePolicy.LINE_BREAKS_SIGNIFICANT
