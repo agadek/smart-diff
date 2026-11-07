@@ -1,0 +1,28 @@
+case: usage-grouping-3
+language: JAVA
+corpus: java
+category: usage-grouping
+split: held-out
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Order", kind: METHOD, name: "total", signature: "()" }
+      new: { path: "class Order", kind: METHOD, name: "sum", signature: "()" }
+      usages:
+        - old: "119..124"
+          new: "117..120"
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: METHOD, name: "sum", signature: "()" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: METHOD, name: "total", signature: "(int)" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: METHOD, name: "use", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "A renamed call groups; an overload call and an unresolved call stay ordinary."

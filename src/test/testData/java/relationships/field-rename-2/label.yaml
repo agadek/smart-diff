@@ -8,6 +8,7 @@ expected:
     - kinds: [RENAME]
       old: { path: "class Invoice", kind: FIELD, name: "MAX_SIZE", signature: null }
       new: { path: "class Invoice", kind: FIELD, name: "MAX_LENGTH", signature: null }
+      usages: []
   changes:
     - subject: { path: "", kind: CLASS, name: "Invoice", signature: null }
       presence: MATCHED

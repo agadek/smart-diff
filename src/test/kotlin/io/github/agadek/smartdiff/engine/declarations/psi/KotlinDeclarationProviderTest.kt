@@ -6,7 +6,7 @@ import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
-import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy
+import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 import org.jetbrains.kotlin.idea.base.plugin.KotlinPluginModeProvider
 
 /** The Kotlin provider's declarations, names, signatures and ranges (technical specification §6.5, §6.6, §6.7). */

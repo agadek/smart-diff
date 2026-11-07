@@ -1,7 +1,7 @@
 package io.github.agadek.smartdiff.engine.declarations.psi
 
 import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
-import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy
+import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 
 /** The Java provider's declarations, names, signatures and ranges (technical specification §6.4, §6.6, §6.7). */
 class JavaDeclarationProviderTest : ProviderTestCase() {

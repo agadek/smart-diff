@@ -52,9 +52,12 @@ import io.github.agadek.smartdiff.engine.lines.LineEngine
 import io.github.agadek.smartdiff.engine.lines.LineEngineFactory
 import io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory
 import io.github.agadek.smartdiff.engine.registry.EngineDefaults
+import io.github.agadek.smartdiff.references.ReferencePass
 import java.awt.event.ActionEvent
 import java.awt.event.FocusEvent
 import java.awt.event.KeyEvent
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import javax.swing.KeyStroke
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.TreePath
@@ -815,6 +818,161 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertFalse(event.presentation.isEnabledAndVisible)
     }
 
+    fun `test relationships 04 R1 R2 the engine result is replaced by the grouped result`() {
+        // relationships/04-rename-grouping R1, R2, R9, R10, R11
+        val local = myFixture.addFileToProject("local/Order.java", USAGE_NEW).virtualFile
+        val shown = open(SimpleDiffRequest("usage", DiffContents.vcsRevision(project, USAGE_OLD, "/repo/Order.java"), DiffContents.localFile(project, local), "HEAD", "Current"))
+        val outline = shown.outline
+
+        val shownState = awaitResult(outline) { state -> labels(state.items).any { it.contains("usages renamed") } }
+        assertNull("the resolving note is gone when the pass finishes", shownState.usageNote)
+        assertEquals("1 rename candidate · 1 usages renamed", outline.panel.summary.text)
+        assertTrue(rows(outline).any { it.contains("method total → sum()  rename candidate, 1 usage") })
+        assertTrue(rows(outline).any { it.contains("method twice()  usages renamed") })
+        assertFalse("the clipboard note is not shown", outline.panel.usageNote.isVisible)
+    }
+
+    fun `test relationships 04 R2 the outline shows a resolving note while the pass runs`() {
+        // relationships/04-rename-grouping R2
+        val local = myFixture.addFileToProject("local/Order.java", USAGE_NEW).virtualFile
+        val shown = open(SimpleDiffRequest("usage", DiffContents.vcsRevision(project, USAGE_OLD, "/repo/Order.java"), DiffContents.localFile(project, local), "HEAD", "Current"))
+        val outline = shown.outline
+        val release = CountDownLatch(1)
+        outline.passRunner = { request, result, cancellation ->
+            release.await(10, TimeUnit.SECONDS)
+            ReferencePass.runForBenchmark(project, request, result, cancellation)
+        }
+        outline.refresh()
+
+        val resolving = awaitResult(outline) { it.usageNote == OutlineController.RESOLVING }
+        assertTrue("the note is visible: ${outline.panel.usageNote.text}", outline.panel.usageNote.isVisible)
+        assertEquals("Resolving usages…", outline.panel.usageNote.text)
+        release.countDown()
+        val grouped = awaitResult(outline) { state -> labels(state.items).any { it.contains("usages renamed") } }
+        assertNull("the resolving note is gone when the pass finishes", grouped.usageNote)
+    }
+
+    fun `test relationships 04 R3 a clipboard diff keeps the engine result`() {
+        // relationships/04-rename-grouping R3
+        val outline = open(history(USAGE_OLD, USAGE_NEW, "Order.java")).awaitResult()
+
+        assertEquals("1 changed · 1 rename candidate", outline.panel.summary.text)
+        assertFalse(rows(outline).any { it.contains("usage") })
+        assertFalse(outline.panel.usageNote.isVisible)
+        assertEquals(null, (outline.state as OutlineState.Shown).usageNote)
+    }
+
+    fun `test relationships 04 R8 the filter never hides a grouped usage`() {
+        // relationships/04-rename-grouping R8; declarations/06-change-labels R14
+        val local = myFixture.addFileToProject("local/Order.java", USAGE_NEW).virtualFile
+        val shown = open(SimpleDiffRequest("usage", DiffContents.vcsRevision(project, USAGE_OLD, "/repo/Order.java"), DiffContents.localFile(project, local), "HEAD", "Current"))
+        val outline = shown.outline
+        awaitResult(outline) { state -> labels(state.items).any { it.contains("usages renamed") } }
+
+        outline.setHidden(ChangeType.CHANGED, true)
+
+        assertTrue(rows(outline).any { it.contains("method twice()  usages renamed") })
+        assertEquals("1 rename candidate · 1 usages renamed", outline.panel.summary.text)
+    }
+
+    fun `test relationships 04 R2 replacing the model keeps the selection`() {
+        // relationships/04-rename-grouping R2
+        val local = myFixture.addFileToProject("local/Order.java", USAGE_NEW).virtualFile
+        val shown = open(SimpleDiffRequest("usage", DiffContents.vcsRevision(project, USAGE_OLD, "/repo/Order.java"), DiffContents.localFile(project, local), "HEAD", "Current"))
+        val outline = shown.outline
+        val release = CountDownLatch(1)
+        outline.passRunner = { request, result, cancellation ->
+            release.await(10, TimeUnit.SECONDS)
+            ReferencePass.runForBenchmark(project, request, result, cancellation)
+        }
+        outline.refresh()
+        awaitResult(outline) { it.usageNote == OutlineController.RESOLVING }
+
+        select(outline, "method total → sum()  rename candidate")
+        release.countDown()
+
+        awaitResult(outline) { state -> labels(state.items).any { it.contains("usages renamed") } }
+        assertEquals("method total → sum()  rename candidate, 1 usage", outline.panel.selectedItem()?.label)
+    }
+
+    fun `test relationships 04 R11 selecting the rename frames every grouped usage`() {
+        // relationships/04-rename-grouping R11
+        val local = myFixture.addFileToProject("local/Order.java", USAGE_NEW).virtualFile
+        val shown = open(SimpleDiffRequest("usage", DiffContents.vcsRevision(project, USAGE_OLD, "/repo/Order.java"), DiffContents.localFile(project, local), "HEAD", "Current"))
+        val outline = shown.outline
+        awaitResult(outline) { state -> labels(state.items).any { it.contains("usages renamed") } }
+
+        select(outline, "method total → sum()  rename candidate, 1 usage")
+
+        val oldStart = USAGE_OLD.indexOf("total() * 2")
+        val newStart = USAGE_NEW.indexOf("sum() * 2")
+        assertTrue(
+            "the old usage is highlighted: ${outline.navigator.shown.map { it.startOffset }}",
+            outline.navigator.shown.any { it.document === shown.viewer.editor1.document && it.startOffset == oldStart },
+        )
+        assertTrue(
+            "the new usage is highlighted: ${outline.navigator.shown.map { it.startOffset }}",
+            outline.navigator.shown.any { it.document === shown.viewer.editor2.document && it.startOffset == newStart },
+        )
+    }
+
+    fun `test relationships 04 R17 a timed out pass shows usages not grouped`() {
+        // relationships/04-rename-grouping R17
+        val local = myFixture.addFileToProject("local/Order.java", USAGE_NEW).virtualFile
+        val shown = open(SimpleDiffRequest("usage", DiffContents.vcsRevision(project, USAGE_OLD, "/repo/Order.java"), DiffContents.localFile(project, local), "HEAD", "Current"))
+        val outline = shown.outline
+        outline.passRunner = { _, result, _ -> ReferencePass.Outcome(result, ReferencePass.Status.TIMED_OUT) }
+        outline.refresh()
+
+        val state = awaitResult(outline) { it.usageNote == OutlineController.USAGES_NOT_GROUPED }
+        assertTrue(outline.panel.usageNote.isVisible)
+        assertEquals("usages not grouped", outline.panel.usageNote.text)
+        assertFalse("no partial usage evidence is kept", labels(state.items).any { it.contains("usages renamed") })
+    }
+
+    fun `test relationships 04 R17 a dumb project shows usages not grouped`() {
+        // relationships/04-rename-grouping R17
+        val local = myFixture.addFileToProject("local/Order.java", USAGE_NEW).virtualFile
+        val shown = open(SimpleDiffRequest("usage", DiffContents.vcsRevision(project, USAGE_OLD, "/repo/Order.java"), DiffContents.localFile(project, local), "HEAD", "Current"))
+        val outline = shown.outline
+        outline.passRunner = { _, result, _ -> ReferencePass.Outcome(result, ReferencePass.Status.NOT_GROUPED, dumb = true) }
+        outline.refresh()
+
+        awaitResult(outline) { it.usageNote == OutlineController.USAGES_NOT_GROUPED }
+        assertTrue(outline.panel.usageNote.isVisible)
+        assertEquals("usages not grouped", outline.panel.usageNote.text)
+    }
+
+    fun `test relationships 04 R16 an edit during the pass discards its result`() {
+        // relationships/04-rename-grouping R16
+        val local = myFixture.addFileToProject("local/Order.java", USAGE_NEW).virtualFile
+        val shown = open(SimpleDiffRequest("usage", DiffContents.vcsRevision(project, USAGE_OLD, "/repo/Order.java"), DiffContents.localFile(project, local), "HEAD", "Current"))
+        val outline = shown.outline
+        val release = CountDownLatch(1)
+        var calls = 0
+        outline.passRunner = { request, result, cancellation ->
+            if (calls++ == 0) {
+                release.await(10, TimeUnit.SECONDS)
+                ReferencePass.runForBenchmark(project, request, result, cancellation)
+            } else {
+                ReferencePass.Outcome(result, ReferencePass.Status.NOT_GROUPED)
+            }
+        }
+        outline.refresh()
+        awaitResult(outline) { it.usageNote == OutlineController.RESOLVING }
+
+        WriteCommandAction.runWriteCommandAction(project) {
+            shown.viewer.editor2.document.insertString(0, "// edited\n")
+        }
+        PlatformTestUtil.waitWithEventsDispatching("the edited comparison did not run", { calls >= 2 }, 20)
+        release.countDown()
+
+        val state = awaitResult(outline) { it.usageNote == null && labels(it.items).none { label -> label.contains("usages renamed") } }
+        assertFalse(labels(state.items).any { it.contains("usages renamed") })
+    }
+
+    private fun labels(items: List<OutlineItem>): List<String> = items.flatMap { listOf(it.label) + labels(it.children) }
+
     private inner class Shown(val panel: DiffRequestPanel, val disposable: Disposable, val request: SimpleDiffRequest, val viewer: TwosideTextDiffViewer) {
         val outline: OutlineController = OutlineController.of(viewer) ?: error("no outline attached to ${request.title}")
 
@@ -1031,6 +1189,8 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         const val JAVA_NEW = "class Greeter {\n    String hello() { return \"hello\"; }\n\n    void bye() {}\n}\n"
         const val FORMATTED_OLD = "class Counter {\n    int a() { return 1; }\n\n    int b() { return 2; }\n}\n"
         const val FORMATTED_NEW = "class Counter {\n    int a() { return 3; }\n\n    int b() {\n        return 2;\n    }\n}\n"
+        const val USAGE_OLD = "class Order {\n    int total() { return 2; }\n    int twice() { return total() * 2; }\n}\n"
+        const val USAGE_NEW = "class Order {\n    int sum() { return 2; }\n    int twice() { return sum() * 2; }\n}\n"
         const val KOTLIN_OLD = "class Greeter {\n    fun hello() = \"hi\"\n}\n"
         const val KOTLIN_NEW = "class Greeter {\n    fun hello() = \"hello\"\n\n    fun bye() {}\n}\n"
     }

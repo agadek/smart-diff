@@ -36,6 +36,7 @@ class HiddenLines private constructor(private val old: BitSet, private val new: 
         fun of(result: ComparisonResult, hidden: Set<ChangeType>, oldText: CharSequence, newText: CharSequence): HiddenLines {
             if (hidden.isEmpty()) return NONE
             val sides = Sides(LineIndex(oldText), LineIndex(newText))
+            val grouped = OutlineModel.groupedUsageNodes(result)
             result.fileRegion?.let { region ->
                 if (region.isChangedItself) sides.add(region.details.map { it.old }, region.details.map { it.new }, OutlineModel.isHidden(region, hidden))
             }
@@ -44,7 +45,7 @@ class HiddenLines private constructor(private val old: BitSet, private val new: 
                     val children = node.children.filter { it.isReported }
                     val olds = subtract(listOf(node.oldRange) + node.details.map { it.old }, children.flatMap { extent(it).first })
                     val news = subtract(listOf(node.newRange) + node.details.map { it.new }, children.flatMap { extent(it).second })
-                    sides.add(olds, news, OutlineModel.isHidden(node, hidden))
+                    sides.add(olds, news, OutlineModel.isHidden(node, hidden, node in grouped))
                 }
                 node.children.forEach(::visit)
             }

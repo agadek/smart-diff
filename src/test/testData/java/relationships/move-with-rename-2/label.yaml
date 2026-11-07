@@ -8,6 +8,7 @@ expected:
     - kinds: [RENAME, MOVE]
       old: { path: "class Invoice", kind: METHOD, name: "computeTotal", signature: "()" }
       new: { path: "class Invoice", kind: METHOD, name: "total", signature: "()" }
+      usages: []
   changes:
     - subject: { path: "", kind: CLASS, name: "Invoice", signature: null }
       presence: MATCHED

@@ -120,9 +120,79 @@ class ContractSuiteSelfTest {
 
         RelationshipChecks.endpointsInResultTree(CASE, result)
         RelationshipChecks.rangesInsideText(CASE, result)
+        RelationshipChecks.referencesNameNewEndpoint(CASE, result)
         RelationshipChecks.extractionFieldsAgree(CASE, result)
         RelationshipChecks.fixedOrder(CASE, result)
         RelationshipChecks.nothingHiddenWithoutRelationships(CASE, result)
+    }
+
+    @Test
+    fun `the relationship model rejects reference evidence on a non-rename R12`() {
+        // relationships/04-rename-grouping R12
+        val reference = Evidence.Reference(Subject.Declaration(DeclarationKind.METHOD, "sum", "()"), TextRange(0, 1), TextRange(0, 1))
+        assertThrows(IllegalArgumentException::class.java) {
+            Relationship(
+                kinds = EnumSet.of(RelationshipKind.MOVE),
+                old = listOf(endpoint(Subject.Region("a"), TextRange(0, 3))),
+                new = listOf(endpoint(Subject.Region("b"), TextRange(0, 3))),
+                confidence = Confidence.HIGH,
+                evidence = listOf(reference),
+            )
+        }
+    }
+
+    @Test
+    fun `the relationship checks reject a reference whose symbol is not a new endpoint R12`() {
+        // relationships/04-rename-grouping R12
+        val node = ChangeNode(Subject.Region("all"), TextRange(0, 3), TextRange(0, 3), Presence.MATCHED, content = Content.CHANGED)
+        val symbol = Subject.Declaration(DeclarationKind.METHOD, "sum", "()")
+        val reference = Evidence.Reference(symbol, TextRange(0, 1), TextRange(0, 1))
+        val rename = Relationship(
+            kinds = EnumSet.of(RelationshipKind.RENAME),
+            old = listOf(endpoint(Subject.Region("a"), TextRange(0, 3))),
+            new = listOf(endpoint(Subject.Region("b"), TextRange(0, 3))),
+            confidence = Confidence.HIGH,
+            evidence = listOf(reference),
+        )
+        val bad = result(node).copy(relationships = listOf(rename))
+
+        assertThrows(AssertionError::class.java) { RelationshipChecks.referencesNameNewEndpoint(CASE, bad) }
+    }
+
+    @Test
+    fun `the relationship model rejects reference evidence out of order R12`() {
+        // relationships/04-rename-grouping R12
+        val symbol = Subject.Declaration(DeclarationKind.METHOD, "sum", "()")
+        val first = Evidence.Reference(symbol, TextRange(0, 1), TextRange(0, 1))
+        val second = Evidence.Reference(symbol, TextRange(2, 3), TextRange(2, 3))
+
+        assertThrows(IllegalArgumentException::class.java) {
+            Relationship(
+                kinds = EnumSet.of(RelationshipKind.RENAME),
+                old = listOf(endpoint(Subject.Region("a"), TextRange(0, 3))),
+                new = listOf(endpoint(symbol, TextRange(0, 3))),
+                confidence = Confidence.HIGH,
+                evidence = listOf(second, first),
+            )
+        }
+    }
+
+    @Test
+    fun `the relationship checks reject a reference range outside the text R12`() {
+        // relationships/04-rename-grouping R12
+        val symbol = Subject.Declaration(DeclarationKind.METHOD, "sum", "()")
+        val reference = Evidence.Reference(symbol, TextRange(0, 9), TextRange(0, 1))
+        val node = ChangeNode(Subject.Region("all"), TextRange(0, 3), TextRange(0, 3), Presence.MATCHED, content = Content.CHANGED)
+        val rename = Relationship(
+            kinds = EnumSet.of(RelationshipKind.RENAME),
+            old = listOf(endpoint(Subject.Region("a"), TextRange(0, 3))),
+            new = listOf(endpoint(symbol, TextRange(0, 3))),
+            confidence = Confidence.HIGH,
+            evidence = listOf(reference),
+        )
+        val bad = result(node).copy(relationships = listOf(rename))
+
+        assertThrows(AssertionError::class.java) { RelationshipChecks.rangesInsideText(CASE, bad) }
     }
 
     @Test

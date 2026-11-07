@@ -70,7 +70,7 @@ Proposed 2026-11-01 as the next item after 0.2.0. The benchmark harness, the ful
 | Benchmark and today's baseline | [relationships/01](specs/relationships/01-relationship-benchmark.md) | Done: the [2026-11-02 baseline](VALIDATION.md#2026-11-02-relationship-benchmark-baseline) is a run with no shortfall |
 | Relationship model, with today's fields computed from it | [relationships/02](specs/relationships/02-relationship-model.md) (implemented 2026-11-04) | The outline, Changes tree and merge outline are unchanged, the contract checks relationships, and the benchmark reads the list with the baseline's scores |
 | Better pairing over the whole file | [relationships/03](specs/relationships/03-relationship-matching.md) (implemented 2026-11-04) | The benchmark shows no new wrong pairs and no lower held-out precision; the benchmark output is unchanged, and two corpus files now pair reordered renames |
-| Rename grouped with its usages | [relationships/04](specs/relationships/04-rename-grouping.md) | The full 440-case usage gate passes with the 16 usage cases, no wrongly grouped usage, and unresolved or also-changed usages stay ordinary changes |
+| Rename grouped with its usages | [relationships/04](specs/relationships/04-rename-grouping.md) | Step 1 groups Java usages (2026-11-07); step 2 adds Kotlin K2 and Scala, and the full 440-case usage gate passes with no wrongly grouped usage, while unresolved or also-changed usages stay ordinary changes |
 | Inlining detection | [relationships/05](specs/relationships/05-inlining-detection.md) | The inlining cases pass, and every linked declaration stays visible |
 | Refactorings view | [relationships/06](specs/relationships/06-refactorings-view.md) | The view shows every change the container tree shows |
 | Validation and release | [relationships/07](specs/relationships/07-relationship-validation.md) | The results are in VALIDATION.md and the release checks pass |
@@ -144,7 +144,7 @@ Link an added method or function to the code it was extracted from. When most of
 
 ### Rename grouping across usages
 
-*(gap review)* Group a rename with every usage it changed, so the reviewer reads "renamed `foo` → `bar`, 12 usages" once instead of each changed call site. The 0.1.0 rename candidates pair the declaration only; edits that only follow a rename stay as ordinary changes. Planned in [relationships/04](specs/relationships/04-rename-grouping.md), as part of [STRUCTURAL-RELATIONSHIPS.md](STRUCTURAL-RELATIONSHIPS.md). Applies to declarations and local variables, and needs the same conservative confirmation as rename candidates. Like SemanticDiff, give each rename its own highlight color so its occurrences can be followed through the diff.
+*(gap review)* Group a rename with every usage it changed, so the reviewer reads "renamed `foo` → `bar`, 12 usages" once instead of each changed call site. The 0.1.0 rename candidates pair the declaration only; edits that only follow a rename stay as ordinary changes. Step 1 (Java) is implemented in [relationships/04](specs/relationships/04-rename-grouping.md), as part of [STRUCTURAL-RELATIONSHIPS.md](STRUCTURAL-RELATIONSHIPS.md); Kotlin K2 and Scala follow in step 2. Applies to declarations and local variables, and needs the same conservative confirmation as rename candidates. Like SemanticDiff, give each rename its own highlight color so its occurrences can be followed through the diff.
 
 ### Moves inside declarations
 

@@ -457,6 +457,17 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
         )
     }
 
+    fun `test relationships 04 R19 the merge outline shows no grouped usages`() {
+        // relationships/04-rename-grouping R19
+        val old = "class Order {\n    int total() { return 2; }\n    int twice() { return total() * 2; }\n}\n"
+        val new = "class Order {\n    int sum() { return 2; }\n    int twice() { return sum() * 2; }\n}\n"
+        val outline = open(base = old, left = old, right = new).awaitShown()
+
+        val labels = rows(outline).joinToString("\n")
+        assertFalse(labels, labels.contains("usage"))
+        assertFalse(labels, labels.contains("usages renamed"))
+    }
+
     private fun open(
         fileName: String = "OrderService.java",
         base: String = BASE,
