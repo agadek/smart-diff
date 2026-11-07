@@ -169,15 +169,19 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
         val path = TreePath(summary.path)
         reveal(tree, path)
         tree.collapsePath(path)
-        tree.doubleClickHandler = Processor { true }
+        val platformClicks = mutableListOf<Int>()
+        tree.doubleClickHandler = Processor { e -> platformClicks += e.clickCount; true }
         ChangesTreeSetup.configure(tree, suppressExpansion = true)
         assertFalse("the row starts collapsed", tree.isExpanded(path))
 
-        val press = tree.pressOnly(tree.centerOf(path), clickCount = 2)
+        val point = tree.centerOf(path)
+        tree.click(point, clickCount = 1)
+        val secondPress = tree.click(point, clickCount = 2)
 
-        assertTrue("the second press is consumed", press.isConsumed)
+        assertTrue("the second press is consumed", secondPress.isConsumed)
         assertSame("the suppressed press selects the summary row", summary, tree.selectionPath?.lastPathComponent)
         assertFalse("the suppressed press does not expand the row", tree.isExpanded(path))
+        assertEquals("the release reaches the platform handler once", listOf(1), platformClicks)
     }
 
     fun `test a double-click on a summarized row matches a plain row in Local Changes with diff on`() {
@@ -723,6 +727,22 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
                 // The platform's click listener asks the toolkit for the screen location after the press was handled.
             }
             return event
+        }
+
+        /** A press and its release, so the platform click listener sees a complete click. */
+        fun click(point: Point, clickCount: Int): MouseEvent {
+            val press = pressOnly(point, clickCount)
+            try {
+                processMouseEvent(
+                    MouseEvent(
+                        this, MouseEvent.MOUSE_RELEASED, System.currentTimeMillis(), 0,
+                        point.x, point.y, clickCount, false, MouseEvent.BUTTON1,
+                    ),
+                )
+            } catch (e: HeadlessException) {
+                // The tree UI may need the toolkit for a release too; the listener still receives the press.
+            }
+            return press
         }
 
         fun centerOf(path: TreePath): Point = point(path)
