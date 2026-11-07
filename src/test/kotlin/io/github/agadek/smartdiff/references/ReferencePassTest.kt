@@ -49,6 +49,33 @@ class ReferencePassTest : BasePlatformTestCase() {
         assertNoChangeNodeOrDetailsChanged(engineResult, outcome.result)
     }
 
+    fun `test R21 a PARTIAL result never adds evidence to an unanalyzed endpoint`() {
+        // relationships/04-rename-grouping R12, R21
+        val request = ComparisonRequest(ONE_OLD, ONE_NEW, "JAVA", "Order.java")
+        val result = compare(request)
+        val endpoint = result.relationships.single().new.single()
+        val unanalysed = result.copy(
+            status = Status.PARTIAL,
+            changes = result.changes.map { markUnanalysed(it, endpoint.range) },
+            unanalyzed = listOf(io.github.agadek.smartdiff.engine.api.RangePair(endpoint.range, endpoint.range)),
+        )
+
+        val outcome = ReferencePass.runForBenchmark(project, request, unanalysed, Cancellation.NONE)
+
+        assertEquals(ReferencePass.Status.NOT_GROUPED, outcome.status)
+        assertSame(unanalysed, outcome.result)
+        assertTrue(outcome.result.relationships.flatMap { it.evidence }.none { it is Evidence.Reference })
+    }
+
+    private fun markUnanalysed(node: ChangeNode, range: TextRange): ChangeNode {
+        val marked = if (node.newRange == range || node.oldRange == range) {
+            node.copy(content = io.github.agadek.smartdiff.engine.api.Content.UNANALYZED)
+        } else {
+            node
+        }
+        return marked.copy(children = marked.children.map { markUnanalysed(it, range) })
+    }
+
     fun `test R12 the pass adds no endpoint and writes no change detail`() {
         val (engineResult, outcome) = run(ONE_OLD, ONE_NEW)
         assertNoChangeNodeOrDetailsChanged(engineResult, outcome.result)
@@ -126,13 +153,14 @@ class ReferencePassTest : BasePlatformTestCase() {
         assertEquals("s.length() is not a usage of the renamed method", 1, references.size)
     }
 
-    fun `test R16 an external cancellation stops before the next resolve and propagates`() {
+    fun `test R16 an external cancellation after the first resolve propagates and stops the next`() {
         val request = ComparisonRequest(ONE_OLD, ONE_NEW, "JAVA", "Order.java")
         val result = compare(request)
-        val spy = CancelingResolver()
+        val spy = SpyResolver()
+        val external = Cancellation { if (spy.cancelAfterResolve) throw ProcessCanceledException() }
 
         assertThrows(ProcessCanceledException::class.java) {
-            ReferencePass.runWith(project, request, result, Cancellation.NONE, listOf(spy), ReferencePass.BUDGET_MILLIS)
+            ReferencePass.runWith(project, request, result, external, listOf(spy), ReferencePass.BUDGET_MILLIS)
         }
         assertEquals("the resolver saw one resolve and no second", 1, spy.resolves)
     }
@@ -201,14 +229,21 @@ class ReferencePassTest : BasePlatformTestCase() {
         return nodes
     }
 
-    private class CancelingResolver : ReferenceResolver {
+    /** Resolves one usage, then asks the external cancellation to cancel; the pass must not resolve a second. */
+    private class SpyResolver : ReferenceResolver {
         var resolves = 0
+
+        @Volatile
+        var cancelAfterResolve = false
 
         override fun supports(languageId: String) = languageId == "JAVA"
         override fun target(file: PsiFile, range: TextRange, subject: Subject.Declaration): PsiElement = file
         override fun usages(file: PsiFile, target: PsiElement, cancellation: Cancellation): List<TextRange> {
             resolves++
-            throw ProcessCanceledException()
+            cancellation.checkCanceled()
+            cancelAfterResolve = true
+            cancellation.checkCanceled()
+            return listOf(TextRange(0, 1))
         }
         override fun context(file: PsiFile, usage: TextRange): TextRange = TextRange(0, 10)
         override fun whitespacePolicy(file: PsiFile): WhitespacePolicy = WhitespacePolicy.INSIGNIFICANT

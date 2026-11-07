@@ -12,6 +12,7 @@ import com.intellij.psi.PsiNamedElement
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiStatement
 import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProcessCanceledException
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
@@ -50,10 +51,12 @@ internal object JavaReferenceResolver : ReferenceResolver {
                     reference.resolve()
                 } catch (e: ProcessCanceledException) {
                     // A canceled read action is a cancellation when the pass asked for one; otherwise this usage is
-                    // simply unresolved (relationships/04, Scala resolver note).
+                    // simply unresolved (relationships/04, resolver note).
                     cancellation.checkCanceled()
+                    LOG.debug("Java usage ${range} was not resolved: $e")
                     null
                 } catch (e: Exception) {
+                    LOG.debug("Java usage ${range} was not resolved: $e")
                     null
                 }
                 cancellation.checkCanceled()
@@ -98,6 +101,8 @@ internal object JavaReferenceResolver : ReferenceResolver {
         if (element is PsiReferenceExpression && element.referenceNameElement?.text == "new") return null
         return TextRange(range.startOffset, range.endOffset)
     }
+
+    private val LOG = Logger.getInstance(JavaReferenceResolver::class.java)
 
     /** A class target accepts its constructor reference; every other target must be the resolved declaration itself. */
     private fun resolvesTo(resolved: PsiElement, target: PsiElement): Boolean {

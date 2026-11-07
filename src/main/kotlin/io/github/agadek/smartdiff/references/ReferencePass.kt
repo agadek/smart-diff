@@ -16,6 +16,7 @@ import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.Confidence
+import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.Evidence
 import io.github.agadek.smartdiff.engine.api.EvidenceOrder
 import io.github.agadek.smartdiff.engine.api.Presence
@@ -161,6 +162,8 @@ object ReferencePass {
             val newEndpoint = relationship.new.single()
             val oldSubject = oldEndpoint.subject as? Subject.Declaration ?: continue
             val newSubject = newEndpoint.subject as? Subject.Declaration ?: continue
+            if (unanalysedEndpoint(nodes, oldEndpoint.range, oldSide = true)) continue
+            if (unanalysedEndpoint(nodes, newEndpoint.range, oldSide = false)) continue
             val oldTarget = resolver.target(oldFile, oldEndpoint.range, oldSubject) ?: continue
             val newTarget = resolver.target(newFile, newEndpoint.range, newSubject) ?: continue
             val oldUsages = resolver.usages(oldFile, oldTarget, cancellation)
@@ -226,6 +229,13 @@ object ReferencePass {
         return found.sortedWith(compareBy({ it.oldRange.start }, { it.newRange.start }))
     }
 
+    /** A parse-error or unanalyzed endpoint is never resolved, so it adds no reference evidence (R12, R21). */
+    private fun unanalysedEndpoint(nodes: List<ChangeNode>, range: TextRange, oldSide: Boolean): Boolean =
+        nodes.any { node ->
+            val nodeRange = if (oldSide) node.oldRange else node.newRange
+            nodeRange == range && node.content == Content.UNANALYZED
+        }
+
     private fun groupByNode(
         usages: List<TextRange>,
         nodes: List<ChangeNode>,
@@ -235,6 +245,7 @@ object ReferencePass {
         for (usage in usages) {
             val node = nodes
                 .filter { node ->
+                    if (node.content == Content.UNANALYZED) return@filter false
                     val range = if (oldSide) node.oldRange else node.newRange
                     range != null && usage.start >= range.start && usage.end <= range.end
                 }

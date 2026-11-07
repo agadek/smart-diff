@@ -41,6 +41,7 @@ The summarized preview is slower than the plain one because it opens the plugin'
 **Found and fixed while checking Enter.** Closing the preview tab disposes its `DiffRequestProcessor`, so the next preview reused a disposed viewer and failed with `IncorrectOperationException: parent ... SingleRequestProcessor ... has already been disposed` (2025.1). `PreviewSession` now creates a new processor and diff file after disposal. Enter on the summarized row after closing its preview opened the preview again in 193 ms on 2025.1.
 
 **Verifier.** `./gradlew verifyPlugin` is compatible on IC-251.26927.53 and IU-263.7307.200 with 4 experimental API usages (the existing Scala `PsiNamedElementWithCustomPresentation` reference and `ChangesViewNodeAction`) and **no deprecated API usage**; removing `FileEditorManager.openFile` removed the last deprecated usage.
+
 ## 2026-11-07: rename grouping step 1 benchmark
 
 Java-only step 1 of [relationships/04](specs/relationships/04-rename-grouping.md). `ReferencePass.VERSION` is 1, separate

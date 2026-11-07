@@ -334,6 +334,7 @@ object OutlineModel {
         /** A declaration whose only change is the grouped usages inside it (R10). */
         fun isRenameOnly(node: ChangeNode): Boolean {
             val references = byNode[node] ?: return false
+            if (node.content == Content.UNANALYZED) return false
             if (node.newRange in renameEndpoints) return false
             if (node.moved || node.signatureChanged || node.renamedFrom != null || node.kindChangedFrom != null) return false
             val oldRange = node.oldRange ?: return false

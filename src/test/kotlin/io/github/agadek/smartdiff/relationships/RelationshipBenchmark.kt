@@ -202,6 +202,8 @@ object RelationshipBenchmark {
         val actualUsages: List<ActualUsage> = emptyList(),
         /** The reference pass's status for the report; null when the file ran no pass. */
         val referenceStatus: String? = null,
+        /** The reference pass's own time, for the report; zero when no pass ran. */
+        val usageMillis: Long = 0,
     )
 
     data class CorpusEntry(val path: File?, val repository: File?, val arguments: List<String>, val line: String)
@@ -308,6 +310,8 @@ object RelationshipBenchmark {
         val confidencePolicy: ConfidencePolicy = ConfidencePolicy.DEFAULT,
         /** R19/R44: the reference pass version that produced the usage evidence. */
         val referencePassVersion: String = ReferencePass.VERSION,
+        /** Why this run cannot be the full usage baseline; null when every corpus has a resolver and four fixtures. */
+        val usageGate: String? = null,
     ) {
         val ready: Boolean get() = gateFailures.isEmpty()
     }
@@ -705,6 +709,28 @@ object RelationshipBenchmark {
     }
 
     /**
+     * R44: the step-1 run has a resolver and four fixtures only for Java, so it is a smoke run for the usage gate,
+     * not the 440-case baseline. Step 2 adds Kotlin K2 and Scala and removes this note.
+     */
+    fun usageGate(labels: List<Label>): String? {
+        val minimum = CATEGORY_MINIMUMS["usage-grouping"] ?: 4
+        val missing = CORPORA.filter { corpus ->
+            !ReferencePass.supports(languageIdForCorpus(corpus)) ||
+                labels.count { it.corpus == corpus && it.category == "usage-grouping" && it.reviewed } < minimum
+        }
+        if (missing.isEmpty()) return null
+        val complete = CORPORA - missing.toSet()
+        return "usage grouping step 1: resolvers and four fixtures only for ${complete.joinToString(", ").ifEmpty { "none" }}; " +
+            "missing ${missing.joinToString(", ")}; this is not the 440-case baseline"
+    }
+
+    private fun languageIdForCorpus(corpus: String): String = when (corpus) {
+        "kotlin" -> "kotlin"
+        "scala2", "scala3" -> "Scala"
+        else -> "JAVA"
+    }
+
+    /**
      * The minimums of R8, R9 and R10 (R30). Every matrix category and corpus is counted unless
      * [notApplicable] gives a reason, and every corpus's labelled commits are counted against [commitMinimum].
      */
@@ -861,6 +887,7 @@ object RelationshipBenchmark {
         val baselineFile = System.getProperty(BASELINE_PROPERTY)?.takeIf { it.isNotBlank() }?.let(::File)
         val failures = gateFailures(gateMode, overall, byLanguage, baselineFile, tolerance, cases, safety)
         val shortfalls = matrixFailures(cases.map { it.label }, labelledCommits = labelledCommits, minimum = minimum, commitMinimum = commitMinimum)
+        val usageGate = usageGate(cases.map { it.label })
         val report = Report(
             cases = cases,
             metricsByLanguage = byLanguage,
@@ -872,7 +899,7 @@ object RelationshipBenchmark {
             reportDirectory = output,
             metricsByCategory = byCategory,
             skippedCommitLines = skippedCommitLines,
-            smoke = shortfalls.isNotEmpty(),
+            smoke = shortfalls.isNotEmpty() || usageGate != null,
             matrixFailures = shortfalls,
             labelledCommits = labelledCommits,
             notApplicable = notApplicableReasons(),
@@ -883,6 +910,7 @@ object RelationshipBenchmark {
             unlabelledHidden = unlabelledHidden,
             unlabelledFallback = unlabelledFallback,
             confidencePolicy = confidence,
+            usageGate = usageGate,
         )
         write(report)
         return report
@@ -910,6 +938,7 @@ object RelationshipBenchmark {
             outcome.millis, hidden(old, new, outcome.result), outcome.exception,
             actualUsages = reportedUsages(outcome.result, oldTree),
             referenceStatus = outcome.referenceStatus,
+            usageMillis = outcome.usageMillis,
         )
     }
 
@@ -974,6 +1003,7 @@ object RelationshipBenchmark {
                         outcome.millis, hidden(old, new, outcome.result), outcome.exception, id,
                         actualUsages = reportedUsages(outcome.result, oldDeclarationTree),
                         referenceStatus = outcome.referenceStatus,
+                        usageMillis = outcome.usageMillis,
                     )
                 } else if (label?.reviewed != true) {
                     val reason = when {
@@ -1480,6 +1510,7 @@ object RelationshipBenchmark {
             if (report.smoke) {
                 appendLine("## Shortfalls")
                 report.matrixFailures.forEach { appendLine("- ${it.message}") }
+                report.usageGate?.let { appendLine("- $it") }
                 appendLine()
             }
             if (report.notApplicable.isNotEmpty()) {
@@ -1496,6 +1527,11 @@ object RelationshipBenchmark {
             appendLine(
                 "Usages: ${report.overall.reportedUsages} reported, ${report.overall.usageTp} matched, " +
                     "${report.overall.usageFp} wrong, ${report.overall.usageFn} missed, ${report.overall.usageUnlabelled} unlabelled",
+            )
+            appendLine(
+                "Reference statuses: ${report.cases.groupingBy { it.referenceStatus ?: "NONE" }.eachCount().entries.joinToString(", ") { "${it.key}=${it.value}" }}; " +
+                    "pass median ${median(report.cases.map { it.usageMillis })} ms, p95 ${percentile(report.cases.map { it.usageMillis }, 0.95)} ms, " +
+                    "slowest ${report.cases.maxOfOrNull { it.usageMillis } ?: 0} ms of ${ReferencePass.BUDGET_MILLIS} ms",
             )
             appendLine()
             for (corpus in CORPORA) {
@@ -1607,6 +1643,8 @@ object RelationshipBenchmark {
         val json = mapOf(
             "engine" to mapOf("id" to DeclarationEngine.ID.toString(), "version" to DeclarationEngine.VERSION),
             "referencePassVersion" to report.referencePassVersion,
+            "usageGate" to report.usageGate,
+            "usageGateComplete" to (report.usageGate == null),
             "ide" to ApplicationInfo.getInstance().build.asStringWithoutProductCode(),
             "scalaPlugin" to scalaVersion(),
             "smoke" to report.smoke,
@@ -1639,6 +1677,12 @@ object RelationshipBenchmark {
             },
             "newGatePairs" to report.newGatePairs,
             "draftsWritten" to report.draftsWritten,
+            "referenceStatuses" to report.cases.groupingBy { it.referenceStatus ?: "NONE" }.eachCount(),
+            "usageMillis" to mapOf(
+                "median" to median(report.cases.map { it.usageMillis }),
+                "p95" to percentile(report.cases.map { it.usageMillis }, 0.95),
+                "slowest" to (report.cases.maxOfOrNull { it.usageMillis } ?: 0),
+            ),
         )
         File(report.reportDirectory, "report.json").writeText(GsonBuilder().setPrettyPrinting().create().toJson(json))
         println("RELATIONSHIPS ${report.cases.size} cases, precision ${format(report.overall.precision)}, recall ${format(report.overall.recall)}${if (report.smoke) ", smoke run" else ""}; report in ${report.reportDirectory.absolutePath}")

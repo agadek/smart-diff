@@ -19,6 +19,7 @@ import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.ui.changes.ChangesTreeFilter
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -606,6 +607,106 @@ class OutlineModelTest {
     }
 
     @Test
+    fun `R10 an unanalyzed declaration is never labelled usages renamed`() {
+        // relationships/04-rename-grouping R10, R12
+        val fixture = usageFixture()
+        fun unanalyse(node: ChangeNode): ChangeNode {
+            val marked = if (node.subject == Subject.Declaration(DeclarationKind.METHOD, "twice", "")) node.copy(content = Content.UNANALYZED) else node
+            return marked.copy(children = marked.children.map(::unanalyse))
+        }
+        val result = fixture.result.copy(status = Status.PARTIAL, changes = fixture.result.changes.map(::unanalyse))
+
+        val rows = render(OutlineModel.build(result, fixture.old, fixture.new, formattingInline = false))
+
+        assertTrue(rows, rows.contains("method twice()  unanalyzed"))
+        assertFalse(rows, rows.contains("usages renamed"))
+    }
+
+    @Test
+    fun `R10 leading whitespace does not change the label`() {
+        // relationships/04-rename-grouping R10
+        val fixture = usageFixture(leadingWhitespace = true)
+
+        val rows = render(OutlineModel.build(fixture.result, fixture.old, fixture.new, formattingInline = false))
+
+        assertTrue(rows, rows.contains("method twice()  usages renamed"))
+    }
+
+    @Test
+    fun `R10 a string literal that keeps the old name does not make the label`() {
+        // relationships/04-rename-grouping R10
+        val unchanged = usageFixture(oldLiteral = "total", newLiteral = "total")
+        val changed = usageFixture(oldLiteral = "total", newLiteral = "sum")
+
+        val unchangedRows = render(OutlineModel.build(unchanged.result, unchanged.old, unchanged.new, formattingInline = false))
+        val changedRows = render(OutlineModel.build(changed.result, changed.old, changed.new, formattingInline = false))
+
+        assertTrue(unchangedRows, unchangedRows.contains("method twice()  usages renamed"))
+        assertTrue(changedRows, changedRows.contains("method twice()  changed"))
+        assertFalse(changedRows, changedRows.contains("usages renamed"))
+    }
+
+    @Test
+    fun `R10 usages from two renames in one declaration map both`() {
+        // relationships/04-rename-grouping R10
+        val old = "class Order {\n    int total() { return 1; }\n    int price() { return 2; }\n    int use() { return total() + price(); }\n}\n"
+        val new = "class Order {\n    int sum() { return 1; }\n    int cost() { return 2; }\n    int use() { return sum() + cost(); }\n}\n"
+        val oldTotal = old.indexOf("int total()")
+        val newTotal = new.indexOf("int sum()")
+        val oldPrice = old.indexOf("int price()")
+        val newPrice = new.indexOf("int cost()")
+        val oldUse = old.indexOf("int use()")
+        val newUse = new.indexOf("int use()")
+        val oldTotalSubject = Subject.Declaration(DeclarationKind.METHOD, "total", "")
+        val newTotalSubject = Subject.Declaration(DeclarationKind.METHOD, "sum", "")
+        val oldPriceSubject = Subject.Declaration(DeclarationKind.METHOD, "price", "")
+        val newPriceSubject = Subject.Declaration(DeclarationKind.METHOD, "cost", "")
+        val oldTotalUsage = TextRange(old.indexOf("total() + price()"), old.indexOf("total() + price()") + 5)
+        val newTotalUsage = TextRange(new.indexOf("sum() + cost()"), new.indexOf("sum() + cost()") + 3)
+        val oldPriceUsage = TextRange(old.lastIndexOf("price()"), old.lastIndexOf("price()") + 5)
+        val newPriceUsage = TextRange(new.lastIndexOf("cost()"), new.lastIndexOf("cost()") + 4)
+        val totalReference = Evidence.Reference(newTotalSubject, oldTotalUsage, newTotalUsage)
+        val priceReference = Evidence.Reference(newPriceSubject, oldPriceUsage, newPriceUsage)
+        val total = Relationship(
+            java.util.EnumSet.of(RelationshipKind.RENAME),
+            listOf(RelationshipEndpoint(oldTotalSubject, TextRange(oldTotal, old.indexOf("}", oldTotal) + 1))),
+            listOf(RelationshipEndpoint(newTotalSubject, TextRange(newTotal, new.indexOf("}", newTotal) + 1))),
+            Confidence.HIGH,
+            listOf(Evidence.Name("total", "sum"), totalReference, Evidence.Score(0.9)),
+        )
+        val price = Relationship(
+            java.util.EnumSet.of(RelationshipKind.RENAME),
+            listOf(RelationshipEndpoint(oldPriceSubject, TextRange(oldPrice, old.indexOf("}", oldPrice) + 1))),
+            listOf(RelationshipEndpoint(newPriceSubject, TextRange(newPrice, new.indexOf("}", newPrice) + 1))),
+            Confidence.HIGH,
+            listOf(Evidence.Name("price", "cost"), priceReference, Evidence.Score(0.9)),
+        )
+        val sumNode = ChangeNode(
+            newTotalSubject, TextRange(oldTotal, old.indexOf("}", oldTotal) + 1), TextRange(newTotal, new.indexOf("}", newTotal) + 1),
+            Presence.MATCHED, renamedFrom = oldTotalSubject,
+        )
+        val costNode = ChangeNode(
+            newPriceSubject, TextRange(oldPrice, old.indexOf("}", oldPrice) + 1), TextRange(newPrice, new.indexOf("}", newPrice) + 1),
+            Presence.MATCHED, renamedFrom = oldPriceSubject,
+        )
+        val use = ChangeNode(
+            Subject.Declaration(DeclarationKind.METHOD, "use", ""),
+            TextRange(oldUse, old.length), TextRange(newUse, new.length), Presence.MATCHED, content = Content.CHANGED,
+        )
+        val order = ChangeNode(
+            Subject.Declaration(DeclarationKind.CLASS, "Order", null),
+            TextRange(0, old.length), TextRange(0, new.length), Presence.MATCHED, children = listOf(sumNode, costNode, use),
+        )
+        val result = ComparisonResult(EngineId("e"), "1", Status.ANALYZED, changes = listOf(order), relationships = listOf(total, price))
+
+        val rows = render(OutlineModel.build(result, old, new, formattingInline = false))
+
+        assertTrue(rows, rows.contains("method use()  usages renamed"))
+        assertTrue(rows, rows.contains("method total → sum()  rename candidate, 1 usage"))
+        assertTrue(rows, rows.contains("method price → cost()  rename candidate, 1 usage"))
+    }
+
+    @Test
     fun `R11 the rename row frames every usage and ChangeNode details stay untouched`() {
         // relationships/04-rename-grouping R11
         val fixture = usageFixture()
@@ -646,18 +747,23 @@ class OutlineModelTest {
         newComment: String = "",
         extraNewChange: Boolean = false,
         recursiveUsage: Boolean = false,
+        leadingWhitespace: Boolean = false,
+        oldLiteral: String? = null,
+        newLiteral: String? = null,
     ): UsageFixture {
         val oldCommentLine = if (oldComment.isEmpty()) "" else "    // $oldComment\n"
         val newCommentLine = if (newComment.isEmpty()) "" else "    // $newComment\n"
-        val old = "class Order {\n    int total() { return 2; }\n$oldCommentLine    int twice() { return total() * 2; }\n}\n"
+        val oldLiteralCode = oldLiteral?.let { " + \"$it\".length()" }.orEmpty()
+        val newLiteralCode = newLiteral?.let { " + \"$it\".length()" }.orEmpty()
+        val old = "class Order {\n    int total() { return 2; }\n$oldCommentLine    int twice() { return total() * 2$oldLiteralCode; }\n}\n"
         val newChange = if (extraNewChange) " + 1" else ""
-        val new = "class Order {\n    int sum() { return 2; }\n$newCommentLine    int twice() { return sum() * 2$newChange; }\n}\n"
+        val new = "class Order {\n    int sum() { return 2; }\n$newCommentLine    int twice() { return sum() * 2$newChange$newLiteralCode; }\n}\n"
         val oldSumStart = old.indexOf("int total()")
         val oldSumEnd = old.indexOf("}", oldSumStart) + 1
         val newSumStart = new.indexOf("int sum()")
         val newSumEnd = new.indexOf("}", newSumStart) + 1
-        val oldTwiceStart = old.indexOf("int twice()")
-        val newTwiceStart = new.indexOf("int twice()")
+        val oldTwiceStart = if (leadingWhitespace) old.indexOf("\n    int twice()") + 1 else old.indexOf("int twice()")
+        val newTwiceStart = if (leadingWhitespace) new.indexOf("\n    int twice()") + 1 else new.indexOf("int twice()")
         val oldUsage = TextRange(old.indexOf("total() * 2"), old.indexOf("total() * 2") + "total".length)
         val newUsage = TextRange(new.indexOf("sum() * 2"), new.indexOf("sum() * 2") + "sum".length)
         val oldSubject = Subject.Declaration(DeclarationKind.METHOD, "total", "")

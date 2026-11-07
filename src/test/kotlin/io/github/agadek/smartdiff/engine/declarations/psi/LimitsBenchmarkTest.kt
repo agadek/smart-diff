@@ -5,6 +5,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.Limits
+import io.github.agadek.smartdiff.references.ReferencePass
 import java.io.File
 import java.util.concurrent.Callable
 import java.util.concurrent.TimeUnit
@@ -29,7 +30,7 @@ class LimitsBenchmarkTest : BasePlatformTestCase() {
         }
         val engine = DeclarationEngine(null)
         val limits = Limits(maxChars = Int.MAX_VALUE, maxDeclarations = Int.MAX_VALUE, timeoutMillis = Long.MAX_VALUE)
-        benchmark("file | chars | lines | variant | status | declarations reported | median ms of 5 (after 2 warm-up runs)")
+        benchmark("file | chars | lines | variant | status | declarations reported | median ms of 5 (after 2 warm-up runs) | reference pass")
         for (path in File(list).readLines().map { it.trim() }.filter { it.isNotEmpty() }) {
             val text = File(path).readText().replace("\r\n", "\n")
             val languageId = if (path.endsWith(".kt") || path.endsWith(".kts")) "kotlin" else "JAVA"
@@ -43,14 +44,22 @@ class LimitsBenchmarkTest : BasePlatformTestCase() {
                 val request = ComparisonRequest(text, newText, languageId, File(path).name, limits)
                 val timings = mutableListOf<Long>()
                 var summary = ""
+                var result: io.github.agadek.smartdiff.engine.api.ComparisonResult? = null
                 repeat(7) { run ->
                     val start = System.nanoTime()
-                    val result = onPooledThread { engine.compare(request, Cancellation.NONE) }
+                    result = onPooledThread { engine.compare(request, Cancellation.NONE) }
                     val millis = (System.nanoTime() - start) / 1_000_000
                     if (run >= 2) timings += millis
-                    summary = "${result.status} | ${countReported(result.changes)}"
+                    summary = "${result!!.status} | ${countReported(result!!.changes)}"
                 }
-                benchmark("${File(path).name} | ${text.length} | ${lines.size} | $variant | $summary | ${timings.sorted()[timings.size / 2]}")
+                val passStart = System.nanoTime()
+                val pass = ReferencePass.runForBenchmark(project, request, result!!, Cancellation.NONE)
+                val passMillis = (System.nanoTime() - passStart) / 1_000_000
+                assertFalse("the reference pass timed out on ${File(path).name} $variant", pass.status == ReferencePass.Status.TIMED_OUT)
+                benchmark(
+                    "${File(path).name} | ${text.length} | ${lines.size} | $variant | $summary | " +
+                        "${timings.sorted()[timings.size / 2]} | ${pass.status} ${passMillis} ms",
+                )
             }
         }
     }

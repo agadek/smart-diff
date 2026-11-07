@@ -95,6 +95,12 @@ class OutlineController internal constructor(
 
     private var running: Job? = null
 
+    /**
+     * Test seam: the reference pass this controller runs; null uses [ReferencePass.run]. The outcome is still checked
+     * for staleness, so a test can hold the pass or make it time out without changing production behavior.
+     */
+    internal var passRunner: ((ComparisonRequest, ComparisonResult, Cancellation) -> ReferencePass.Outcome)? = null
+
     /** The comparison behind the shown result, kept to rebuild the rows when the filter changes; null when none is shown. */
     private var shownRequest: ComparisonRequest? = null
     private var disposed = false
@@ -235,7 +241,7 @@ class OutlineController internal constructor(
         }
         if (selection().selected?.id != job.engine.id) return refresh()
         // The engine result is on screen before the pass starts, so a resolve never delays it (R2).
-        if (ReferencePass.isApplicable(project, file, result)) {
+        if (ReferencePass.supports(languageId) && ReferencePass.isApplicable(project, file, result)) {
             showResult(request, result, note = RESOLVING)
             startPass(job, request, result)
         } else {
@@ -249,7 +255,8 @@ class OutlineController internal constructor(
         val cancellable = job.passCancellation()
         ApplicationManager.getApplication().executeOnPooledThread {
             val outcome = try {
-                ReferencePass.run(project, file, request, result, cancellable)
+                passRunner?.invoke(request, result, cancellable)
+                    ?: ReferencePass.run(project, file, request, result, cancellable)
             } catch (e: ProcessCanceledException) {
                 return@executeOnPooledThread
             } catch (e: CancellationException) {

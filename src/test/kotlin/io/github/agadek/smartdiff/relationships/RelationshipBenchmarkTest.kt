@@ -228,7 +228,7 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         try {
             RelationshipBenchmark.run(File("src/test/testData/relationships-corpus.txt"), first)
             RelationshipBenchmark.run(File("src/test/testData/relationships-corpus.txt"), second)
-            val time = Regex("\"(medianMillis|p95Millis|slowestMillis)\"\\s*:\\s*\\d+")
+            val time = Regex("\"(medianMillis|p95Millis|slowestMillis|median|p95|slowest)\"\\s*:\\s*\\d+")
             val a = File(first, "report.json").readText().replace(time, "")
             val b = File(second, "report.json").readText().replace(time, "")
             assertEquals(a, b)
