@@ -119,6 +119,41 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
         assertEquals("the Commit tree reached its platform handler", listOf(1), commitPlatform.clickCounts)
     }
 
+    fun `test an empty tree's false schedule keeps suppression on a tree with rows`() {
+        // changes-tree/02-changes-tree-declarations R17: one rebuilt tree must not clear another tree's handlers
+        settings.showChangesSummary = true
+        settings.showChangesDeclarations = true
+        val rowsTree = summarizedTree(modified("Cart.java"))
+        val rowsPath = TreePath(summaryRow(rowsTree).path)
+        reveal(rowsTree, rowsPath)
+        rowsTree.collapsePath(rowsPath)
+        val rowsClicks = mutableListOf<Int>()
+        rowsTree.doubleClickHandler = Processor { e -> rowsClicks += e.clickCount; true }
+        rowsTree.enterKeyHandler = Processor { true }
+
+        val emptyTree = TestChangesListView(project)
+        emptyTree.updateTreeModel(
+            TreeModelBuilder(project, NoneChangesGroupingFactory).setChanges(emptyList(), null).build(),
+            ChangesTree.DO_NOTHING,
+        )
+        emptyTree.setSize(800, 600)
+        emptyTree.doLayout()
+
+        withToolWindow(rowsTree, ToolWindowId.VCS) {
+            withToolWindow(emptyTree, ToolWindowId.COMMIT) {
+                ChangesTreeSetup.schedule(project, suppressExpansion = false)
+                PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+
+                val press = rowsTree.pressOnly(rowsTree.centerOf(rowsPath), clickCount = 2)
+                assertTrue("the rows tree keeps its second-press handler", press.isConsumed)
+                assertFalse("the rows row stays collapsed", rowsTree.isExpanded(rowsPath))
+
+                rowsTree.doubleClick(rowsPath)
+                assertEquals("the rows tree reaches the platform handler with one click", listOf(1), rowsClicks)
+            }
+        }
+    }
+
     fun `test the first rebuild with declaration rows installs the setup before the new model is shown`() {
         // changes-tree/02-changes-tree-declarations R17: the row state comes from the builder, not the previous model
         settings.showChangesSummary = true

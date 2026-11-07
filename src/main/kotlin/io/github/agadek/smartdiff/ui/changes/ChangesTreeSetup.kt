@@ -53,13 +53,17 @@ internal object ChangesTreeSetup {
         }, ModalityState.nonModal(), project.disposed)
     }
 
-    /** Finds every Local Changes and Commit tree and applies the setup to each of them. */
+    /**
+     * Finds every Local Changes and Commit tree and applies the setup to each of them. [suppressExpansion] comes from
+     * one rebuilt tree, so it is combined with each tree's own declaration rows: an empty tree must not clear the
+     * handlers of another tree that still shows rows.
+     */
     fun installIn(project: Project, suppressExpansion: Boolean) {
         val manager = ToolWindowManager.getInstance(project)
         for (id in listOf(ToolWindowId.VCS, ToolWindowId.COMMIT)) {
             val toolWindow = manager.getToolWindow(id) ?: continue
             for (content in toolWindow.contentManager.contents) {
-                findChangesTrees(content.component).forEach { configure(it, suppressExpansion) }
+                findChangesTrees(content.component).forEach { configure(it, suppressExpansion || hasDeclarationRows(it)) }
             }
         }
     }
@@ -254,6 +258,10 @@ internal object ChangesTreeSetup {
             if (handler.process(e)) e.consume()
         }
     }
+
+    /** Whether [tree] has declaration rows, so its summary file rows are non-leaf and need the setup. */
+    private fun hasDeclarationRows(tree: ChangesListView): Boolean =
+        tree.root.depthFirstEnumeration().asSequence().any { it is DeclarationNode }
 
     /** Every Changes tree under [component], so a content with more than one is not left half configured. */
     private fun findChangesTrees(component: Component?, trees: MutableList<ChangesListView> = mutableListOf()): List<ChangesListView> {

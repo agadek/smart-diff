@@ -56,7 +56,7 @@ The physical click was not delivered: `java.awt.Robot` reported `moved=false` on
 
 ### Verification
 
-- `./gradlew test --tests '*ChangesTreeInteractionTest*'` — passed, including the R17/R18 comparison tests for both tool windows and settings, the first-rebuild order test, and the second-press consumption test.
+- `./gradlew test --tests '*ChangesTreeInteractionTest*'` — passed, including the R17/R18 comparison tests for both tool windows and settings, the first-rebuild order test, the two-tree false-schedule test, and the second-press consumption test.
 - `./gradlew clean buildPlugin check` — passed.
 - `./gradlew verifyPlugin` — compatible on both `IC-251.26927.53` and `IU-263.7307.200`, with the same 4 experimental API usages as before (the existing Scala `PsiNamedElementWithCustomPresentation` reference and `ChangesViewNodeAction`) and no deprecated API usage.
 
