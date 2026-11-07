@@ -49,8 +49,8 @@ class ReferencePassTest : BasePlatformTestCase() {
         assertNoChangeNodeOrDetailsChanged(engineResult, outcome.result)
     }
 
-    fun `test R21 a PARTIAL result never adds evidence to an unanalyzed endpoint`() {
-        // relationships/04-rename-grouping R12, R21
+    fun `test R12 R21 a PARTIAL result never adds evidence to an unanalyzed endpoint`() {
+        // relationships/04-rename-grouping R12; relationships/02-relationship-model R21
         val request = ComparisonRequest(ONE_OLD, ONE_NEW, "JAVA", "Order.java")
         val result = compare(request)
         val endpoint = result.relationships.single().new.single()
@@ -65,6 +65,28 @@ class ReferencePassTest : BasePlatformTestCase() {
         assertEquals(ReferencePass.Status.NOT_GROUPED, outcome.status)
         assertSame(unanalysed, outcome.result)
         assertTrue(outcome.result.relationships.flatMap { it.evidence }.none { it is Evidence.Reference })
+    }
+
+    fun `test R12 a usage inside an unanalyzed method never attaches to its analyzed class`() {
+        // relationships/04-rename-grouping R12; relationships/02-relationship-model R21
+        val request = ComparisonRequest(ONE_OLD, ONE_NEW, "JAVA", "Order.java")
+        val result = compare(request)
+        val unanalysed = result.copy(
+            status = Status.PARTIAL,
+            changes = result.changes.map { markNamed(it, "twice", io.github.agadek.smartdiff.engine.api.Content.UNANALYZED) },
+            unanalyzed = listOf(io.github.agadek.smartdiff.engine.api.RangePair(TextRange(43, 48), TextRange(41, 46))),
+        )
+
+        val outcome = ReferencePass.runForBenchmark(project, request, unanalysed, Cancellation.NONE)
+
+        assertEquals(ReferencePass.Status.NOT_GROUPED, outcome.status)
+        assertTrue(outcome.result.relationships.flatMap { it.evidence }.none { it is Evidence.Reference })
+    }
+
+    private fun markNamed(node: ChangeNode, name: String, content: io.github.agadek.smartdiff.engine.api.Content): ChangeNode {
+        val subject = node.subject as? Subject.Declaration
+        val marked = if (subject?.name == name) node.copy(content = content) else node
+        return marked.copy(children = marked.children.map { markNamed(it, name, content) })
     }
 
     private fun markUnanalysed(node: ChangeNode, range: TextRange): ChangeNode {

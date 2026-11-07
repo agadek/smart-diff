@@ -229,7 +229,7 @@ object ReferencePass {
         return found.sortedWith(compareBy({ it.oldRange.start }, { it.newRange.start }))
     }
 
-    /** A parse-error or unanalyzed endpoint is never resolved, so it adds no reference evidence (R12, R21). */
+    /** A parse-error or unanalyzed endpoint is never resolved, so it adds no reference evidence (R12). */
     private fun unanalysedEndpoint(nodes: List<ChangeNode>, range: TextRange, oldSide: Boolean): Boolean =
         nodes.any { node ->
             val nodeRange = if (oldSide) node.oldRange else node.newRange
@@ -245,7 +245,6 @@ object ReferencePass {
         for (usage in usages) {
             val node = nodes
                 .filter { node ->
-                    if (node.content == Content.UNANALYZED) return@filter false
                     val range = if (oldSide) node.oldRange else node.newRange
                     range != null && usage.start >= range.start && usage.end <= range.end
                 }
@@ -253,6 +252,9 @@ object ReferencePass {
                     val range = if (oldSide) node.oldRange!! else node.newRange!!
                     range.length
                 } ?: continue
+            // Find the innermost containing node first, then skip it when it is unanalyzed: an analyzed class must not
+            // collect a usage that lies inside an unanalyzed method.
+            if (node.content == Content.UNANALYZED) continue
             grouped.getOrPut(node, ::mutableListOf) += usage
         }
         return grouped.mapValues { (_, ranges) -> ranges.sortedBy { it.start } }
