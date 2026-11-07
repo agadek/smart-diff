@@ -863,6 +863,19 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertEquals("1 rename candidate · 1 usages renamed", outline.panel.summary.text)
     }
 
+    fun `test relationships 04 R2 replacing the model keeps the selection`() {
+        // relationships/04-rename-grouping R2
+        val local = myFixture.addFileToProject("local/Order.java", USAGE_NEW).virtualFile
+        val shown = open(SimpleDiffRequest("usage", DiffContents.vcsRevision(project, USAGE_OLD, "/repo/Order.java"), DiffContents.localFile(project, local), "HEAD", "Current"))
+        val outline = shown.outline
+        awaitResult(outline) { state -> labels(state.items).any { it.contains("usages renamed") } }
+
+        val selected = selectItem(outline) { it.label.contains("method twice()  usages renamed") }
+        outline.setHidden(ChangeType.MOVED, true)
+
+        assertEquals(selected.label, outline.panel.selectedItem()?.label)
+    }
+
     fun `test relationships 04 R11 selecting the rename frames every grouped usage`() {
         // relationships/04-rename-grouping R11
         val local = myFixture.addFileToProject("local/Order.java", USAGE_NEW).virtualFile
