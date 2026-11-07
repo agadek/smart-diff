@@ -4,9 +4,11 @@ import com.intellij.diff.DiffDialogHints
 import com.intellij.diff.DiffManager
 import com.intellij.diff.DiffRequestPanel
 import com.intellij.diff.editor.DiffEditorTabFilesManager
+import com.intellij.diff.editor.DiffViewerVirtualFile
 import com.intellij.diff.chains.DiffRequestChain
 import com.intellij.diff.chains.DiffRequestProducer
 import com.intellij.diff.impl.DiffEditorViewer
+import com.intellij.diff.impl.DiffRequestProcessor
 import com.intellij.diff.merge.MergeRequest
 import com.intellij.diff.requests.DiffRequest
 import com.intellij.openapi.Disposable
@@ -285,8 +287,61 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
         assertSummaryMatchesPlain("commit-source", TestContext.COMMIT, showDiff = false, showPreview = false)
     }
 
-    fun `test opening the Commit preview reads the revisions off the EDT`() {
-        // changes-tree/02-changes-tree-declarations R19: the preview reads the file like the platform's
+    fun `test opening the Commit preview reads the revisions off the EDT and switches changes`() {
+        // changes-tree/02-changes-tree-declarations R19: the preview reads each file like the platform's
+        VcsApplicationSettings.getInstance().let {
+            it.SHOW_DIFF_ON_DOUBLE_CLICK = false
+            it.SHOW_EDITOR_PREVIEW_ON_DOUBLE_CLICK = true
+        }
+        val cartPath = VcsUtil.getFilePath("/repo/Cart.java", false)
+        val orderPath = VcsUtil.getFilePath("/repo/Order.java", false)
+        val cartBefore = CheckedRevision(OLD_CART, cartPath)
+        val cartAfter = CheckedRevision(NEW_CART, cartPath)
+        val orderBefore = CheckedRevision(OLD_ORDER, orderPath)
+        val orderAfter = CheckedRevision(NEW_ORDER, orderPath)
+        val tree = summarizedTree(Change(cartBefore, cartAfter), Change(orderBefore, orderAfter))
+        // The summary already read both revisions; only the preview's reads are checked.
+        listOf(cartBefore, cartAfter, orderBefore, orderAfter).forEach { it.read = false }
+        val cartRow = TreePath(summaryRow(tree, "Cart.java").path)
+        val orderRow = TreePath(summaryRow(tree, "Order.java").path)
+        reveal(tree, cartRow)
+        reveal(tree, orderRow)
+
+        withToolWindow(tree, ToolWindowId.COMMIT) {
+            ChangesTreeSetup.configure(tree, suppressExpansion = true)
+            val previewManager = RecordingDiffEditorTabFilesManager()
+            val previewDisposable = Disposer.newDisposable(testRootDisposable)
+            project.replaceService(DiffEditorTabFilesManager::class.java, previewManager, previewDisposable)
+            try {
+                // The click runs on the EDT; a revision read there fails in CheckedRevision.
+                ApplicationManager.getApplication().invokeAndWait { tree.doubleClick(cartRow) }
+                val preview = previewManager.shown ?: error("the preview opens")
+                waitForReads("the background load reads the first change", cartBefore, cartAfter)
+                val viewer = (preview as DiffViewerVirtualFile).createViewer(project) as DiffRequestProcessor
+                PlatformTestUtil.waitWithEventsDispatching(
+                    "the preview shows the first change",
+                    { viewer.activeRequest?.title == cartPath.path },
+                    10,
+                )
+                assertFalse("the second change is not read yet", orderBefore.read || orderAfter.read)
+
+                // Switching the preview to a second change loads and shows it, without a revision read on the EDT.
+                ApplicationManager.getApplication().invokeAndWait { tree.doubleClick(orderRow) }
+                waitForReads("switching the preview reads the second change", orderBefore, orderAfter)
+                PlatformTestUtil.waitWithEventsDispatching(
+                    "the preview switches to the second change",
+                    { viewer.activeRequest?.title == orderPath.path },
+                    10,
+                )
+            } finally {
+                ChangesTreeSetup.disposePreview(tree)
+                Disposer.dispose(previewDisposable)
+            }
+        }
+    }
+
+    fun `test reopening the Commit preview after its tab closed loads it again`() {
+        // changes-tree/02-changes-tree-declarations R19: closing the preview tab disposes its viewer
         VcsApplicationSettings.getInstance().let {
             it.SHOW_DIFF_ON_DOUBLE_CLICK = false
             it.SHOW_EDITOR_PREVIEW_ON_DOUBLE_CLICK = true
@@ -294,9 +349,7 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
         val path = VcsUtil.getFilePath("/repo/Cart.java", false)
         val before = CheckedRevision(OLD_CART, path)
         val after = CheckedRevision(NEW_CART, path)
-        val change = Change(before, after)
-        val tree = summarizedTree(change)
-        // The summary already read both revisions; only the preview's reads are checked.
+        val tree = summarizedTree(Change(before, after))
         before.read = false
         after.read = false
         val summaryPath = TreePath(summaryRow(tree).path)
@@ -308,12 +361,20 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
             val previewDisposable = Disposer.newDisposable(testRootDisposable)
             project.replaceService(DiffEditorTabFilesManager::class.java, previewManager, previewDisposable)
             try {
-                // The click runs on the EDT; a revision read there fails in CheckedRevision.
                 ApplicationManager.getApplication().invokeAndWait { tree.doubleClick(summaryPath) }
-                assertNotNull("the preview opens", previewManager.shown)
+                val first = previewManager.shown ?: error("the preview opens")
+                waitForReads("the preview reads both revisions", before, after)
+
+                // Closing the editor tab disposes the diff viewer; the next preview must build a new one.
+                Disposer.dispose((first as DiffViewerVirtualFile).createViewer(project) as Disposable)
+                before.read = false
+                after.read = false
+                ApplicationManager.getApplication().invokeAndWait { tree.doubleClick(summaryPath) }
+                waitForReads("the reopened preview reads both revisions", before, after)
+                val reopened = (previewManager.shown as DiffViewerVirtualFile).createViewer(project) as DiffRequestProcessor
                 PlatformTestUtil.waitWithEventsDispatching(
-                    "the background load reads both revisions",
-                    { before.read && after.read },
+                    "the reopened preview shows the file",
+                    { reopened.activeRequest?.title == path.path },
                     10,
                 )
             } finally {
@@ -321,6 +382,10 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
                 Disposer.dispose(previewDisposable)
             }
         }
+    }
+
+    private fun waitForReads(message: String, vararg revisions: CheckedRevision) {
+        PlatformTestUtil.waitWithEventsDispatching(message, { revisions.all { it.read } }, 10)
     }
 
     fun `test moving the tree between tool windows uses the new setting`() {
@@ -592,8 +657,10 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
         return tree
     }
 
-    private fun summaryRow(tree: ChangesListView): SummaryChangeNode =
-        VcsTreeModelData.all(tree).iterateNodes().filterIsInstance<SummaryChangeNode>().single()
+    private fun summaryRow(tree: ChangesListView, fileName: String? = null): SummaryChangeNode =
+        VcsTreeModelData.all(tree).iterateNodes().filterIsInstance<SummaryChangeNode>().single { node ->
+            fileName == null || (node.userObject as? Change)?.let { (it.afterRevision ?: it.beforeRevision)?.file?.name } == fileName
+        }
 
     private fun declarationRows(tree: ChangesListView): List<DeclarationNode> =
         summaryRow(tree).preorderEnumeration().toList().filterIsInstance<DeclarationNode>()
@@ -805,6 +872,28 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
 
                 boolean isEmpty() {
                     return total() == 0;
+                }
+            }
+        """.trimIndent()
+
+        val OLD_ORDER = """
+            // order
+            class Order {
+                int count() {
+                    return 1;
+                }
+            }
+        """.trimIndent()
+
+        val NEW_ORDER = """
+            // order
+            class Order {
+                int count() {
+                    return 2;
+                }
+
+                int size() {
+                    return 0;
                 }
             }
         """.trimIndent()
