@@ -1,6 +1,6 @@
 # Changes tree caret follow
 
-Status: proposed, 2026-11-05
+Status: implemented, 2026-11-07
 
 **Description:** When the caret moves in a file shown in the [Changes tree](../../GLOSSARY.md#changes-tree), the tree
 expands the file and selects the innermost changed [declaration](../../GLOSSARY.md#declaration) under the caret, or the
@@ -30,6 +30,8 @@ the tree. This is the reverse of opening a declaration from the tree.
   file row selected.
 - **R9** Following reads no revision content on the UI thread and uses no internal, experimental or deprecated platform
   API.
+- **R10** When the tree's filter or its Declarations toggle hides the declaration under the caret, the tree selects the
+  nearest shown row above it, or the file row when no declaration row is shown.
 
 ## Out of scope
 

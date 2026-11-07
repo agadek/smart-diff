@@ -32,6 +32,9 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         /** Whether the Local Changes and Commit tree shows each file's declaration rows. */
         var showChangesDeclarations: Boolean = true
 
+        /** Whether the Local Changes and Commit tree follows the caret in an editor (changes-tree/05 R4). */
+        var followChangesTreeCaret: Boolean = true
+
         /** Show formatting-only changes inline instead of in a collapsed group per container. */
         var formattingOnlyInline: Boolean = false
 
@@ -57,6 +60,14 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
     /** Moves when a setting that changes what a summary contains changes; display toggles and filters do not move it. */
     @Volatile
     var analysisRevision: Long = 0
+        private set
+
+    /**
+     * Moves when any setting except [followChangesTreeCaret] changes, so the settings listener can rebuild the tree only
+     * when something other than following changed (settings/01 R14).
+     */
+    @Volatile
+    var treeRevision: Long = 0
         private set
 
     /** The last malformed registry value that was logged, so one bad value logs one warning (R30). */
@@ -86,6 +97,11 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
     var showChangesDeclarations: Boolean
         get() = current.showChangesDeclarations
         set(value) = update { showChangesDeclarations = value }
+
+    /** Whether the Changes tree selects the declaration under the editor caret (changes-tree/05 R4). Display-only. */
+    var followChangesTreeCaret: Boolean
+        get() = current.followChangesTreeCaret
+        set(value) = update { followChangesTreeCaret = value }
 
     var formattingOnlyInline: Boolean
         get() = current.formattingOnlyInline
@@ -152,6 +168,7 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
             it.outlineMinimised = old.outlineMinimised
             it.showChangesSummary = old.showChangesSummary
             it.showChangesDeclarations = old.showChangesDeclarations
+            it.followChangesTreeCaret = old.followChangesTreeCaret
             it.formattingOnlyInline = old.formattingOnlyInline
             it.mergeGroupedBySide = old.mergeGroupedBySide
             it.mergeHideBothSides = old.mergeHideBothSides
@@ -164,11 +181,23 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         }
         current = next
         if (old.analysisSignature() != next.analysisSignature()) analysisRevision++
+        if (old.treeSignature() != next.treeSignature()) treeRevision++
     }
 
     /** The settings that change what a summary contains; display toggles, filters and merge options do not. */
     private fun SettingsState.analysisSignature(): List<Any> =
         listOf(maxChars, maxDeclarations, timeoutMillis, formattingOnlyInline)
+
+    /**
+     * Every setting except [followChangesTreeCaret]. Following only starts or stops selection, so changing it keeps the
+     * tree and its summaries as they are (settings/01 R14).
+     */
+    private fun SettingsState.treeSignature(): List<Any> =
+        listOf(
+            showOutline, outlineMinimised, showChangesSummary, showChangesDeclarations, formattingOnlyInline,
+            mergeGroupedBySide, mergeHideBothSides, hiddenChangeTypes, hiddenChangesTreeChangeTypes,
+            maxChars, maxDeclarations, timeoutMillis,
+        )
 
     /** Told after the settings page is applied, so views that show results outside a diff can update. */
     fun interface Listener {

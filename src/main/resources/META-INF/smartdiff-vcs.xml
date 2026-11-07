@@ -3,6 +3,7 @@
     <extensions defaultExtensionNs="com.intellij">
         <vcs.changes.changesViewModifier implementation="io.github.agadek.smartdiff.ui.changes.ChangesSummaryModifier"/>
         <vcs.changes.changesViewNodeAction implementation="io.github.agadek.smartdiff.ui.changes.DeclarationNodeAction"/>
+        <postStartupActivity implementation="io.github.agadek.smartdiff.ui.changes.ChangesTreeCaretFollowActivity"/>
     </extensions>
     <applicationListeners>
         <listener class="io.github.agadek.smartdiff.ui.changes.ChangesSummarySettingsListener"

@@ -40,6 +40,11 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                     .bindSelected(settings::showChangesDeclarations)
                     .comment("Each summarized file can be expanded to show its changed declarations.")
             }
+            row {
+                checkBox("Follow the caret in the Changes tree")
+                    .bindSelected(settings::followChangesTreeCaret)
+                    .comment("Select the changed declaration under the caret in the editor or a diff; moving the caret never opens a diff or changes the commit.")
+            }
             buttonsGroup("Formatting-only changes:") {
                 row { radioButton("Collapsed in a group", false) }
                 row { radioButton("Inline", true) }

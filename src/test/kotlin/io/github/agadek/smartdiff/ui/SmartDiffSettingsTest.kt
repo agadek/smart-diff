@@ -36,6 +36,7 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
         assertFalse("the outline opens full by default", settings.outlineMinimised)
         assertTrue("the Changes tree shows summaries by default", settings.showChangesSummary)
         assertTrue("the Changes tree shows declarations by default", settings.showChangesDeclarations)
+        assertTrue("the Changes tree follows the caret by default", settings.followChangesTreeCaret)
         assertFalse("formatting-only changes are grouped by default", settings.formattingOnlyInline)
         assertEquals(Limits.DEFAULT, settings.limits)
         assertEquals("nothing is hidden by default", emptySet<ChangeType>(), settings.hiddenChangeTypes)
@@ -80,6 +81,19 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
         settings.loadState(SmartDiffSettings.SettingsState().apply { hiddenChangesTreeChangeTypes = "RENAMED, REMOVED" })
         assertEquals("unknown names are ignored", setOf(ChangeType.REMOVED), settings.hiddenChangesTreeChangeTypes)
         assertEquals("the outline filter is still empty", emptySet<ChangeType>(), settings.hiddenChangeTypes)
+    }
+
+    fun `test changing the follow setting is display-only`() {
+        // settings/01-settings-page R14
+        settings.loadState(SmartDiffSettings.SettingsState())
+        val analysis = settings.analysisRevision
+        val tree = settings.treeRevision
+
+        settings.followChangesTreeCaret = false
+
+        assertFalse(settings.followChangesTreeCaret)
+        assertEquals("following does not clear summaries", analysis, settings.analysisRevision)
+        assertEquals("following does not rebuild the tree", tree, settings.treeRevision)
     }
 
     fun `test only analysis settings move the analysis revision`() {
