@@ -109,7 +109,7 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
 
         withToolWindow(local, ToolWindowId.VCS) {
             withToolWindow(commit, ToolWindowId.COMMIT) {
-                ChangesTreeSetup.installIn(project)
+                ChangesTreeSetup.installIn(project, suppressExpansion = true)
                 local.doubleClick(TreePath(summaryRow(local).path))
                 commit.doubleClick(TreePath(summaryRow(commit).path))
             }
@@ -117,6 +117,67 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
 
         assertEquals("the Local Changes tree reached its platform handler", listOf(1), localPlatform.clickCounts)
         assertEquals("the Commit tree reached its platform handler", listOf(1), commitPlatform.clickCounts)
+    }
+
+    fun `test the first rebuild with declaration rows installs the setup before the new model is shown`() {
+        // changes-tree/02-changes-tree-declarations R17: the row state comes from the builder, not the previous model
+        settings.showChangesSummary = true
+        settings.showChangesDeclarations = true
+        val change = realChange("setup-order/Cart.java", OLD_CART, NEW_CART).first
+        ChangesSummaryService.getInstance(project).summaries(listOf(change))
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+
+        val tree = TestChangesListView(project)
+        tree.updateTreeModel(
+            TreeModelBuilder(project, NoneChangesGroupingFactory).setChanges(emptyList(), null).build(),
+            ChangesTree.DO_NOTHING,
+        )
+        tree.setSize(800, 600)
+        tree.doLayout()
+        val platformClicks = mutableListOf<Int>()
+        tree.doubleClickHandler = Processor { e -> platformClicks += e.clickCount; true }
+        tree.enterKeyHandler = Processor { true }
+
+        withToolWindow(tree, ToolWindowId.COMMIT) {
+            // The modifier sees the new model with declaration rows and schedules the setup; the tree still has the old
+            // model, as it does when the platform builds the new model off the EDT.
+            val builder = TreeModelBuilder(project, NoneChangesGroupingFactory).setChanges(listOf(change), null)
+            ChangesSummaryModifier(project).modifyTreeModelBuilder(builder)
+            PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
+
+            // The platform applies the new model after the modifier has run.
+            tree.updateTreeModel(builder.build(), ChangesTree.DO_NOTHING)
+            tree.setSize(800, 600)
+            tree.doLayout()
+            val path = TreePath(summaryRow(tree).path)
+            reveal(tree, path)
+            assertFalse("the summary row starts collapsed", tree.isExpanded(path))
+
+            val press = tree.pressOnly(tree.centerOf(path), clickCount = 2)
+            assertTrue("the second press is consumed", press.isConsumed)
+            assertFalse("the second press does not expand the row", tree.isExpanded(path))
+
+            tree.doubleClick(path)
+            assertEquals("the summary row reaches the platform handler", listOf(1), platformClicks)
+        }
+    }
+
+    fun `test a double-click on a summarized file row consumes the second press and does not expand`() {
+        // changes-tree/02-changes-tree-declarations R17: the press listener stops the tree UI toggling a non-leaf row
+        val tree = summarizedTree(modified("Cart.java"))
+        val summary = summaryRow(tree)
+        val path = TreePath(summary.path)
+        reveal(tree, path)
+        tree.collapsePath(path)
+        tree.doubleClickHandler = Processor { true }
+        ChangesTreeSetup.configure(tree, suppressExpansion = true)
+        assertFalse("the row starts collapsed", tree.isExpanded(path))
+
+        val press = tree.pressOnly(tree.centerOf(path), clickCount = 2)
+
+        assertTrue("the second press is consumed", press.isConsumed)
+        assertSame("the suppressed press selects the summary row", summary, tree.selectionPath?.lastPathComponent)
+        assertFalse("the suppressed press does not expand the row", tree.isExpanded(path))
     }
 
     fun `test a double-click on a summarized row matches a plain row in Local Changes with diff on`() {

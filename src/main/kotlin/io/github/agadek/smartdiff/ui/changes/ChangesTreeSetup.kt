@@ -10,7 +10,6 @@ import com.intellij.openapi.vcs.changes.ui.ChangesListView
 import com.intellij.openapi.wm.ToolWindowId
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.util.Processor
-import io.github.agadek.smartdiff.ui.SmartDiffSettings
 import java.awt.Component
 import java.awt.Container
 import java.awt.event.KeyAdapter
@@ -41,21 +40,26 @@ internal object ChangesTreeSetup {
     /** The tree's toggle click count before the setup changed it. */
     private val SAVED_TOGGLE_CLICK_COUNT = Key.create<Int>("smartdiff.changes.tree.savedToggleClickCount")
 
-    /** Applies the setup to every Changes tree in the project after the trees have been built, on the EDT. */
-    fun schedule(project: Project) {
+    /**
+     * Applies the setup to every Changes tree in the project after the trees have been built, on the EDT.
+     *
+     * [suppressExpansion] comes from the tree model being built, not from the tree's current model: the platform may
+     * still show the previous model when this runs, and the first rebuild that adds declaration rows must already get
+     * the setup.
+     */
+    fun schedule(project: Project, suppressExpansion: Boolean) {
         ApplicationManager.getApplication().invokeLater({
-            if (!project.isDisposed) installIn(project)
+            if (!project.isDisposed) installIn(project, suppressExpansion)
         }, ModalityState.nonModal(), project.disposed)
     }
 
-    /** Finds the Local Changes and Commit trees and applies the setup to each of them that shows declaration rows. */
-    fun installIn(project: Project) {
-        val declarations = SmartDiffSettings.getInstance().showChangesDeclarations
+    /** Finds every Local Changes and Commit tree and applies the setup to each of them. */
+    fun installIn(project: Project, suppressExpansion: Boolean) {
         val manager = ToolWindowManager.getInstance(project)
         for (id in listOf(ToolWindowId.VCS, ToolWindowId.COMMIT)) {
             val toolWindow = manager.getToolWindow(id) ?: continue
             for (content in toolWindow.contentManager.contents) {
-                findChangesTree(content.component)?.let { configure(it, declarations && hasDeclarationRows(it)) }
+                findChangesTrees(content.component).forEach { configure(it, suppressExpansion) }
             }
         }
     }
@@ -251,15 +255,12 @@ internal object ChangesTreeSetup {
         }
     }
 
-    /** Whether [tree] has declaration rows, so its summary file rows are non-leaf and need the setup. */
-    private fun hasDeclarationRows(tree: ChangesListView): Boolean =
-        tree.root.depthFirstEnumeration().asSequence().any { it is DeclarationNode }
-
-    private fun findChangesTree(component: Component?): ChangesListView? {
-        if (component is ChangesListView) return component
-        if (component is Container) {
-            for (child in component.components) findChangesTree(child)?.let { return it }
+    /** Every Changes tree under [component], so a content with more than one is not left half configured. */
+    private fun findChangesTrees(component: Component?, trees: MutableList<ChangesListView> = mutableListOf()): List<ChangesListView> {
+        when (component) {
+            is ChangesListView -> if (component !in trees) trees += component
+            is Container -> component.components.forEach { findChangesTrees(it, trees) }
         }
-        return null
+        return trees
     }
 }
