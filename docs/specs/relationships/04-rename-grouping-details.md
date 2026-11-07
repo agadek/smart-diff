@@ -1,6 +1,6 @@
 # Rename grouping: details
 
-Status: accepted, 2026-11-05
+Status: accepted, 2026-11-05; step 1 (Java) implemented, 2026-11-07; Kotlin K2, Scala and the 440-case gate are step 2
 
 Feature: [Rename grouping](04-rename-grouping.md)
 

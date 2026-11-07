@@ -1,6 +1,6 @@
 # Relationship benchmark
 
-Status: implemented, 2026-11-02; the usage labels (R8, R9), the reference pass version in R19 and R44 arrive with [rename grouping](04-rename-grouping.md), 2026-11-05.
+Status: implemented, 2026-11-02; the usage labels (R8, R9), the reference pass version in R19 and R44 arrive with [rename grouping](04-rename-grouping.md), 2026-11-05; the Java step 1 is implemented, 2026-11-07.
 
 **Description:** Measures how well the declaration engine pairs declarations across two versions, against labelled ground truth, so a matcher change is accepted or rejected by its numbers.
 

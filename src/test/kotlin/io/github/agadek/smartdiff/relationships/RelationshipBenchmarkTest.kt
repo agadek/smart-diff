@@ -23,7 +23,7 @@ import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.declarations.model.Declaration
 import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
 import io.github.agadek.smartdiff.engine.declarations.model.FileRegion
-import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy
+import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationProvider
 import io.github.agadek.smartdiff.engine.declarations.psi.java.JavaDeclarationProvider
 import java.io.File
@@ -184,6 +184,8 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
             assertTrue(markdown.contains("IDE:"))
             assertTrue(markdown.contains("corpus revision: abc123"))
             assertTrue(markdown.contains("gate: no-new-wrong-pairs"))
+            assertTrue("the report names the reference pass version", markdown.contains("Reference pass: ${io.github.agadek.smartdiff.references.ReferencePass.VERSION}"))
+            assertTrue(File(directory, "report.json").readText().contains("\"referencePassVersion\""))
         } finally {
             directory.deleteRecursively()
         }
@@ -327,7 +329,7 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
             relationships = listOf(
                 RelationshipBenchmark.LabelledRelationship(
                     setOf(RelationshipBenchmark.Kind.RENAME, RelationshipBenchmark.Kind.MOVE),
-                    old("total"), new("sum"), null,
+                    old("total"), new("sum"), null, usages = emptyList(),
                 ),
             ),
         )
@@ -660,7 +662,7 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         val both = label("move-rename", "JAVA", "move-with-rename").copy(
             relationships = listOf(
                 RelationshipBenchmark.LabelledRelationship(
-                    setOf(RelationshipBenchmark.Kind.RENAME, RelationshipBenchmark.Kind.MOVE), old("total"), new("sum"), null,
+                    setOf(RelationshipBenchmark.Kind.RENAME, RelationshipBenchmark.Kind.MOVE), old("total"), new("sum"), null, usages = emptyList(),
                 ),
             ),
         )
@@ -674,7 +676,7 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         assertEquals(0, bothMetrics.perKind.values.sumOf { it.fp })
         assertEquals(0, bothMetrics.perKind.values.sumOf { it.fn })
 
-        val renameOnly = both.copy(relationships = listOf(RelationshipBenchmark.LabelledRelationship(setOf(RelationshipBenchmark.Kind.RENAME), old("total"), new("sum"), null)))
+        val renameOnly = both.copy(relationships = listOf(RelationshipBenchmark.LabelledRelationship(setOf(RelationshipBenchmark.Kind.RENAME), old("total"), new("sum"), null, usages = emptyList())))
         val oneKind = RelationshipBenchmark.evaluate(listOf(renameOnly), listOf(caseResult(renameOnly, two, nodes())))
         assertEquals(1, oneKind.perKind.getValue("RENAME").tp)
         assertEquals(1, oneKind.perKind.getValue("MOVE").fp)
@@ -963,7 +965,7 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         // relationships/01-relationship-benchmark-details.md: confidence is not compared until the engine reports one
         fun metricsFor(confidence: RelationshipBenchmark.Confidence?): RelationshipBenchmark.Metrics {
             val expected = RelationshipBenchmark.LabelledRelationship(
-                setOf(RelationshipBenchmark.Kind.RENAME), old("total"), new("sum"), confidence,
+                setOf(RelationshipBenchmark.Kind.RENAME), old("total"), new("sum"), confidence, usages = emptyList(),
             )
             val label = label("rename-1", "JAVA", "method-rename").copy(relationships = listOf(expected))
             val actual = RelationshipBenchmark.ActualRelationship(
@@ -1381,6 +1383,88 @@ notes: "Built inside the test."
                 .flatMap { repository -> repository.listFiles().orEmpty().filter { it.isDirectory } }
         }
 
+    fun `test R44 a usage label matches a reported reference`() {
+        // relationships/01-relationship-benchmark R44
+        val usage = RelationshipBenchmark.Usage(TextRange(10, 15), TextRange(12, 15))
+        val expected = RelationshipBenchmark.LabelledRelationship(
+            setOf(RelationshipBenchmark.Kind.RENAME), old("total"), new("sum"), null, usages = listOf(usage),
+        )
+        val label = label("usage-1", "JAVA", "usage-grouping").copy(relationships = listOf(expected))
+        val actualUsage = RelationshipBenchmark.ActualUsage(old("total"), new("sum"), usage.old, usage.new)
+        val result = caseResult(
+            label,
+            listOf(actual(RelationshipBenchmark.Kind.RENAME, old("total"), new("sum"))),
+            nodes(),
+            actualUsages = listOf(actualUsage),
+        )
+
+        val metrics = RelationshipBenchmark.evaluate(listOf(label), listOf(result))
+        assertEquals(1, metrics.usageTp)
+        assertEquals(0, metrics.usageFp)
+        assertEquals(0, metrics.usageFn)
+        assertTrue(RelationshipBenchmark.wrongUsages(listOf(result)).isEmpty())
+        assertTrue(RelationshipBenchmark.missedUsages(listOf(result)).isEmpty())
+    }
+
+    fun `test R44 a wrongly grouped usage is a wrong pair and fails the gate`() {
+        // relationships/01-relationship-benchmark R44
+        val directory = Files.createTempDirectory("relationship-usage-gate").toFile()
+        try {
+            val label = label("usage-1", "JAVA", "usage-grouping").copy(
+                relationships = listOf(
+                    RelationshipBenchmark.LabelledRelationship(setOf(RelationshipBenchmark.Kind.RENAME), old("total"), new("sum"), null, usages = emptyList()),
+                ),
+            )
+            val actualUsage = RelationshipBenchmark.ActualUsage(old("total"), new("sum"), TextRange(10, 15), TextRange(12, 15))
+            val result = caseResult(
+                label,
+                listOf(actual(RelationshipBenchmark.Kind.RENAME, old("total"), new("sum"))),
+                nodes(),
+                actualUsages = listOf(actualUsage),
+            )
+            assertTrue(RelationshipBenchmark.wrongUsages(listOf(result)).isNotEmpty())
+            val baseline = File(directory, "baseline.json").apply {
+                writeText("""{"smoke":false,"wrongPairs":[],"precision":{"java|RENAME":1.0},"recall":{"java|RENAME":1.0}}""")
+            }
+            val metrics = RelationshipBenchmark.evaluate(listOf(label), listOf(result))
+            val failures = RelationshipBenchmark.gateFailures(
+                "no-new-wrong-pairs", metrics, mapOf("java" to metrics), baseline, 0.0, listOf(result),
+            )
+            assertTrue(failures.toString(), failures.any { it.contains("new wrong or forced pairs") })
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
+    fun `test R44 an absent usages list is usage-unlabelled and fails completeness`() {
+        // relationships/01-relationship-benchmark R44
+        val label = label("usage-1", "JAVA", "usage-grouping").copy(
+            relationships = listOf(
+                RelationshipBenchmark.LabelledRelationship(setOf(RelationshipBenchmark.Kind.RENAME), old("total"), new("sum"), null, usages = null),
+            ),
+        )
+        val result = caseResult(label, listOf(actual(RelationshipBenchmark.Kind.RENAME, old("total"), new("sum"))), nodes())
+
+        assertTrue(RelationshipBenchmark.usageUnlabelledRenames(listOf(result)).isNotEmpty())
+        val metrics = RelationshipBenchmark.evaluate(listOf(label), listOf(result))
+        assertTrue(
+            RelationshipBenchmark.gateFailures("no-new-wrong-pairs", metrics, mapOf("java" to metrics), null, 0.0, listOf(result))
+                .any { it.contains("usage-unlabelled renames") },
+        )
+    }
+
+    fun `test R44 an empty usages list passes with no references`() {
+        // relationships/01-relationship-benchmark R44
+        val label = label("usage-1", "JAVA", "usage-grouping")
+        val result = caseResult(label, listOf(actual(RelationshipBenchmark.Kind.RENAME, old("total"), new("sum"))), nodes())
+
+        val metrics = RelationshipBenchmark.evaluate(listOf(label), listOf(result))
+        assertEquals(0, metrics.usageFp)
+        assertEquals(0, metrics.usageFn)
+        assertTrue(RelationshipBenchmark.wrongUsages(listOf(result)).isEmpty())
+        assertTrue(RelationshipBenchmark.usageUnlabelledRenames(listOf(result)).isEmpty())
+    }
+
     private fun label(
         case: String,
         language: String,
@@ -1390,7 +1474,7 @@ notes: "Built inside the test."
         reviewed: Boolean = true,
     ) = RelationshipBenchmark.Label(
         case, language, split,
-        listOf(RelationshipBenchmark.LabelledRelationship(setOf(RelationshipBenchmark.Kind.RENAME), old("total"), new("sum"), null)),
+        listOf(RelationshipBenchmark.LabelledRelationship(setOf(RelationshipBenchmark.Kind.RENAME), old("total"), new("sum"), null, usages = emptyList())),
         listOf(RelationshipBenchmark.ExpectedChange(endpoint("sum"), Presence.MATCHED, Content.UNCHANGED)),
         listOf(old("ambiguous")),
         null,
@@ -1412,8 +1496,10 @@ notes: "Built inside the test."
         hidden: Boolean = false,
         status: Status = Status.ANALYZED,
         exception: String? = null,
+        actualUsages: List<RelationshipBenchmark.ActualUsage> = emptyList(),
     ) = RelationshipBenchmark.CaseResult(
         label, ComparisonResult(EngineId("test"), "1", status), actualRelationships, nodes, millis, hidden, exception,
+        actualUsages = actualUsages,
     )
 
     private fun relationship(

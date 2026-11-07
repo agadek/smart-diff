@@ -3,10 +3,15 @@ package io.github.agadek.smartdiff.ui
 import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.Content
+import io.github.agadek.smartdiff.engine.api.Confidence
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.Evidence
 import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.RangePair
+import io.github.agadek.smartdiff.engine.api.Relationship
+import io.github.agadek.smartdiff.engine.api.RelationshipEndpoint
+import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
@@ -87,6 +92,26 @@ class HiddenLinesTest {
     }
 
     /** Lines [first, last] as an offset range ending before the last line's line break. */
+    @Test
+    fun `a grouped usage line is never hidden`() {
+        // relationships/04-rename-grouping R8
+        val changed = node("a", lines(0, 0), lines(0, 0), content = Content.FORMATTING_ONLY)
+        val oldSubject = Subject.Declaration(DeclarationKind.METHOD, "total", null)
+        val newSubject = Subject.Declaration(DeclarationKind.METHOD, "sum", null)
+        val relationship = Relationship(
+            kinds = java.util.EnumSet.of(RelationshipKind.RENAME),
+            old = listOf(RelationshipEndpoint(oldSubject, lines(0, 0))),
+            new = listOf(RelationshipEndpoint(newSubject, lines(0, 0))),
+            confidence = Confidence.HIGH,
+            evidence = listOf(Evidence.Reference(newSubject, TextRange(0, 1), TextRange(0, 1))),
+        )
+        val result = result(changed).copy(relationships = listOf(relationship))
+
+        val hidden = HiddenLines.of(result, setOf(ChangeType.FORMATTING_ONLY), text, text)
+
+        assertFalse("a declaration with a grouped usage is never hidden", hidden.covers(0, 1, 0, 1))
+    }
+
     private fun lines(first: Int, last: Int) = TextRange(first * 10, last * 10 + 9)
 
     private fun result(vararg changes: ChangeNode) = ComparisonResult(EngineId("e"), "1", Status.ANALYZED, changes = changes.toList())

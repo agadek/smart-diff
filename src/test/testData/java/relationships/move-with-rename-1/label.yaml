@@ -8,6 +8,7 @@ expected:
     - kinds: [RENAME, MOVE]
       old: { path: "class Order", kind: METHOD, name: "total", signature: "()" }
       new: { path: "class Order", kind: METHOD, name: "sum", signature: "()" }
+      usages: []
   changes:
     - subject: { path: "", kind: CLASS, name: "Order", signature: null }
       presence: MATCHED

@@ -26,6 +26,7 @@ import io.github.agadek.smartdiff.engine.declarations.model.Declaration
 import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationEngine
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationProvider
+import io.github.agadek.smartdiff.references.ReferencePass
 import io.github.agadek.smartdiff.ui.OutlineModel
 import org.yaml.snakeyaml.Yaml
 import java.io.File
@@ -90,17 +91,25 @@ object RelationshipBenchmark {
         "empty-identical",
         "large-file",
         "ambiguous-rename-group",
+        "usage-grouping",
     )
+
+    /** R9, R44: the usage-grouping category needs at least four cases per language. */
+    val CATEGORY_MINIMUMS = mapOf("usage-grouping" to 4)
 
     /** The category that a checked-in real-commit label carries; it is outside the case matrix. */
     const val REAL_COMMIT_CATEGORY = "real-commit"
 
     /**
-     * Categories a corpus does not have the construct for, with the reason the report shows (R30). Empty while every
-     * matrix category names a construct that Java, Kotlin, Scala 2 and Scala 3 all have; the mechanism keeps a future
-     * category from being dropped without a stated reason.
+     * Categories a corpus does not have the construct for, with the reason the report shows (R30). In step 1 the
+     * usage-grouping category has the Java resolver only; the Kotlin K2 and Scala resolvers arrive in step 2, which
+     * removes these entries and adds their four fixtures.
      */
-    val NOT_APPLICABLE: Map<String, Map<String, String>> = emptyMap()
+    val NOT_APPLICABLE: Map<String, Map<String, String>> = mapOf(
+        "kotlin" to mapOf("usage-grouping" to "the Kotlin K2 reference resolver arrives in step 2"),
+        "scala2" to mapOf("usage-grouping" to "the Scala reference resolver arrives in step 2"),
+        "scala3" to mapOf("usage-grouping" to "the Scala reference resolver arrives in step 2"),
+    )
 
     enum class Kind { RENAME, MOVE, KIND_CHANGE, EXTRACT, INLINE }
     enum class Confidence { HIGH, MEDIUM, LOW }
@@ -132,7 +141,12 @@ object RelationshipBenchmark {
         val old: Endpoint,
         val new: Endpoint,
         val confidence: Confidence?,
+        /** The grouped usage range pairs; null when the label is a draft that does not list them (R44). */
+        val usages: List<Usage>? = null,
     )
+
+    /** One grouped usage on the two sides, as a rename label lists it (R44). */
+    data class Usage(val old: TextRange, val new: TextRange)
 
     data class ExpectedChange(
         val subject: Endpoint,
@@ -171,6 +185,9 @@ object RelationshipBenchmark {
         val score: Double? = null,
     )
 
+    /** One reported reference, with the rename relationship's endpoints (R44). */
+    data class ActualUsage(val old: Endpoint, val new: Endpoint, val oldRange: TextRange, val newRange: TextRange)
+
     data class CaseResult(
         val label: Label,
         val result: ComparisonResult,
@@ -181,6 +198,10 @@ object RelationshipBenchmark {
         val exception: String? = null,
         /** The repository, commit and path of a real-commit case, for the report. */
         val source: String? = null,
+        /** The reference evidence the pass grouped, for usage labels (R44). */
+        val actualUsages: List<ActualUsage> = emptyList(),
+        /** The reference pass's status for the report; null when the file ran no pass. */
+        val referenceStatus: String? = null,
     )
 
     data class CorpusEntry(val path: File?, val repository: File?, val arguments: List<String>, val line: String)
@@ -233,10 +254,19 @@ object RelationshipBenchmark {
         val kindTotal: Int = 0,
         /** R33: the reported relationships of each kind, at each confidence. */
         val confidenceByKind: Map<String, Map<Confidence, Int>> = emptyMap(),
+        /** R44: grouped usage pairs, wrongly grouped usages, missed usages and renames with no `usages` label. */
+        val usageTp: Int = 0,
+        val usageFp: Int = 0,
+        val usageFn: Int = 0,
+        val usageUnlabelled: Int = 0,
     ) {
         /** R12: the pairs the engine reported; zero means precision has nothing to divide, so the report shows `n/a`. */
         val reportedPairs: Int get() = perKind.values.sumOf { it.tp + it.fp }
         val labelledPairs: Int get() = perKind.values.sumOf { it.tp + it.fn }
+        val reportedUsages: Int get() = usageTp + usageFp
+        val labelledUsages: Int get() = usageTp + usageFn
+        val usagePrecision: Double get() = if (reportedUsages == 0) 1.0 else usageTp.toDouble() / reportedUsages
+        val usageRecall: Double get() = if (labelledUsages == 0) 1.0 else usageTp.toDouble() / labelledUsages
         val classificationAccuracy: Double get() = if (classificationTotal == 0) 1.0 else classificationCorrect.toDouble() / classificationTotal
         val presenceAccuracy: Double get() = accuracy(presenceCorrect, presenceTotal)
         val contentAccuracy: Double get() = accuracy(contentCorrect, contentTotal)
@@ -276,6 +306,8 @@ object RelationshipBenchmark {
         val unlabelledFallback: Int = 0,
         /** The policy the run classified relationships with; report.json records it (relationships/02 R15). */
         val confidencePolicy: ConfidencePolicy = ConfidencePolicy.DEFAULT,
+        /** R19/R44: the reference pass version that produced the usage evidence. */
+        val referencePassVersion: String = ReferencePass.VERSION,
     ) {
         val ready: Boolean get() = gateFailures.isEmpty()
     }
@@ -356,7 +388,21 @@ object RelationshipBenchmark {
             endpoint(map["old"], file),
             endpoint(map["new"], file),
             (map["confidence"] as? String)?.uppercase()?.let { Confidence.valueOf(it) },
+            // Absent is allowed in a draft only; a gate run reports it as usage-unlabelled (R44).
+            if (map.containsKey("usages")) list(map["usages"]).map { usage(it, file) } else null,
         )
+    }
+
+    private fun usage(value: Any?, file: File): Usage {
+        val map = map(value, file)
+        return Usage(range(map["old"], file, "usage old"), range(map["new"], file, "usage new"))
+    }
+
+    private fun range(value: Any?, file: File, what: String): TextRange {
+        val text = value as? String ?: error("label ${file.path}: $what range is required")
+        val parts = text.split("..")
+        require(parts.size == 2) { "label ${file.path}: $what range must be start..end" }
+        return TextRange(parts[0].trim().toInt(), parts[1].trim().toInt())
     }
 
     private fun change(value: Any?, file: File): ExpectedChange {
@@ -434,6 +480,34 @@ object RelationshipBenchmark {
         io.github.agadek.smartdiff.engine.api.Confidence.LOW -> Confidence.LOW
     }
 
+    /** The reference evidence of [result], each with the rename relationship's endpoints (R44). */
+    fun reportedUsages(result: ComparisonResult, oldTree: DeclarationTree? = null): List<ActualUsage> {
+        if (result.relationships.isEmpty()) return emptyList()
+        val oldPaths = oldContainerPaths(oldTree)
+        val paths = resultPaths(result)
+        val usages = mutableListOf<ActualUsage>()
+        for (relationship in result.relationships) {
+            if (Kind.RENAME !in relationship.kinds.map { Kind.valueOf(it.name) }) continue
+            val references = relationship.evidence.filterIsInstance<Evidence.Reference>()
+            if (references.isEmpty()) continue
+            for (old in relationship.old) {
+                val oldPath = oldPaths[old.range] ?: paths.old[old.range] ?: ""
+                for (new in relationship.new) {
+                    val newPath = paths.new[new.range] ?: ""
+                    for (reference in references.filter { it.symbol == new.subject }) {
+                        usages += ActualUsage(
+                            endpoint(old.subject, oldPath, old.range),
+                            endpoint(new.subject, newPath, new.range),
+                            reference.oldRange,
+                            reference.newRange,
+                        )
+                    }
+                }
+            }
+        }
+        return usages
+    }
+
     /** The paths of the result tree by range, one map per side, so the two sides' offsets cannot be confused. */
     private class ResultPaths(val old: Map<TextRange, String>, val new: Map<TextRange, String>)
 
@@ -496,6 +570,10 @@ object RelationshipBenchmark {
         var signatureTotal = 0
         var kindCorrect = 0
         var kindTotal = 0
+        var usageTp = 0
+        var usageFp = 0
+        var usageFn = 0
+        var usageUnlabelled = 0
         val confidenceByKind = mutableMapOf<String, MutableMap<Confidence, Int>>()
         for (result in results) {
             val label = result.label
@@ -545,6 +623,37 @@ object RelationshipBenchmark {
                     (expected.kindChangedFrom == null || actual.kindChangedFrom == expected.kindChangedFrom)
                 ) correct++
             }
+            val expectedRenames = label.relationships.filter { Kind.RENAME in it.kinds }
+            val usedUsages = mutableSetOf<Int>()
+            for (expected in expectedRenames) {
+                val actualIndices = result.actualUsages.indices.filter { index ->
+                    index !in usedUsages &&
+                        endpointsMatch(expected.old, result.actualUsages[index].old) &&
+                        endpointsMatch(expected.new, result.actualUsages[index].new)
+                }
+                val labelled = expected.usages
+                if (labelled == null) {
+                    if (ReferencePass.supports(label.language)) usageUnlabelled += actualIndices.size
+                    usedUsages += actualIndices
+                    continue
+                }
+                val remaining = actualIndices.toMutableList()
+                for (usage in labelled) {
+                    val match = remaining.firstOrNull { result.actualUsages[it].oldRange == usage.old && result.actualUsages[it].newRange == usage.new }
+                    if (match == null) {
+                        usageFn++
+                    } else {
+                        usageTp++
+                        remaining.remove(match)
+                        usedUsages += match
+                    }
+                }
+                usageFp += remaining.size
+                usedUsages += remaining
+            }
+            if (ReferencePass.supports(label.language)) {
+                usageUnlabelled += result.actualUsages.indices.count { it !in usedUsages }
+            }
         }
         // Kinds in enum order, so the rows of two runs and of the baseline line up (R28).
         val orderedKinds = Kind.entries.mapNotNull { kind -> perKind[kind.name]?.let { kind.name to it } }.toMap()
@@ -568,6 +677,10 @@ object RelationshipBenchmark {
             kindCorrect,
             kindTotal,
             orderedConfidence,
+            usageTp,
+            usageFp,
+            usageFn,
+            usageUnlabelled,
         )
     }
 
@@ -603,12 +716,14 @@ object RelationshipBenchmark {
         minimum: Int = MINIMUM_CASES,
         commitMinimum: Int = MINIMUM_COMMITS,
         notApplicable: Map<String, Map<String, String>> = NOT_APPLICABLE,
+        categoryMinimums: Map<String, Int> = CATEGORY_MINIMUMS,
     ): List<MatrixFailure> = buildList {
         for (corpus in corpora) {
             for (category in categories) {
                 if (notApplicable[corpus]?.containsKey(category) == true) continue
                 val count = labels.count { it.corpus == corpus && it.category == category && it.reviewed }
-                if (count < minimum) add(MatrixFailure(corpus, category, count, minimum))
+                val needed = categoryMinimums[category] ?: minimum
+                if (count < needed) add(MatrixFailure(corpus, category, count, needed))
             }
             val commits = labelledCommits[corpus] ?: 0
             if (commits < commitMinimum) add(MatrixFailure(corpus, "labelled commits", commits, commitMinimum, "commits"))
@@ -789,9 +904,12 @@ object RelationshipBenchmark {
         val new = newFile.readText().replace("\r\n", "\n")
         val request = ComparisonRequest(old, new, label.language, "${label.case}.$extension", confidence = confidence)
         val outcome = compare(engine, request)
+        val oldTree = oldTree(engine, request, outcome.result)
         return CaseResult(
-            label, outcome.result, reportedRelationships(outcome.result, oldTree(engine, request, outcome.result)), actualNodes(outcome.result),
+            label, outcome.result, reportedRelationships(outcome.result, oldTree), actualNodes(outcome.result),
             outcome.millis, hidden(old, new, outcome.result), outcome.exception,
+            actualUsages = reportedUsages(outcome.result, oldTree),
+            referenceStatus = outcome.referenceStatus,
         )
     }
 
@@ -850,9 +968,12 @@ object RelationshipBenchmark {
                 val id = "${repository.name} ${commit.take(7)} $path"
                 val scored = label != null && label.reviewed && (split == null || label.split == split)
                 if (scored) {
+                    val oldDeclarationTree = oldTree(engine, request, outcome.result)
                     result.cases += CaseResult(
-                        label!!, outcome.result, reportedRelationships(outcome.result, oldTree(engine, request, outcome.result)), actualNodes(outcome.result),
+                        label!!, outcome.result, reportedRelationships(outcome.result, oldDeclarationTree), actualNodes(outcome.result),
                         outcome.millis, hidden(old, new, outcome.result), outcome.exception, id,
+                        actualUsages = reportedUsages(outcome.result, oldDeclarationTree),
+                        referenceStatus = outcome.referenceStatus,
                     )
                 } else if (label?.reviewed != true) {
                     val reason = when {
@@ -905,13 +1026,31 @@ object RelationshipBenchmark {
         val started = System.nanoTime()
         return try {
             val result = onPooledThread { compareSafely(engine, request, Cancellation.NONE) }
-            Outcome(result, (System.nanoTime() - started) / 1_000_000)
+            val usageStarted = System.nanoTime()
+            val pass = if (result.status == Status.ANALYZED || result.status == Status.PARTIAL) {
+                ReferencePass.runForBenchmark(null, request, result, Cancellation.NONE)
+            } else {
+                null
+            }
+            Outcome(
+                pass?.result ?: result,
+                (usageStarted - started) / 1_000_000,
+                null,
+                pass?.status?.name,
+                (System.nanoTime() - usageStarted) / 1_000_000,
+            )
         } catch (e: Exception) {
             Outcome(ComparisonResult(engine.id, engine.version, Status.FAILED, fallbackReason = e.message), (System.nanoTime() - started) / 1_000_000, e.message)
         }
     }
 
-    private data class Outcome(val result: ComparisonResult, val millis: Long, val exception: String? = null)
+    private data class Outcome(
+        val result: ComparisonResult,
+        val millis: Long,
+        val exception: String? = null,
+        val referenceStatus: String? = null,
+        val usageMillis: Long = 0,
+    )
 
     private fun hidden(old: String, new: String, result: ComparisonResult): Boolean =
         (result.status == Status.ANALYZED || result.status == Status.PARTIAL) && NothingHidden.violation(old, new, result) != null
@@ -1099,6 +1238,8 @@ object RelationshipBenchmark {
         if (cases.any { it.millis > TIME_LIMIT_MILLIS }) add("file over the ${TIME_LIMIT_MILLIS} ms limit")
         if (cases.any { it.exception != null }) add("case threw")
         addAll(safety)
+        val unlabelled = usageUnlabelledRenames(cases)
+        if (unlabelled.isNotEmpty()) add("usage-unlabelled renames: ${unlabelled.joinToString(", ")}")
         if (baselineFile != null && !baselineFile.isFile) {
             add("baseline not found: ${baselineFile.path}")
             return@buildList
@@ -1110,7 +1251,7 @@ object RelationshipBenchmark {
         }
         when (mode) {
             "no-new-wrong-pairs" -> {
-                val currentWrong = wrongPairs(cases) + forcedPairs(cases)
+                val currentWrong = wrongPairs(cases) + forcedPairs(cases) + wrongUsages(cases)
                 val new = currentWrong - baseline.wrongPairs
                 if (new.isNotEmpty()) add("new wrong or forced pairs: ${new.sorted().joinToString(", ")}")
             }
@@ -1196,6 +1337,81 @@ object RelationshipBenchmark {
         }
     }
 
+    /** R44: a reported reference on a `usages`-labelled rename with no matching pair is a wrong pair. */
+    fun wrongUsages(cases: List<CaseResult>): Set<String> = buildSet {
+        for (case in cases) {
+            for ((expected, actuals) in usagePairs(case)) {
+                if (expected.usages == null) continue
+                val remaining = actuals.toMutableList()
+                for (usage in expected.usages) {
+                    val match = remaining.indexOfFirst { it.oldRange == usage.old && it.newRange == usage.new }
+                    if (match >= 0) remaining.removeAt(match)
+                }
+                remaining.forEach { actual ->
+                    add("${case.label.case}|usage|${expected.old.key()}|${expected.new.key()}|${actual.oldRange}|${actual.newRange}")
+                }
+            }
+        }
+    }
+
+    /** R44: a listed usage that the pass did not report; listed, not gated by default. */
+    fun missedUsages(cases: List<CaseResult>): List<String> = buildList {
+        for (case in cases) {
+            for ((expected, actuals) in usagePairs(case)) {
+                val listed = expected.usages ?: continue
+                val remaining = actuals.toMutableList()
+                for (usage in listed) {
+                    val match = remaining.indexOfFirst { it.oldRange == usage.old && it.newRange == usage.new }
+                    if (match >= 0) {
+                        remaining.removeAt(match)
+                    } else {
+                        add("${case.label.case}|missed-usage|${expected.old.name}|${expected.new.name}|${usage.old}|${usage.new}|${case.label.path ?: "-"}")
+                    }
+                }
+            }
+        }
+    }
+
+    /** R44: a rename label in a language the pass covers without a `usages` list fails completeness. */
+    fun usageUnlabelledRenames(cases: List<CaseResult>): List<String> = buildList {
+        for (case in cases) {
+            if (!ReferencePass.supports(case.label.language)) continue
+            for (relationship in case.label.relationships) {
+                if (Kind.RENAME !in relationship.kinds) continue
+                if (relationship.usages == null) {
+                    add("${case.label.case}|usage-unlabelled|${relationship.old.name}|${relationship.new.name}|${case.label.path ?: "-"}")
+                }
+            }
+        }
+    }
+
+    /** R44: reported references on a rename whose label has no `usages` list, counted and not scored. */
+    fun unlabelledUsages(cases: List<CaseResult>): List<String> = buildList {
+        for (case in cases) {
+            if (!ReferencePass.supports(case.label.language)) continue
+            for ((expected, actuals) in usagePairs(case)) {
+                if (expected.usages != null) continue
+                actuals.forEach { actual ->
+                    add("${case.label.case}|usage-unlabelled|${expected.old.name}|${expected.new.name}|${actual.oldRange}|${actual.newRange}|${case.label.path ?: "-"}")
+                }
+            }
+            val labelled = case.label.relationships.filter { Kind.RENAME in it.kinds }
+            case.actualUsages.filter { usage ->
+                labelled.none { endpointsMatch(it.old, usage.old) && endpointsMatch(it.new, usage.new) }
+            }.forEach { usage ->
+                add("${case.label.case}|usage-unlabelled|${usage.old.name}|${usage.new.name}|${usage.oldRange}|${usage.newRange}|${case.label.path ?: "-"}")
+            }
+        }
+    }
+
+    /** The label's rename relationships and the reported usages that name the same endpoints. */
+    private fun usagePairs(case: CaseResult): List<Pair<LabelledRelationship, List<ActualUsage>>> =
+        case.label.relationships.filter { Kind.RENAME in it.kinds }.map { expected ->
+            expected to case.actualUsages.filter {
+                endpointsMatch(expected.old, it.old) && endpointsMatch(expected.new, it.new)
+            }
+        }
+
     fun missedRelationships(cases: List<CaseResult>): List<String> = buildList {
         for (case in cases) {
             val claimed = claimedRelationships(case)
@@ -1243,6 +1459,12 @@ object RelationshipBenchmark {
                     val counts = metrics.perKind[kind] ?: PairCounts()
                     appendLine(listOf(language, kind, counts.tp, counts.fp, counts.fn, formatPrecision(counts), formatRecall(counts), format(counts.wrongShare)).joinToString("\t"))
                 }
+                appendLine(
+                    listOf(
+                        language, "USAGE", metrics.usageTp, metrics.usageFp, metrics.usageFn,
+                        formatUsagePrecision(metrics), formatUsageRecall(metrics), "",
+                    ).joinToString("\t"),
+                )
             }
         })
         File(report.reportDirectory, "report.md").writeText(buildString {
@@ -1250,8 +1472,9 @@ object RelationshipBenchmark {
             appendLine()
             appendLine(if (report.smoke) "Status: smoke run" else "Status: complete run")
             appendLine("Engine: ${DeclarationEngine.ID} ${DeclarationEngine.VERSION}; IDE: ${ApplicationInfo.getInstance().build.asStringWithoutProductCode()}")
+            appendLine("Reference pass: ${report.referencePassVersion}")
             appendLine("Scala plugin: ${scalaVersion()}; corpus revision: ${report.corpusRevision}; gate: ${report.gateMode}")
-            appendLine("Analysis limit: ${TIME_LIMIT_MILLIS} ms per file")
+            appendLine("Analysis limit: ${TIME_LIMIT_MILLIS} ms per file; reference pass limit: ${ReferencePass.BUDGET_MILLIS} ms per file")
             appendLine("Skipped real-commit commits: ${report.skippedCommitLines}")
             appendLine()
             if (report.smoke) {
@@ -1269,6 +1492,10 @@ object RelationshipBenchmark {
                     "fallback: ${report.overall.fallback} scored + ${report.unlabelledFallback} unlabelled; " +
                     "forced pairs: ${report.overall.forcedPairs}; unlabelled: ${report.unlabelled.size}; skipped files: ${report.skippedFiles.size}; " +
                     "drafts: ${report.draftsWritten}",
+            )
+            appendLine(
+                "Usages: ${report.overall.reportedUsages} reported, ${report.overall.usageTp} matched, " +
+                    "${report.overall.usageFp} wrong, ${report.overall.usageFn} missed, ${report.overall.usageUnlabelled} unlabelled",
             )
             appendLine()
             for (corpus in CORPORA) {
@@ -1293,6 +1520,7 @@ object RelationshipBenchmark {
                         "wrong share ${format(metrics.wrongShare)}, presence ${format(metrics.presenceAccuracy)}, " +
                         "content ${format(metrics.contentAccuracy)}, moved ${format(metrics.movedAccuracy)}, " +
                         "signature ${format(metrics.signatureAccuracy)}, kind ${format(metrics.kindAccuracy)}, " +
+                        "usage precision ${formatUsagePrecision(metrics)}, usage recall ${formatUsageRecall(metrics)}, " +
                         "median ${metrics.medianMillis} ms, p95 ${metrics.p95Millis} ms, slowest ${metrics.slowestMillis} ms of $TIME_LIMIT_MILLIS ms",
                 )
             }
@@ -1345,6 +1573,18 @@ object RelationshipBenchmark {
             val wrong = wrongPairLines(report.cases).sorted()
             if (wrong.isEmpty()) appendLine("- none") else wrong.forEach { appendLine("- $it") }
             appendLine()
+            appendLine("## Wrong usages")
+            val wrongUsages = wrongUsages(report.cases).sorted()
+            if (wrongUsages.isEmpty()) appendLine("- none") else wrongUsages.forEach { appendLine("- $it") }
+            appendLine()
+            appendLine("## Missed usages")
+            val missedUsages = missedUsages(report.cases).sorted()
+            if (missedUsages.isEmpty()) appendLine("- none") else missedUsages.forEach { appendLine("- $it") }
+            appendLine()
+            appendLine("## Usage-unlabelled renames")
+            val unlabelledRenames = usageUnlabelledRenames(report.cases).sorted()
+            if (unlabelledRenames.isEmpty()) appendLine("- none") else unlabelledRenames.forEach { appendLine("- $it") }
+            appendLine()
             appendLine("## Missed relationships")
             val missed = missedRelationships(report.cases).sorted()
             if (missed.isEmpty()) appendLine("- none") else missed.forEach { appendLine("- $it") }
@@ -1366,6 +1606,7 @@ object RelationshipBenchmark {
         val recall = gateCounts(report.metricsByLanguage).mapValues { it.value.recall }
         val json = mapOf(
             "engine" to mapOf("id" to DeclarationEngine.ID.toString(), "version" to DeclarationEngine.VERSION),
+            "referencePassVersion" to report.referencePassVersion,
             "ide" to ApplicationInfo.getInstance().build.asStringWithoutProductCode(),
             "scalaPlugin" to scalaVersion(),
             "smoke" to report.smoke,
@@ -1374,6 +1615,10 @@ object RelationshipBenchmark {
             "labelledCommits" to report.labelledCommits,
             "wrongPairs" to (wrongPairs(report.cases) + forcedPairs(report.cases)).sorted(),
             "wrongPairDetails" to wrongPairLines(report.cases).sorted(),
+            "wrongUsages" to wrongUsages(report.cases).sorted(),
+            "missedUsages" to missedUsages(report.cases).sorted(),
+            "usageUnlabelled" to unlabelledUsages(report.cases).sorted(),
+            "usageUnlabelledRenames" to usageUnlabelledRenames(report.cases).sorted(),
             "missed" to missedRelationships(report.cases),
             "classificationMismatches" to classificationMismatches(report.cases),
             "precision" to precision,
@@ -1416,6 +1661,12 @@ object RelationshipBenchmark {
         "movedAccuracy" to metrics.movedAccuracy,
         "signatureAccuracy" to metrics.signatureAccuracy,
         "kindAccuracy" to metrics.kindAccuracy,
+        "usageTp" to metrics.usageTp,
+        "usageFp" to metrics.usageFp,
+        "usageFn" to metrics.usageFn,
+        "usageUnlabelled" to metrics.usageUnlabelled,
+        "usagePrecision" to metrics.usagePrecision,
+        "usageRecall" to metrics.usageRecall,
         "hidden" to metrics.hidden,
         "fallback" to metrics.fallback,
         "medianMillis" to metrics.medianMillis,
@@ -1443,6 +1694,10 @@ object RelationshipBenchmark {
     private fun formatMetricsPrecision(metrics: Metrics): String = if (metrics.reportedPairs == 0) "n/a" else format(metrics.precision)
 
     private fun formatMetricsRecall(metrics: Metrics): String = if (metrics.labelledPairs == 0) "n/a" else format(metrics.recall)
+
+    private fun formatUsagePrecision(metrics: Metrics): String = if (metrics.reportedUsages == 0) "n/a" else format(metrics.usagePrecision)
+
+    private fun formatUsageRecall(metrics: Metrics): String = if (metrics.labelledUsages == 0) "n/a" else format(metrics.usageRecall)
 
     /** R43: a hash of the list, every case and label file it reaches, and the clone of each real-commit line. */
     fun corpusRevision(corpus: File, labelRoot: File = File(DEFAULT_LABEL_ROOT)): String {

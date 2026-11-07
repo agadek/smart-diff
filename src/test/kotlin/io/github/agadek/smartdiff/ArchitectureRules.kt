@@ -26,7 +26,7 @@ class ArchitectureRules(private val root: String) {
                 resideInAPackage("$root.engine..").and(not(resideInAnyPackage(api, registry))),
             )
             .allowEmptyShould(true)
-            .because("ui may use engine.api and engine.registry, never a concrete engine")
+            .because("ui may use engine.api, engine.registry and the reference pass, never a concrete engine")
 
     val apiDependsOnNothingInThePlugin: ArchRule =
         classes().that().resideInAPackage(api)

@@ -12,6 +12,7 @@ import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.OnePixelSplitter
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
@@ -19,9 +20,11 @@ import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.api.Status
+import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 import io.github.agadek.smartdiff.engine.api.compareSafely
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
 import io.github.agadek.smartdiff.engine.registry.EngineSelection
+import io.github.agadek.smartdiff.references.ReferencePass
 import java.awt.BorderLayout
 import java.util.concurrent.CancellationException
 import javax.swing.JPanel
@@ -38,7 +41,14 @@ sealed interface OutlineState {
     data class NoEngine(val languageName: String) : OutlineState
 
     /** [hiddenCount] changes of the result are left out of [items] by the change type filter. */
-    data class Shown(val result: ComparisonResult, val summary: String, val items: List<OutlineItem>, val hiddenCount: Int = 0) : OutlineState
+    data class Shown(
+        val result: ComparisonResult,
+        val summary: String,
+        val items: List<OutlineItem>,
+        val hiddenCount: Int = 0,
+        /** The grey note under the summary, such as `Resolving usages…`; null when there is none. */
+        val usageNote: String? = null,
+    ) : OutlineState
 }
 
 /**
@@ -54,6 +64,8 @@ class OutlineController internal constructor(
     internal val splitter: OnePixelSplitter,
     private val languageId: String,
     private val fileName: String?,
+    /** The diff's new-side file, or its old-side file when the new side has none; null keeps the engine's result (R3). */
+    private val file: VirtualFile?,
     private val oldDocument: Document,
     private val newDocument: Document,
     /** A row to select in the first result shown, when the diff was opened from the Changes tree (§9.4). */
@@ -217,13 +229,47 @@ class OutlineController internal constructor(
     /** Renders [result] unless it is stale: a document or the selected engine changed since the request (§9.2 step 3). */
     private fun finish(job: Job, request: ComparisonRequest, result: ComparisonResult) {
         if (disposed || job !== running || job.canceled) return
-        running = null
         if (oldDocument.modificationStamp != job.oldStamp || newDocument.modificationStamp != job.newStamp) {
             // A document listener has already scheduled the next comparison.
             return
         }
         if (selection().selected?.id != job.engine.id) return refresh()
-        showResult(request, result)
+        // The engine result is on screen before the pass starts, so a resolve never delays it (R2).
+        if (ReferencePass.isApplicable(project, file, result)) {
+            showResult(request, result, note = RESOLVING)
+            startPass(job, request, result)
+        } else {
+            showResult(request, result)
+            running = null
+        }
+    }
+
+    /** Runs the reference pass on the pooled thread and replaces the engine result when it returns (R1, R2, R16, R17). */
+    private fun startPass(job: Job, request: ComparisonRequest, result: ComparisonResult) {
+        val cancellable = job.passCancellation()
+        ApplicationManager.getApplication().executeOnPooledThread {
+            val outcome = try {
+                ReferencePass.run(project, file, request, result, cancellable)
+            } catch (e: ProcessCanceledException) {
+                return@executeOnPooledThread
+            } catch (e: CancellationException) {
+                return@executeOnPooledThread
+            }
+            if (job.canceled) return@executeOnPooledThread
+            ApplicationManager.getApplication().invokeLater(
+                { finishPass(job, request, outcome) },
+                ModalityState.stateForComponent(viewer.component),
+            )
+        }
+    }
+
+    private fun finishPass(job: Job, request: ComparisonRequest, outcome: ReferencePass.Outcome) {
+        if (disposed || job !== running || job.canceled) return
+        if (oldDocument.modificationStamp != job.oldStamp || newDocument.modificationStamp != job.newStamp) return
+        if (selection().selected?.id != job.engine.id) return refresh()
+        running = null
+        val note = if (outcome.notGrouped) USAGES_NOT_GROUPED else null
+        showResult(request, outcome.result, note, keepSelection = true)
     }
 
     /** Hides or shows changes of [type] in every outline from now on, and rebuilds this one's rows without comparing again. */
@@ -232,17 +278,35 @@ class OutlineController internal constructor(
         settings.hiddenChangeTypes = if (hide) settings.hiddenChangeTypes + type else settings.hiddenChangeTypes - type
         val shown = state as? OutlineState.Shown ?: return
         val request = shownRequest ?: return
-        showResult(request, shown.result)
+        showResult(request, shown.result, shown.usageNote, keepSelection = true)
     }
 
-    private fun showResult(request: ComparisonRequest, result: ComparisonResult) {
+    private fun showResult(
+        request: ComparisonRequest,
+        result: ComparisonResult,
+        note: String? = null,
+        keepSelection: Boolean = false,
+    ) {
         val settings = SmartDiffSettings.getInstance()
         val hidden = settings.hiddenChangeTypes
-        val items = OutlineModel.build(result, request.oldText, request.newText, settings.formattingOnlyInline, hidden)
+        val policy = whitespacePolicy(languageId)
+        val selection = if (keepSelection) panel.selectedPath() else null
+        val items = OutlineModel.build(result, request.oldText, request.newText, settings.formattingOnlyInline, hidden, policy)
         shownRequest = request
-        show(OutlineState.Shown(result, OutlineModel.summary(result, hidden), items, OutlineModel.hiddenCount(result, hidden)))
-        reveal?.let(panel::reveal)
-        reveal = null
+        show(
+            OutlineState.Shown(
+                result,
+                OutlineModel.summary(result, hidden, request.oldText, request.newText, policy),
+                items,
+                OutlineModel.hiddenCount(result, hidden),
+                note,
+            ),
+        )
+        when {
+            keepSelection && selection != null -> panel.reveal(selection)
+            !keepSelection -> reveal?.let(panel::reveal)
+        }
+        if (!keepSelection) reveal = null
         (viewer as? FilteringDiffViewer)?.hide(HiddenLines.of(result, hidden, request.oldText, request.newText))
     }
 
@@ -313,10 +377,25 @@ class OutlineController internal constructor(
                 throw ProcessCanceledException()
             }
         }
+
+        /** The pass's cancellation reads only the job's flag; the pass keeps its own 1 s clock (R17). */
+        fun passCancellation(): Cancellation = Cancellation { if (canceled) throw ProcessCanceledException() }
     }
 
     companion object {
         const val DEBOUNCE_MILLIS = 300
+
+        /** The grey note while the reference pass runs, and after it could not run (relationships/04 R2, R17). */
+        const val RESOLVING = "Resolving usages…"
+        const val USAGES_NOT_GROUPED = "usages not grouped"
+
+        /** The whitespace policy the outline compares a rename-only declaration with, by language. */
+        internal fun whitespacePolicy(languageId: String): WhitespacePolicy = when (languageId) {
+            "JAVA" -> WhitespacePolicy.INSIGNIFICANT
+            "kotlin" -> WhitespacePolicy.LINE_BREAKS_SIGNIFICANT
+            "Scala" -> WhitespacePolicy.INDENTATION_SIGNIFICANT
+            else -> WhitespacePolicy.SIGNIFICANT
+        }
 
         /** The outline toggle's state for one diff window, shared by the viewers it shows one after another. */
         private const val CONTROLLER = "smartdiff.outline.controller"

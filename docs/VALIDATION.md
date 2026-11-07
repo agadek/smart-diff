@@ -41,6 +41,51 @@ The summarized preview is slower than the plain one because it opens the plugin'
 **Found and fixed while checking Enter.** Closing the preview tab disposes its `DiffRequestProcessor`, so the next preview reused a disposed viewer and failed with `IncorrectOperationException: parent ... SingleRequestProcessor ... has already been disposed` (2025.1). `PreviewSession` now creates a new processor and diff file after disposal. Enter on the summarized row after closing its preview opened the preview again in 193 ms on 2025.1.
 
 **Verifier.** `./gradlew verifyPlugin` is compatible on IC-251.26927.53 and IU-263.7307.200 with 4 experimental API usages (the existing Scala `PsiNamedElementWithCustomPresentation` reference and `ChangesViewNodeAction`) and **no deprecated API usage**; removing `FileEditorManager.openFile` removed the last deprecated usage.
+## 2026-11-07: rename grouping step 1 benchmark
+
+Java-only step 1 of [relationships/04](specs/relationships/04-rename-grouping.md). `ReferencePass.VERSION` is 1, separate
+from `DeclarationEngine.VERSION` 9. `RelationshipBenchmarkTest` ran the existing corpus plus the four Java usage-grouping
+fixtures:
+
+```shell
+./gradlew test --tests '*RelationshipBenchmarkTest*' \
+  -Psmartdiff.relationships.corpus=src/test/testData/relationships-corpus-full.txt \
+  -Psmartdiff.relationships.gate=no-new-wrong-pairs \
+  -Psmartdiff.relationships.baseline=src/test/testData/relationships-baseline/report.json
+```
+
+**Result:** 428 cases (308 checked-in cases, including the four Java usage-grouping fixtures, and 120 real commits),
+precision 1.000 and recall 0.829, with no wrong or forced pair; the `no-new-wrong-pairs` gate passed and the report
+records `referencePassVersion` 1. The report says `Status: smoke run` and lists a `usageGate` note, so it is not
+mistaken for the 440-case baseline. The 93 rename relationships are Java 23 high and 5 medium, Kotlin 18 and 3, Scala 2 17 and 6,
+Scala 3 15 and 6: 73 high, 20 medium and 0 low. Reference evidence gave 19 usages, all matched: 15 from the four Java
+fixtures and four on the `SystemUtils` real-commit field rename; no usage was wrongly grouped, missed or unlabelled.
+Java usage precision and recall are 1.000; the other corpora show `n/a` because their resolvers are step 2. The engine
+result is unchanged: the pass only adds reference evidence, and no existing label or classification moved.
+
+This is a **step-1 smoke run** for the [relationships/04](specs/relationships/04-rename-grouping.md) R18 usage gate, not
+the gate itself. Kotlin K2 and Scala add their resolvers, the other twelve usage-grouping fixtures (16 in total), and
+usage labels on their renames in step 2; the gate remains the 440-case corpus with 105 renames (85 high, 20 medium and 0
+low). The report records `GROUPED=5`, `NOT_GROUPED=417` and `NONE=6`, with a pass median of 0 ms, p95 of 0 ms and
+slowest of 325 ms of the 1000 ms budget. The report is in `build/reports/smartdiff-relationships/`.
+
+**Manual runIde check:** `./gradlew runIde` started IntelliJ IDEA Community 2025.1.3 (`IC-251.26927.53`), and the
+`IU-263.7307.200` build ran with the same built plugin. A temporary `AppLifecycleListener`, removed before the change
+was committed, ran the reference pass and the outline model once at startup; both logged:
+
+```text
+VALIDATION_PROBE status=GROUPED references=1 summary=1 rename candidate · 1 usages renamed
+labels=[class Order, method total → sum()  rename candidate, 1 usage, method twice()  usages renamed]
+details=[RangePair(old=[13, 18), new=[13, 18)), RangePair(old=[69, 74), new=[67, 70)),
+  RangePair(old=[43, 48), new=[41, 46)), RangePair(old=[69, 74), new=[67, 70))]
+clipboard=NOT_GROUPED
+```
+
+So both IDEs show the rename with `1 usage`, the declaration with `usages renamed`, the grouped usage ranges for
+framing, and no grouping for a clipboard diff. `OutlineIntegrationTest` drives the controller for the grey
+`Resolving usages…` note, timeout and dumb-mode notes, the replacement keeping the selection, an edit during the pass,
+the filter and selecting the rename to frame the usages.
+
 
 ## 2026-11-06: Changes tree manual check on 2025.1 and 2026.3
 

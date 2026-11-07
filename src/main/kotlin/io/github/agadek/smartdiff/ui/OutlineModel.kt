@@ -4,10 +4,15 @@ import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
+import io.github.agadek.smartdiff.engine.api.Evidence
 import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.RangePair
+import io.github.agadek.smartdiff.engine.api.Relationship
+import io.github.agadek.smartdiff.engine.api.RelationshipKind
+import io.github.agadek.smartdiff.engine.api.RenameNameMapping
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
+import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 import java.util.IdentityHashMap
 
 /** A change label shown after a node's title (technical specification §10). */
@@ -21,6 +26,7 @@ enum class Tag(val text: String) {
     FORMATTING_ONLY("formatting-only"),
     UNANALYZED("unanalyzed"),
     SIGNATURE_CHANGED("signature changed"),
+    USAGES_RENAMED("usages renamed"),
 }
 
 /**
@@ -92,9 +98,11 @@ object OutlineModel {
         newText: CharSequence,
         formattingInline: Boolean,
         hidden: Set<ChangeType> = emptySet(),
+        whitespacePolicy: WhitespacePolicy = WhitespacePolicy.INSIGNIFICANT,
     ): List<OutlineItem> {
         val uncertain = mutableListOf<OutlineItem>()
-        val builder = Builder(formattingInline, hidden, uncertain, Links(result))
+        val usages = Usages(result, oldText, newText, whitespacePolicy)
+        val builder = Builder(formattingInline, hidden, uncertain, Links(result), usages)
         val rows = mutableListOf<OutlineItem>()
         result.fileRegion?.takeIf { it.isReported && !isHidden(it, hidden) }?.let { region ->
             rows += OutlineItem(ItemKind.FILE_REGION, "File region", tags(region), region.oldRange, region.newRange, region.details)
@@ -116,13 +124,20 @@ object OutlineModel {
      * added declaration extracted from old code counts as extracted instead of added. It counts every change, hidden or
      * not, and ends with how many are [hidden], such as `· 2 hidden`.
      */
-    fun summary(result: ComparisonResult, hidden: Set<ChangeType> = emptySet()): String {
+    fun summary(
+        result: ComparisonResult,
+        hidden: Set<ChangeType> = emptySet(),
+        oldText: CharSequence = "",
+        newText: CharSequence = "",
+        whitespacePolicy: WhitespacePolicy = WhitespacePolicy.INSIGNIFICANT,
+    ): String {
+        val usages = Usages(result, oldText, newText, whitespacePolicy)
         val counts = LinkedHashMap<String, Int>()
         listOf(Tag.CHANGED.text, EXTRACTED, Tag.ADDED.text, Tag.REMOVED.text, Tag.MOVED.text, Tag.FORMATTING_ONLY.text,
-            Tag.RENAME_CANDIDATE.text, Tag.UNCERTAIN.text, Tag.UNANALYZED.text).forEach { counts[it] = 0 }
+            Tag.RENAME_CANDIDATE.text, Tag.USAGES_RENAMED.text, Tag.UNCERTAIN.text, Tag.UNANALYZED.text).forEach { counts[it] = 0 }
         fun count(node: ChangeNode) {
-            if (node.isChangedItself) {
-                tags(node).map { if (it == Tag.ADDED && node.extractedFrom.isNotEmpty()) EXTRACTED else it.text }
+            if (node.isChangedItself || usages.hasUsages(node)) {
+                tags(node, usages.isRenameOnly(node)).map { if (it == Tag.ADDED && node.extractedFrom.isNotEmpty()) EXTRACTED else it.text }
                     .filter { it in counts }.forEach { counts[it] = counts.getValue(it) + 1 }
             }
             node.children.forEach(::count)
@@ -138,14 +153,19 @@ object OutlineModel {
     /** How many changes [build] leaves out, or shows only as containers, because their types are [hidden]. */
     fun hiddenCount(result: ComparisonResult, hidden: Set<ChangeType>): Int {
         if (hidden.isEmpty()) return 0
+        val usages = Usages(result, "", "", WhitespacePolicy.INSIGNIFICANT)
         fun count(node: ChangeNode): Int =
-            (if (node.isReported && isHidden(node, hidden)) 1 else 0) + node.children.sumOf(::count)
+            (if (node.isReported && isHidden(node, hidden, usages.hasUsages(node))) 1 else 0) + node.children.sumOf(::count)
         return (result.fileRegion?.let(::count) ?: 0) + result.changes.sumOf(::count)
     }
 
-    /** A change itself whose every label is of a [hidden] type; an uncertain, rename candidate or unanalyzed change never is. */
-    fun isHidden(node: ChangeNode, hidden: Set<ChangeType>): Boolean {
-        if (!node.isChangedItself || hidden.isEmpty()) return false
+    /** The nodes whose innermost matched declaration contains a grouped usage, for the native diff's hidden lines (R8). */
+    fun groupedUsageNodes(result: ComparisonResult): Set<ChangeNode> =
+        Usages(result, "", "", WhitespacePolicy.INSIGNIFICANT).nodesWithUsages()
+
+    /** A change itself whose every label is of a [hidden] type; an uncertain, rename candidate, grouped usage or unanalyzed change never is. */
+    fun isHidden(node: ChangeNode, hidden: Set<ChangeType>, groupedUsages: Boolean = false): Boolean {
+        if (groupedUsages || !node.isChangedItself || hidden.isEmpty()) return false
         val hiddenTags = hidden.flatMapTo(HashSet()) { it.tags }
         return tags(node).all { it in hiddenTags }
     }
@@ -239,7 +259,8 @@ object OutlineModel {
     fun note(result: ComparisonResult, node: ChangeNode): String? = Links(result).note(node)
 
     /** The change labels of a node that is a change itself; none for a node shown only as a container. */
-    fun tags(node: ChangeNode): List<Tag> {
+    fun tags(node: ChangeNode, usagesRenamed: Boolean = false): List<Tag> {
+        if (usagesRenamed) return listOf(Tag.USAGES_RENAMED)
         if (!node.isChangedItself) return emptyList()
         return buildList {
             when (node.presence) {
@@ -260,11 +281,80 @@ object OutlineModel {
         }
     }
 
+    /** The grouped usages of a result, by relationship and by the innermost matched declaration that contains them. */
+    private class Usages(
+        result: ComparisonResult,
+        private val oldText: CharSequence,
+        private val newText: CharSequence,
+        private val policy: WhitespacePolicy,
+    ) {
+        private val byNode = IdentityHashMap<ChangeNode, MutableList<Evidence.Reference>>()
+        private val byRelationship = IdentityHashMap<Relationship, List<Evidence.Reference>>()
+        private val renameEndpoints = HashSet<TextRange>()
+        private val nodes = mutableListOf<ChangeNode>()
+
+        init {
+            fun visit(node: ChangeNode) {
+                if (node.presence == Presence.MATCHED && node.subject is Subject.Declaration && node.oldRange != null && node.newRange != null) {
+                    nodes += node
+                }
+                node.children.forEach(::visit)
+            }
+            result.changes.forEach(::visit)
+            for (relationship in result.relationships) {
+                if (RelationshipKind.RENAME !in relationship.kinds) continue
+                relationship.new.forEach { renameEndpoints += it.range }
+                val references = relationship.evidence.filterIsInstance<Evidence.Reference>()
+                if (references.isEmpty()) continue
+                byRelationship[relationship] = references
+                for (reference in references) {
+                    val node = nodes
+                        .filter { contains(it, reference) }
+                        .minWithOrNull(compareBy({ it.oldRange!!.length }, { it.newRange!!.length }))
+                        ?: continue
+                    byNode.getOrPut(node, ::mutableListOf) += reference
+                }
+            }
+        }
+
+        fun references(node: ChangeNode): List<Evidence.Reference> = byNode[node].orEmpty()
+
+        fun hasUsages(node: ChangeNode): Boolean = byNode.containsKey(node)
+
+        fun nodesWithUsages(): Set<ChangeNode> =
+            java.util.Collections.newSetFromMap(IdentityHashMap<ChangeNode, Boolean>()).apply { addAll(byNode.keys) }
+
+        /** The rename relationship whose new endpoint is [node], if any. */
+        fun renameOf(node: ChangeNode): Relationship? = byRelationship.keys.firstOrNull { relationship ->
+            relationship.new.any { it.range == node.newRange }
+        }
+
+        fun renameReferences(node: ChangeNode): List<Evidence.Reference> = renameOf(node)?.let { byRelationship[it] }.orEmpty()
+
+        /** A declaration whose only change is the grouped usages inside it (R10). */
+        fun isRenameOnly(node: ChangeNode): Boolean {
+            val references = byNode[node] ?: return false
+            if (node.newRange in renameEndpoints) return false
+            if (node.moved || node.signatureChanged || node.renamedFrom != null || node.kindChangedFrom != null) return false
+            val oldRange = node.oldRange ?: return false
+            val newRange = node.newRange ?: return false
+            return RenameNameMapping.isRenameOnly(oldText, newText, references, oldRange, newRange, policy)
+        }
+
+        private fun contains(node: ChangeNode, reference: Evidence.Reference): Boolean {
+            val old = node.oldRange ?: return false
+            val new = node.newRange ?: return false
+            return reference.oldRange.start >= old.start && reference.oldRange.end <= old.end &&
+                reference.newRange.start >= new.start && reference.newRange.end <= new.end
+        }
+    }
+
     private class Builder(
         private val formattingInline: Boolean,
         private val hidden: Set<ChangeType>,
         private val uncertain: MutableList<OutlineItem>,
         private val links: Links,
+        private val usages: Usages,
     ) {
 
         /** The rows for [nodes], the children of one container; uncertain nodes go to [uncertain] instead. */
@@ -272,7 +362,7 @@ object OutlineModel {
             val rows = mutableListOf<OutlineItem>()
             val formatting = mutableListOf<OutlineItem>()
             for (node in nodes) {
-                if (!node.isReported) continue
+                if (!node.isReported && !usages.hasUsages(node)) continue
                 if (node.presence == Presence.UNCERTAIN) {
                     uncertain += uncertainItem(node)
                     continue
@@ -286,18 +376,29 @@ object OutlineModel {
 
         /**
          * The row for a reported node, or null for a container whose only reported children were uncertain or hidden. A
-         * hidden node with shown children is a container without change labels.
+         * hidden node with shown children is a container without change labels. A node with grouped usages is never
+         * hidden and its row frames the usages inside it as well.
          */
         private fun item(node: ChangeNode): OutlineItem? {
             val children = children(node.children)
-            if (isHidden(node, hidden)) {
+            val grouped = usages.references(node)
+            if (isHidden(node, hidden, grouped.isNotEmpty())) {
                 if (children.isEmpty()) return null
                 return OutlineItem(ItemKind.CHANGE, title(node), emptyList(), node.oldRange, node.newRange, children = children)
             }
-            if (!node.isChangedItself && children.isEmpty()) return null
+            if (!node.isChangedItself && children.isEmpty() && grouped.isEmpty()) return null
             // An extraction frames the code it came from on the old side, where it is otherwise absent.
             val oldRange = node.oldRange ?: node.extractedFrom.firstOrNull()?.range
-            return OutlineItem(ItemKind.CHANGE, title(node), tags(node), oldRange, node.newRange, node.details, children, links.note(node))
+            val details = node.details + grouped.map { RangePair(it.oldRange, it.newRange) } +
+                usages.renameReferences(node).map { RangePair(it.oldRange, it.newRange) }
+            val usageNote = usages.renameOf(node)?.let { relationship ->
+                val count = usages.renameReferences(node).size
+                if (count == 0) null else if (count == 1) "1 usage" else "$count usages"
+            }
+            return OutlineItem(
+                ItemKind.CHANGE, title(node), tags(node, usages.isRenameOnly(node)), oldRange, node.newRange,
+                details.distinct(), children, listOfNotNull(usageNote, links.note(node)).joinToString(", ").ifEmpty { null },
+            )
         }
 
         private fun uncertainItem(node: ChangeNode): OutlineItem {
@@ -317,7 +418,7 @@ object OutlineModel {
         /** A matched node whose only change is formatting, with nothing reported inside it. */
         private fun isFormattingOnly(node: ChangeNode): Boolean =
             node.presence == Presence.MATCHED && !node.moved && !node.signatureChanged &&
-                node.content == Content.FORMATTING_ONLY && node.children.none { it.isReported }
+                node.content == Content.FORMATTING_ONLY && node.children.none { it.isReported } && !usages.hasUsages(node)
     }
 
     /** 1-based lines of [range]: `line 3` or `lines 3-5`. */

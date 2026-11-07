@@ -13,6 +13,15 @@ expected:
     - kinds: [RENAME]
       old: { path: "class SystemUtils", kind: FIELD, name: "JAVA_SPECIFICATION_VERSION_AS_ENUM", signature: null }
       new: { path: "class SystemUtils", kind: FIELD, name: "JAVA_SPECIFICATION_VERSION_ENUM", signature: null }
+      usages:
+        - old: "86096..86130"
+          new: "86093..86124"
+        - old: "86142..86176"
+          new: "86136..86167"
+        - old: "86705..86739"
+          new: "86696..86727"
+        - old: "86751..86785"
+          new: "86739..86770"
   changes:
     - subject: { path: "class SystemUtils", kind: FIELD, name: "JAVA_SPECIFICATION_VERSION_ENUM", signature: null }
       presence: MATCHED

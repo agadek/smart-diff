@@ -88,9 +88,14 @@ class ComparisonEngineContract(private val newEngine: () -> ComparisonEngine) {
         for (case in relationshipCases()) RelationshipChecks.endpointsInResultTree(case, compare(case))
     }
 
-    /** R17: every endpoint and content evidence range lies inside its side's text. */
+    /** R17: every endpoint and content or reference evidence range lies inside its side's text. */
     fun `relationship ranges lie inside their side`() {
         for (case in relationshipCases()) RelationshipChecks.rangesInsideText(case, compare(case))
+    }
+
+    /** R12: reference evidence appears only on a rename and names one of its new endpoints. */
+    fun `references name a new endpoint and only a rename`() {
+        for (case in relationshipCases()) RelationshipChecks.referencesNameNewEndpoint(case, compare(case))
     }
 
     /** R18: an extraction's two fields agree with one relationship, and no relationship is listed twice. */
@@ -140,6 +145,7 @@ class ComparisonEngineContract(private val newEngine: () -> ComparisonEngine) {
         `results are deterministic`()
         `relationships name declarations in the result`()
         `relationship ranges lie inside their side`()
+        `references name a new endpoint and only a rename`()
         `extraction fields agree and no relationship repeats`()
         `relationships are in a fixed order`()
         `relationships hide nothing`()

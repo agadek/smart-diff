@@ -43,7 +43,7 @@ object RelationshipChecks {
         }
     }
 
-    /** R17: every endpoint and content evidence range lies inside its side's text. */
+    /** R17: every endpoint and content or reference evidence range lies inside its side's text. */
     fun rangesInsideText(case: ContractCase, result: ComparisonResult) {
         for (relationship in result.relationships) {
             relationship.old.forEach { check(case, it.range.end <= case.oldText.length) { "old endpoint ${it.range} of $relationship is outside ${case.oldText.length} characters" } }
@@ -51,6 +51,27 @@ object RelationshipChecks {
             for (evidence in relationship.evidence.filterIsInstance<Evidence.Content>()) {
                 check(case, evidence.oldRange.end <= case.oldText.length) { "old content ${evidence.oldRange} of $relationship is outside the text" }
                 check(case, evidence.newRange.end <= case.newText.length) { "new content ${evidence.newRange} of $relationship is outside the text" }
+            }
+            for (evidence in relationship.evidence.filterIsInstance<Evidence.Reference>()) {
+                check(case, evidence.oldRange.end <= case.oldText.length) { "old reference ${evidence.oldRange} of $relationship is outside the text" }
+                check(case, evidence.newRange.end <= case.newText.length) { "new reference ${evidence.newRange} of $relationship is outside the text" }
+            }
+        }
+    }
+
+    /** R12: reference evidence appears only on a rename, and its symbol is one of the relationship's new endpoints. */
+    fun referencesNameNewEndpoint(case: ContractCase, result: ComparisonResult) {
+        for (relationship in result.relationships) {
+            val references = relationship.evidence.filterIsInstance<Evidence.Reference>()
+            if (references.isEmpty()) continue
+            check(case, RelationshipKind.RENAME in relationship.kinds) {
+                "reference evidence on a relationship without RENAME: $relationship"
+            }
+            val newSubjects = relationship.new.mapTo(HashSet()) { it.subject }
+            for (reference in references) {
+                check(case, reference.symbol in newSubjects) {
+                    "reference ${reference.symbol} of $relationship is not one of its new endpoints $newSubjects"
+                }
             }
         }
     }
@@ -104,7 +125,11 @@ object RelationshipChecks {
             }
             check(case, relationship.old == relationship.old.sortedBy { it.range.start }) { "old endpoints of $relationship are not sorted" }
             check(case, relationship.new == relationship.new.sortedBy { it.range.start }) { "new endpoints of $relationship are not sorted" }
-            check(case, relationship.evidence == relationship.evidence.sortedBy(::evidenceOrder)) { "evidence of $relationship is not in type order" }
+            check(case, relationship.evidence == relationship.evidence.sortedWith(EVIDENCE_ORDER)) { "evidence of $relationship is not in type order" }
+            val references = relationship.evidence.filterIsInstance<Evidence.Reference>()
+            check(case, references == references.sortedWith(compareBy({ it.oldRange.start }, { it.newRange.start }))) {
+                "references of $relationship are not ordered by old then new range start"
+            }
         }
     }
 
@@ -161,7 +186,19 @@ object RelationshipChecks {
         is Evidence.Content -> 1
         is Evidence.Structure -> 2
         is Evidence.Position -> 3
-        is Evidence.Score -> 4
+        is Evidence.Reference -> 4
+        is Evidence.Score -> 5
+    }
+
+    /** relationships/02 R19 extended by relationships/04 R12, written out so the check does not read the model. */
+    private val EVIDENCE_ORDER = Comparator<Evidence> { first, second ->
+        val byType = evidenceOrder(first).compareTo(evidenceOrder(second))
+        if (byType != 0) byType
+        else if (first is Evidence.Reference && second is Evidence.Reference) {
+            compareValuesBy(first, second, { it.oldRange.start }, { it.newRange.start })
+        } else {
+            0
+        }
     }
 
     private inline fun check(case: ContractCase, condition: Boolean, message: () -> String) {

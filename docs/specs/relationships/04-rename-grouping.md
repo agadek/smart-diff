@@ -1,6 +1,6 @@
 # Rename grouping
 
-Status: accepted, 2026-11-05
+Status: accepted, 2026-11-05; step 1 (Java) implemented, 2026-11-07; Kotlin K2, Scala and the 440-case gate are step 2
 
 **Description:** Groups a renamed declaration with the [usages](../../GLOSSARY.md#usage) in the same file that changed only to follow the rename, so the reviewer reads the rename once.
 

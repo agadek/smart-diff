@@ -2,6 +2,7 @@ package io.github.agadek.smartdiff.engine.declarations.model
 
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.TextRange
+import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 
 /**
  * One side of a file as the declaration engine sees it (technical specification §6.1), built by a language provider.
@@ -78,21 +79,3 @@ class FileRegion(
 data class Token(val type: String, val text: String, val kind: TokenKind)
 
 enum class TokenKind { WHITESPACE, COMMENT, OTHER }
-
-/** Which whitespace a language treats as insignificant (§8 step 4). */
-enum class WhitespacePolicy {
-    /** Java: whitespace never matters. */
-    INSIGNIFICANT,
-
-    /** Kotlin: only whether there is a line break between two tokens matters. */
-    LINE_BREAKS_SIGNIFICANT,
-
-    /**
-     * Scala 3: whether there is a line break matters, and so does the indentation after the last one, compared as
-     * written; spaces within a line do not.
-     */
-    INDENTATION_SIGNIFICANT,
-
-    /** Python, YAML: whitespace always matters, so nothing is formatting-only. */
-    SIGNIFICANT,
-}

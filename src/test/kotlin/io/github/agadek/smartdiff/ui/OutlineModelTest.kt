@@ -7,6 +7,7 @@ import io.github.agadek.smartdiff.engine.api.Confidence
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.Evidence
 import io.github.agadek.smartdiff.engine.api.Origin
 import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.RangePair
@@ -544,7 +545,152 @@ class OutlineModelTest {
         assertEquals("method a()  moved, changed", item.label)
     }
 
-    private fun result(vararg changes: ChangeNode) = ComparisonResult(EngineId("e"), "1", Status.ANALYZED, changes = changes.toList())
+    @Test
+    fun `R9 a rename row notes one usage or twelve usages`() {
+        // relationships/04-rename-grouping R9
+        val fixture = usageFixture()
+        assertEquals("method total → sum()  rename candidate, 1 usage", render(OutlineModel.build(fixture.result, fixture.old, fixture.new, formattingInline = false)).lines().single { it.contains("rename candidate") }.trimStart())
+
+        val relationship = fixture.result.relationships.single()
+        val symbol = (relationship.new.single().subject as Subject.Declaration)
+        val twelve = (1..12).map { Evidence.Reference(symbol, TextRange(it, it + 1), TextRange(it, it + 1)) }
+        val many = fixture.result.copy(relationships = listOf(relationship.copy(evidence = listOf(Evidence.Name("total", "sum")) + twelve + Evidence.Score(0.9))))
+        assertEquals(
+            "method total → sum()  rename candidate, 12 usages",
+            render(OutlineModel.build(many, fixture.old, fixture.new, formattingInline = false)).lines().single { it.contains("rename candidate") }.trimStart(),
+        )
+    }
+
+    @Test
+    fun `R10 a declaration whose only change is a grouped usage is labelled usages renamed`() {
+        // relationships/04-rename-grouping R10, declarations/06-change-labels R1, R4
+        val fixture = usageFixture()
+
+        val rows = render(OutlineModel.build(fixture.result, fixture.old, fixture.new, formattingInline = false))
+
+        assertTrue(rows, rows.contains("class Order  changed"))
+        assertTrue(rows, rows.contains("method total → sum()  rename candidate, 1 usage"))
+        assertTrue(rows, rows.contains("method twice()  usages renamed"))
+        assertEquals("1 changed · 1 rename candidate · 1 usages renamed", OutlineModel.summary(fixture.result, oldText = fixture.old, newText = fixture.new))
+    }
+
+    @Test
+    fun `R10 a comment that keeps the old name does not make the label`() {
+        // relationships/04-rename-grouping R10
+        val fixture = usageFixture(oldComment = "total", newComment = "total")
+
+        val rows = render(OutlineModel.build(fixture.result, fixture.old, fixture.new, formattingInline = false))
+
+        assertTrue(rows, rows.contains("method twice()  usages renamed"))
+    }
+
+    @Test
+    fun `R10 a declaration with another change keeps changed`() {
+        // relationships/04-rename-grouping R10
+        val fixture = usageFixture(extraNewChange = true)
+
+        val rows = render(OutlineModel.build(fixture.result, fixture.old, fixture.new, formattingInline = false))
+
+        assertTrue(rows, rows.contains("method twice()  changed, usages renamed").not())
+        assertTrue(rows, rows.contains("method twice()  changed"))
+    }
+
+    @Test
+    fun `R10 a rename endpoint stays rename candidate even when it contains a usage`() {
+        // relationships/04-rename-grouping R10
+        val fixture = usageFixture(recursiveUsage = true)
+
+        val rows = render(OutlineModel.build(fixture.result, fixture.old, fixture.new, formattingInline = false))
+
+        assertTrue(rows, rows.contains("method total → sum()  rename candidate, 2 usages"))
+    }
+
+    @Test
+    fun `R11 the rename row frames every usage and ChangeNode details stay untouched`() {
+        // relationships/04-rename-grouping R11
+        val fixture = usageFixture()
+
+        val rename = flatten(OutlineModel.build(fixture.result, fixture.old, fixture.new, formattingInline = false))
+            .single { it.title.contains("→") }
+
+        assertEquals(listOf(RangePair(fixture.oldUsage, fixture.newUsage)), rename.details)
+        assertTrue("the engine's nodes keep no detail", fixture.result.changes.flatMap { listOf(it) + it.children }.all { it.details.isEmpty() })
+    }
+
+    @Test
+    fun `R8 a grouped usage is never hidden and stays counted`() {
+        // relationships/04-rename-grouping R8; declarations/06-change-labels R11, R14
+        val fixture = usageFixture()
+
+        val rows = OutlineModel.build(fixture.result, fixture.old, fixture.new, formattingInline = false, hidden = ChangeType.entries.toSet())
+
+        assertTrue(flatten(rows).any { it.title.contains("twice") })
+        assertEquals("1 changed · 1 rename candidate · 1 usages renamed · 1 hidden", OutlineModel.summary(fixture.result, ChangeType.entries.toSet(), fixture.old, fixture.new))
+        assertEquals("a grouped usage is not hidden", 1, OutlineModel.hiddenCount(fixture.result, ChangeType.entries.toSet()))
+    }
+
+    private data class UsageFixture(
+        val old: String,
+        val new: String,
+        val result: ComparisonResult,
+        val oldUsage: TextRange,
+        val newUsage: TextRange,
+    )
+
+    /**
+     * A class with `total` renamed to `sum`, one pure usage in `twice`, and nodes and a relationship that match it. The
+     * options change the text so a test can check what keeps and what loses `usages renamed`.
+     */
+    private fun usageFixture(
+        oldComment: String = "",
+        newComment: String = "",
+        extraNewChange: Boolean = false,
+        recursiveUsage: Boolean = false,
+    ): UsageFixture {
+        val oldCommentLine = if (oldComment.isEmpty()) "" else "    // $oldComment\n"
+        val newCommentLine = if (newComment.isEmpty()) "" else "    // $newComment\n"
+        val old = "class Order {\n    int total() { return 2; }\n$oldCommentLine    int twice() { return total() * 2; }\n}\n"
+        val newChange = if (extraNewChange) " + 1" else ""
+        val new = "class Order {\n    int sum() { return 2; }\n$newCommentLine    int twice() { return sum() * 2$newChange; }\n}\n"
+        val oldSumStart = old.indexOf("int total()")
+        val oldSumEnd = old.indexOf("}", oldSumStart) + 1
+        val newSumStart = new.indexOf("int sum()")
+        val newSumEnd = new.indexOf("}", newSumStart) + 1
+        val oldTwiceStart = old.indexOf("int twice()")
+        val newTwiceStart = new.indexOf("int twice()")
+        val oldUsage = TextRange(old.indexOf("total() * 2"), old.indexOf("total() * 2") + "total".length)
+        val newUsage = TextRange(new.indexOf("sum() * 2"), new.indexOf("sum() * 2") + "sum".length)
+        val oldSubject = Subject.Declaration(DeclarationKind.METHOD, "total", "")
+        val newSubject = Subject.Declaration(DeclarationKind.METHOD, "sum", "")
+        val sum = ChangeNode(
+            newSubject, TextRange(oldSumStart, oldSumEnd), TextRange(newSumStart, newSumEnd), Presence.MATCHED,
+            renamedFrom = oldSubject,
+        )
+        val twice = ChangeNode(
+            Subject.Declaration(DeclarationKind.METHOD, "twice", ""),
+            TextRange(oldTwiceStart, old.length), TextRange(newTwiceStart, new.length), Presence.MATCHED, content = Content.CHANGED,
+        )
+        val order = ChangeNode(
+            Subject.Declaration(DeclarationKind.CLASS, "Order", null),
+            TextRange(0, old.length), TextRange(0, new.length), Presence.MATCHED, content = Content.CHANGED,
+            children = listOf(sum, twice),
+        )
+        val references = mutableListOf(Evidence.Reference(newSubject, oldUsage, newUsage))
+        if (recursiveUsage) references += Evidence.Reference(newSubject, TextRange(oldSumStart, oldSumStart + 5), TextRange(newSumStart, newSumStart + 3))
+        references.sortWith(compareBy({ it.oldRange.start }, { it.newRange.start }))
+        val relationship = Relationship(
+            kinds = java.util.EnumSet.of(RelationshipKind.RENAME),
+            old = listOf(RelationshipEndpoint(oldSubject, TextRange(oldSumStart, oldSumEnd))),
+            new = listOf(RelationshipEndpoint(newSubject, TextRange(newSumStart, newSumEnd))),
+            confidence = Confidence.HIGH,
+            evidence = listOf(Evidence.Name("total", "sum")) + references + Evidence.Score(0.9),
+        )
+        return UsageFixture(
+            old, new,
+            ComparisonResult(EngineId("e"), "1", Status.ANALYZED, changes = listOf(order), relationships = listOf(relationship)),
+            oldUsage, newUsage,
+        )
+    }
 
     @Test
     fun `extractions name both ends, qualified by container only when it differs`() {
@@ -604,6 +750,8 @@ class OutlineModelTest {
 
     private fun method(name: String) = Subject.Declaration(DeclarationKind.METHOD, name, "")
 
+    private fun result(vararg changes: ChangeNode) = ComparisonResult(EngineId("e"), "1", Status.ANALYZED, changes = changes.toList())
+
     private fun node(
         name: String,
         presence: Presence = Presence.MATCHED,
@@ -620,6 +768,8 @@ class OutlineModelTest {
         val signature = if (kind == DeclarationKind.METHOD) "" else null
         return ChangeNode(Subject.Declaration(kind, name, signature), old, new, presence, moved, signatureChanged, content, candidates, children = children, renamedFrom = renamedFrom)
     }
+
+    private fun flatten(items: List<OutlineItem>): List<OutlineItem> = items.flatMap { listOf(it) + flatten(it.children) }
 
     private fun render(rows: List<OutlineItem>): String = buildString {
         fun visit(item: OutlineItem, depth: Int) {

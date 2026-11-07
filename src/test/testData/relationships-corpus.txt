@@ -74,6 +74,10 @@ src/test/testData/java/relationships/statement-reorder-3
 src/test/testData/java/relationships/string-literal-change-1
 src/test/testData/java/relationships/string-literal-change-2
 src/test/testData/java/relationships/string-literal-change-3
+src/test/testData/java/relationships/usage-grouping-1
+src/test/testData/java/relationships/usage-grouping-2
+src/test/testData/java/relationships/usage-grouping-3
+src/test/testData/java/relationships/usage-grouping-4
 src/test/testData/kotlin/relationships/ambiguous-rename-group-1
 src/test/testData/kotlin/relationships/ambiguous-rename-group-2
 src/test/testData/kotlin/relationships/ambiguous-rename-group-3
