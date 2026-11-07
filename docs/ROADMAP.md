@@ -1,6 +1,8 @@
 # SMART Diff Roadmap
 
-Status: 2026-11-05. Items after the shipped baseline are candidates, not commitments; their order is a proposal. Scope details live in the [product scope](specs/README.md#product-scope), the [feature specifications](specs/README.md) and the [technical specification](TECHNICAL-SPECIFICATION.md).
+Status: 2026-11-07. Items after the shipped baseline are candidates, not commitments; their order is a proposal. Scope details live in the [product scope](specs/README.md#product-scope), the [feature specifications](specs/README.md) and the [technical specification](TECHNICAL-SPECIFICATION.md).
+
+The next two releases are planned in [releases/0.3.0-plan.md](releases/0.3.0-plan.md) (the Changes tree work) and [releases/0.4.0-plan.md](releases/0.4.0-plan.md) (structural relationships), with agent prompts for 0.4.0 in [agent-prompts/0.4.0/](agent-prompts/0.4.0/README.md).
 
 ## Shipped baseline
 
