@@ -285,6 +285,44 @@ class ChangesTreeInteractionTest : BasePlatformTestCase() {
         assertSummaryMatchesPlain("commit-source", TestContext.COMMIT, showDiff = false, showPreview = false)
     }
 
+    fun `test opening the Commit preview reads the revisions off the EDT`() {
+        // changes-tree/02-changes-tree-declarations R19: the preview reads the file like the platform's
+        VcsApplicationSettings.getInstance().let {
+            it.SHOW_DIFF_ON_DOUBLE_CLICK = false
+            it.SHOW_EDITOR_PREVIEW_ON_DOUBLE_CLICK = true
+        }
+        val path = VcsUtil.getFilePath("/repo/Cart.java", false)
+        val before = CheckedRevision(OLD_CART, path)
+        val after = CheckedRevision(NEW_CART, path)
+        val change = Change(before, after)
+        val tree = summarizedTree(change)
+        // The summary already read both revisions; only the preview's reads are checked.
+        before.read = false
+        after.read = false
+        val summaryPath = TreePath(summaryRow(tree).path)
+        reveal(tree, summaryPath)
+
+        withToolWindow(tree, ToolWindowId.COMMIT) {
+            ChangesTreeSetup.configure(tree, suppressExpansion = true)
+            val previewManager = RecordingDiffEditorTabFilesManager()
+            val previewDisposable = Disposer.newDisposable(testRootDisposable)
+            project.replaceService(DiffEditorTabFilesManager::class.java, previewManager, previewDisposable)
+            try {
+                // The click runs on the EDT; a revision read there fails in CheckedRevision.
+                ApplicationManager.getApplication().invokeAndWait { tree.doubleClick(summaryPath) }
+                assertNotNull("the preview opens", previewManager.shown)
+                PlatformTestUtil.waitWithEventsDispatching(
+                    "the background load reads both revisions",
+                    { before.read && after.read },
+                    10,
+                )
+            } finally {
+                ChangesTreeSetup.disposePreview(tree)
+                Disposer.dispose(previewDisposable)
+            }
+        }
+    }
+
     fun `test moving the tree between tool windows uses the new setting`() {
         // changes-tree/02-changes-tree-declarations R17: the context is resolved at click time
         VcsApplicationSettings.getInstance().let {

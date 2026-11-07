@@ -1,6 +1,6 @@
 package io.github.agadek.smartdiff.ui.changes
 
-import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.diff.chains.DiffRequestProducerException
 import com.intellij.diff.editor.DiffEditorTabFilesManager
 import com.intellij.diff.editor.DiffViewerVirtualFile
 import com.intellij.diff.impl.CacheDiffRequestProcessor
@@ -9,6 +9,7 @@ import com.intellij.diff.impl.DiffRequestProcessor
 import com.intellij.diff.requests.DiffRequest
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
@@ -207,12 +208,13 @@ internal object ChangesTreeSetup {
     /** An editor-tab preview of the selected file, using the public diff editor API. */
     private class PreviewSession(private val tree: ChangesListView) : com.intellij.openapi.Disposable {
         private var change: Change? = null
-        private val processor = SingleRequestProcessor(tree.project) { change?.let { ChangesDiff.request(tree.project, it) } }
+        private val processor = SingleRequestProcessor(tree.project) { change }
         private val file = PreviewDiffFile(processor)
 
         fun show(change: Change): Boolean {
+            // A change without a file cannot be previewed; checking that reads no revision content.
+            if (change.beforeRevision == null && change.afterRevision == null) return false
             this.change = change
-            if (ChangesDiff.request(tree.project, change) == null) return false
             DiffEditorTabFilesManager.getInstance(tree.project).showDiffFile(file, true)
             processor.updateRequest(true, null)
             return true
@@ -227,13 +229,26 @@ internal object ChangesTreeSetup {
         override fun createViewer(project: Project): DiffEditorViewer = processor
     }
 
+    /**
+     * Feeds the preview from the selected [Change]. The provider and its name are read on the EDT, while
+     * [loadRequest] builds the request and reads the file's revisions on the background thread.
+     */
     private class SingleRequestProcessor(
-        project: Project,
-        private val request: () -> DiffRequest?,
-    ) : CacheDiffRequestProcessor<DiffRequest>(project, "Changes") {
-        override fun getRequestName(provider: DiffRequest): String? = provider.title
-        override fun getCurrentRequestProvider(): DiffRequest? = request()
-        override fun loadRequest(provider: DiffRequest, indicator: ProgressIndicator): DiffRequest = provider
+        private val project: Project,
+        private val current: () -> Change?,
+    ) : CacheDiffRequestProcessor<Change>(project, "Changes") {
+        override fun getRequestName(provider: Change): String =
+            (provider.afterRevision ?: provider.beforeRevision)?.file?.name ?: "Changes"
+
+        override fun getCurrentRequestProvider(): Change? = current()
+
+        override fun loadRequest(provider: Change, indicator: ProgressIndicator): DiffRequest {
+            indicator.text = "Loading changes"
+            val file = (provider.afterRevision ?: provider.beforeRevision)?.file
+                ?: throw DiffRequestProducerException("The change has no file")
+            return ChangesDiff.request(project, provider)
+                ?: throw DiffRequestProducerException("Cannot read ${file.path}")
+        }
     }
 
     /**
