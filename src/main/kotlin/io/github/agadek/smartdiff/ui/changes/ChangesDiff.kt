@@ -183,13 +183,20 @@ internal object ChangesDiff {
         }
     }
 
-    /** The file's own diff request, without a declaration context. */
-    fun request(project: Project, change: Change): SimpleDiffRequest? {
+    /**
+     * The file's own diff request, without a declaration context. It reads both revisions, so call it on a background
+     * thread, as the diff window does through [ChangeContentDiffProducer] and the Commit preview through its provider.
+     * [indicator] is checked between the reads, so a preview the user switches away from stops early.
+     */
+    fun request(project: Project, change: Change, indicator: ProgressIndicator? = null): SimpleDiffRequest? {
         val before = change.beforeRevision
         val after = change.afterRevision
         val file = after?.file ?: before?.file ?: return null
+        indicator?.checkCanceled()
         val oldContent = content(project, before) ?: return null
+        indicator?.checkCanceled()
         val newContent = content(project, after) ?: return null
+        indicator?.checkCanceled()
         return SimpleDiffRequest(
             file.path,
             oldContent,

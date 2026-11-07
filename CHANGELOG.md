@@ -11,6 +11,8 @@
 ### Fixed
 
 - When the platform's Changes diff action cannot open a declaration, the fallback diff reads the committed revisions off the UI thread, so a slow VCS does not freeze the IDE.
+- Opening the Commit tool window's preview of a summarized file reads the file's revisions off the UI thread, so a slow VCS does not freeze the IDE on the double-click or Enter.
+- Closing the Commit tool window's preview tab and opening the preview again rebuilds its viewer, so the next double-click or Enter still shows the diff.
 - Double-click or Enter on a changed file in the Changes tree opens it again as a file without a summary does when the file has a structural summary, following the Local Changes and Commit settings, and declaration rows open their diff through the tree's real selection.
 
 ## [0.2.0] - 2026-11-05
