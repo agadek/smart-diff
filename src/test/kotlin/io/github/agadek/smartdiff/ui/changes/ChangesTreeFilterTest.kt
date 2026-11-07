@@ -202,15 +202,14 @@ class ChangesTreeFilterTest : BasePlatformTestCase() {
         assertEquals("a display toggle does not compare again", calls, engine.calls.get())
     }
 
-    fun `test an analysis setting still compares again`() {
-        // changes-tree/04-hide-and-filter R6: the cache is kept only for display changes
+    fun `test the first analysis setting change clears the cache`() {
+        // changes-tree/04-hide-and-filter R6: the cache stamp lives with the entries, not in the listener
         val engine = ScriptedEngine(cartResult())
         maskEngines(engine)
         val change = modified("Cart.java")
         summaryNode(change)
         ChangesSummaryService.getInstance(project).waitForSummaries()
         val listener = ChangesSummarySettingsListener()
-        listener.settingsChanged()
         val calls = engine.calls.get()
 
         settings.limits = Limits.DEFAULT.copy(timeoutMillis = Limits.DEFAULT.timeoutMillis - 1)
@@ -219,6 +218,40 @@ class ChangesTreeFilterTest : BasePlatformTestCase() {
         ChangesSummaryService.getInstance(project).waitForSummaries()
 
         assertTrue("an analysis setting makes a new summary", engine.calls.get() > calls)
+    }
+
+    fun `test a setting changed before the listener is created still clears the cache`() {
+        // changes-tree/04-hide-and-filter R6: the listener is created after the change, as the platform does
+        val engine = ScriptedEngine(cartResult())
+        maskEngines(engine)
+        val change = modified("Cart.java")
+        summaryNode(change)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        val calls = engine.calls.get()
+
+        settings.limits = Limits.DEFAULT.copy(timeoutMillis = Limits.DEFAULT.timeoutMillis - 1)
+        val listener = ChangesSummarySettingsListener()
+        listener.settingsChanged()
+        summaryNode(change)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+
+        assertTrue("the first settings event after an analysis change makes a new summary", engine.calls.get() > calls)
+    }
+
+    fun `test summaries clear the cache when the analysis stamp changes`() {
+        // changes-tree/04-hide-and-filter R6: summaries() applies the stamp too, without a settings event
+        val engine = ScriptedEngine(cartResult())
+        maskEngines(engine)
+        val change = modified("Cart.java")
+        summaryNode(change)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        val calls = engine.calls.get()
+
+        settings.limits = Limits.DEFAULT.copy(timeoutMillis = Limits.DEFAULT.timeoutMillis - 1)
+        summaryNode(change)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+
+        assertTrue("summaries() notices the new analysis stamp", engine.calls.get() > calls)
     }
 
     fun `test the filter is a hide change types submenu`() {

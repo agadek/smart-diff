@@ -87,7 +87,8 @@ Rebuilds go through `refreshChangesView`, which publishes `ChangesViewModifier.T
 
 - `SmartDiffSettings` marks a revision when an analysis-affecting setting changes: the limits and the formatting-only layout, which changes the cached rows. Display-only settings such as the two toggles, the two filters, the outline toggle and the merge settings do not mark it.
 - `EngineDefaults` marks a revision when a language's engine changes.
-- `ChangesSummarySettingsListener` remembers both revisions. On `SmartDiffSettings.CHANGED` it clears `ChangesSummaryService` only when one of them moved, then rebuilds every open project's tree.
+- `ChangesSummaryService` records the `AnalysisStamp` made from both revisions and the confidence policy with the cache entries it guards. Both `summaries()` and `settingsChanged()` compare the current stamp with the recorded one and clear the cache when it differs. A request also carries its stamp, so a comparison that finishes after the cache was cleared is not stored under the new stamp.
+- `ChangesSummarySettingsListener` is stateless. On `SmartDiffSettings.CHANGED` it asks each open project's existing service to apply the current stamp, then rebuilds every open project's tree.
 
 The toggle and filter actions publish the same `CHANGED` event, so they rebuild every open tree, but they do not move an analysis revision and do not clear the cache. A test with a counting engine checks that a toggle or filter change leaves the call count unchanged; an engine or limit change still recomputes.
 
@@ -111,7 +112,7 @@ The tests name the requirement they check, for example `// changes-tree/04-hide-
 | R3 | `ChangesTreeFilterTest` `test the structural summary toggle hides the grey text and keeps the rows`: a rendered file row has no summary or reason text, and its declaration children remain. |
 | R4 | `ChangesTreeFilterTest` `test declarations off makes each file a leaf and leaves the row to the platform`: the file node is a leaf with no children, and `DeclarationNodeAction` leaves the row to the platform; M3 checks double-click and Enter after #111. |
 | R5 | `SmartDiffSettingsTest` `test the changes tree toggles share the settings page values`; `ChangesTreeFilterTest` `test a tree toggle writes the same setting as the settings page` |
-| R6 | `ChangesTreeFilterTest` `test toggling rebuilds without another comparison`: a counting engine runs once per file, and changing a toggle leaves the count unchanged; `test an analysis setting still compares again` |
+| R6 | `ChangesTreeFilterTest` `test toggling rebuilds without another comparison`: a counting engine runs once per file, and changing a toggle leaves the count unchanged; `test the first analysis setting change clears the cache`, `test a setting changed before the listener is created still clears the cache`, `test summaries clear the cache when the analysis stamp changes` |
 | R7 | `OutlineModelTest` `test the tree filter hides each change type`; `test a shown change with a hidden child stays with its own labels in the tree`; `ChangesTreeFilterTest` `test a shown change with a hidden child stays with its own labels in the tree` |
 | R8 | `OutlineModelTest` `test hiding changed also hides a signature change from the tree` |
 | R9 | `OutlineModelTest` `test a change with one shown label stays in the tree`; the same shown-change regression above |

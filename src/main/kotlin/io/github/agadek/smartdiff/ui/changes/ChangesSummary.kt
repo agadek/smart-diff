@@ -175,8 +175,8 @@ class DeclarationNodeAction @JvmOverloads constructor(
 }
 
 /**
- * The structural summaries and outline rows of a project's changed files, computed one file at a time on a background thread and cached
- * by file, revisions and engine. A file edited since its summary gets a new one.
+ * The structural summaries and outline rows of a project's changed files, computed one file at a time on a background
+ * thread and cached by file, revisions, engine and analysis stamp. A file edited since its summary gets a new one.
  */
 @Service(Service.Level.PROJECT)
 class ChangesSummaryService(private val project: Project) {
@@ -197,9 +197,9 @@ class ChangesSummaryService(private val project: Project) {
     }
 
     /**
-     * What a summary was computed from: the file's paths, a version of each side, the engine and the confidence policy.
-     * The policy is part of the key, so a changed registry threshold does not leave summaries computed under the old one
-     * (relationships/02 R15).
+     * What a summary was computed from: the file's paths, a version of each side, the engine, the confidence policy and
+     * the analysis stamp. The stamp makes a result computed under older limits or an older engine layout land under an
+     * older key instead of the current cache.
      */
     private data class Key(
         val oldPath: String,
@@ -208,10 +208,12 @@ class ChangesSummaryService(private val project: Project) {
         val newVersion: String,
         val engineId: String,
         val confidence: String,
+        val analysis: AnalysisStamp,
     )
 
     private val executor = AppExecutorUtil.createBoundedApplicationPoolExecutor("SMART Diff Changes summary", 1)
     private val cache = ConcurrentHashMap<Key, Entry>()
+    private var cacheStamp: AnalysisStamp? = null
     private val refreshScheduled = AtomicBoolean()
 
     /**
@@ -222,7 +224,9 @@ class ChangesSummaryService(private val project: Project) {
      * are no longer in [changes] are forgotten.
      */
     fun summaries(changes: List<Change>): List<FileSummary?> {
-        val requests = changes.map(::request)
+        val stamp = currentAnalysisStamp()
+        useStamp(stamp)
+        val requests = changes.map { request(it, stamp) }
         cache.keys.retainAll(requests.mapNotNullTo(HashSet()) { it?.key })
         return requests.map { request ->
             if (request == null) return@map null
@@ -243,8 +247,38 @@ class ChangesSummaryService(private val project: Project) {
         }
     }
 
+    /** Applies the current analysis stamp; the cache is dropped when it differs from the stamp it was computed under. */
+    fun settingsChanged() = useStamp(currentAnalysisStamp())
+
     /** Forgets every summary, for example after the analysis limits changed. */
-    fun clear() = cache.clear()
+    fun clear() {
+        synchronized(cache) {
+            cache.clear()
+            cacheStamp = null
+        }
+    }
+
+    private fun useStamp(stamp: AnalysisStamp) {
+        synchronized(cache) {
+            if (cacheStamp != stamp) {
+                cache.clear()
+                cacheStamp = stamp
+            }
+        }
+    }
+
+    /** What the current summaries depend on, as opposed to how the tree displays them. */
+    private fun currentAnalysisStamp(): AnalysisStamp {
+        val settings = SmartDiffSettings.getInstance()
+        return AnalysisStamp(
+            settings.analysisRevision,
+            EngineDefaults.getInstance().revision,
+            settings.confidence.format(),
+        )
+    }
+
+    /** The values that change what a summary contains. A display toggle or filter does not move them. */
+    internal data class AnalysisStamp(val settingsRevision: Long, val engineRevision: Long, val confidence: String)
 
     /** Waits until every summary requested so far is computed. */
     @TestOnly
@@ -254,13 +288,21 @@ class ChangesSummaryService(private val project: Project) {
 
     private class Request(val key: Key, val change: Change, val languageId: String, val fileName: String)
 
-    private fun request(change: Change): Request? {
+    private fun request(change: Change, stamp: AnalysisStamp): Request? {
         val old = change.beforeRevision ?: return null
         val new = change.afterRevision ?: return null
         val fileName = new.file.name
         val languageId = (FileTypeRegistry.getInstance().getFileTypeByFileName(fileName) as? LanguageFileType)?.language?.id ?: return null
         val engine = EngineRegistry.getInstance(project).select(languageId).selected ?: return null
-        val key = Key(old.file.path, new.file.path, version(old), version(new), engine.id.value, SmartDiffSettings.getInstance().confidence.format())
+        val key = Key(
+            old.file.path,
+            new.file.path,
+            version(old),
+            version(new),
+            engine.id.value,
+            stamp.confidence,
+            stamp,
+        )
         return Request(key, change, languageId, fileName)
     }
 
@@ -411,28 +453,11 @@ internal fun refreshChangesView(project: Project) {
 
 /** Shows or hides the summaries in every open project when the SMART Diff settings change. */
 class ChangesSummarySettingsListener : SmartDiffSettings.Listener {
-    private var lastAnalysis: AnalysisStamp = currentAnalysis()
-
     override fun settingsChanged() {
-        val analysis = currentAnalysis()
-        val analysisChanged = analysis != lastAnalysis
-        lastAnalysis = analysis
         for (project in ProjectManager.getInstance().openProjects) {
             if (project.isDisposed) continue
-            if (analysisChanged) project.serviceIfCreated<ChangesSummaryService>()?.clear()
+            project.serviceIfCreated<ChangesSummaryService>()?.settingsChanged()
             refreshChangesView(project)
         }
     }
-
-    private fun currentAnalysis(): AnalysisStamp {
-        val settings = SmartDiffSettings.getInstance()
-        return AnalysisStamp(
-            settings.analysisRevision,
-            EngineDefaults.getInstance().revision,
-            settings.confidence.format(),
-        )
-    }
-
-    /** The values that change what a summary contains, as opposed to how the tree displays it. */
-    private data class AnalysisStamp(val settingsRevision: Long, val engineRevision: Long, val confidence: String)
 }
