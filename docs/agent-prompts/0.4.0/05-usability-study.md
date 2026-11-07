@@ -1,0 +1,22 @@
+# Agent prompt: prepare the usability study (outline/06)
+
+Written 2026-11-07 for [0.4.0](../../releases/0.4.0-plan.md), task 5. A study, run in parallel with the other tasks after 0.3.0 is released. An agent can prepare the study and analyse its results, but people have to take part, so the maintainer runs the sessions. Paste the block below into a new session.
+
+```text
+Repository agadek/smart-diff (JetBrains plugin "SMART Diff"). Prepare the usability study of docs/specs/outline/06-usability-validation.md and its details file (status proposed, 2026-11-01): a small, repeatable study that compares how quickly reviewers find changed declarations with the structural outline and with the native diff alone. You prepare the study and its materials and, once the maintainer has run the sessions, analyse and record the results. You do not recruit or contact anyone.
+
+Background: outline/06 needs at least 5 review tasks from real multi-hunk changes in supported languages, each with one expected answer (the declaration and how it changed), at least 5 participants who know the language but not the change, every task done once per condition with alternating order, time and correctness recorded, and a pass when the median time is at least 20% shorter with the outline and wrong answers do not rise. No names or other personal data are recorded (R10). The open questions are whether 20% is above run-to-run variation (a pilot is proposed) and what to do with fewer than 5 participants.
+
+Read first: AGENTS.md, docs/SPEC-GUIDE.md, outline/06 and its details, outline/01 to 05, docs/VALIDATION.md (the corpus lists and how results are recorded), and the product scope in docs/specs/README.md.
+
+Check that no open PR or branch already does this (look for docs/usability-study*); if one exists, stop and say so.
+
+Steps:
+ 1. Spec first: settle the open questions with a recommendation each (the pilot's size and how its variation decides the threshold; the rule for a smaller sample, for example reporting the result as inconclusive rather than lowering the bar), update the details and tests table, set the status to accepted with the date, and commit. If a choice changes the release claim, stop and report the options for the maintainer.
+ 2. Choose at least 5 tasks (more if the details ask for a spare) from real commits in the corpus repositories, covering Java, Kotlin and Scala, each a multi-hunk change with one unambiguous expected answer. Pin each commit and file, write the question and the expected answer, and check in a running IDE that the outline shows the answer and that the native diff shows the same change.
+ 3. Write the study kit under docs/usability-study/: the protocol (setup, the order schedule for R5, timing rules, what counts as a right answer), a script the facilitator reads, an anonymous results sheet (participant numbers only, R10), and a small script or test that turns the filled-in sheet into the R6/R7 numbers (median times per condition, the relative difference, wrong answers per condition) so a later study can repeat it (R9).
+ 4. Run a dry run yourself in a running IDE to check that each task opens and the timing works; do not record it as a participant.
+ 5. Branch docs/usability-study from main, commit, and open a PR that says what the maintainer has to do: recruit participants, run the pilot and the sessions with the kit, and fill in the sheet. After the sheets come back (a follow-up task), compute the results, record them in a dated section of docs/VALIDATION.md separate from the corpus results (R8), and mark the spec implemented if the study ran as specified.
+
+Rules: read AGENTS.md and docs/SPEC-GUIDE.md first; the spec wins over the code until the spec is changed, and tests name the requirement they check. Run every CI workflow step (./gradlew clean buildPlugin check and ./gradlew verifyPlugin, plus anything else in .github/workflows) before every push. The cloud sandbox blocks JetBrains downloads, so run them on the maintainer's computer via Remote Control, in a separate git worktree so a running IDE in the main checkout is not disturbed; never push untested hoping CI catches it. Branch names are typed and descriptive (feat/..., fix/..., test/..., docs/..., chore/...), never session-generated. Never name a person in repository content, commit messages or PRs, and never record participants' names or other personal data; the PR attribution line keeps its marker comment and thread link but no name. Do not merge the PR.
+```
