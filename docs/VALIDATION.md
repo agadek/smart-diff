@@ -21,6 +21,27 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-07: Commit preview of a summarized row off the EDT (2025.1 and 2026.3)
+
+[changes-tree/02](specs/changes-tree/02-changes-tree-declarations.md) R19 and issue #126: opening the Commit tool window's preview of a summarized row must not read a committed revision on the UI thread. PR #127 moves the reads into the preview provider's `loadRequest` and replaces the deprecated `FileEditorManager.openFile` source fallback with `OpenFileDescriptor.navigate`.
+
+**Test evidence.** `ChangesTreeInteractionTest` and `ChangesSummaryTest` pass (20 and 19 tests). The new `test opening the Commit preview reads the revisions off the EDT and switches changes` fails on `origin/main` at the first double-click with `AssertionError: revision content is read on the EDT` from `CheckedRevision.getContent` → `ChangesDiff.content` → `ChangesDiff.request` → `PreviewSession.show`. On the branch it passes: both revisions are read on the background load, and switching the preview to a second change reads that change's revisions there too. `test reopening the Commit preview after its tab closed loads it again` covers a viewer disposed by closing the preview tab.
+
+**Manual run.** The IDE was started from the local IC-251.26927.53 and IU-263.7307.200 distributions with the built plugin and a Git project containing a summarized `Cart.java` change, a staged `Order.java` change and a plain `notes.txt` change. A temporary startup probe activated the Commit tool window, waited for the summary, and drove the tree's real double-click handler and Enter listener on the EDT. It logged the handler time and the time until the preview request had a title. The probe was removed before this change was committed.
+
+| Action | IC 2025.1.3, handler / preview | IU 2026.3, handler / preview |
+| --- | --- | --- |
+| Summarized row, double-click | 388 ms / 495 ms | 772 ms / 1091 ms |
+| Plain row, double-click | 140 ms / 207 ms | 65 ms / 203 ms |
+| Summarized row, Enter | 129 ms / 193 ms | 288 ms / 426 ms |
+| Plain row, Enter | 66 ms / 113 ms | 10 ms / 62 ms |
+
+The summarized preview is slower than the plain one because it opens the plugin's editor tab and loads through its provider; the first 2026.3 preview includes class loading and editor creation. The 2026-11-06 record's about 14 s delay did not reproduce. No `UI was frozen` or slow-operation warning followed the clicks; the post-startup activity logged `EDT responsiveness: ok` on both IDEs. The only severe log entry in the first 2025.1 run was the disposed-viewer failure below.
+
+**Found and fixed while checking Enter.** Closing the preview tab disposes its `DiffRequestProcessor`, so the next preview reused a disposed viewer and failed with `IncorrectOperationException: parent ... SingleRequestProcessor ... has already been disposed` (2025.1). `PreviewSession` now creates a new processor and diff file after disposal. Enter on the summarized row after closing its preview opened the preview again in 193 ms on 2025.1.
+
+**Verifier.** `./gradlew verifyPlugin` is compatible on IC-251.26927.53 and IU-263.7307.200 with 4 experimental API usages (the existing Scala `PsiNamedElementWithCustomPresentation` reference and `ChangesViewNodeAction`) and **no deprecated API usage**; removing `FileEditorManager.openFile` removed the last deprecated usage.
+
 ## 2026-11-06: Changes tree manual check on 2025.1 and 2026.3
 
 This run checked #108, #111 and #112 (PR #124) in running IDEs. `./gradlew buildPlugin` produced

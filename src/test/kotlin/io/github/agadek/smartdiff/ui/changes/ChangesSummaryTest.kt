@@ -556,26 +556,6 @@ class ChangesSummaryTest : BasePlatformTestCase() {
         override fun showMerge(project: Project?, request: MergeRequest) { error("unexpected") }
     }
 
-    /** A revision whose content can only be read off the EDT, as a committed revision in the Changes view is. */
-    private class CheckedRevision(private val text: String, file: FilePath) : ContentRevision {
-        private val delegate = SimpleContentRevision(text, file, "1")
-
-        @Volatile
-        var read = false
-
-        override fun getContent(): String {
-            if (ApplicationManager.getApplication().isDispatchThread) {
-                throw AssertionError("revision content is read on the EDT")
-            }
-            read = true
-            return text
-        }
-
-        override fun getFile(): FilePath = delegate.file
-
-        override fun getRevisionNumber(): VcsRevisionNumber = delegate.revisionNumber
-    }
-
     private companion object {
         val OLD_CART = """
             // cart
@@ -599,4 +579,24 @@ class ChangesSummaryTest : BasePlatformTestCase() {
             }
         """.trimIndent()
     }
+}
+
+/** A revision whose content can only be read off the EDT, as a committed revision in the Changes view is. */
+internal class CheckedRevision(private val text: String, file: FilePath) : ContentRevision {
+    private val delegate = SimpleContentRevision(text, file, "1")
+
+    @Volatile
+    var read = false
+
+    override fun getContent(): String {
+        if (ApplicationManager.getApplication().isDispatchThread) {
+            throw AssertionError("revision content is read on the EDT")
+        }
+        read = true
+        return text
+    }
+
+    override fun getFile(): FilePath = delegate.file
+
+    override fun getRevisionNumber(): VcsRevisionNumber = delegate.revisionNumber
 }
