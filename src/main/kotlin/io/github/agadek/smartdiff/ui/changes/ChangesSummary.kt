@@ -66,13 +66,12 @@ class ChangesSummaryModifier(private val project: Project) : ChangesViewModifier
         val showSummary = settings.showChangesSummary
         val showDeclarations = settings.showChangesDeclarations
         if (!showSummary && !showDeclarations) {
-            ChangesTreeSetup.schedule(project, suppressExpansion = false)
+            ChangesTreeSetup.schedule(project)
             return
         }
         val root = (builder as? TreeModelBuilder)?.myRoot ?: return
         val nodes = changeNodes(root)
         val summaries = ChangesSummaryService.getInstance(project).summaries(nodes.map { it.userObject })
-        var hasDeclarationRows = false
         for ((node, summary) in nodes.zip(summaries)) {
             if (summary == null) continue
             val filtered = ChangesTreeFilter.filter(summary.items, settings.hiddenChangesTreeChangeTypes)
@@ -83,9 +82,8 @@ class ChangesSummaryModifier(private val project: Project) : ChangesViewModifier
             val text = if (showSummary) ChangesTreeFilter.summary(summary.text, filtered) else ""
             parent.remove(index)
             parent.insert(SummaryChangeNode(project, node, text).apply { rows.forEach { add(DeclarationNode(it)) } }, index)
-            hasDeclarationRows = hasDeclarationRows || rows.isNotEmpty()
         }
-        ChangesTreeSetup.schedule(project, suppressExpansion = hasDeclarationRows)
+        ChangesTreeSetup.schedule(project)
     }
 
     /** The file nodes of the tree, at most [MAX_FILES]; a node with children, such as a changed directory, is left alone. */
