@@ -240,8 +240,9 @@ class OutlineController internal constructor(
             return
         }
         if (selection().selected?.id != job.engine.id) return refresh()
-        // The engine result is on screen before the pass starts, so a resolve never delays it (R2).
-        if (ReferencePass.supports(languageId) && ReferencePass.isApplicable(project, file, result)) {
+        // The engine result is on screen before the pass starts, so a resolve never delays it (R2). Only the cheap
+        // checks run here, on the EDT; the pass reads the project file index on its pooled thread (R3).
+        if (ReferencePass.supports(languageId) && ReferencePass.canRun(project, file, result)) {
             showResult(request, result, note = RESOLVING)
             startPass(job, request, result)
         } else {
