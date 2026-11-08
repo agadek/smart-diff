@@ -35,6 +35,8 @@ the tree. This is the reverse of opening a declaration from the tree.
   API.
 - **R10** When the tree's filter or its Declarations toggle hides the declaration under the caret, the tree selects the
   nearest shown row above it, or the file row when no declaration row is shown.
+- **R11** A caret event from the platform's selection-following preview, or from an editor without focus, does not
+  replace a pending follow from another editor.
 
 ## Out of scope
 

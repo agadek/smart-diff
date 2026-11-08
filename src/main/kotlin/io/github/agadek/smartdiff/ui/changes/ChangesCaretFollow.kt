@@ -1,9 +1,11 @@
 package io.github.agadek.smartdiff.ui.changes
 
 import com.intellij.diff.FrameDiffTool
+import com.intellij.diff.contents.DocumentContent
 import com.intellij.diff.editor.DiffEditorViewerFileEditor
 import com.intellij.diff.merge.MergeTool
 import com.intellij.diff.tools.util.DiffDataKeys
+import com.intellij.diff.tools.util.side.OnesideDiffViewer
 import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
 import com.intellij.ide.DataManager
 import com.intellij.openapi.diagnostic.Logger
@@ -86,7 +88,7 @@ class ChangesTreeCaretFollower internal constructor(
 
     private enum class Side { OLD, NEW }
 
-    private data class SideFile(val side: Side, val file: VirtualFile, val fallback: Boolean)
+    private data class SideFile(val side: Side?, val file: VirtualFile, val fallback: Boolean)
 
     private data class PendingFollow(
         val editor: Editor,
@@ -197,7 +199,7 @@ class ChangesTreeCaretFollower internal constructor(
     private val selectionChangedListener = object : FileEditorManagerListener {
         override fun selectionChanged(event: FileEditorManagerEvent) {
             val editor = event.manager.selectedTextEditor ?: return
-            onCaretMoved(editor, editor.caretModel.offset)
+            onCaretMoved(editor, editor.caretModel.offset, fromSelectionChange = true)
         }
     }
 
@@ -229,9 +231,9 @@ class ChangesTreeCaretFollower internal constructor(
         override fun keyPressed(e: KeyEvent) = cancelPending()
     }
 
-    internal fun onCaretMoved(editor: Editor, offset: Int) {
+    internal fun onCaretMoved(editor: Editor, offset: Int, fromSelectionChange: Boolean = false) {
         if (!ApplicationManager.getApplication().isDispatchThread) {
-            ApplicationManager.getApplication().invokeLater { onCaretMoved(editor, offset) }
+            ApplicationManager.getApplication().invokeLater { onCaretMoved(editor, offset, fromSelectionChange) }
             return
         }
         if (!started || project.isDisposed || editor.project !== project || editor.isDisposed) return
@@ -239,8 +241,28 @@ class ChangesTreeCaretFollower internal constructor(
             cancelPending()
             return
         }
+        if (keepsPendingFollow(editor, fromSelectionChange)) return
         pending = PendingFollow(editor, offset, selectionEpoch.get())
         restartTimer()
+    }
+
+    /**
+     * Whether a caret event in [editor] must leave a pending follow from another editor in place (R11). The platform's
+     * selection-following preview fires caret events while it loads or scrolls, and an editor without focus is not the
+     * user's caret; either would otherwise replace a remembered editor and offset with a file-row-only follow. A user's
+     * editor switch is a selection change and always wins, so switching to a diff still follows it without a caret move.
+     */
+    private fun keepsPendingFollow(editor: Editor, fromSelectionChange: Boolean): Boolean {
+        val current = pending ?: return false
+        if (current.editor === editor) return false
+        if (watchedTree?.let { selectionFollowingPreview(editor, it) } == true) return true
+        if (fromSelectionChange) return false
+        return !isEditorFocused(editor)
+    }
+
+    private fun isEditorFocused(editor: Editor): Boolean {
+        val focus = focusOwner() ?: return false
+        return focus === editor.contentComponent || SwingUtilities.isDescendingFrom(focus, editor.contentComponent)
     }
 
     private fun onEdt(action: () -> Unit) {
@@ -352,6 +374,7 @@ class ChangesTreeCaretFollower internal constructor(
         val sideFile = sideFile(editor) ?: return Target.None
         val fileRow = findFileRow(tree, sideFile) ?: return Target.None
         val change = fileRow.userObject as? Change ?: return Target.None
+        val side = sideFile.side ?: if (samePath(change.afterRevision?.file, sideFile.file)) Side.NEW else Side.OLD
         val settings = SmartDiffSettings.getInstance()
         return when (val snapshot = summaries.snapshot(change)) {
             SummarySnapshot.Stale -> Target.Stale
@@ -375,7 +398,7 @@ class ChangesTreeCaretFollower internal constructor(
                 if (summaryRow == null) {
                     return Target.FileRow(fileRow, retry = settings.showChangesSummary || settings.showChangesDeclarations)
                 }
-                val path = innermost(summary.items, sideFile.side, offset)
+                val path = innermost(summary.items, side, offset)
                     ?: return Target.FileRow(summaryRow, retry = false)
                 val filtered = ChangesTreeFilter.filter(summary.items, settings.hiddenChangesTreeChangeTypes)
                 val shown = OutlinePath.of(path).find(filtered.items)
@@ -384,11 +407,11 @@ class ChangesTreeCaretFollower internal constructor(
         }
     }
 
-    /** The side and file of [editor]: its own side of a two-sided diff, or the new side of a plain editor. */
+    /** The side and file of [editor]: its own side of a two-sided diff, the shown side of a one-sided diff, or a plain editor. */
     private fun sideFile(editor: Editor): SideFile? {
         if (mergeViewerOf(editor) != null) return null
         val viewer = viewerOf(editor)
-        if (viewer != null && viewer !is TwosideTextDiffViewer) return null
+        if (viewer != null && viewer !is TwosideTextDiffViewer && viewer !is OnesideDiffViewer<*>) return null
         if (viewer is TwosideTextDiffViewer) {
             val side = when (editor) {
                 viewer.editor2 -> Side.NEW
@@ -400,8 +423,18 @@ class ChangesTreeCaretFollower internal constructor(
             val file = own ?: other ?: return null
             return SideFile(side, file, fallback = own == null)
         }
+        if (viewer is OnesideDiffViewer<*>) {
+            // An added or deleted file is shown on the only side that has a revision: the platform picks the non-empty
+            // content and exposes it as the viewer's side.
+            val side = if (viewer.side.isLeft) Side.OLD else Side.NEW
+            val content = viewer.side.select(viewer.request.contents)
+            val file = (content as? DocumentContent)?.highlightFile ?: return null
+            return SideFile(side, file, fallback = false)
+        }
+        // A plain editor names one file but not its side. A deleted file, or a diff opened without DIFF_VIEWER, names only
+        // the old revision, so the side is resolved from the change once its row is found.
         val file = FileDocumentManager.getInstance().getFile(editor.document) ?: editor.virtualFile ?: return null
-        return SideFile(Side.NEW, file, fallback = false)
+        return SideFile(side = null, file, fallback = false)
     }
 
     private fun findFileRow(tree: ChangesListView, sideFile: SideFile): ChangesBrowserChangeNode? {
@@ -410,10 +443,16 @@ class ChangesTreeCaretFollower internal constructor(
         while (nodes.hasMoreElements()) {
             val node = nodes.nextElement() as? ChangesBrowserChangeNode ?: continue
             val change = node.userObject as? Change ?: continue
-            val onSide = if (sideFile.side == Side.NEW) change.afterRevision?.file else change.beforeRevision?.file
-            val other = if (sideFile.side == Side.NEW) change.beforeRevision?.file else change.afterRevision?.file
+            val matches = when (sideFile.side) {
+                null -> samePath(change.afterRevision?.file, sideFile.file) ||
+                    samePath(change.beforeRevision?.file, sideFile.file)
+                Side.NEW -> samePath(change.afterRevision?.file, sideFile.file) ||
+                    (sideFile.fallback && samePath(change.beforeRevision?.file, sideFile.file))
+                Side.OLD -> samePath(change.beforeRevision?.file, sideFile.file) ||
+                    (sideFile.fallback && samePath(change.afterRevision?.file, sideFile.file))
+            }
             // An added or deleted file names only one side; the other content found it, the side still picks the range.
-            if (samePath(onSide, sideFile.file) || (sideFile.fallback && samePath(other, sideFile.file))) return node
+            if (matches) return node
         }
         return null
     }
