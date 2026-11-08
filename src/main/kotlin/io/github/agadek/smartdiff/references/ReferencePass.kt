@@ -3,6 +3,7 @@ package io.github.agadek.smartdiff.references
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProcessCanceledException
+import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
@@ -137,6 +138,13 @@ object ReferencePass {
         }
     }
 
+    private class RenameTarget(
+        val relationship: Relationship,
+        val oldTarget: PsiElement,
+        val newTarget: PsiElement,
+        val newSubject: Subject.Declaration,
+    )
+
     private fun group(
         project: Project,
         request: ComparisonRequest,
@@ -153,6 +161,7 @@ object ReferencePass {
         val nodes = matchedNodes(result)
         val references = IdentityHashMap<Relationship, List<Evidence.Reference>>()
         var grouped = false
+        val targets = mutableListOf<RenameTarget>()
 
         for (relationship in result.relationships) {
             cancellation.checkCanceled()
@@ -166,12 +175,23 @@ object ReferencePass {
             if (unanalysedEndpoint(nodes, newEndpoint.range, oldSide = false)) continue
             val oldTarget = resolver.target(oldFile, oldEndpoint.range, oldSubject) ?: continue
             val newTarget = resolver.target(newFile, newEndpoint.range, newSubject) ?: continue
-            val oldUsages = resolver.usages(oldFile, oldTarget, cancellation)
-            val newUsages = resolver.usages(newFile, newTarget, cancellation)
+            targets += RenameTarget(relationship, oldTarget, newTarget, newSubject)
+        }
+        if (targets.isEmpty()) return result
 
-            val found = pair(oldUsages, newUsages, nodes, oldFile, newFile, resolver, oldPolicy, newPolicy, newSubject, cancellation)
+        // One resolver walk per side for every rename target, then one grouping per rename. Without this cache each
+        // rename would resolve every reference in the file again.
+        val oldUsages = resolver.usages(oldFile, targets.mapTo(LinkedHashSet()) { it.oldTarget }, cancellation)
+        val newUsages = resolver.usages(newFile, targets.mapTo(LinkedHashSet()) { it.newTarget }, cancellation)
+        for (target in targets) {
+            cancellation.checkCanceled()
+            val found = pair(
+                oldUsages[target.oldTarget].orEmpty(),
+                newUsages[target.newTarget].orEmpty(),
+                nodes, oldFile, newFile, resolver, oldPolicy, newPolicy, target.newSubject, cancellation,
+            )
             if (found.isNotEmpty()) {
-                references[relationship] = found
+                references[target.relationship] = found
                 grouped = true
             }
         }
@@ -285,6 +305,9 @@ object ReferencePass {
 
         override fun checkCanceled() {
             external.checkCanceled()
+            // A pending write action cancels the read action's platform indicator; let the helper retry the read, rather
+            // than returning a partial grouping from the first pass.
+            if (ProgressManager.getInstance().progressIndicator?.isCanceled == true) throw ProcessCanceledException()
             if (System.nanoTime() - deadline > 0) {
                 timedOut = true
                 throw ProcessCanceledException()

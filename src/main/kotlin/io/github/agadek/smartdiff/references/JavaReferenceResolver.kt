@@ -40,8 +40,17 @@ internal object JavaReferenceResolver : ReferenceResolver {
             ?: candidates.firstOrNull { it is PsiMethod || it is PsiClass }
     }
 
-    override fun usages(file: PsiFile, target: PsiElement, cancellation: Cancellation): List<TextRange> {
-        val found = sortedSetOf<TextRange>(compareBy { it.start })
+    override fun usages(file: PsiFile, target: PsiElement, cancellation: Cancellation): List<TextRange> =
+        usages(file, setOf(target), cancellation)[target].orEmpty()
+
+    /** One reference walk and one resolve per reference, shared by every rename target in [targets]. */
+    override fun usages(
+        file: PsiFile,
+        targets: Set<PsiElement>,
+        cancellation: Cancellation,
+    ): Map<PsiElement, List<TextRange>> {
+        if (targets.isEmpty()) return emptyMap()
+        val found = targets.associateWith { sortedSetOf<TextRange>(compareBy { it.start }) }
         val elements = PsiTreeUtil.collectElements(file) { it is PsiReferenceExpression || it is PsiJavaCodeReferenceElement }
         for (element in elements) {
             cancellation.checkCanceled()
@@ -50,20 +59,22 @@ internal object JavaReferenceResolver : ReferenceResolver {
                 val resolved = try {
                     reference.resolve()
                 } catch (e: ProcessCanceledException) {
-                    // A canceled read action is a cancellation when the pass asked for one; otherwise this usage is
-                    // simply unresolved (relationships/04, resolver note).
-                    cancellation.checkCanceled()
-                    LOG.debug("Java usage ${range} was not resolved: $e")
-                    null
+                    // A canceled read action must reach cancellableReadAction, which retries after the write action;
+                    // swallowing it here would return a partial grouping from the canceled read.
+                    LOG.debug("Java usage ${range} was canceled while resolving: $e")
+                    throw e
                 } catch (e: Exception) {
                     LOG.debug("Java usage ${range} was not resolved: $e")
                     null
                 }
                 cancellation.checkCanceled()
-                if (resolved != null && resolvesTo(resolved, target)) found += range
+                if (resolved == null) continue
+                for (target in targets) {
+                    if (resolvesTo(resolved, target)) found.getValue(target) += range
+                }
             }
         }
-        return found.toList()
+        return found.mapValues { it.value.toList() }
     }
 
     override fun context(file: PsiFile, usage: TextRange): TextRange? {

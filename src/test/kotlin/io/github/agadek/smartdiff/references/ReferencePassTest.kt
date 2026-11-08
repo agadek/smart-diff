@@ -1,6 +1,8 @@
 package io.github.agadek.smartdiff.references
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.progress.ProcessCanceledException
+import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
@@ -22,6 +24,8 @@ import io.github.agadek.smartdiff.engine.api.contract.ContractCase
 import io.github.agadek.smartdiff.engine.api.contract.RelationshipChecks
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationEngine
 import java.nio.file.Files
+import java.util.concurrent.Callable
+import java.util.concurrent.TimeUnit
 
 /** The reference pass over the Java fixtures: grouping, purity, pairing, confidence, cancellation and the time budget. */
 class ReferencePassTest : BasePlatformTestCase() {
@@ -187,6 +191,22 @@ class ReferencePassTest : BasePlatformTestCase() {
         assertEquals("the resolver saw one resolve and no second", 1, spy.resolves)
     }
 
+    fun `test R16 a platform indicator cancellation during resolve retries without a partial group`() {
+        // relationships/04-rename-grouping R16
+        val old = "class Order {\n    int total() { return 1; }\n    int use() { return total() + total(); }\n}\n"
+        val new = "class Order {\n    int sum() { return 1; }\n    int use() { return sum() + sum(); }\n}\n"
+        val request = ComparisonRequest(old, new, "JAVA", "Order.java")
+        val result = compare(request)
+        val resolver = PlatformCancelResolver(old, new)
+
+        val outcome = ApplicationManager.getApplication().executeOnPooledThread(
+            Callable { ReferencePass.runWith(project, request, result, Cancellation.NONE, listOf(resolver), ReferencePass.BUDGET_MILLIS) },
+        ).get(30, TimeUnit.SECONDS)
+
+        assertEquals("the canceled read is retried, not returned as a partial group", ReferencePass.Status.GROUPED, outcome.status)
+        assertEquals(2, outcome.result.relationships.single().evidence.filterIsInstance<Evidence.Reference>().size)
+    }
+
     fun `test R17 a pass over its budget returns the engine result with no grouped usages`() {
         val request = ComparisonRequest(ONE_OLD, ONE_NEW, "JAVA", "Order.java")
         val result = compare(request)
@@ -269,6 +289,37 @@ class ReferencePassTest : BasePlatformTestCase() {
         }
         override fun context(file: PsiFile, usage: TextRange): TextRange = TextRange(0, 10)
         override fun whitespacePolicy(file: PsiFile): WhitespacePolicy = WhitespacePolicy.INSIGNIFICANT
+    }
+
+    /** Cancels the platform indicator during the first resolve and returns only one usage, as a write action would. */
+    private class PlatformCancelResolver(private val old: String, private val new: String) : ReferenceResolver {
+        private var canceled = false
+        private val oldUsages = occurrences(old, "total()", old.indexOf("use()"))
+        private val newUsages = occurrences(new, "sum()", new.indexOf("use()"))
+
+        override fun supports(languageId: String) = languageId == "JAVA"
+        override fun target(file: PsiFile, range: TextRange, subject: Subject.Declaration): PsiElement = file
+
+        override fun usages(file: PsiFile, target: PsiElement, cancellation: Cancellation): List<TextRange> {
+            cancellation.checkCanceled()
+            if (!canceled) {
+                canceled = true
+                val indicator = ProgressManager.getInstance().progressIndicator
+                assertNotNull("the read action has a platform indicator", indicator)
+                indicator!!.cancel()
+                return listOf(oldUsages.first())
+            }
+            return if (file.text == old) oldUsages else newUsages
+        }
+
+        override fun context(file: PsiFile, usage: TextRange): TextRange = usage
+        override fun whitespacePolicy(file: PsiFile): WhitespacePolicy = WhitespacePolicy.INSIGNIFICANT
+
+        private fun occurrences(text: String, token: String, after: Int): List<TextRange> {
+            val first = text.indexOf(token, after)
+            val second = text.indexOf(token, first + token.length)
+            return listOf(TextRange(first, first + token.length), TextRange(second, second + token.length))
+        }
     }
 
     private class SlowResolver : ReferenceResolver {

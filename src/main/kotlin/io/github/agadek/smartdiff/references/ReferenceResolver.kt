@@ -32,6 +32,13 @@ internal interface ReferenceResolver {
     fun usages(file: PsiFile, target: PsiElement, cancellation: Cancellation): List<TextRange>
 
     /**
+     * The usages of every target in [targets], resolved once per reference where the language can. The default calls
+     * [usages] for each target; a resolver with an expensive reference walk overrides it to resolve each reference once.
+     */
+    fun usages(file: PsiFile, targets: Set<PsiElement>, cancellation: Cancellation): Map<PsiElement, List<TextRange>> =
+        targets.associateWith { usages(file, it, cancellation) }
+
+    /**
      * The smallest expression containing [usage], or the enclosing statement or member when the language has no
      * expression node; null when no such context exists.
      */
