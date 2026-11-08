@@ -72,8 +72,7 @@ class ChangesTreeCaretFollower internal constructor(
     private val summaries: ChangesSummaryService,
     private val focusOwner: () -> Component?,
     private val treeShowing: (ChangesListView) -> Boolean = { it.isShowing },
-    private val viewerOf: (Editor) -> FrameDiffTool.DiffViewer? = ::viewerFromContext,
-    private val mergeViewerOf: (Editor) -> MergeTool.MergeViewer? = ::mergeViewerFromContext,
+    private val viewersOf: (Editor) -> ContextViewers = ::viewersFromContext,
     private val selectionFollowingPreview: (Editor, ChangesListView) -> Boolean =
         { editor, tree -> isSelectionFollowingPreview(project, editor, tree) },
     private val logFailure: (Throwable) -> Unit = ::logFollowFailure,
@@ -409,8 +408,9 @@ class ChangesTreeCaretFollower internal constructor(
 
     /** The side and file of [editor]: its own side of a two-sided diff, the shown side of a one-sided diff, or a plain editor. */
     private fun sideFile(editor: Editor): SideFile? {
-        if (mergeViewerOf(editor) != null) return null
-        val viewer = viewerOf(editor)
+        val viewers = viewersOf(editor)
+        if (viewers.mergeViewer != null) return null
+        val viewer = viewers.viewer
         if (viewer != null && viewer !is TwosideTextDiffViewer && viewer !is OnesideDiffViewer<*>) return null
         if (viewer is TwosideTextDiffViewer) {
             val side = when (editor) {
@@ -602,13 +602,30 @@ class ChangesTreeCaretFollowActivity : ProjectActivity {
     }
 }
 
-/** The diff viewer of [editor] from its data context, or null for a plain editor. */
-internal fun viewerFromContext(editor: Editor): FrameDiffTool.DiffViewer? =
-    DiffDataKeys.DIFF_VIEWER.getData(DataManager.getInstance().getDataContext(editor.contentComponent))
+/** The diff and merge viewers of [editor] from one data-context snapshot. */
+internal data class ContextViewers(
+    val viewer: FrameDiffTool.DiffViewer?,
+    val mergeViewer: MergeTool.MergeViewer?,
+)
 
-/** The merge viewer of [editor], which marks a merge window that following leaves alone. */
-internal fun mergeViewerFromContext(editor: Editor): MergeTool.MergeViewer? =
-    DiffDataKeys.MERGE_VIEWER.getData(DataManager.getInstance().getDataContext(editor.contentComponent))
+/**
+ * The diff and merge viewers of [editor] from its data context, or two nulls for a plain editor.
+ *
+ * Building the context snapshots the viewer's component, and the platform's `OnesideTextDiffViewer` and
+ * `UnifiedDiffViewer` `getNavigatable` need read access, so the lookup runs in one application read action
+ * (changes-tree/05 R12).
+ */
+internal fun viewersFromContext(editor: Editor): ContextViewers {
+    lateinit var viewers: ContextViewers
+    ApplicationManager.getApplication().runReadAction(Runnable {
+        val context = DataManager.getInstance().getDataContext(editor.contentComponent)
+        viewers = ContextViewers(
+            DiffDataKeys.DIFF_VIEWER.getData(context),
+            DiffDataKeys.MERGE_VIEWER.getData(context),
+        )
+    })
+    return viewers
+}
 
 /**
  * Whether [editor] belongs to the platform's selection-following Changes preview. Selecting a declaration row there
