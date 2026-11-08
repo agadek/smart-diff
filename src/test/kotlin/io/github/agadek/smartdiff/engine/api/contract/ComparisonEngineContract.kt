@@ -98,9 +98,13 @@ class ComparisonEngineContract(private val newEngine: () -> ComparisonEngine) {
         for (case in relationshipCases()) RelationshipChecks.referencesNameNewEndpoint(case, compare(case))
     }
 
-    /** R18: an extraction's two fields agree with one relationship, and no relationship is listed twice. */
-    fun `extraction fields agree and no relationship repeats`() {
-        for (case in relationshipCases()) RelationshipChecks.extractionFieldsAgree(case, compare(case))
+    /** R18, R36: an extraction's and an inlining's two fields agree with one relationship, and no relationship is listed twice. */
+    fun `extraction and inlining fields agree and no relationship repeats`() {
+        for (case in relationshipCases()) {
+            val result = compare(case)
+            RelationshipChecks.extractionFieldsAgree(case, result)
+            RelationshipChecks.inliningFieldsAgree(case, result)
+        }
     }
 
     /** R19: the list, its kinds, endpoints and evidence are in a fixed order. Two runs are equal by `results are deterministic`. */
@@ -146,7 +150,7 @@ class ComparisonEngineContract(private val newEngine: () -> ComparisonEngine) {
         `relationships name declarations in the result`()
         `relationship ranges lie inside their side`()
         `references name a new endpoint and only a rename`()
-        `extraction fields agree and no relationship repeats`()
+        `extraction and inlining fields agree and no relationship repeats`()
         `relationships are in a fixed order`()
         `relationships hide nothing`()
         `cancellation propagates promptly`()

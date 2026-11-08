@@ -1,0 +1,22 @@
+case: inlining-4
+language: Scala
+corpus: scala3
+category: inlining
+split: tuning
+expected:
+  relationships:
+    - kinds: [INLINE]
+      old: { path: "class Receipt", kind: FUNCTION, name: "line", signature: "String,Int" }
+      new: { path: "class Receipt", kind: FUNCTION, name: "total", signature: "String,Int" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Receipt", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Receipt", kind: FUNCTION, name: "total", signature: "String,Int" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Receipt", kind: FUNCTION, name: "line", signature: "String,Int" }
+      presence: REMOVED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A reformatted helper is inlined into its caller."

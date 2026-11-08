@@ -1,0 +1,4 @@
+status: ANALYZED
+class Note  old 1-6  new 1-3
+  function title(String)  changed  old 2-3  new 2-3
+  function prefix(String)  removed  old 5-6

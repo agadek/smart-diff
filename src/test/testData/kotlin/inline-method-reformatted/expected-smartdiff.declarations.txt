@@ -1,0 +1,4 @@
+status: ANALYZED
+class Receipt  old 1-12  new 1-10
+  function total(String,Int)  changed  code inlined from line(String,Int) old 7-10 new 3-8  old 2-4  new 2-9
+  function line(String,Int)  removed  inlined into total(String,Int)  old 6-11

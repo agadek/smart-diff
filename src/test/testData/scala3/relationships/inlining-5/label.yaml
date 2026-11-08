@@ -1,0 +1,19 @@
+case: inlining-5
+language: Scala
+corpus: scala3
+category: inlining
+split: tuning
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Note", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Note", kind: FUNCTION, name: "title", signature: "String" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Note", kind: FUNCTION, name: "prefix", signature: "String" }
+      presence: REMOVED
+      content: UNCHANGED
+  ambiguous: []
+notes: "The removed body is under ten tokens, so it is not inlined."

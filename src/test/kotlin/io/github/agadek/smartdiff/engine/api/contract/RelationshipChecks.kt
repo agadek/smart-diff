@@ -114,6 +114,47 @@ object RelationshipChecks {
         }
     }
 
+    /** R18, R36: an inlining's two fields agree with one `INLINE` relationship. */
+    fun inliningFieldsAgree(case: ContractCase, result: ComparisonResult) {
+        val inlinings = result.relationships.filter { RelationshipKind.INLINE in it.kinds }
+        for (node in nodes(result)) {
+            for (inlined in node.inlinedFrom) {
+                val links = inlinings.filter { link ->
+                    link.old.size == 1 && link.new.size == 1 &&
+                        link.old.first().range == inlined.declarationRange &&
+                        link.new.first().range == node.newRange
+                }
+                check(case, links.size == 1) { "inlinedFrom ${inlined.subject} of $node matches ${links.size} relationships, not 1" }
+                check(case, contentOf(links.single()).oldRange == inlined.oldRange && contentOf(links.single()).newRange == inlined.newRange) {
+                    "inlinedFrom ${inlined.oldRange}/${inlined.newRange} of $node disagrees with ${contentOf(links.single())}"
+                }
+            }
+            for (inlined in node.inlinedInto) {
+                val links = inlinings.filter { link ->
+                    link.old.size == 1 && link.new.size == 1 &&
+                        link.old.first().range == node.oldRange &&
+                        link.new.first().range == inlined.declarationRange
+                }
+                check(case, links.size == 1) { "inlinedInto ${inlined.subject} of $node matches ${links.size} relationships, not 1" }
+                check(case, contentOf(links.single()).oldRange == inlined.oldRange && contentOf(links.single()).newRange == inlined.newRange) {
+                    "inlinedInto ${inlined.oldRange}/${inlined.newRange} of $node disagrees with ${contentOf(links.single())}"
+                }
+            }
+        }
+        for (link in inlinings.filter { it.confidence != Confidence.LOW }) {
+            val source = nodes(result).singleOrNull { it.oldRange == link.old.first().range }
+            val target = nodes(result).singleOrNull { it.newRange == link.new.first().range }
+            check(case, source != null && target != null) { "INLINE $link has no node on one side" }
+            val content = contentOf(link)
+            check(case, source!!.inlinedInto.any { it.declarationRange == link.new.first().range && it.oldRange == content.oldRange && it.newRange == content.newRange }) {
+                "INLINE $link sets no inlinedInto on $source"
+            }
+            check(case, target!!.inlinedFrom.any { it.declarationRange == link.old.first().range && it.oldRange == content.oldRange && it.newRange == content.newRange }) {
+                "INLINE $link sets no inlinedFrom on $target"
+            }
+        }
+    }
+
     /** R19: the list, its kinds, its endpoints and its evidence come in the order the model fixes. */
     fun fixedOrder(case: ContractCase, result: ComparisonResult) {
         check(case, result.relationships == result.relationships.sortedWith(ORDER)) {

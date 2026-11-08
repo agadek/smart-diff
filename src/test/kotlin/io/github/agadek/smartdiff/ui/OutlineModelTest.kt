@@ -8,6 +8,7 @@ import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.api.Evidence
+import io.github.agadek.smartdiff.engine.api.Inlined
 import io.github.agadek.smartdiff.engine.api.Origin
 import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.RangePair
@@ -301,12 +302,15 @@ class OutlineModelTest {
                 node("extracted", presence = Presence.ADDED, old = null).copy(
                     extractedFrom = listOf(Origin(method("source"), TextRange(0, 1), TextRange(0, 1))),
                 ),
+                node("inlined", presence = Presence.REMOVED, new = null).copy(
+                    inlinedInto = listOf(Inlined(method("target"), TextRange(2, 3), TextRange(0, 1), TextRange(2, 3))),
+                ),
             ),
             unanalyzed = listOf(RangePair(TextRange(0, 1), null)),
         )
 
         assertEquals(
-            "1 changed · 1 extracted · 1 added · 1 removed · 1 moved · 1 formatting-only · 1 rename candidate · 1 uncertain · 1 unanalyzed",
+            "1 changed · 1 extracted · 1 added · 1 inlined · 1 removed · 1 moved · 1 formatting-only · 1 rename candidate · 1 uncertain · 1 unanalyzed",
             OutlineModel.summary(result),
         )
         assertEquals("a zero count is left out", "1 changed", OutlineModel.summary(result(node("changed", content = Content.CHANGED))))
@@ -852,6 +856,85 @@ class OutlineModelTest {
         assertTrue(shown, shown.contains("method helper()  added, extracted from s1(), s2(), s3(), +2 more"))
         assertTrue(hidden, !hidden.contains("helper"))
         assertEquals("5 changed · 1 extracted · 1 hidden", OutlineModel.summary(result, setOf(ChangeType.ADDED)))
+    }
+
+    @Test
+    fun `an inlining names both ends and lists at most three names`() {
+        // relationships/05-inlining-detection R6, R7, R8; declarations/06-change-labels R5
+        val sourceOld = TextRange(10, 50)
+        val source = node("heading", presence = Presence.REMOVED, new = null, old = sourceOld)
+        val targets = (1..5).map { i ->
+            node("render$i", old = TextRange(60 + i * 10, 70 + i * 10), new = TextRange(60 + i * 10, 70 + i * 10), content = Content.CHANGED).copy(
+                inlinedFrom = listOf(Inlined(source.subject, sourceOld, TextRange(20, 40), TextRange(70, 90))),
+            )
+        }
+        val inlined = targets.map { target ->
+            Inlined(target.subject, target.newRange!!, TextRange(20, 40), TextRange(70, 90))
+        }
+        val result = result(node("Service", children = listOf(source.copy(inlinedInto = inlined)) + targets))
+
+        val rows = OutlineModel.build(result, "", "", formattingInline = false)
+
+        assertEquals(
+            "method heading()  removed, inlined into render1(), render2(), render3(), +2 more",
+            rows[0].children[0].label,
+        )
+        assertTrue(rows[0].children[1].label.endsWith("code inlined from heading()"))
+    }
+
+    @Test
+    fun `an inlining frames the inlined code on the new side`() {
+        // relationships/05-inlining-detection R9
+        val oldCode = TextRange(20, 40)
+        val newCode = TextRange(70, 90)
+        val target = node("render", old = TextRange(60, 100), new = TextRange(60, 100), content = Content.CHANGED)
+        val source = node("heading", presence = Presence.REMOVED, old = TextRange(10, 50), new = null).copy(
+            inlinedInto = listOf(Inlined(target.subject, target.newRange!!, oldCode, newCode)),
+        )
+        val result = result(target.copy(inlinedFrom = listOf(Inlined(source.subject, source.oldRange!!, oldCode, newCode))), source)
+
+        val rows = OutlineModel.build(result, "", "", formattingInline = false)
+        val removedRow = rows.single { it.title == "method heading()" }
+        val targetRow = rows.single { it.title == "method render()" }
+
+        assertEquals("the removed row frames the inlined code on the new side", newCode, removedRow.newRange)
+        assertEquals(TextRange(10, 50), removedRow.oldRange)
+        assertTrue(removedRow.details.contains(RangePair(null, newCode)))
+        assertEquals(TextRange(60, 100), targetRow.newRange)
+        assertTrue("the target highlights the code inlined into it", targetRow.details.contains(RangePair(null, newCode)))
+        assertEquals("1 changed · 1 inlined", OutlineModel.summary(result))
+    }
+
+    @Test
+    fun `the summary counts an inlining as inlined, not removed`() {
+        // relationships/05-inlining-detection R13; declarations/06-change-labels R15
+        val target = node("render", content = Content.CHANGED)
+        val source = node("heading", presence = Presence.REMOVED, new = null).copy(
+            inlinedInto = listOf(Inlined(target.subject, target.newRange!!, TextRange(0, 5), TextRange(5, 10))),
+        )
+
+        assertEquals("1 changed · 1 inlined", OutlineModel.summary(result(target, source)))
+    }
+
+    @Test
+    fun `an inlining is hidden with removed changes`() {
+        // relationships/05-inlining-detection R14; declarations/06-change-labels R15
+        val target = node("render", content = Content.CHANGED)
+        val source = node("heading", presence = Presence.REMOVED, new = null).copy(
+            inlinedInto = listOf(Inlined(target.subject, target.newRange!!, TextRange(0, 5), TextRange(5, 10))),
+        )
+        val result = result(
+            target.copy(inlinedFrom = listOf(Inlined(source.subject, source.oldRange!!, TextRange(0, 5), TextRange(5, 10)))),
+            source,
+        )
+
+        val shown = render(OutlineModel.build(result, "", "", formattingInline = false))
+        val hidden = render(OutlineModel.build(result, "", "", formattingInline = false, hidden = setOf(ChangeType.REMOVED)))
+
+        assertTrue(shown.contains("method heading()  removed, inlined into render()"))
+        assertFalse(hidden.contains("method heading()  removed"))
+        assertTrue(hidden.contains("method render()  changed, code inlined from heading()"))
+        assertEquals("1 changed · 1 inlined · 1 hidden", OutlineModel.summary(result, setOf(ChangeType.REMOVED)))
     }
 
     private fun method(name: String) = Subject.Declaration(DeclarationKind.METHOD, name, "")

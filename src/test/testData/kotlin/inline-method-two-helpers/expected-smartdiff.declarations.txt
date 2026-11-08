@@ -1,0 +1,5 @@
+status: ANALYZED
+class Basket  old 1-21  new 1-13
+  function render(String,Int)  changed  code inlined from heading(String,Int,StringBuilder) old 10-12 new 4-6  code inlined from footer(String,Int,StringBuilder) old 16-19 new 7-10  old 2-7  new 2-12
+  function heading(String,Int,StringBuilder)  removed  inlined into render(String,Int)  old 9-13
+  function footer(String,Int,StringBuilder)  removed  inlined into render(String,Int)  old 15-20

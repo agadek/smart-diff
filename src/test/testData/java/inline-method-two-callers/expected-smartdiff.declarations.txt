@@ -1,0 +1,5 @@
+status: ANALYZED
+class Invoice  old 1-16  new 1-15
+  method render(String,int)  changed  code inlined from heading(String,int) old 11-14 new 3-6  old 2-4  new 2-7
+  method summary(String,int)  changed  code inlined from heading(String,int) old 11-14 new 10-13  old 6-8  new 9-14
+  method heading(String,int)  removed  inlined into render(String,int), summary(String,int)  old 10-15

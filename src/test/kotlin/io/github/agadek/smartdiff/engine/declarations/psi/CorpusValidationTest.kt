@@ -51,8 +51,10 @@ import java.util.concurrent.TimeUnit
  * - `noisy`: more reported changes than twice the native hunks plus two.
  * - `slow`: the comparison took more than a second.
  * - `extraction`: an added declaration is linked to code it was extracted from, to check that the link is right.
- * - `extraction-near-miss`: a link that lower thresholds would make (a covered or removed share from 0.5 up to the
- *   real threshold), for tuning them (extraction detection specification §8). The report lists them.
+ * - `inlining`: a removed declaration is linked to code it was inlined into, to check that the link is right.
+ * - `extraction-near-miss` and `inlining-near-miss`: a link that lower thresholds would make (a covered or removed
+ *   share from 0.5 up to the real threshold), for tuning them (extraction detection specification §8). The report lists
+ *   them.
  */
 class CorpusValidationTest : BasePlatformTestCase() {
 
@@ -90,8 +92,13 @@ class CorpusValidationTest : BasePlatformTestCase() {
                     val millis = (System.nanoTime() - start) / 1_000_000
                     val dialect = dialect(languageId, old, new)
                     val nearMisses = onPooledThread { nearMisses(engine, request, result) }
-                    val flags = flags(old, new, hunks.size, result, millis) + listOfNotNull("extraction-near-miss".takeIf { nearMisses.isNotEmpty() })
-                    rows += Row(repository.name, commit.take(10), path, old, new, hunks, result, millis, flags, dialect, nearMisses)
+                    val inliningNearMisses = onPooledThread { inliningNearMisses(engine, request, result) }
+                    val flags = flags(old, new, hunks.size, result, millis) +
+                        listOfNotNull(
+                            "extraction-near-miss".takeIf { nearMisses.isNotEmpty() },
+                            "inlining-near-miss".takeIf { inliningNearMisses.isNotEmpty() },
+                        )
+                    rows += Row(repository.name, commit.take(10), path, old, new, hunks, result, millis, flags, dialect, nearMisses, inliningNearMisses)
                 }
             }
         }
@@ -113,7 +120,7 @@ class CorpusValidationTest : BasePlatformTestCase() {
     private class Row(
         val repository: String, val commit: String, val path: String, val old: String, val new: String,
         val hunks: List<String>, val result: ComparisonResult, val millis: Long, val flags: List<String>, val dialect: String?,
-        val nearMisses: List<String>,
+        val nearMisses: List<String>, val inliningNearMisses: List<String>,
     ) {
         /** Whether the report lists this file. */
         val flagged: Boolean get() = flags.isNotEmpty()
@@ -143,6 +150,7 @@ class CorpusValidationTest : BasePlatformTestCase() {
         if (reported(result) > 2 * hunks + 2) add("noisy")
         if (millis > 1000) add("slow")
         if (nodes.any { it.node.extractedFrom.isNotEmpty() }) add("extraction")
+        if (nodes.any { it.node.inlinedInto.isNotEmpty() }) add("inlining")
     }
 
     /**
@@ -163,6 +171,28 @@ class CorpusValidationTest : BasePlatformTestCase() {
             val linked = strict.filter { it.target === target }.map { it.source }
             links.filter { link -> linked.none { it === link.source } }.map { link ->
                 "${target.name} <- ${link.source.old.name} covered %.2f removed %.2f".format(link.covered, link.removed)
+            }
+        }
+    }
+
+    /**
+     * The inlining links detection with thresholds lowered to 0.5 makes and the real thresholds do not, as
+     * `source -> target covered 0.70 added 0.90`.
+     */
+    private fun inliningNearMisses(engine: DeclarationEngine, request: ComparisonRequest, result: ComparisonResult): List<String> {
+        if (result.status != Status.ANALYZED && result.status != Status.PARTIAL) return emptyList()
+        val (old, new) = engine.trees(request, Cancellation.NONE) ?: return emptyList()
+        val matching = DeclarationMatcher.match(old, new, Cancellation.NONE)
+        val changed = { match: Match ->
+            ContentClassifier.classify(match.old.ownTokens, match.new.ownTokens, new.whitespacePolicy, parseError = false,
+                signatureChanged = match.old.signature != match.new.signature) == Content.CHANGED
+        }
+        val loose = ExtractionDetector.detectInliningLinks(matching, changed, Cancellation.NONE, thresholds = ExtractionDetector.Thresholds(0.5, 0.5))
+        val strict = ExtractionDetector.detectInliningLinks(matching, changed, Cancellation.NONE)
+        return loose.groupBy { it.source }.flatMap { (source, links) ->
+            val linked = strict.filter { it.source === source }.map { it.target.new }
+            links.filter { link -> linked.none { it === link.target.new } }.map { link ->
+                "${source.name} -> ${link.target.new.name} covered %.2f added %.2f".format(link.covered, link.added)
             }
         }
     }
@@ -209,8 +239,9 @@ class CorpusValidationTest : BasePlatformTestCase() {
                 appendLine()
                 appendLine("Flags: ${row.flags.joinToString(", ")}; ${row.millis} ms" + (row.dialect?.let { "; $it" } ?: ""))
                 appendLine()
-                row.nearMisses.forEach { appendLine("- near miss: $it") }
-                if (row.nearMisses.isNotEmpty()) appendLine()
+                row.nearMisses.forEach { appendLine("- extraction near miss: $it") }
+                row.inliningNearMisses.forEach { appendLine("- inlining near miss: $it") }
+                if (row.nearMisses.isNotEmpty() || row.inliningNearMisses.isNotEmpty()) appendLine()
                 appendLine("```")
                 append(Rendering.result(row.result, row.old, row.new))
                 appendLine("--- native hunks")

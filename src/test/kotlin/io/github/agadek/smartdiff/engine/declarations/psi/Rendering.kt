@@ -40,6 +40,10 @@ object Rendering {
             if (node.signatureChanged) add("signature changed")
             node.extractedFrom.forEach { add("extracted from ${name(it.subject)} old ${lines(it.range, oldText)}") }
             if (node.extractedTo.isNotEmpty()) add("code extracted to ${node.extractedTo.joinToString(", ") { name(it) }}")
+            if (node.inlinedInto.isNotEmpty()) add("inlined into ${node.inlinedInto.joinToString(", ") { name(it.subject) }}")
+            node.inlinedFrom.forEach {
+                add("code inlined from ${name(it.subject)} old ${lines(it.oldRange, oldText)} new ${lines(it.newRange, newText)}")
+            }
         }
         val sides = listOfNotNull(node.oldRange?.let { "old ${lines(it, oldText)}" }, node.newRange?.let { "new ${lines(it, newText)}" })
         val kindFrom = node.kindChangedFrom?.let { it.name.lowercase().replace('_', ' ') + " → " }.orEmpty()
