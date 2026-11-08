@@ -1,6 +1,7 @@
 package io.github.agadek.smartdiff.references
 
 import com.intellij.lang.java.JavaLanguage
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiExpression
@@ -12,8 +13,6 @@ import com.intellij.psi.PsiNamedElement
 import com.intellij.psi.PsiReferenceExpression
 import com.intellij.psi.PsiStatement
 import com.intellij.psi.util.PsiTreeUtil
-import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.progress.ProcessCanceledException
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.Subject
@@ -28,7 +27,7 @@ import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
  * constructor reference is a usage of its class when the relationship renamed the class, and of the constructor when
  * the relationship renamed the constructor.
  */
-internal object JavaReferenceResolver : ReferenceResolver {
+class JavaReferenceResolver : ReferenceResolver {
 
     override fun supports(languageId: String): Boolean = languageId == JavaLanguage.INSTANCE.id
 
@@ -43,36 +42,29 @@ internal object JavaReferenceResolver : ReferenceResolver {
     override fun usages(file: PsiFile, target: PsiElement, cancellation: Cancellation): List<TextRange> =
         usages(file, setOf(target), cancellation)[target].orEmpty()
 
-    /** One reference walk and one resolve per reference, shared by every rename target in [targets]. */
+    /** One reference walk and one resolve per reference, shared by every rename target in [targets] (R17). */
     override fun usages(
         file: PsiFile,
         targets: Set<PsiElement>,
         cancellation: Cancellation,
     ): Map<PsiElement, List<TextRange>> {
         if (targets.isEmpty()) return emptyMap()
+        val names = targets.mapNotNullTo(HashSet()) { (it as? PsiNamedElement)?.name }
+        if (names.isEmpty()) return emptyMap()
         val found = targets.associateWith { sortedSetOf<TextRange>(compareBy { it.start }) }
         val elements = PsiTreeUtil.collectElements(file) { it is PsiReferenceExpression || it is PsiJavaCodeReferenceElement }
         for (element in elements) {
             cancellation.checkCanceled()
+            val range = nameRange(element) ?: continue
+            // Resolve only the references that can name this file's rename endpoints, not every reference (R17).
+            if (file.viewProvider.contents.subSequence(range.start, range.end).toString() !in names) continue
             for (reference in element.references) {
-                val range = nameRange(element) ?: continue
-                val resolved = try {
-                    reference.resolve()
-                } catch (e: ProcessCanceledException) {
-                    // A canceled read action must reach cancellableReadAction, which retries after the write action;
-                    // swallowing it here would return a partial grouping from the canceled read.
-                    LOG.debug("Java usage ${range} was canceled while resolving: $e")
-                    throw e
-                } catch (e: Exception) {
-                    LOG.debug("Java usage ${range} was not resolved: $e")
-                    null
-                }
-                cancellation.checkCanceled()
-                if (resolved == null) continue
+                val resolved = ReferenceResolution.resolve(reference, file, cancellation, LOG) ?: continue
                 for (target in targets) {
                     if (resolvesTo(resolved, target)) found.getValue(target) += range
                 }
             }
+            cancellation.checkCanceled()
         }
         return found.mapValues { it.value.toList() }
     }
@@ -81,7 +73,7 @@ internal object JavaReferenceResolver : ReferenceResolver {
         var element = file.findElementAt(usage.start.coerceIn(0, maxOf(0, file.textLength - 1))) ?: return null
         var statement: PsiElement? = null
         var member: PsiElement? = null
-        while (element != null && element !is PsiFile) {
+        while (element !is PsiFile) {
             val range = element.textRange
             if (range.startOffset <= usage.start && range.endOffset >= usage.end) {
                 when (element) {
@@ -113,13 +105,15 @@ internal object JavaReferenceResolver : ReferenceResolver {
         return TextRange(range.startOffset, range.endOffset)
     }
 
-    private val LOG = Logger.getInstance(JavaReferenceResolver::class.java)
-
     /** A class target accepts its constructor reference; every other target must be the resolved declaration itself. */
     private fun resolvesTo(resolved: PsiElement, target: PsiElement): Boolean {
         if (resolved === target) return true
         if (target is PsiClass && resolved is PsiMethod && resolved.isConstructor) return resolved.containingClass === target
         if (target is PsiMethod && target.isConstructor && resolved is PsiClass) return target.containingClass === resolved
         return false
+    }
+
+    private companion object {
+        val LOG: Logger = Logger.getInstance(JavaReferenceResolver::class.java)
     }
 }

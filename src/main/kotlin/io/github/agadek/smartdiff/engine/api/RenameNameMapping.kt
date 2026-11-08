@@ -78,7 +78,7 @@ object RenameNameMapping {
         var index = 0
         var quote: String? = null
         var lineComment = false
-        var blockComment = false
+        var blockDepth = 0
 
         fun flushText() {
             if (current.isNotEmpty()) {
@@ -112,13 +112,20 @@ object RenameNameMapping {
                 index++
                 continue
             }
-            if (blockComment) {
+            if (blockDepth > 0) {
+                // Kotlin and Scala nest block comments, so only the matching close ends the comment.
+                if (c == '/' && index + 1 < text.length && text[index + 1] == '*') {
+                    current.append("/*")
+                    blockDepth++
+                    index += 2
+                    continue
+                }
                 current.append(c)
                 if (c == '*' && index + 1 < text.length && text[index + 1] == '/') {
                     current.append('/')
                     index += 2
-                    blockComment = false
-                    flushText()
+                    blockDepth--
+                    if (blockDepth == 0) flushText()
                     continue
                 }
                 index++
@@ -151,16 +158,27 @@ object RenameNameMapping {
                 c == '/' && index + 1 < text.length && text[index + 1] == '*' -> {
                     flushWhitespace()
                     flushText()
-                    blockComment = true
+                    current.append("/*")
+                    index += 2
+                    blockDepth = 1
+                    continue
                 }
-                c == '"' || c == '\'' -> {
+                c == '"' || c == '`' || c == '\'' && isCharLiteral(text, index) -> {
                     flushWhitespace()
                     flushText()
-                    val opening = if (text.startsWith("\"\"\"", index)) "\"\"\"" else c.toString()
+                    val opening = when {
+                        text.startsWith("\"\"\"", index) -> "\"\"\""
+                        else -> c.toString()
+                    }
                     current.append(opening)
                     index += opening.length
                     quote = opening
                     continue
+                }
+                // A Scala symbol literal such as 'foo is code, not an opening quote of a char literal.
+                c == '\'' -> {
+                    flushWhitespace()
+                    current.append(c)
                 }
                 c.isWhitespace() -> {
                     flushText()
@@ -176,5 +194,28 @@ object RenameNameMapping {
         flushText()
         flushWhitespace()
         return tokens
+    }
+
+    /**
+     * Whether the quote at [index] opens a char literal rather than a Scala symbol. A char literal has one character
+     * or one escape and then a closing quote on the same line: `'a'`, `'\n'`, `'\u0041'`. The check is deliberately
+     * lexical so it needs no language: Kotlin has char literals, Scala 2 has both chars and symbols, and Scala 3 uses
+     * `'` for quotes as well.
+     */
+    private fun isCharLiteral(text: CharSequence, index: Int): Boolean {
+        var i = index + 1
+        if (i >= text.length) return false
+        if (text[i] == '\\') {
+            while (i < text.length && i - index <= 12) {
+                when {
+                    text[i] == '\\' -> i += 2
+                    text[i] == '\'' -> return true
+                    text[i] == '\n' || text[i] == '\r' -> return false
+                    else -> i++
+                }
+            }
+            return false
+        }
+        return i + 1 < text.length && text[i + 1] == '\'' && text[i] != '\n' && text[i] != '\r'
     }
 }

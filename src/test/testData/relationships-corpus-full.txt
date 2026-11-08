@@ -154,6 +154,10 @@ src/test/testData/kotlin/relationships/statement-reorder-3
 src/test/testData/kotlin/relationships/string-literal-change-1
 src/test/testData/kotlin/relationships/string-literal-change-2
 src/test/testData/kotlin/relationships/string-literal-change-3
+src/test/testData/kotlin/relationships/usage-grouping-1
+src/test/testData/kotlin/relationships/usage-grouping-2
+src/test/testData/kotlin/relationships/usage-grouping-3
+src/test/testData/kotlin/relationships/usage-grouping-4
 src/test/testData/scala2/relationships/ambiguous-rename-group-1
 src/test/testData/scala2/relationships/ambiguous-rename-group-2
 src/test/testData/scala2/relationships/ambiguous-rename-group-3
@@ -230,6 +234,10 @@ src/test/testData/scala2/relationships/statement-reorder-3
 src/test/testData/scala2/relationships/string-literal-change-1
 src/test/testData/scala2/relationships/string-literal-change-2
 src/test/testData/scala2/relationships/string-literal-change-3
+src/test/testData/scala2/relationships/usage-grouping-1
+src/test/testData/scala2/relationships/usage-grouping-2
+src/test/testData/scala2/relationships/usage-grouping-3
+src/test/testData/scala2/relationships/usage-grouping-4
 src/test/testData/scala3/relationships/ambiguous-rename-group-1
 src/test/testData/scala3/relationships/ambiguous-rename-group-2
 src/test/testData/scala3/relationships/ambiguous-rename-group-3
@@ -306,6 +314,10 @@ src/test/testData/scala3/relationships/statement-reorder-3
 src/test/testData/scala3/relationships/string-literal-change-1
 src/test/testData/scala3/relationships/string-literal-change-2
 src/test/testData/scala3/relationships/string-literal-change-3
+src/test/testData/scala3/relationships/usage-grouping-1
+src/test/testData/scala3/relationships/usage-grouping-2
+src/test/testData/scala3/relationships/usage-grouping-3
+src/test/testData/scala3/relationships/usage-grouping-4
 ../smartdiff-corpus/commons-lang --no-walk 3d576e2e0efed2e3639a70c247edb7a89ffb5645 4161d6019a1f68d0a3dc819702d90ad4044e4c05 ca21966b93b6cc43ce2ec3a37018921d66251ac2 1db59d54a7863943014c3d6ed12f17e88f5d05a3 50478b4a5a0a78a0d7c328da7afd73505cfe413c 28c71a2ae4d20d564d210a5dec6ae7b68cc68ab6 e8bafeb6a347f1cb529db6c4b33cc81ca069e337 e66ad3dd2e8538e24940d97179c960a60dd25495 e4675ec1c0366f34b61bf7156bef60c5678513eb 8b91981bf647312d2b0af0cc5d00d42f5d843868 a77a32c0b7195fc7e8bece37275acd271de8d7fc 2062efa81db088015280fb837fde8c127f18c9bf 2ffb336343b1a8ee7ac8a4bf35433331da17c98b 0392b4204dbeb894a44c209b982fbc959d53cc86 2341c9cd7ed4b7f2e841e165b6077d1aa7a61b17 1c93abfd5bb615c610247fa11dba03c75dfcf3b6 91b536e4f502f940c6c64399737a1f129c2e0374
 ../smartdiff-corpus/spring-petclinic --no-walk 80d03f3cefadd64488fb60ce5bcd9f6ab3d44000 706c6fc647ea1746ba043418810323611c98eb2e f0bf6927674a8c4fdf5a74352749ca5be326b5d3 5accc40c77e51cb15eb87a480e679a5012d1423e f2d9c9b63fadb913b3087c1a7a19db769d731be0 61be1bac41293482506215d879da2b95961f582d c4dbb1f6485d55009417bc029966cd2434dcb079 a4fcf04c932031463dc7eb1ed9f1e05b402c13c0 6e71aaa44cbd147a000d3a7b4bd5db55244948bf
 ../smartdiff-corpus/guava --no-walk 2e27929f97bdb81e8115188343ebfb6666ea1b3f 83869af96382246da6ff99cb029ef59ba684f592 90a2a9dda8452cf6ef253a82ecd27fa5b09f5f0d

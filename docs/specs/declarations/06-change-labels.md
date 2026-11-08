@@ -1,6 +1,6 @@
 # Change labels
 
-Status: implemented, 2026-11-04; the `usages renamed` additions (R1, R4, R6, R9, R11 and R14) arrive with [rename grouping](../relationships/04-rename-grouping.md), 2026-11-05; the Java step 1 is implemented, 2026-11-07.
+Status: implemented, 2026-11-04; the `usages renamed` additions (R1, R4, R6, R9, R11 and R14) arrive with [rename grouping](../relationships/04-rename-grouping.md), 2026-11-05; the Kotlin and Scala step 2 is implemented, 2026-11-07.
 
 **Description:** One set of user-facing [labels](../../GLOSSARY.md#label) says how each change is classified, how the [summary line](../../GLOSSARY.md#summary-line) counts it, and whether the [change type filter](../../GLOSSARY.md#change-type-filter) can hide it.
 

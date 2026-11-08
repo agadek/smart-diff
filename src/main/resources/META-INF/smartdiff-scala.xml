@@ -2,5 +2,6 @@
 <idea-plugin>
     <extensions defaultExtensionNs="io.github.agadek.smartdiff">
         <declarationProvider implementation="io.github.agadek.smartdiff.engine.declarations.psi.scala.ScalaDeclarationProvider"/>
+        <referenceResolver implementation="io.github.agadek.smartdiff.references.ScalaReferenceResolver"/>
     </extensions>
 </idea-plugin>

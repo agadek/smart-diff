@@ -221,6 +221,76 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test R18 the full corpus has 440 cases and every labelled rename has a usages list`() {
+        // relationships/04-rename-grouping R18; relationships/01-relationship-benchmark R44
+        val entries = RelationshipBenchmark.parseCorpus(File("src/test/testData/relationships-corpus-full.txt"))
+        assertEquals("320 checked-in cases", 320, entries.count { it.path != null })
+        assertEquals(
+            "120 real commits",
+            120,
+            entries.filter { it.repository != null }.sumOf { entry -> entry.arguments.count { Regex("[0-9a-f]{40}").matches(it) } },
+        )
+        val labels = entries.mapNotNull { it.path }.map { RelationshipBenchmark.parseLabel(File(it, "label.yaml")) }
+        for (corpus in RelationshipBenchmark.CORPORA) {
+            assertEquals("$corpus has four usage-grouping cases", 4, labels.count { it.corpus == corpus && it.category == "usage-grouping" })
+        }
+        val renames = labels.sumOf { label -> label.relationships.count { RelationshipBenchmark.Kind.RENAME in it.kinds } }
+        assertTrue(
+            "every checked-in rename has a reviewed usages list",
+            labels.flatMap { it.relationships }.filter { RelationshipBenchmark.Kind.RENAME in it.kinds }.all { it.usages != null },
+        )
+
+        // Every real-commit label with a rename is reviewed too, including the 30 commits per corpus.
+        val commitLabels = RelationshipBenchmark.CORPORA.flatMap { corpus ->
+            File("src/test/testData/$corpus/relationships/commits").walkTopDown()
+                .filter { it.isFile && it.extension == "yaml" }
+                .map { RelationshipBenchmark.parseLabel(it) }
+                .toList()
+        }
+        val commitRenames = commitLabels.flatMap { it.relationships }.filter { RelationshipBenchmark.Kind.RENAME in it.kinds }
+        assertEquals("108 labelled renames; the gate reports 105 and lists the other 3 as misses", 108, renames + commitRenames.size)
+        assertTrue("the real commits have renames to review", commitRenames.isNotEmpty())
+        assertTrue("every real-commit rename has a usages list", commitRenames.all { it.usages != null })
+    }
+
+    fun `test R18 the Kotlin and Scala usage fixtures report every labelled usage`() {
+        // relationships/04-rename-grouping R18; relationships/01-relationship-benchmark R44
+        val directory = Files.createTempDirectory("relationship-usage-gate").toFile()
+        try {
+            val cases = listOf("kotlin", "scala2", "scala3").flatMap { corpus ->
+                (1..4).map { File("src/test/testData/$corpus/relationships/usage-grouping-$it") }
+            }
+            val corpus = File(directory, "corpus.txt").apply { writeText(cases.joinToString("\n") { it.absolutePath } + "\n") }
+            val report = RelationshipBenchmark.run(corpus, File(directory, "output"), minimum = 0, commitMinimum = 0)
+
+            assertEquals("four usage cases per language", 12, report.cases.size)
+            assertTrue("no wrong usage: ${RelationshipBenchmark.wrongUsages(report.cases)}", RelationshipBenchmark.wrongUsages(report.cases).isEmpty())
+            assertTrue("no missed usage: ${RelationshipBenchmark.missedUsages(report.cases)}", RelationshipBenchmark.missedUsages(report.cases).isEmpty())
+            assertTrue(RelationshipBenchmark.usageUnlabelledRenames(report.cases).isEmpty())
+            assertEquals("twelve high renames, one per fixture", 12, report.overall.perKind.getValue("RENAME").tp)
+            assertEquals(RelationshipBenchmark.Confidence.HIGH, caseHighConfidence(report))
+            for (case in report.cases) {
+                val expected = case.label.relationships.filter { RelationshipBenchmark.Kind.RENAME in it.kinds }.sumOf { it.usages.orEmpty().size }
+                assertEquals("${case.label.case} reports its labelled usages", expected, case.actualUsages.size)
+            }
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
+    private fun caseHighConfidence(report: RelationshipBenchmark.Report): RelationshipBenchmark.Confidence =
+        report.cases.flatMap { it.actualRelationships }.first { it.kind == RelationshipBenchmark.Kind.RENAME }.confidence
+
+    fun `test R18 the first usage baseline is recorded in VALIDATION`() {
+        // relationships/04-rename-grouping R18; relationships/01-relationship-benchmark R44
+        val validation = File("docs/VALIDATION.md").readText()
+        assertTrue(validation.contains("## 2026-11-07: rename grouping usage gate"))
+        assertTrue(validation.contains("440 cases"))
+        assertTrue(validation.contains("105 of the 108 labelled"))
+        assertTrue(validation.contains("85 high"))
+        assertTrue(validation.contains("usage precision 1.000"))
+    }
+
     fun `test two runs give the same report apart from times`() {
         // relationships/01-relationship-benchmark R28
         val first = Files.createTempDirectory("relationship-run-1").toFile()

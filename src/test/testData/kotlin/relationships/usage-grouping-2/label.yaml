@@ -1,0 +1,80 @@
+case: usage-grouping-2
+language: kotlin
+corpus: kotlin
+category: usage-grouping
+split: held-out
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Order", kind: FUNCTION, name: "total", signature: "()" }
+      new: { path: "class Order", kind: FUNCTION, name: "sum", signature: "()" }
+      usages:
+        - old: "75..80"
+          new: "73..76"
+        - old: "112..117"
+          new: "108..111"
+        - old: "149..154"
+          new: "143..146"
+        - old: "186..191"
+          new: "178..181"
+        - old: "223..228"
+          new: "213..216"
+        - old: "260..265"
+          new: "248..251"
+        - old: "297..302"
+          new: "283..286"
+        - old: "334..339"
+          new: "318..321"
+        - old: "371..376"
+          new: "353..356"
+        - old: "409..414"
+          new: "389..392"
+        - old: "447..452"
+          new: "425..428"
+        - old: "485..490"
+          new: "461..464"
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "sum", signature: "()" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a1", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a2", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a3", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a4", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a5", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a6", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a7", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a8", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a9", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a10", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a11", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a12", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "The use case: one rename with twelve usages."

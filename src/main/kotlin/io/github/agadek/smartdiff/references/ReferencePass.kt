@@ -47,7 +47,7 @@ import java.util.concurrent.CancellationException
 object ReferencePass {
 
     /** Raised when a resolver or the grouping rule changes. Separate from `DeclarationEngine.VERSION` (R2). */
-    const val VERSION = "1"
+    const val VERSION = "2"
 
     /** R17: the pass adds at most this much per file, beyond the engine's own limit. */
     const val BUDGET_MILLIS = 1_000L
@@ -63,6 +63,8 @@ object ReferencePass {
         val status: Status,
         val version: String = VERSION,
         val dumb: Boolean = false,
+        /** The policy the compare used, so the outline compares a `usages renamed` node the same way (R10). */
+        val whitespacePolicy: WhitespacePolicy? = null,
     ) {
         val notGrouped: Boolean get() = status == Status.TIMED_OUT || dumb
     }
@@ -129,7 +131,11 @@ object ReferencePass {
             val grouped = cancellableReadAction(passCancellation) {
                 group(project, request, result, provider, resolver, passCancellation)
             }
-            Outcome(grouped, if (grouped === result) Status.NOT_GROUPED else Status.GROUPED)
+            Outcome(
+                grouped.result,
+                if (grouped.result === result) Status.NOT_GROUPED else Status.GROUPED,
+                whitespacePolicy = grouped.whitespacePolicy,
+            )
         } catch (e: CancellationException) {
             if (passCancellation.timedOut) Outcome(result, Status.TIMED_OUT) else throw e
         } catch (e: Exception) {
@@ -138,7 +144,10 @@ object ReferencePass {
         }
     }
 
-    private class RenameTarget(
+    private data class Grouped(val result: ComparisonResult, val whitespacePolicy: WhitespacePolicy)
+
+    /** A high-confidence rename whose endpoints resolve in the light copies, before its usages are paired. */
+    private data class Candidate(
         val relationship: Relationship,
         val oldTarget: PsiElement,
         val newTarget: PsiElement,
@@ -152,16 +161,24 @@ object ReferencePass {
         provider: DeclarationProvider,
         resolver: ReferenceResolver,
         cancellation: Cancellation,
-    ): ComparisonResult {
+    ): Grouped {
+        // A file with no high-confidence rename has nothing to group; do not parse or resolve it at all (R17).
+        if (result.relationships.none {
+                RelationshipKind.RENAME in it.kinds && it.confidence == Confidence.HIGH &&
+                    it.old.size == 1 && it.new.size == 1
+            }
+        ) {
+            return Grouped(result, WhitespacePolicy.INSIGNIFICANT)
+        }
         val dialect = provider.dialect(project, listOf(request.oldText, request.newText) + request.relatedTexts, request.fileName)
         val oldFile = provider.parse(project, request.oldText, request.fileName, dialect)
         val newFile = provider.parse(project, request.newText, request.fileName, dialect)
         val oldPolicy = resolver.whitespacePolicy(oldFile)
         val newPolicy = resolver.whitespacePolicy(newFile)
+        // Both texts are parsed in one dialect, so their policies agree; the new side is the one the outline shows.
+        val policy = if (oldPolicy == newPolicy) oldPolicy else newPolicy
         val nodes = matchedNodes(result)
-        val references = IdentityHashMap<Relationship, List<Evidence.Reference>>()
-        var grouped = false
-        val targets = mutableListOf<RenameTarget>()
+        val candidates = mutableListOf<Candidate>()
 
         for (relationship in result.relationships) {
             cancellation.checkCanceled()
@@ -175,32 +192,38 @@ object ReferencePass {
             if (unanalysedEndpoint(nodes, newEndpoint.range, oldSide = false)) continue
             val oldTarget = resolver.target(oldFile, oldEndpoint.range, oldSubject) ?: continue
             val newTarget = resolver.target(newFile, newEndpoint.range, newSubject) ?: continue
-            targets += RenameTarget(relationship, oldTarget, newTarget, newSubject)
+            candidates += Candidate(relationship, oldTarget, newTarget, newSubject)
         }
-        if (targets.isEmpty()) return result
+        if (candidates.isEmpty()) return Grouped(result, policy)
 
-        // One resolver walk per side for every rename target, then one grouping per rename. Without this cache each
-        // rename would resolve every reference in the file again.
-        val oldUsages = resolver.usages(oldFile, targets.mapTo(LinkedHashSet()) { it.oldTarget }, cancellation)
-        val newUsages = resolver.usages(newFile, targets.mapTo(LinkedHashSet()) { it.newTarget }, cancellation)
-        for (target in targets) {
+        // One resolver walk per side for every rename target, then one grouping per rename (R17).
+        val oldUsages = resolver.usages(oldFile, candidates.mapTo(LinkedHashSet()) { it.oldTarget }, cancellation)
+        val newUsages = resolver.usages(newFile, candidates.mapTo(LinkedHashSet()) { it.newTarget }, cancellation)
+        val references = IdentityHashMap<Relationship, List<Evidence.Reference>>()
+        for (candidate in candidates) {
             cancellation.checkCanceled()
             val found = pair(
-                oldUsages[target.oldTarget].orEmpty(),
-                newUsages[target.newTarget].orEmpty(),
-                nodes, oldFile, newFile, resolver, oldPolicy, newPolicy, target.newSubject, cancellation,
+                oldUsages[candidate.oldTarget].orEmpty(),
+                newUsages[candidate.newTarget].orEmpty(),
+                nodes,
+                oldFile,
+                newFile,
+                resolver,
+                policy,
+                candidate.newSubject,
+                cancellation,
             )
-            if (found.isNotEmpty()) {
-                references[target.relationship] = found
-                grouped = true
-            }
+            if (found.isNotEmpty()) references[candidate.relationship] = found
         }
-        if (!grouped) return result
-        return result.copy(
-            relationships = result.relationships.map { relationship ->
-                val found = references[relationship] ?: return@map relationship
-                relationship.copy(evidence = (relationship.evidence + found).sortedWith(EvidenceOrder))
-            },
+        if (references.isEmpty()) return Grouped(result, policy)
+        return Grouped(
+            result.copy(
+                relationships = result.relationships.map { relationship ->
+                    val found = references[relationship] ?: return@map relationship
+                    relationship.copy(evidence = (relationship.evidence + found).sortedWith(EvidenceOrder))
+                },
+            ),
+            policy,
         )
     }
 
@@ -215,8 +238,7 @@ object ReferencePass {
         oldFile: PsiFile,
         newFile: PsiFile,
         resolver: ReferenceResolver,
-        oldPolicy: WhitespacePolicy,
-        newPolicy: WhitespacePolicy,
+        policy: WhitespacePolicy,
         symbol: Subject.Declaration,
         cancellation: Cancellation,
     ): List<Evidence.Reference> {
@@ -231,7 +253,6 @@ object ReferencePass {
                 val newContext = resolver.context(newFile, newRange)
                 if (oldContext == null || newContext == null) continue
                 val reference = Evidence.Reference(symbol, oldRange, newRange)
-                val policy = if (oldPolicy == newPolicy) oldPolicy else newPolicy
                 if (RenameNameMapping.isRenameOnly(
                         oldFile.viewProvider.contents,
                         newFile.viewProvider.contents,

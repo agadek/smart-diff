@@ -13,6 +13,7 @@ expected:
     - kinds: [RENAME]
       old: { path: "class CallTest", kind: FUNCTION, name: "httpWithExcessiveHeaders", signature: "" }
       new: { path: "class CallTest", kind: FUNCTION, name: "httpWithExcessiveStatusLine", signature: "" }
+      usages: []
   changes:
     - subject: { path: "class CallTest", kind: FUNCTION, name: "httpWithExcessiveStatusLine", signature: "" }
       presence: MATCHED

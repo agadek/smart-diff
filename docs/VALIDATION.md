@@ -177,6 +177,48 @@ framing, and no grouping for a clipboard diff. `OutlineIntegrationTest` drives t
 the filter and selecting the rename to frame the usages.
 
 
+## 2026-11-07: rename grouping usage gate
+
+Step 2 of [relationships/04](specs/relationships/04-rename-grouping.md): Kotlin K2, Scala 2 and Scala 3 join the Java
+resolver. `ReferencePass.VERSION` is 2, separate from `DeclarationEngine.VERSION` 9. `RelationshipBenchmarkTest` ran the
+full corpus:
+
+```shell
+./gradlew test --tests '*RelationshipBenchmarkTest*' \
+  -Psmartdiff.relationships.corpus=src/test/testData/relationships-corpus-full.txt \
+  -Psmartdiff.relationships.gate=no-new-wrong-pairs \
+  -Psmartdiff.relationships.baseline=src/test/testData/relationships-baseline/report.json
+```
+
+**Result:** 440 cases (320 checked-in cases, including the 16 usage-grouping fixtures, and 120 real commits), precision
+1.000 and recall 0.837, with no wrong or forced pair; the `no-new-wrong-pairs` gate passed and the report records
+`referencePassVersion` 2. The report has no shortfall and is not a smoke run. The engine reports 105 of the 108 labelled
+rename relationships: Java 23 high and 5 medium, Kotlin 22 and 3, Scala 2 21 and 6, Scala 3 19 and 6, which is 85 high,
+20 medium and 0 low; the three misses are listed in the report. Reference evidence
+gave 67 labelled usages; 66 were reported and matched and one was missed, with no usage wrongly grouped and no
+`usage-unlabelled` rename. Usage precision is 1.000 and recall 0.985. Java has 19 of 19 usages, Kotlin 15 of 16, Scala 2
+17 of 17 and Scala 3 15 of 15. The missed usage is the `LOW_RAITING_THRESHOLD` use in the Exposed real commit, whose
+rename the engine does not pair; its correct usage list stays in the label, so the miss is reported rather than hidden.
+The engine result is unchanged: the pass only adds reference evidence, and no existing label or classification moved.
+
+The report records `GROUPED=18`, `NOT_GROUPED=416` and `NONE=6`, with no `TIMED_OUT`. The pass median is 0 ms, p95 5 ms
+and slowest 70 ms of the 1000 ms budget (R17). The report is in `build/reports/smartdiff-relationships/`. A rerun on
+2026-11-08 after rebasing onto `main` (`c99af73`, which merges the step-1 and caret-follow branches) has the same counts
+and gate result, with p95 5 ms and slowest 78 ms.
+
+**Usage review.** The Kotlin and Scala rename labels were generated from the pass, then reviewed against both sides:
+all 79 Kotlin and Scala labels that carry a rename relationship (67 existing, including the real commits, and 12 new
+fixture labels) now have a `usages` list. The pass references were kept as reported; one true usage was added by hand for
+the Exposed real commit whose rename the engine misses. Java's 29 rename labels were already reviewed in step 1. No
+reported usage was removed or corrected, so the first usage baseline is usage precision 1.000 and recall 0.985. This run
+is that first usage baseline; the [2026-11-02 baseline](#2026-11-02-relationship-benchmark-baseline) is not replaced.
+
+**Verifier.** `./gradlew verifyPlugin` is Compatible on IC-251.26927.53 and IU-263.7307.200 with the existing 4
+experimental API usages and no deprecated usage. The verifier installed `org.intellij.scala:2025.1.32` on IC 2025.1.3
+and `org.intellij.scala:2026.3.26` on IU 2026.3, so the Scala resolver is in both reports. The Kotlin resolver calls no
+Analysis API (`KaSession` / `KaExperimentalApi`); the Scala PSI usages are the reviewed internal plugin API of
+relationships/04 R15.
+
 ## 2026-11-06: Changes tree manual check on 2025.1 and 2026.3
 
 This run checked #108, #111 and #112 (PR #124) in running IDEs. `./gradlew buildPlugin` produced

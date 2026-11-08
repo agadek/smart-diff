@@ -1,0 +1,25 @@
+case: usage-grouping-1
+language: kotlin
+corpus: kotlin
+category: usage-grouping
+split: held-out
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Order", kind: FUNCTION, name: "total", signature: "()" }
+      new: { path: "class Order", kind: FUNCTION, name: "sum", signature: "()" }
+      usages:
+        - old: "78..83"
+          new: "76..79"
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "sum", signature: "()" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "twice", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "One usage that changed only to follow the rename."

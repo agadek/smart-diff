@@ -1,0 +1,28 @@
+case: usage-grouping-3
+language: kotlin
+corpus: kotlin
+category: usage-grouping
+split: held-out
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Order", kind: FUNCTION, name: "total", signature: "()" }
+      new: { path: "class Order", kind: FUNCTION, name: "sum", signature: "()" }
+      usages:
+        - old: "133..138"
+          new: "131..134"
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "sum", signature: "()" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "total", signature: "Int" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "use", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "A renamed call groups; an overload call and an unresolved call stay ordinary."

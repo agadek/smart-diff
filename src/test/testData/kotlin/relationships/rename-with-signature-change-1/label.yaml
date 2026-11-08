@@ -8,6 +8,7 @@ expected:
     - kinds: [RENAME]
       old: { path: "class Order", kind: FUNCTION, name: "total", signature: "(Int)" }
       new: { path: "class Order", kind: FUNCTION, name: "sum", signature: "(Long)" }
+      usages: []
   changes:
     - subject: { path: "", kind: CLASS, name: "Order", signature: null }
       presence: MATCHED

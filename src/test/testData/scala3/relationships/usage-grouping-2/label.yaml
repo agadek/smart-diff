@@ -1,0 +1,80 @@
+case: usage-grouping-2
+language: Scala
+corpus: scala3
+category: usage-grouping
+split: held-out
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Order", kind: FUNCTION, name: "total" }
+      new: { path: "class Order", kind: FUNCTION, name: "sum" }
+      usages:
+        - old: "54..59"
+          new: "52..55"
+        - old: "80..85"
+          new: "76..79"
+        - old: "106..111"
+          new: "100..103"
+        - old: "132..137"
+          new: "124..127"
+        - old: "158..163"
+          new: "148..151"
+        - old: "184..189"
+          new: "172..175"
+        - old: "210..215"
+          new: "196..199"
+        - old: "236..241"
+          new: "220..223"
+        - old: "262..267"
+          new: "244..247"
+        - old: "289..294"
+          new: "269..272"
+        - old: "316..321"
+          new: "294..297"
+        - old: "343..348"
+          new: "319..322"
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "sum" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a1" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a2" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a3" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a4" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a5" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a6" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a7" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a8" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a9" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a10" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a11" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a12" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "The use case: one rename with twelve usages."

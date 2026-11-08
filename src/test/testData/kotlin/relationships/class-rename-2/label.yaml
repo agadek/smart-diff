@@ -8,6 +8,7 @@ expected:
     - kinds: [RENAME]
       old: { path: "", kind: CLASS, name: "Invoice", signature: null }
       new: { path: "", kind: CLASS, name: "Bill", signature: null }
+      usages: []
   changes:
     - subject: { path: "", kind: CLASS, name: "Bill", signature: null }
       presence: MATCHED

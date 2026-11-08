@@ -1,6 +1,6 @@
 # Rename grouping
 
-Status: accepted, 2026-11-05; step 1 (Java) implemented, 2026-11-07; Kotlin K2, Scala and the 440-case gate are step 2
+Status: implemented, 2026-11-07
 
 **Description:** Groups a renamed declaration with the [usages](../../GLOSSARY.md#usage) in the same file that changed only to follow the rename, so the reviewer reads the rename once.
 
@@ -42,3 +42,4 @@ Status: accepted, 2026-11-05; step 1 (Java) implemented, 2026-11-07; Kotlin K2, 
 - [ADR 0008](../../adr/0008-relationships-are-the-source-of-truth-for-pairing.md)
 - [ADR 0002](../../adr/0002-parser-neutral-model-with-psi-first.md)
 - [Validation, 2026-11-04](../../VALIDATION.md#2026-11-04-relationship-matching)
+- [Usage gate, 2026-11-07](../../VALIDATION.md#2026-11-07-rename-grouping-usage-gate)

@@ -13,6 +13,11 @@ expected:
     - kinds: [RENAME]
       old: { path: "", kind: CLASS, name: "Apply2Ops", signature: null }
       new: { path: "", kind: CLASS, name: "ApplyFABCOps", signature: null }
+      usages:
+        - old: "1626..1635"
+          new: "1626..1638"
+        - old: "1658..1667"
+          new: "1661..1673"
     - kinds: [MOVE]
       old: { path: "", kind: CLASS, name: "ApplyOps2", signature: null }
       new: { path: "", kind: CLASS, name: "ApplyOps2", signature: null }
