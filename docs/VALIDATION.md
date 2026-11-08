@@ -53,8 +53,11 @@ Java, Kotlin and Scala diffs from the Local Changes splitter preview (`PreviewDi
 probe-assisted, not a physical click path: macOS Assistive access is not granted here, so the real mouse and keyboard
 gestures were not delivered.
 
-**Verifier.** `./gradlew verifyPlugin` is Compatible on IC-251.26927.53 and IU-263.7307.200, with the existing 4
-experimental API usages and no deprecated usage. This change adds no internal, experimental or deprecated API usage.
+**Verifier.** `./gradlew verifyPlugin` is Compatible on IC-251.26927.53 and IU-263.7307.200. The CI verifier artifact
+records 3 experimental API usages, all `ChangesViewNodeAction` overrides or reference in `DeclarationNodeAction`, the
+same 3 as `origin/main`; a local run that resolves the Scala plugin also lists its existing
+`PsiNamedElementWithCustomPresentation` reference. There is no deprecated usage, and this change adds no internal,
+experimental or deprecated API usage.
 
 ## 2026-11-08: 0.3.0 release checks
 
