@@ -25,8 +25,8 @@ Its report is written to `build/reports/smartdiff-validation/merge/`.
 
 The release checks for 0.3.0 from the release branch head on `chore/release-0.3.0`, with `DeclarationEngine.VERSION` 9,
 `ReferencePass.VERSION` 1 and Scala plugin 2025.1.32. **Publishing is blocked:** the automated checks below pass, but the
-[#110 R1–R10 manual check](#2026-11-08-changes-tree-caret-follow-110-r7-and-r8-failed) was run and **R7 and R8 failed**,
-so a fix is required and must be backported to `release/0.3.0`. Do not merge `main`, which carries #132
+[#110 R1–R10 manual check](#2026-11-08-changes-tree-caret-follow-110-r7-and-r8-failed) was run and **R7 and R8 failed**;
+the fix is in PR #137, and the R7/R8 re-check is outstanding. Do not merge `main`, which carries #132
 (relationships/04 step 2) as 0.4.0 work. The remaining #111 and #108 hand checks also stay open. The [manual runIde
 checklist](releases/0.3.0-manual-check.md) records the failed run and the re-check.
 
@@ -124,16 +124,59 @@ The four uses, identical in 0.2.0 and 0.3.0:
 ### Manual checks and blockers
 
 The automated release record above is complete. Publishing is blocked by the caret-follow manual check: it ran and
-**R7 and R8 failed**, so a fix is required and must be backported to `release/0.3.0` before the tag. Do not merge `main`,
+**R7 and R8 failed**; the fix is in PR #137, and the re-check on the release artifact is outstanding. Do not merge `main`,
 which carries #132 (relationships/04 step 2) as 0.4.0 work. The remaining #111 and #108 physical-click and single-click
 hand checks also stay open. The [manual runIde checklist](releases/0.3.0-manual-check.md) records the failed run and the
 re-check. 0.3.0 is prepared, not published.
+
+## 2026-11-08: Changes tree caret follow fixes: R8 one-sided diff and R7 pending follow
+
+This run fixes the two failures recorded in the PR #131 manual check: a deleted or added file shown in a one-sided
+diff did not select its row (R8), and a preview caret event replaced a follow that was waiting for a summary (R7/R11).
+The feature remains `implemented` and the full R1–R11 manual check is still outstanding.
+
+**Automated evidence.** `./gradlew clean buildPlugin check` passes, including all 35 `ChangesCaretFollowTest` tests.
+Five new regressions name the requirements:
+
+- R8: `test an added file in a one-sided diff selects only its file row` and `test a deleted file in a one-sided diff
+  selects only its file row`, using a real `SimpleOnesideDiffViewer` whose content has a null `highlightFile` as the
+  platform's `ContextReferentDocumentContent` does, and, for the deleted file, a plain editor without a `DIFF_VIEWER`.
+- R3: `test a plain editor prefers the change whose new revision is the file over a rename's old path`.
+- R7/R11: `test a preview caret event does not replace a pending summary follow` and `test an unfocused editor's caret
+  event does not replace a pending summary follow`.
+
+All pass on this head. The three one-sided and rename regressions fail when the caret fix is reverted; the two R7/R11 regressions fail when the earlier pending-follow fix is reverted.
+
+**Running-IDE probe, IC 2025.1.3 (`IC-251.26927.53`, `runIde` sandbox).** A temporary probe, removed before this
+change was committed, opened a Git project with a changed `Cart.java` (a changed class header, two changed methods and
+an added method), `Added.java`, a deleted `Old.java`, a modified `notes.txt` and an over-limit `Large.java`. It drove
+caret moves with `moveToOffset` and the follower, opened real two- and three-sided diffs, and selected the Commit tree
+in the Commit tool window.
+
+- Passed: R1 (the innermost changed method and the changed class), R3 (the new and old sides of a real two-sided diff,
+  a three-sided diff that left the tree alone, and the platform editor-tab preview kept the file row and stayed open),
+  R4 off, R5 (focus owner and included changes unchanged), and R6 click-during-follow.
+- The probe found the real `SimpleOnesideDiffViewer` for both the added and the deleted file, which is the class the
+  fix handles. Its caret moved to the file row instead of a declaration. The follow-up found that the platform's
+  deleted-file content has a null `highlightFile`; the fallback to the editor's own file and the null-highlight test
+  above cover it.
+- The probe harness could not keep the IDE window's focus owner non-null, so several later checks (R2, R4 on, R6
+  debounce, R7, R10, the unsupported and too-large rows) are not reliable results and are not claimed as passes. The
+  full R1–R11 table in all four setups, including the IC Local Changes splitter R7 race repeated at least 6 times,
+  was not completed in this run.
+
+**Verifier.** `./gradlew verifyPlugin` is compatible on IC 2025.1.3 and the latest release, with no new internal,
+experimental or deprecated usage from the follower. The existing experimental usages remain unchanged.
+
+**Outstanding.** The full R1–R11 manual table in the Commit tool window and Local Changes, on IntelliJ IDEA 2025.1 and
+the latest release, is still required before the feature is claimed as manually verified. The new R11 step is in the
+manual check of [changes-tree/05 details](specs/changes-tree/05-changes-tree-caret-follow-details.md#manual-check-outstanding).
 
 ## 2026-11-08: Changes tree caret follow (#110): R7 and R8 failed
 
 PR #131 adds the caret follow in [changes-tree/05](specs/changes-tree/05-changes-tree-caret-follow.md) R1–R10. The
 automated checks pass, and the preview blocker has a running-IDE check. The R1–R10 manual run was executed on
-2026-11-08; **R7 and R8 failed**, so a fix is required and must be backported to `release/0.3.0` before the tag.
+2026-11-08; **R7 and R8 failed**, and the fix is in PR #137 for `release/0.3.0`; the re-check is outstanding.
 
 **Automated evidence.** `./gradlew clean buildPlugin check` passes, including all 30 `ChangesCaretFollowTest` tests. They
 cover the R7 stale and pending summaries through an installed intermediate pending model, R10's hidden-row fallback with
@@ -173,8 +216,7 @@ releases in both preview forms. The separate R1–R10 manual run then failed R7 
 
 **Running-IDE check: run; R7 and R8 failed.** The R1–R10 manual run was executed on IntelliJ IDEA 2025.1 and the latest
 release, in Local Changes and in the Commit tool window. R7 (the stale summary and the intermediate pending rebuild) and
-R8 (files without a summary) failed; the other steps are not claimed as passed here. A fix is required and must be
-backported to `release/0.3.0`; do not merge `main`, which carries #132 (relationships/04 step 2) as 0.4.0 work. The
+R8 (files without a summary) failed; the other steps are not claimed as passed here. The fix is in PR #137 for `release/0.3.0`; do not merge `main`, which carries #132 (relationships/04 step 2) as 0.4.0 work. The
 [manual checklist](releases/0.3.0-manual-check.md) records the failed run and the re-check.
 
 ## 2026-11-07: Changes tree row parity (issues #111 and #108)

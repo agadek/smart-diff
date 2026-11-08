@@ -17,6 +17,8 @@
 
 - A selected moved declaration's frames stay aligned on both sides while scrolling, in a two-sided diff and in the three-sided merge outline, instead of drifting apart when the unchanged code around them differs.
 - Following the caret in either platform Changes preview, the editor tab or the Local Changes splitter, keeps the preview open by selecting the file row, instead of a declaration row that used to close or empty it.
+- Following the caret in an added or deleted file's one-sided diff now selects that file's row, including a deleted file opened without a diff viewer in the Commit tool window.
+- A caret event from the platform Changes preview, or from an editor without focus, no longer replaces a follow that is waiting for a rebuilt summary, so the declaration under the caret is still selected when the summary arrives.
 - When the platform's Changes diff action cannot open a declaration, the fallback diff reads the committed revisions off the UI thread, so a slow VCS does not freeze the IDE.
 - Double-click or Enter on a changed file with a structural summary in Local Changes or the Commit tool window now uses the platform's own preview, diff or source choice, so it opens the same editor preview as a file without a summary, and Enter works on 2025.1. Declaration rows open their diff through the tree's real selection.
 - A large group of similar renamed declarations no longer makes the analysis time out: the assignment stops at its work limit and leaves that group unpaired, as it does for a group over the pair limit.
