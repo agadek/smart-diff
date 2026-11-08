@@ -1,6 +1,6 @@
 # Inlining detection
 
-Status: proposed, 2026-11-01
+Status: accepted, 2026-11-08
 
 **Description:** Links a [removed](../../GLOSSARY.md#removed) method or function to the declaration its code was inlined into, the reverse of [extraction detection](../declarations/05-extraction-detection.md).
 
@@ -26,6 +26,8 @@ Status: proposed, 2026-11-01
 - **R16** Detection works the same way for Java, Kotlin and Scala.
 - **R17** A file that would take too much work is not checked for inlinings.
 - **R18** The benchmark's inlining cases pass its gate.
+- **R19** An inlining has [high confidence](../../GLOSSARY.md#confidence).
+- **R20** An inlining is its own relationship when its target is also renamed or moved; the target keeps those labels and its notes.
 
 ## Out of scope
 
@@ -35,6 +37,9 @@ Status: proposed, 2026-11-01
 ## References
 
 - [Details: design and tests](05-inlining-detection-details.md)
+- [Relationship model](02-relationship-model.md)
+- [Change labels](../declarations/06-change-labels.md)
+- [Change type filter](../outline/03-change-type-filter.md)
 - [Structural relationships plan §6.5](../../STRUCTURAL-RELATIONSHIPS.md#65-extraction-and-inlining)
 - [Extraction detection design](../../EXTRACTION-DETECTION.md)
 - [ADR 0003](../../adr/0003-conservative-classification.md)

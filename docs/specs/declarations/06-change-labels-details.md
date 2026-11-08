@@ -1,6 +1,6 @@
 # Change labels: details
 
-Status: implemented, 2026-11-04; the `usages renamed` additions (R1, R4, R6, R9, R11 and R14) arrive with [rename grouping](../relationships/04-rename-grouping.md), 2026-11-05; the Kotlin and Scala step 2 is implemented, 2026-11-07.
+Status: implemented, 2026-11-04; the `usages renamed` additions (R1, R4, R6, R9, R11 and R14) arrive with [rename grouping](../relationships/04-rename-grouping.md), 2026-11-05; the Kotlin and Scala step 2 is implemented, 2026-11-07; the inlining note and count (R5, R6 and R15) arrive with [inlining detection](../relationships/05-inlining-detection.md), 2026-11-08.
 
 Feature: [Change labels](06-change-labels.md)
 
@@ -12,13 +12,13 @@ Feature: [Change labels](06-change-labels.md)
 
 `OutlineModel` also reads the result's relationships. A rename relationship with grouped usages adds the note `N usages` to the rename row. A matched node is labelled `usages renamed` when it is not any rename's new endpoint, contains at least one grouped `Reference`, and has no change other than those references. The check applies the shared `RenameNameMapping` (`engine.api`) to the node's old text using every grouped reference in the node, maps each reference by its own rename relationship, and compares the result with the new text; it starts at the node's first non-whitespace token and never reads `ChangeNode.details`, so leading whitespace or an engine detail span cannot make the label. The helper changes only text at resolved reference ranges, never strings or comments. The grouped ranges go into the row's `OutlineItem.details` for navigation, not into `ChangeNode.details`. A node with another change keeps `changed`, and its grouped usages remain part of its row and the rename row. Neither case hides a usage: `usages renamed` is never a hidden type, and a node with a grouped usage is exempt from hiding even when its other labels are hidden (R11, R14).
 
-`OutlineModel.summary` counts labels in a fixed order: `changed`, `extracted`, `added`, `removed`, `moved`, `formatting-only`, `rename candidate`, `usages renamed`, `uncertain`, `unanalyzed`. An added node with `extractedFrom` counts as `extracted`; it keeps the `added` label on its row. `usages renamed` counts the declaration once, not each usage; the rename row's `N usages` note gives the usage count. `unanalyzed` adds the file region's unanalyzed ranges, so a range without a row is still counted. The hidden count comes from the rows the filter leaves out.
+`OutlineModel.summary` counts labels in a fixed order: `changed`, `extracted`, `added`, `inlined`, `removed`, `moved`, `formatting-only`, `rename candidate`, `usages renamed`, `uncertain`, `unanalyzed`. An added node with `extractedFrom` counts as `extracted`; it keeps the `added` label on its row. A removed node with `inlinedInto` counts as `inlined`; it keeps the `removed` label on its row. `usages renamed` counts the declaration once, not each usage; the rename row's `N usages` note gives the usage count. `unanalyzed` adds the file region's unanalyzed ranges, so a range without a row is still counted. The hidden count comes from the rows the filter leaves out.
 
 `ChangeType` maps the filter's five types to labels. `changed` covers both `changed` and `signature changed`; `rename candidate`, `usages renamed`, `uncertain` and `unanalyzed` have no type, which is why they are never hidden. A node that has at least one grouped usage is also exempt: it stays in the rows and the summary even when every label it would otherwise show is a hidden type, it is not counted as hidden, and `HiddenLines` reads the same predicate so the native diff keeps its lines.
 
 ### Labels added by later features
 
-[Relationship model](../relationships/02-relationship-model.md) replaces `renamedFrom`, `extractedFrom` and `extractedTo` with relationships while keeping these labels. [Rename grouping](../relationships/04-rename-grouping.md) adds the `N usages` note and the `usages renamed` label; it never removes a change from the summary or the native diff. [Inlining detection](../relationships/05-inlining-detection.md) adds `inlined` to the summary and the note `inlined into <target>`; this feature is updated with it, not duplicated. [Refactorings view](../relationships/06-refactorings-view.md) adds confidence and evidence to the row; those are not labels of this feature.
+[Relationship model](../relationships/02-relationship-model.md) replaces `renamedFrom`, `extractedFrom` and `extractedTo` with relationships while keeping these labels. [Rename grouping](../relationships/04-rename-grouping.md) adds the `N usages` note and the `usages renamed` label; it never removes a change from the summary or the native diff. [Inlining detection](../relationships/05-inlining-detection.md) adds the notes `inlined into <target>` and `code inlined from <declaration>`, and counts inlining rows as `inlined` instead of `removed` (R5, R6, R15); the row keeps the `removed` label, so hiding removed changes hides it. [Refactorings view](../relationships/06-refactorings-view.md) adds confidence and evidence to the row; those are not labels of this feature.
 
 ### Edge cases
 
@@ -37,8 +37,8 @@ Feature: [Change labels](06-change-labels.md)
 | R2 | `OutlineModelTest` `labels list presence, moved, content and signature changed`: a signature change also shows `changed` |
 | R3 | `OutlineModelTest` `a kind change shows both kinds and carries signature changed`: `trait → class Shape` and `signature changed` |
 | R4 | `OutlineModelTest` `a rename candidate shows both names, is never hidden and is counted`; `R9 a rename row notes one usage or twelve usages` |
-| R5 | `OutlineModelTest` `extractions name both ends, qualified by container only when it differs`: `extracted from` and `code extracted to` |
-| R6 | `OutlineModelTest` `the summary counts every label in a fixed order`: all ten counts in order, with zero counts left out |
+| R5 | `OutlineModelTest` `extractions name both ends, qualified by container only when it differs`: `extracted from` and `code extracted to`; `an inlining names both ends and lists at most three names`: `inlined into` and `code inlined from` |
+| R6 | `OutlineModelTest` `the summary counts every label in a fixed order`: all eleven counts in order, with zero counts left out |
 | R7 | `OutlineModelTest` `extractions name both ends, qualified by container only when it differs`: an extraction counts as `extracted`, not `added` |
 | R8 | `OutlineModelTest` `a signature change and a kind change count as changed` |
 | R9 | `OutlineModelTest` `R9 a rename row notes one usage or twelve usages`; `R10 a declaration whose only change is a grouped usage is labelled usages renamed` |
@@ -48,3 +48,4 @@ Feature: [Change labels](06-change-labels.md)
 | R13 | `OutlineModelTest` `every row's label is its title followed by its change labels`: every row's label is the title followed by its change labels, so the meaning is text, not color alone |
 | R13 | Manual check: (1) open a Java diff with the outline; (2) move focus to a row; (3) inspect its accessible name with a screen reader or the IDE's accessibility inspector; (4) confirm it is the row's label |
 | R14 | `OutlineModelTest` `R8 a grouped usage is never hidden and stays counted`: hiding every type leaves the usages-only declaration in the rows and summary, while a changed declaration without a grouped usage is hidden; the hidden count excludes the exempt one; `OutlineIntegrationTest` `test relationships 04 R8 the filter never hides a grouped usage` |
+| R15 | `OutlineModelTest` `the summary counts an inlining as inlined, not removed`; `an inlining is hidden with removed changes` |
