@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-08
+
 ### Added
 
 - The Changes tree follows the caret in the editor and in both sides of a two-sided diff, selecting the changed declaration under the caret or the file row, while respecting the tree's filter and Declarations toggle.
@@ -13,9 +15,13 @@
 
 ### Fixed
 
+- A selected moved declaration's frames stay aligned on both sides while scrolling, in a two-sided diff and in the three-sided merge outline, instead of drifting apart when the unchanged code around them differs.
 - Following the caret in either platform Changes preview, the editor tab or the Local Changes splitter, keeps the preview open by selecting the file row, instead of a declaration row that used to close or empty it.
 - When the platform's Changes diff action cannot open a declaration, the fallback diff reads the committed revisions off the UI thread, so a slow VCS does not freeze the IDE.
 - Double-click or Enter on a changed file with a structural summary in Local Changes or the Commit tool window now uses the platform's own preview, diff or source choice, so it opens the same editor preview as a file without a summary, and Enter works on 2025.1. Declaration rows open their diff through the tree's real selection.
+- A large group of similar renamed declarations no longer makes the analysis time out: the assignment stops at its work limit and leaves that group unpaired, as it does for a group over the pair limit.
+- A low-confidence container rename keeps its members paired and shows them moved, instead of leaving them unchanged under the added container.
+- The declaration engine version names the installed Scala plugin's real version from its descriptor, instead of `Scala unknown`, so a Scala plugin update changes the version.
 
 ## [0.2.0] - 2026-11-05
 
@@ -28,9 +34,6 @@
 
 ### Fixed
 
-- A large group of similar renamed declarations no longer makes the analysis time out: the assignment stops at its work limit and leaves that group unpaired, as it does for a group over the pair limit.
-- A low-confidence container rename keeps its members paired and shows them moved, instead of leaving them unchanged under the added container.
-- The declaration engine version names the installed Scala plugin's real version from its descriptor, instead of `Scala unknown`, so a Scala plugin update changes the version.
 - A changed file in the Changes tree that was not analyzed shows the reason in place of its summary, such as `not analyzed: too large`, `not analyzed: timed out`, `not analyzed: parse errors` or `not analyzed: analysis failed`.
 - Scala and Kotlin: adding a declaration above another no longer marks the unchanged declaration as changed; the line break before it is shown as formatting-only.
 - A failed analysis names the engine that failed in the outline's reason.
@@ -63,7 +66,8 @@
 - Scala 2 and Scala 3 support, when the Scala plugin is installed: classes, traits, objects, enums, methods, values, type aliases, givens and extension methods, with Scala 3 indentation changes never shown as formatting-only.
 - Unsupported, malformed or oversized files fall back to the native diff with the reason shown.
 
-[Unreleased]: https://github.com/agadek/smart-diff/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/agadek/smart-diff/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/agadek/smart-diff/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/agadek/smart-diff/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/agadek/smart-diff/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/agadek/smart-diff/commits/v0.1.0

@@ -1,12 +1,12 @@
 # SMART Diff Roadmap
 
-Status: 2026-11-07. Items after the shipped baseline are candidates, not commitments; their order is a proposal. Scope details live in the [product scope](specs/README.md#product-scope), the [feature specifications](specs/README.md) and the [technical specification](TECHNICAL-SPECIFICATION.md).
+Status: 2026-11-08. Items after the shipped baseline are candidates, not commitments; their order is a proposal. Scope details live in the [product scope](specs/README.md#product-scope), the [feature specifications](specs/README.md) and the [technical specification](TECHNICAL-SPECIFICATION.md).
 
-The next two releases are planned in [releases/0.3.0-plan.md](releases/0.3.0-plan.md) (the Changes tree work) and [releases/0.4.0-plan.md](releases/0.4.0-plan.md) (structural relationships), with agent prompts for 0.4.0 in [agent-prompts/0.4.0/](agent-prompts/0.4.0/README.md).
+0.3.0 is prepared for release but not published; the [0.3.0 plan](releases/0.3.0-plan.md) records the merged work and what blocks publishing. The next release is planned in [releases/0.4.0-plan.md](releases/0.4.0-plan.md) (structural relationships), with agent prompts in [agent-prompts/0.4.0/](agent-prompts/0.4.0/README.md).
 
 ## Shipped baseline
 
-0.1.0, 0.1.1 and 0.2.0 (2026-11-05) are released.
+0.1.0, 0.1.1 and 0.2.0 (2026-11-05) are released. 0.3.0 is prepared, not published; see [0.3.0](#030-changes-tree-in-the-ide-prepared-2026-11-08).
 
 - Structural outline for two-sided diffs, attached to the native diff, per file only. It opens by default, with a setting to turn it off and a toolbar button in every diff to switch to the plain native diff.
 - Comparison engine interface, registry, per-language default, and engine dropdown ([ADR 0004](adr/0004-pluggable-comparison-engines.md)).
@@ -60,6 +60,24 @@ Decided 2026-10-30. It came before everything else under [Later](#later), and it
 | Outline for languages without an engine, and the "not analyzed" reason in the Changes tree | [outline/01](specs/outline/01-structural-outline.md), [changes-tree/01](specs/changes-tree/01-changes-tree-summary.md) | Implemented, PR #37 |
 
 0.2.0 was released on 2026-11-05. The merge gate passes: the [2026-11-02 rerun](VALIDATION.md#2026-11-02-merge-validation-rerun) meets merge/06 R15 to R17 and R32, and the flagged files are reviewed. The two-sided corpus gate passes too: the [2026-11-04 rerun](VALIDATION.md#2026-11-04-two-sided-corpus-rerun) covers the Java and Kotlin list and the Scala list, zio included, with every clone's HEAD pinned; it has 1970 files, 1968 `ANALYZED` and 2 `PARTIAL`, no fallback and no `hidden` or `empty` flag, and the Java and Kotlin half reproduces the [2026-10-23 run](VALIDATION.md#2026-10-23-extraction-detection) exactly. The Scala half's zio and scala3 windows differ from the recorded run, and each of its 28 flagged files is reviewed in that section. The requirement-named tests for the features accepted on 2026-11-01 (outline/05, declarations/06 and changes-tree/03) are done, and those features are implemented. The tag and GitHub release are published with the signed plugin attached.
+
+## 0.3.0: Changes tree in the IDE, prepared 2026-11-08
+
+Decided 2026-11-07 in [releases/0.3.0-plan.md](releases/0.3.0-plan.md). The release finishes the Changes tree work started after 0.2.0 and includes the outline, matching and scroll fixes already on main. It adds no new relationship kind.
+
+| Work | Spec | State |
+| --- | --- | --- |
+| Changes tree hide and filter, with View Options toggles and the tree's own filter | [changes-tree/04](specs/changes-tree/04-hide-and-filter.md) | Implemented and merged, PR #124 |
+| Commit preview revisions off the UI thread, and the platform preview for summarized rows | [changes-tree/02](specs/changes-tree/02-changes-tree-declarations.md) | Implemented and merged, PRs #127 and #130 |
+| Changes tree follows the caret | [changes-tree/05](specs/changes-tree/05-changes-tree-caret-follow.md) | Implemented and merged, PR #131; R1–R10 manual check outstanding |
+| Outline Hide and Minimise controls and the Structural Outline shortcut | [outline/02](specs/outline/02-outline-toggle.md) | Implemented and merged, PR #120 |
+| SMART Diff viewer icon | [outline/04](specs/outline/04-smart-diff-viewer.md) | Implemented and merged, PR #116 |
+| Selected moved declaration's frames stay aligned while scrolling | [outline/01](specs/outline/01-structural-outline.md), [merge/03](specs/merge/03-three-sided-diffs.md) | Implemented and merged, PR #121 |
+| Scored whole-file relationship matching | [relationships/03](specs/relationships/03-relationship-matching.md) | Implemented and merged, PR #95 |
+| Rename grouping, step 1 for Java | [relationships/04](specs/relationships/04-rename-grouping.md) | Implemented and merged, PR #129; step 2 is 0.4.0 |
+| Release preparation | [RELEASING.md](RELEASING.md) | Prepared 2026-11-08; publishing blocked |
+
+The [2026-11-08 release checks](VALIDATION.md#2026-11-08-030-release-checks) pass: the two-sided corpus and the merge validation reproduce the 2026-11-04 results with every flagged file reviewed, the relationship benchmark reports no new wrong pair, and Plugin Verifier is compatible on both target IDEs with the same experimental API usages as 0.2.0 and no internal or deprecated usage. `pluginVersion` is 0.3.0 and the changelog section is dated. Publishing is blocked until the manual checks are recorded: the full [changes-tree/05 R1–R10 check](specs/changes-tree/05-changes-tree-caret-follow-details.md#manual-check-outstanding) and the remaining #111 and #108 hand checks. The [manual runIde checklist](releases/0.3.0-manual-check.md) lists them. Until then 0.3.0 is prepared, not released, and the `v0.3.0` GitHub release is not published.
 
 ## After 0.2.0: structural relationships
 
