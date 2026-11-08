@@ -31,6 +31,7 @@ import com.intellij.openapi.vcs.changes.ui.ChangesBrowserNode
 import com.intellij.openapi.vcs.changes.ui.ChangesListView
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.ToolWindowId
+import com.intellij.platform.vcs.impl.shared.changes.PreviewDiffSplitterComponent
 import com.intellij.openapi.wm.ToolWindowManager
 import io.github.agadek.smartdiff.ui.ItemKind
 import io.github.agadek.smartdiff.ui.OutlineItem
@@ -562,6 +563,9 @@ internal fun mergeViewerFromContext(editor: Editor): MergeTool.MergeViewer? =
  * selects a helper node with no change, which closes the preview on 2025.1 and empties it on 2026.3.
  */
 internal fun isSelectionFollowingPreview(project: Project, editor: Editor, tree: ChangesListView): Boolean {
+    if (SwingUtilities.getAncestorOfClass(PreviewDiffSplitterComponent::class.java, editor.contentComponent) != null) {
+        return true
+    }
     val file = diffEditorFile(project, editor) ?: return false
     val preview = DiffDataKeys.EDITOR_TAB_DIFF_PREVIEW.getData(DataManager.getInstance().getDataContext(tree))
     if (preview is EditorTabDiffPreview && preview.previewFile == file) return true

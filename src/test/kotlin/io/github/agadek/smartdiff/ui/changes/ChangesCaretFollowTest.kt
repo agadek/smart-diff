@@ -53,6 +53,8 @@ import com.intellij.openapi.wm.RegisterToolWindowTask
 import com.intellij.openapi.wm.ToolWindowAnchor
 import com.intellij.openapi.wm.ToolWindowId
 import com.intellij.openapi.wm.ToolWindowManager
+import com.intellij.platform.vcs.impl.shared.changes.DiffPreviewUpdateProcessor
+import com.intellij.platform.vcs.impl.shared.changes.PreviewDiffSplitterComponent
 import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -777,6 +779,52 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
             assertFalse("the preview does not select a helper declaration row", tree.selectionPath?.lastPathComponent is DeclarationNode)
         } finally {
             FileEditorManager.getInstance(project).closeFile(previewFile)
+        }
+    }
+
+    fun `test a splitter preview keeps the file row instead of selecting a declaration`() {
+        // changes-tree/05-changes-tree-caret-follow R3, R5
+        maskEngines(RangeEngine())
+        val (_, file) = configuredFile("SplitterCart.java", NEW_TEXT)
+        val change = change(file)
+        val tree = summarizedTree(change)
+        val fileRow = fileRow(tree, change)
+        val classRow = declarationRow(tree, "class Cart")
+        tree.selectionPath = declarationPath(classRow)
+        val request = SimpleDiffRequest(
+            "SplitterCart.java",
+            DiffContentFactory.getInstance().create(project, OLD_TEXT, file),
+            DiffContentFactory.getInstance().create(project, NEW_TEXT, file),
+            "old",
+            "new",
+        )
+        val processor = CacheDiffRequestChainProcessor(project, SimpleDiffRequestChain(request))
+        processor.updateRequest(true, null)
+        PlatformTestUtil.waitWithEventsDispatching("no splitter viewer was created", { processor.activeViewer != null }, 10)
+        val viewer = processor.activeViewer as TwosideTextDiffViewer
+        val splitter = PreviewDiffSplitterComponent(
+            object : DiffPreviewUpdateProcessor {
+                override val component: JComponent get() = processor.component
+                override fun clear() {}
+                override fun refresh(fromModelRefresh: Boolean) {}
+            },
+            "smartdiff.test.splitter",
+        )
+        splitter.openPreview(false)
+        try {
+            assertTrue(
+                "the production check finds the splitter preview",
+                isSelectionFollowingPreview(project, viewer.editor2, tree),
+            )
+            val follower = follower(tree, viewer = viewer)
+
+            follower.followNow(viewer.editor2, NEW_TEXT.indexOf("return 2"))
+
+            assertSame("the splitter preview keeps the file row", fileRow, tree.selectionPath?.lastPathComponent)
+            assertFalse("the splitter preview does not select a declaration row", tree.selectionPath?.lastPathComponent is DeclarationNode)
+        } finally {
+            splitter.closePreview()
+            Disposer.dispose(processor)
         }
     }
 

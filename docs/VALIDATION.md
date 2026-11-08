@@ -27,11 +27,11 @@ PR #131 adds the caret follow in [changes-tree/05](specs/changes-tree/05-changes
 automated checks pass, and the preview blocker has a running-IDE check; the full R1–R10 manual check has not been recorded
 yet.
 
-**Automated evidence.** `./gradlew clean buildPlugin check` passes, including all 29 `ChangesCaretFollowTest` tests. They
+**Automated evidence.** `./gradlew clean buildPlugin check` passes, including all 30 `ChangesCaretFollowTest` tests. They
 cover the R7 stale and pending summaries through an installed intermediate pending model, R10's hidden-row fallback with
 the filter and with Declarations off, the real viewer and merge-viewer data-context lookup, the live tree lookup in the
 Version Control tool window, the old-path fallback rule, commit inclusion, a real focus owner, background-thread
-marshalling, a fresh summary with no rows, the selection-following preview, and failure logging.
+marshalling, a fresh summary with no rows, the editor-tab preview, the Local Changes splitter, and failure logging.
 
 **Verifier.** The CI verifier report records 3 experimental API usages, all existing `ChangesViewNodeAction` overrides or
 reference in `DeclarationNodeAction`, and no new internal, experimental or deprecated usage from the follower. A local run
@@ -51,11 +51,17 @@ modified `Cart.java`, the built plugin, and the single-click preview setting on
   `DiffDataKeys.EDITOR_TAB_DIFF_PREVIEW`. Moving the caret in the preview kept the file row selected and the preview open
   (`runs 0 -> 1`). Selecting `method total()  changed` directly kept the file open but rebuilt it to `NoDiffRequest` with
   no title, the 2026.3 empty-preview symptom.
+- **Local Changes splitter, IC 2025.1.3.** The probe found `PreviewDiffSplitterComponent` as an ancestor of the tree,
+  selected the summarized file row and moved the caret in the splitter editor. The file row stayed selected, the splitter
+  stayed open, and its request kept the `Cart.java` title (`runs 0 -> 1`). Selecting `method total()  changed` directly
+  selected the declaration row and cleared the splitter request (`request=null`).
+- **Local Changes splitter, IU 2026.3.** The same check found the splitter component and passed: the caret kept the file
+  row and the splitter request, while selecting the declaration directly selected the helper row and cleared the request.
 
 The probe selected the declaration directly only to reproduce the platform symptom. In the fixed build, moving the caret
-in the preview maps to the file row, so the follower never selects the declaration there; normal editors and diff sides
-still map declarations in `ChangesCaretFollowTest`. The R3 preview behavior is therefore checked on both target releases;
-the remaining R1–R10 manual steps are outstanding.
+in either preview maps to the file row, so the follower never selects the declaration there; normal editors and diff
+sides still map declarations in `ChangesCaretFollowTest`. The R3 preview behavior is therefore checked on both target
+releases in both preview forms; the remaining R1–R10 manual steps are outstanding.
 
 **Running-IDE check: outstanding.** The R1–R10 manual steps in
 [changes-tree/05 details](specs/changes-tree/05-changes-tree-caret-follow-details.md#manual-check-outstanding) have not been
