@@ -26,7 +26,7 @@ Its report is written to `build/reports/smartdiff-validation/merge/`.
 The release checks for 0.3.0 from the release branch head on `chore/release-0.3.0`, with `DeclarationEngine.VERSION` 9,
 `ReferencePass.VERSION` 1 and Scala plugin 2025.1.32. **Publishing is blocked:** the automated checks below pass, but the
 [#110 R1–R10 manual check](#2026-11-08-changes-tree-caret-follow-110-r7-and-r8-failed) was run and **R7 and R8 failed**,
-so a fix is required and must be backported to `release/0.3.0`. Do not merge `main`, which carries #132
+the fix is in PR #137, and the R7/R8 re-check is outstanding. Do not merge `main`, which carries #132
 (relationships/04 step 2) as 0.4.0 work. The remaining #111 and #108 hand checks also stay open. The [manual runIde
 checklist](releases/0.3.0-manual-check.md) records the failed run and the re-check.
 
@@ -101,14 +101,34 @@ The report says `Status: smoke run` because usage grouping is still step 1 for J
 gate and is not a release gate until [relationships/07](specs/relationships/07-relationship-validation.md) is accepted.
 The known classification-mismatch list is unchanged from the 2026-11-07 run, and no pair or classification moved.
 
-**Manual runIde check: outstanding.** The labels, summary, framing on selection and hiding removed changes have to be
-checked in a running IDE on 2025.1 and 2026.3, as the feature's details ask. This environment has no interactive desktop
-for the click path, so the check has not been run and is not claimed as passed. The automated evidence is
-`OutlineModelTest` (labels, `inlined` count, the removed filter and the new-side range), `OutlineIntegrationTest` (the
-real outline selection frames and highlights the new side) and `InliningDetectionTest`; the
-manual steps remain: open a Java, Kotlin and Scala diff with an inlined helper on both target IDEs, confirm
-`inlined into …` and `code inlined from …`, the `inlined` summary count, the frame on the new side, and that hiding
-removed changes hides the removed row.
+### Build and Plugin Verifier
+
+- `./gradlew clean buildPlugin check` passed; `build/distributions/smart-diff-0.3.0.zip` has SHA-256
+  `49fd127437c74b03a88fd9ed78be024da6a5f98c7ff956d0b34773fac571c13d`.
+- `./gradlew verifyPlugin` is **compatible** on `IC-251.26927.53` and `IU-263.7307.200`, with **4 experimental API
+  usages** on each (the 4 in the 0.2.0 report below), **no internal API usage** and **no deprecated API usage**.
+- The 0.2.0 verifier report in the 0.2.0 release worktree records the same 4 experimental usages on `IC-251.26927.53` and
+  `IU-262.11879.100`, with no internal or deprecated usage. No usage is new in 0.3.0.
+
+The four uses, identical in 0.2.0 and 0.3.0:
+
+1. Experimental interface `com.intellij.psi.PsiNamedElementWithCustomPresentation`, referenced in the Scala plugin's
+   `org.jetbrains.plugins.scala.lang.psi.api.toplevel.ScNamedElement` (the Scala provider's PSI use).
+2. Experimental method `ChangesViewNodeAction.createNodeHoverIcon(ChangesBrowserNode)`, overridden in
+   `io.github.agadek.smartdiff.ui.changes.DeclarationNodeAction`.
+3. Experimental method `ChangesViewNodeAction.handleDoubleClick(ChangesBrowserNode)`, overridden in
+   `io.github.agadek.smartdiff.ui.changes.DeclarationNodeAction`.
+4. Experimental interface `ChangesViewNodeAction`, referenced in
+   `io.github.agadek.smartdiff.ui.changes.DeclarationNodeAction`.
+
+### Manual checks and blockers
+
+The automated release record above is complete. Publishing is blocked by the caret-follow manual check: it ran and
+**R7 and R8 failed**; the fix is in PR #137, and the re-check on the release artifact is outstanding. Do not merge `main`,
+which carries #132 (relationships/04 step 2) as 0.4.0 work. The remaining #111 and #108 physical-click and single-click
+hand checks also stay open. The [manual runIde checklist](releases/0.3.0-manual-check.md) records the failed run and the
+re-check. 0.3.0 is prepared, not published.
+
 ## 2026-11-08: Changes tree caret follow fixes: R8 one-sided diff and R7 pending follow
 
 This run fixes the two failures recorded in the PR #131 manual check: a deleted or added file shown in a one-sided
@@ -125,8 +145,7 @@ Five new regressions name the requirements:
 - R7/R11: `test a preview caret event does not replace a pending summary follow` and `test an unfocused editor's caret
   event does not replace a pending summary follow`.
 
-All pass on this head. The three one-sided and rename regressions fail with `4d3c6fb` reverted; the two R7/R11
-regressions fail with `2debf54` reverted.
+All pass on this head. The three one-sided and rename regressions fail when the caret fix is reverted; the two R7/R11 regressions fail when the earlier pending-follow fix is reverted.
 
 **Running-IDE probe, IC 2025.1.3 (`IC-251.26927.53`, `runIde` sandbox).** A temporary probe, removed before this
 change was committed, opened a Git project with a changed `Cart.java` (a changed class header, two changed methods and
@@ -153,39 +172,11 @@ experimental or deprecated usage from the follower. The existing experimental us
 the latest release, is still required before the feature is claimed as manually verified. The new R11 step is in the
 manual check of [changes-tree/05 details](specs/changes-tree/05-changes-tree-caret-follow-details.md#manual-check-outstanding).
 
-### Build and Plugin Verifier
-
-- `./gradlew clean buildPlugin check` passed; `build/distributions/smart-diff-0.3.0.zip` has SHA-256
-  `49fd127437c74b03a88fd9ed78be024da6a5f98c7ff956d0b34773fac571c13d`.
-- `./gradlew verifyPlugin` is **compatible** on `IC-251.26927.53` and `IU-263.7307.200`, with **4 experimental API
-  usages** on each (the 4 in the 0.2.0 report below), **no internal API usage** and **no deprecated API usage**.
-- The 0.2.0 verifier report in the 0.2.0 release worktree records the same 4 experimental usages on `IC-251.26927.53` and
-  `IU-262.11879.100`, with no internal or deprecated usage. No usage is new in 0.3.0.
-
-The four uses, identical in 0.2.0 and 0.3.0:
-
-1. Experimental interface `com.intellij.psi.PsiNamedElementWithCustomPresentation`, referenced in the Scala plugin's
-   `org.jetbrains.plugins.scala.lang.psi.api.toplevel.ScNamedElement` (the Scala provider's PSI use).
-2. Experimental method `ChangesViewNodeAction.createNodeHoverIcon(ChangesBrowserNode)`, overridden in
-   `io.github.agadek.smartdiff.ui.changes.DeclarationNodeAction`.
-3. Experimental method `ChangesViewNodeAction.handleDoubleClick(ChangesBrowserNode)`, overridden in
-   `io.github.agadek.smartdiff.ui.changes.DeclarationNodeAction`.
-4. Experimental interface `ChangesViewNodeAction`, referenced in
-   `io.github.agadek.smartdiff.ui.changes.DeclarationNodeAction`.
-
-### Manual checks and blockers
-
-The automated release record above is complete. Publishing is blocked by the caret-follow manual check: it ran and
-**R7 and R8 failed**, so a fix is required and must be backported to `release/0.3.0` before the tag. Do not merge `main`,
-which carries #132 (relationships/04 step 2) as 0.4.0 work. The remaining #111 and #108 physical-click and single-click
-hand checks also stay open. The [manual runIde checklist](releases/0.3.0-manual-check.md) records the failed run and the
-re-check. 0.3.0 is prepared, not published.
-
 ## 2026-11-08: Changes tree caret follow (#110): R7 and R8 failed
 
 PR #131 adds the caret follow in [changes-tree/05](specs/changes-tree/05-changes-tree-caret-follow.md) R1–R10. The
 automated checks pass, and the preview blocker has a running-IDE check. The R1–R10 manual run was executed on
-2026-11-08; **R7 and R8 failed**, so a fix is required and must be backported to `release/0.3.0` before the tag.
+2026-11-08; **R7 and R8 failed**, and the fix is in PR #137 for `release/0.3.0`; the re-check is outstanding.
 
 **Automated evidence.** `./gradlew clean buildPlugin check` passes, including all 30 `ChangesCaretFollowTest` tests. They
 cover the R7 stale and pending summaries through an installed intermediate pending model, R10's hidden-row fallback with
@@ -225,8 +216,7 @@ releases in both preview forms. The separate R1–R10 manual run then failed R7 
 
 **Running-IDE check: run; R7 and R8 failed.** The R1–R10 manual run was executed on IntelliJ IDEA 2025.1 and the latest
 release, in Local Changes and in the Commit tool window. R7 (the stale summary and the intermediate pending rebuild) and
-R8 (files without a summary) failed; the other steps are not claimed as passed here. A fix is required and must be
-backported to `release/0.3.0`; do not merge `main`, which carries #132 (relationships/04 step 2) as 0.4.0 work. The
+R8 (files without a summary) failed; the other steps are not claimed as passed here. The fix is in PR #137 for `release/0.3.0`; do not merge `main`, which carries #132 (relationships/04 step 2) as 0.4.0 work. The
 [manual checklist](releases/0.3.0-manual-check.md) records the failed run and the re-check.
 
 ## 2026-11-07: Changes tree row parity (issues #111 and #108)

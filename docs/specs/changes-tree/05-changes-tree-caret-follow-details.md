@@ -293,9 +293,9 @@ language, a file over the size limit and a file with a timed-out or failed summa
 | Failure logging | `ChangesCaretFollowTest` `test a mapping failure is logged once and leaves the tree unchanged` |
 | R10 | `ChangesCaretFollowTest` `test the tree filter hides the caret row and selects the nearest shown row above`: with the changed method's own label hidden, the shown class container or file row is selected, and with Declarations off the file row is selected |
 | R11 | `ChangesCaretFollowTest` `test a preview caret event does not replace a pending summary follow` and `test an unfocused editor's caret event does not replace a pending summary follow`: while a summary is pending, a caret event from the Local Changes splitter or from an editor without focus leaves the remembered editor and offset in place, and the declaration under the original caret is selected once the summary arrives |
-| R1–R11 | Manual check: **outstanding** as of 2026-11-08. The #131 check found R7 and R8 failures; this release branch carries the fix. The full four-setup table, the IC Local Changes R7 race and the deleted-file re-check are still required. See [validation](../../VALIDATION.md#2026-11-08-changes-tree-caret-follow-fixes-r8-one-sided-diff-and-r7-pending-follow). |
+| R1–R11 | Manual check: **outstanding** as of 2026-11-08. The #131 check found R7 and R8 failures; the fix is in PR #137 and must merge before the tag. The full four-setup table, the IC Local Changes R7 race and the deleted-file re-check are still required. See [validation](../../VALIDATION.md#2026-11-08-changes-tree-caret-follow-fixes-r8-one-sided-diff-and-r7-pending-follow). |
 
-### Manual check (run 2026-11-08; R7 and R8 failed)
+### Manual check (outstanding)
 
 Not yet fully run in a running IDE as of 2026-11-08. A probe on IC 2025.1 in the Commit tool window checked R1, R3,
 R4 off, R5 and R6 click against a real project and found the real one-sided viewer for R8; the probe's null focus owner
