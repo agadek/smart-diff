@@ -1,11 +1,11 @@
 package io.github.agadek.smartdiff.engine.declarations.analysis
 
 import io.github.agadek.smartdiff.engine.api.Content
-import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy
-import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy.INDENTATION_SIGNIFICANT
-import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy.INSIGNIFICANT
-import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy.LINE_BREAKS_SIGNIFICANT
-import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy.SIGNIFICANT
+import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
+import io.github.agadek.smartdiff.engine.api.WhitespacePolicy.INDENTATION_SIGNIFICANT
+import io.github.agadek.smartdiff.engine.api.WhitespacePolicy.INSIGNIFICANT
+import io.github.agadek.smartdiff.engine.api.WhitespacePolicy.LINE_BREAKS_SIGNIFICANT
+import io.github.agadek.smartdiff.engine.api.WhitespacePolicy.SIGNIFICANT
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

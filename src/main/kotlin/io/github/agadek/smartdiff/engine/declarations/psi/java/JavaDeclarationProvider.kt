@@ -23,7 +23,7 @@ import com.intellij.psi.PsiTypeParameter
 import com.intellij.psi.util.JavaPsiRecordUtil
 import com.intellij.psi.util.PsiUtil
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
-import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy
+import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationInfo
 import io.github.agadek.smartdiff.engine.declarations.psi.PsiDeclarationProvider
 import io.github.agadek.smartdiff.engine.declarations.psi.Signatures

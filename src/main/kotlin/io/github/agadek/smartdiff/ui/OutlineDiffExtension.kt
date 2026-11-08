@@ -53,9 +53,11 @@ class OutlineDiffExtension : DiffExtension() {
         val splitter = insertOutlineSplitter(viewer.component, "smartdiff.outline.proportion") ?: return
 
         val fileName = (new.highlightFile ?: old.highlightFile)?.name
+        // The new side's file, or the old side's when the new side has none; the reference pass needs it for R3.
+        val file = new.highlightFile ?: old.highlightFile
         // Taken off the request, so showing it again later does not select the row again.
         val reveal = request.getUserData(OutlinePath.KEY)?.also { request.putUserData(OutlinePath.KEY, null) }
-        val controller = OutlineController(project, viewer, context, splitter, languageId, fileName, old.document, new.document, reveal)
+        val controller = OutlineController(project, viewer, context, splitter, languageId, fileName, file, old.document, new.document, reveal)
         Disposer.register(viewer, controller)
         controller.start()
     }

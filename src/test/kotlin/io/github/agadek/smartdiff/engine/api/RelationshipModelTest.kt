@@ -54,13 +54,15 @@ class RelationshipModelTest {
     }
 
     @Test
-    fun `R5 evidence is name, content, structure, position or score, and only content carries ranges`() {
+    fun `R5 evidence is name, content, structure, position, reference or score, and content and reference carry ranges`() {
         val content = Evidence.Content(shared = 12, total = 20, oldRange = TextRange(3, 9), newRange = TextRange(10, 18))
+        val reference = Evidence.Reference(Subject.Declaration(DeclarationKind.METHOD, "sum", ""), TextRange(21, 26), TextRange(30, 33))
         val evidence = listOf(
             Evidence.Name("total", "sum"),
             content,
             Evidence.Structure("class Order", "class Order", DeclarationKind.METHOD, DeclarationKind.METHOD),
             Evidence.Position(2, 1),
+            reference,
             Evidence.Score(0.91),
         )
 
@@ -68,8 +70,40 @@ class RelationshipModelTest {
 
         assertEquals(TextRange(3, 9), content.oldRange)
         assertEquals(TextRange(10, 18), content.newRange)
+        assertEquals(Subject.Declaration(DeclarationKind.METHOD, "sum", ""), reference.symbol)
+        assertEquals(TextRange(21, 26), reference.oldRange)
+        assertEquals(TextRange(30, 33), reference.newRange)
         // The evidence order is fixed: out of order is refused (R19).
         assertThrows(IllegalArgumentException::class.java) { relationship(evidence = evidence.reversed()) }
+    }
+
+    @Test
+    fun `R12 reference evidence sorts after position and before score, by old then new range`() {
+        // relationships/04-rename-grouping R12
+        val symbol = Subject.Declaration(DeclarationKind.METHOD, "sum", "")
+        val first = Evidence.Reference(symbol, TextRange(1, 2), TextRange(3, 4))
+        val second = Evidence.Reference(symbol, TextRange(1, 2), TextRange(5, 6))
+        val third = Evidence.Reference(symbol, TextRange(7, 8), TextRange(1, 2))
+        val ordered = listOf(
+            Evidence.Name("total", "sum"),
+            Evidence.Position(0, 0),
+            first,
+            second,
+            third,
+            Evidence.Score(0.9),
+        )
+
+        assertEquals(ordered, relationship(evidence = ordered).evidence)
+        assertThrows(IllegalArgumentException::class.java) { relationship(evidence = listOf(third, first, second)) }
+        assertThrows(IllegalArgumentException::class.java) {
+            Relationship(
+                kinds = EnumSet.of(RelationshipKind.MOVE),
+                old = listOf(subject("total")),
+                new = listOf(target("sum")),
+                confidence = Confidence.HIGH,
+                evidence = listOf(first),
+            )
+        }
     }
 
     @Test

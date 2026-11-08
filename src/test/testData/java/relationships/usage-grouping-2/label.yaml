@@ -1,0 +1,80 @@
+case: usage-grouping-2
+language: JAVA
+corpus: java
+category: usage-grouping
+split: held-out
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Order", kind: METHOD, name: "total", signature: "()" }
+      new: { path: "class Order", kind: METHOD, name: "sum", signature: "()" }
+      usages:
+        - old: "66..71"
+          new: "64..67"
+        - old: "99..104"
+          new: "95..98"
+        - old: "132..137"
+          new: "126..129"
+        - old: "165..170"
+          new: "157..160"
+        - old: "198..203"
+          new: "188..191"
+        - old: "231..236"
+          new: "219..222"
+        - old: "264..269"
+          new: "250..253"
+        - old: "297..302"
+          new: "281..284"
+        - old: "330..335"
+          new: "312..315"
+        - old: "364..369"
+          new: "344..347"
+        - old: "398..403"
+          new: "376..379"
+        - old: "432..437"
+          new: "408..411"
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: METHOD, name: "sum", signature: "()" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: METHOD, name: "a1", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: METHOD, name: "a2", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: METHOD, name: "a3", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: METHOD, name: "a4", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: METHOD, name: "a5", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: METHOD, name: "a6", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: METHOD, name: "a7", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: METHOD, name: "a8", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: METHOD, name: "a9", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: METHOD, name: "a10", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: METHOD, name: "a11", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: METHOD, name: "a12", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "The use case: one rename with twelve usages."

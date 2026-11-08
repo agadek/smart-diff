@@ -1,0 +1,25 @@
+case: usage-grouping-1
+language: JAVA
+corpus: java
+category: usage-grouping
+split: held-out
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Order", kind: METHOD, name: "total", signature: "()" }
+      new: { path: "class Order", kind: METHOD, name: "sum", signature: "()" }
+      usages:
+        - old: "69..74"
+          new: "67..70"
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: METHOD, name: "sum", signature: "()" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: METHOD, name: "twice", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "One usage that changed only to follow the rename."

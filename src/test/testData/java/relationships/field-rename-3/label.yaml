@@ -8,6 +8,7 @@ expected:
     - kinds: [RENAME]
       old: { path: "class Basket", kind: FIELD, name: "MIN_COUNT", signature: null }
       new: { path: "class Basket", kind: FIELD, name: "MIN_ITEMS", signature: null }
+      usages: []
   changes:
     - subject: { path: "", kind: CLASS, name: "Basket", signature: null }
       presence: MATCHED
