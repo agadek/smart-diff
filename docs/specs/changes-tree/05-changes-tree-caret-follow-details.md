@@ -273,15 +273,15 @@ language, a file over the size limit and a file with a timed-out or failed summa
 | R9 | `ChangesCaretFollowTest` `test following reads no revision content on the UI thread`: a `ContentRevision` whose `content` fails when read on the EDT is never read; `test a caret event and start from a background thread are marshalled to the EDT`; Plugin Verifier report: no new internal, experimental, deprecated or override-only usage from the follower, and the existing usages stay unchanged |
 | Failure logging | `ChangesCaretFollowTest` `test a mapping failure is logged once and leaves the tree unchanged` |
 | R10 | `ChangesCaretFollowTest` `test the tree filter hides the caret row and selects the nearest shown row above`: with the changed method's own label hidden, the shown class container or file row is selected, and with Declarations off the file row is selected |
-| R1–R10 | Manual check: **outstanding** as of 2026-11-08. The automated checks above pass; the steps below have not yet been run in a running IDE. |
+| R1–R10 | Manual check: **run 2026-11-08; R7 and R8 failed**. The automated checks above pass. A fix is required and must be backported to `release/0.3.0` before the tag. |
 
-### Manual check (outstanding)
+### Manual check (run 2026-11-08; R7 and R8 failed)
 
-Not yet run in a running IDE as of 2026-11-08. The R3 preview behavior in both the editor tab and the Local Changes
-splitter is recorded in [validation](../../VALIDATION.md); the remaining steps below are still required on IntelliJ IDEA
-2025.1 and the latest release for R1–R10, including the R7 intermediate pending rebuild in step 5 and the R10 hidden-row
-check in step 6a.
-Run this on IntelliJ IDEA 2025.1 and the latest release, in the Local Changes view and in the Commit tool window:
+The manual check was run on 2026-11-08 and **R7 and R8 failed**. A fix is required and must be backported to
+`release/0.3.0`; do not merge `main`, which carries #132 (relationships/04 step 2) as 0.4.0 work. The R3 preview behavior
+in both the editor tab and the Local Changes splitter is recorded in [validation](../../VALIDATION.md). The steps below
+are the checklist used for the run and for the re-check on IntelliJ IDEA 2025.1 and the latest release, in the Local
+Changes view and in the Commit tool window:
 
 1. Open a modified Java file with at least two changed methods. Move the caret through each changed method, through
    unchanged code in the same file, and into a changed class header. The tree expands the file and selects the method,

@@ -23,10 +23,12 @@ Its report is written to `build/reports/smartdiff-validation/merge/`.
 
 ## 2026-11-08: 0.3.0 release checks
 
-The release checks for 0.3.0 from `c99af73` on `chore/release-0.3.0`, with `DeclarationEngine.VERSION` 9, `ReferencePass.VERSION`
-1 and Scala plugin 2025.1.32. **Publishing is blocked:** the automated checks below pass, but the full [#110 R1–R10
-manual check](#2026-11-08-changes-tree-caret-follow-110-manual-check-outstanding) and the remaining #111 and #108 hand
-checks are outstanding. The [manual runIde checklist](releases/0.3.0-manual-check.md) lists them.
+The release checks for 0.3.0 from the release branch head on `chore/release-0.3.0`, with `DeclarationEngine.VERSION` 9,
+`ReferencePass.VERSION` 1 and Scala plugin 2025.1.32. **Publishing is blocked:** the automated checks below pass, but the
+[#110 R1–R10 manual check](#2026-11-08-changes-tree-caret-follow-110-r7-and-r8-failed) was run and **R7 and R8 failed**,
+so a fix is required and must be backported to `release/0.3.0`. Do not merge `main`, which carries #132
+(relationships/04 step 2) as 0.4.0 work. The remaining #111 and #108 hand checks also stay open. The [manual runIde
+checklist](releases/0.3.0-manual-check.md) records the failed run and the re-check.
 
 ### Corpus and pins
 
@@ -119,17 +121,19 @@ The four uses, identical in 0.2.0 and 0.3.0:
 4. Experimental interface `ChangesViewNodeAction`, referenced in
    `io.github.agadek.smartdiff.ui.changes.DeclarationNodeAction`.
 
-### Outstanding manual checks
+### Manual checks and blockers
 
-The automated release record above is complete. Publishing is still blocked until the [manual runIde
-checklist](releases/0.3.0-manual-check.md) is recorded: the full changes-tree/05 R1–R10 check (issue #110) and the
-remaining #111 and #108 physical-click and single-click hand checks. 0.3.0 is prepared, not published.
+The automated release record above is complete. Publishing is blocked by the caret-follow manual check: it ran and
+**R7 and R8 failed**, so a fix is required and must be backported to `release/0.3.0` before the tag. Do not merge `main`,
+which carries #132 (relationships/04 step 2) as 0.4.0 work. The remaining #111 and #108 physical-click and single-click
+hand checks also stay open. The [manual runIde checklist](releases/0.3.0-manual-check.md) records the failed run and the
+re-check. 0.3.0 is prepared, not published.
 
-## 2026-11-08: Changes tree caret follow (#110): manual check outstanding
+## 2026-11-08: Changes tree caret follow (#110): R7 and R8 failed
 
 PR #131 adds the caret follow in [changes-tree/05](specs/changes-tree/05-changes-tree-caret-follow.md) R1–R10. The
-automated checks pass, and the preview blocker has a running-IDE check; the full R1–R10 manual check has not been recorded
-yet.
+automated checks pass, and the preview blocker has a running-IDE check. The R1–R10 manual run was executed on
+2026-11-08; **R7 and R8 failed**, so a fix is required and must be backported to `release/0.3.0` before the tag.
 
 **Automated evidence.** `./gradlew clean buildPlugin check` passes, including all 30 `ChangesCaretFollowTest` tests. They
 cover the R7 stale and pending summaries through an installed intermediate pending model, R10's hidden-row fallback with
@@ -165,13 +169,13 @@ modified `Cart.java`, the built plugin, and the single-click preview setting on
 The probe selected the declaration directly only to reproduce the platform symptom. In the fixed build, moving the caret
 in either preview maps to the file row, so the follower never selects the declaration there; normal editors and diff
 sides still map declarations in `ChangesCaretFollowTest`. The R3 preview behavior is therefore checked on both target
-releases in both preview forms; the remaining R1–R10 manual steps are outstanding.
+releases in both preview forms. The separate R1–R10 manual run then failed R7 and R8; those are the release blockers.
 
-**Running-IDE check: outstanding.** The R1–R10 manual steps in
-[changes-tree/05 details](specs/changes-tree/05-changes-tree-caret-follow-details.md#manual-check-outstanding) have not been
-run in a running IDE. They must still be run on IntelliJ IDEA 2025.1 and the latest release, including the R7 intermediate
-pending rebuild (step 5) and the R10 hidden-row fallback (step 6a), in Local Changes and in the Commit tool window. The
-feature is not claimed as manually verified.
+**Running-IDE check: run; R7 and R8 failed.** The R1–R10 manual run was executed on IntelliJ IDEA 2025.1 and the latest
+release, in Local Changes and in the Commit tool window. R7 (the stale summary and the intermediate pending rebuild) and
+R8 (files without a summary) failed; the other steps are not claimed as passed here. A fix is required and must be
+backported to `release/0.3.0`; do not merge `main`, which carries #132 (relationships/04 step 2) as 0.4.0 work. The
+[manual checklist](releases/0.3.0-manual-check.md) records the failed run and the re-check.
 
 ## 2026-11-07: Changes tree row parity (issues #111 and #108)
 
