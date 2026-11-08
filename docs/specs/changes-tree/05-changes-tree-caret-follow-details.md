@@ -277,9 +277,10 @@ language, a file over the size limit and a file with a timed-out or failed summa
 
 ### Manual check (outstanding)
 
-Not yet run in a running IDE as of 2026-11-08. The R3 preview behavior is recorded in [validation](../../VALIDATION.md); the
-remaining steps below are still required on IntelliJ IDEA 2025.1 and the latest release for R1–R10, including the R7
-intermediate pending rebuild in step 5 and the R10 hidden-row check in step 6a.
+Not yet run in a running IDE as of 2026-11-08. The R3 preview behavior in both the editor tab and the Local Changes
+splitter is recorded in [validation](../../VALIDATION.md); the remaining steps below are still required on IntelliJ IDEA
+2025.1 and the latest release for R1–R10, including the R7 intermediate pending rebuild in step 5 and the R10 hidden-row
+check in step 6a.
 Run this on IntelliJ IDEA 2025.1 and the latest release, in the Local Changes view and in the Commit tool window:
 
 1. Open a modified Java file with at least two changed methods. Move the caret through each changed method, through
