@@ -48,8 +48,11 @@ claimed as passed. The manual step is: start the built plugin in IC 2025.1.3 and
 and Scala diff from Local Changes and the Commit tool window, and search the IDE log for
 `Slow operations are prohibited on EDT` and `SMART Diff`; none should follow opening the diff.
 
-**Verifier.** `./gradlew verifyPlugin` is Compatible on IC-251.26927.53 and IU-263.7307.200, with the existing 4
-experimental API usages and no deprecated usage. This change adds no internal, experimental or deprecated API usage.
+**Verifier.** `./gradlew verifyPlugin` is Compatible on IC-251.26927.53 and IU-263.7307.200. The CI verifier artifact
+records 3 experimental API usages, all `ChangesViewNodeAction` overrides or reference in `DeclarationNodeAction`, the
+same 3 as `origin/main`; a local run that resolves the Scala plugin also lists its existing
+`PsiNamedElementWithCustomPresentation` reference. There is no deprecated usage, and this change adds no internal,
+experimental or deprecated API usage.
 
 ## 2026-11-08: inlining detection
 
