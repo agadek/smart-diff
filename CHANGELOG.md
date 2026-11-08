@@ -4,6 +4,7 @@
 
 ### Added
 
+- The Changes tree follows the caret in the editor and in both sides of a two-sided diff, selecting the changed declaration under the caret or the file row, while respecting the tree's filter and Declarations toggle.
 - The Changes view's View Options menu has Structural Summary and Declarations toggles and a Hide Change Types submenu. The tree's filter is separate from the outline's, keeps hidden changes counted in the summary as `· N hidden` or `· all hidden`, and changing it rebuilds the tree without comparing files again.
 - Rename grouping, step 1 for Java: a high-confidence rename is shown once with its changed same-file usages, such as `method total → sum()  rename candidate, 12 usages`, and a declaration whose only change is those usages is labelled `usages renamed`. Selecting the rename frames every grouped usage on both sides. Kotlin K2, Scala and the full 440-case usage gate follow in step 2.
 - The outline panel has its own Hide and Minimise buttons. Minimising leaves a thin strip at the right edge with the summary line or fallback reason, and clicking it or pressing Enter restores the panel at its previous width without comparing again. The Structural Outline toggle has the default shortcut `Ctrl+Alt+Shift+O` (`Cmd+Option+Shift+O` on macOS), is first in the diff toolbar, and the minimised state and panel width are remembered for the next diff.
@@ -12,6 +13,7 @@
 
 ### Fixed
 
+- Following the caret in either platform Changes preview, the editor tab or the Local Changes splitter, keeps the preview open by selecting the file row, instead of a declaration row that used to close or empty it.
 - When the platform's Changes diff action cannot open a declaration, the fallback diff reads the committed revisions off the UI thread, so a slow VCS does not freeze the IDE.
 - Double-click or Enter on a changed file with a structural summary in Local Changes or the Commit tool window now uses the platform's own preview, diff or source choice, so it opens the same editor preview as a file without a summary, and Enter works on 2025.1. Declaration rows open their diff through the tree's real selection.
 

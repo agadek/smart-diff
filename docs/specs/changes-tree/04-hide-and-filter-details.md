@@ -88,7 +88,7 @@ Rebuilds go through `refreshChangesView`, which publishes `ChangesViewModifier.T
 - `SmartDiffSettings` marks a revision when an analysis-affecting setting changes: the limits and the formatting-only layout, which changes the cached rows. Display-only settings such as the two toggles, the two filters, the outline toggle and the merge settings do not mark it.
 - `EngineDefaults` marks a revision when a language's engine changes.
 - `ChangesSummaryService` records the `AnalysisStamp` made from both revisions and the confidence policy with the cache entries it guards. Both `summaries()` and `settingsChanged()` compare the current stamp with the recorded one and clear the cache when it differs. A request also carries its stamp, so a comparison that finishes after the cache was cleared is not stored under the new stamp.
-- `ChangesSummarySettingsListener` is stateless. On `SmartDiffSettings.CHANGED` it asks each open project's existing service to apply the current stamp, then rebuilds every open project's tree.
+- `ChangesSummarySettingsListener` keeps only the last tree and analysis revisions, engine revision and confidence value it saw, to decide whether a change affects the tree; it holds no summaries. On `SmartDiffSettings.CHANGED` it asks each open project's existing service to apply the current stamp, then rebuilds every open project's tree when the tree display/filter revision, an analysis revision, `EngineDefaults.revision` or the confidence policy changed; it skips the rebuild when only the caret-follow setting or another display-only outline or merge setting changed (changes-tree/05 R4, settings/01 R14).
 
 The toggle and filter actions publish the same `CHANGED` event, so they rebuild every open tree, but they do not move an analysis revision and do not clear the cache. A test with a counting engine checks that a toggle or filter change leaves the call count unchanged; an engine or limit change still recomputes.
 
@@ -99,7 +99,7 @@ The tree already asks each node for `getTextPresentation`; `DeclarationNode` ret
 ### Dependencies and interactions
 
 - **Issue #111 (file row double-click and Enter):** R4 and the "Declarations off" path assume the platform's file row behavior, including opening a diff from a file that used to have children. This feature should land after #111, and its tests should run against the fixed behavior. #111 also covers file rows with Declarations on, which still have children.
-- **Issue #110 (tree follows the caret):** when it lands, the caret-to-row selection must use the filtered rows. If the declaration under the caret is hidden by the tree's filter, or the declaration rows are off, the nearest shown row above is selected, as in [changes-tree/02](02-changes-tree-declarations.md) R12; if there is none, the file row is selected. This feature does not implement #110.
+- **Issue #110 (tree follows the caret):** the caret-to-row selection uses the filtered rows. If the declaration under the caret is hidden by the tree's filter, or the declaration rows are off, the nearest shown row above is selected, as in [changes-tree/02](02-changes-tree-declarations.md) R12; if there is none, the file row is selected (changes-tree/05 R10).
 
 ## Tests
 

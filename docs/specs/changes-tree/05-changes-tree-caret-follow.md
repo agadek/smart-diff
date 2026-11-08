@@ -1,6 +1,6 @@
 # Changes tree caret follow
 
-Status: proposed, 2026-11-05
+Status: implemented, 2026-11-07
 
 **Description:** When the caret moves in a file shown in the [Changes tree](../../GLOSSARY.md#changes-tree), the tree
 expands the file and selects the innermost changed [declaration](../../GLOSSARY.md#declaration) under the caret, or the
@@ -17,19 +17,24 @@ the tree. This is the reverse of opening a declaration from the tree.
 - **R2** When the caret is in the file but outside every changed declaration, the tree selects the file's row and no
   declaration row.
 - **R3** The caret maps to the [new side](../../GLOSSARY.md#new-side) range in a plain editor and on the new side of a
-  two-sided diff, and to the [old side](../../GLOSSARY.md#old-side) range on the old side.
+  two-sided diff, and to the [old side](../../GLOSSARY.md#old-side) range on the old side. In the platform's
+  selection-following Changes preview, whether it is an editor tab or the Local Changes splitter, following selects the
+  file row and never a declaration row, which would close or empty the preview.
 - **R4** The setting "Follow the caret in the Changes tree" turns this on and off, and it is on by default.
 - **R5** Following never moves focus out of the editor, opens a diff itself or changes what is included in the commit,
   though the platform's own single-click preview may follow the new selection as it does for any selection.
 - **R6** Following does not change the tree while the tree has focus, a selection made in the tree is not overwritten by a
   later caret event, and caret moves are debounced so typing and arrow keys stay smooth.
-- **R7** While a file's [summary line](../../GLOSSARY.md#summary-line) is stale after an edit, following does not change
-  the tree's selection, and it selects the row under the caret when the new summary arrives.
+- **R7** While a file's [summary line](../../GLOSSARY.md#summary-line) is stale after an edit, following does not select a
+  row from the old summary; if the rebuilt tree shows only a plain pending file row, it selects that file row and keeps
+  retrying, and it selects the row under the caret when the new summary arrives.
 - **R8** A file without a summary, because it is pending, not analyzed, in an
   [unsupported language](../../GLOSSARY.md#supported-language), added, deleted or after the 500-file limit, gets only its
   file row selected.
 - **R9** Following reads no revision content on the UI thread and uses no internal, experimental or deprecated platform
   API.
+- **R10** When the tree's filter or its Declarations toggle hides the declaration under the caret, the tree selects the
+  nearest shown row above it, or the file row when no declaration row is shown.
 
 ## Out of scope
 

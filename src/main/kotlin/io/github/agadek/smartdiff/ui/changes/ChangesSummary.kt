@@ -247,6 +247,24 @@ class ChangesSummaryService(private val project: Project) {
         }
     }
 
+    /**
+     * What the tree can show for [change] right now, without starting a comparison, evicting another entry or reading
+     * revision content. [Fresh] carries the current summary; [Stale] means an older summary is still in the cache after
+     * an edit; [Pending] means the current summary is being computed; [None] means there is no summary for the file.
+     */
+    internal fun snapshot(change: Change): SummarySnapshot {
+        val request = request(change, currentAnalysisStamp()) ?: return SummarySnapshot.None
+        return when (val entry = cache[request.key]) {
+            is Entry.Done -> entry.summary?.let(SummarySnapshot::Fresh) ?: SummarySnapshot.None
+            Entry.Pending -> if (hasOtherEntry(request.key)) SummarySnapshot.Stale else SummarySnapshot.Pending
+            null -> if (hasOtherEntry(request.key)) SummarySnapshot.Stale else SummarySnapshot.None
+        }
+    }
+
+    /** Whether the cache has an entry for the same paths under another key, such as the previous document version. */
+    private fun hasOtherEntry(key: Key): Boolean =
+        cache.keys.any { it != key && it.oldPath == key.oldPath && it.newPath == key.newPath }
+
     /** Applies the current analysis stamp; the cache is dropped when it differs from the stamp it was computed under. */
     fun settingsChanged() = useStamp(currentAnalysisStamp())
 
@@ -446,18 +464,50 @@ class ChangesSummaryService(private val project: Project) {
  */
 class FileSummary(val text: String, val items: List<OutlineItem>, val retryable: Boolean = false)
 
+/**
+ * What [ChangesSummaryService.snapshot] finds for one change without computing anything: a summary for the current
+ * document version, an older summary that an edit made stale, a summary still being computed, or no summary at all.
+ */
+internal sealed interface SummarySnapshot {
+    data class Fresh(val summary: FileSummary) : SummarySnapshot
+
+    data object Stale : SummarySnapshot
+
+    data object Pending : SummarySnapshot
+
+    data object None : SummarySnapshot
+}
+
 /** Rebuilds the Local Changes and Commit tree, which asks [ChangesSummaryModifier] again. */
 internal fun refreshChangesView(project: Project) {
     project.messageBus.syncPublisher(ChangesViewModifier.TOPIC).updated()
 }
 
-/** Shows or hides the summaries in every open project when the SMART Diff settings change. */
+/**
+ * Shows or hides the summaries in every open project when the SMART Diff settings change. A change that only turns
+ * following on or off applies the analysis stamp but does not rebuild the tree (settings/01 R14, R15).
+ */
 class ChangesSummarySettingsListener : SmartDiffSettings.Listener {
+    private var lastTreeRevision = SmartDiffSettings.getInstance().treeRevision
+    private var lastAnalysisRevision = SmartDiffSettings.getInstance().analysisRevision
+    private var lastEngineRevision = EngineDefaults.getInstance().revision
+    private var lastConfidence = SmartDiffSettings.getInstance().confidence.format()
+
     override fun settingsChanged() {
-        for (project in ProjectManager.getInstance().openProjects) {
-            if (project.isDisposed) continue
-            project.serviceIfCreated<ChangesSummaryService>()?.settingsChanged()
-            refreshChangesView(project)
-        }
+        val settings = SmartDiffSettings.getInstance()
+        val engineRevision = EngineDefaults.getInstance().revision
+        val confidence = settings.confidence.format()
+        val projects = ProjectManager.getInstance().openProjects.filterNot { it.isDisposed }
+        for (project in projects) project.serviceIfCreated<ChangesSummaryService>()?.settingsChanged()
+        // The analysis stamp above still notices engine, limit and layout changes made before this listener existed.
+        val treeChanged = settings.treeRevision != lastTreeRevision
+        val analysisChanged = settings.analysisRevision != lastAnalysisRevision ||
+            engineRevision != lastEngineRevision || confidence != lastConfidence
+        lastTreeRevision = settings.treeRevision
+        lastAnalysisRevision = settings.analysisRevision
+        lastEngineRevision = engineRevision
+        lastConfidence = confidence
+        if (!treeChanged && !analysisChanged) return
+        for (project in projects) refreshChangesView(project)
     }
 }

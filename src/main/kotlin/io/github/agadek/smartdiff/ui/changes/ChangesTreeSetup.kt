@@ -264,7 +264,7 @@ internal object ChangesTreeSetup {
         tree.root.depthFirstEnumeration().asSequence().any { it is DeclarationNode }
 
     /** Every Changes tree under [component], so a content with more than one is not left half configured. */
-    private fun findChangesTrees(component: Component?, trees: MutableList<ChangesListView> = mutableListOf()): List<ChangesListView> {
+    internal fun findChangesTrees(component: Component?, trees: MutableList<ChangesListView> = mutableListOf()): List<ChangesListView> {
         when (component) {
             is ChangesListView -> if (component !in trees) trees += component
             is Container -> component.components.forEach { findChangesTrees(it, trees) }

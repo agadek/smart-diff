@@ -21,6 +21,54 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-08: Changes tree caret follow (#110): manual check outstanding
+
+PR #131 adds the caret follow in [changes-tree/05](specs/changes-tree/05-changes-tree-caret-follow.md) R1–R10. The
+automated checks pass, and the preview blocker has a running-IDE check; the full R1–R10 manual check has not been recorded
+yet.
+
+**Automated evidence.** `./gradlew clean buildPlugin check` passes, including all 30 `ChangesCaretFollowTest` tests. They
+cover the R7 stale and pending summaries through an installed intermediate pending model, R10's hidden-row fallback with
+the filter and with Declarations off, the real viewer and merge-viewer data-context lookup, the live tree lookup in the
+Version Control tool window, the old-path fallback rule, commit inclusion, a real focus owner, background-thread
+marshalling, a fresh summary with no rows, the editor-tab preview, the Local Changes splitter, and failure logging.
+
+**Verifier.** The CI verifier report records 3 experimental API usages, all existing `ChangesViewNodeAction` overrides or
+reference in `DeclarationNodeAction`, and no new internal, experimental or deprecated usage from the follower. A local run
+that resolves the Scala plugin also lists its existing `PsiNamedElementWithCustomPresentation` reference.
+
+**Preview runtime check.** A temporary startup probe, removed before this change was committed, used a Git project with a
+modified `Cart.java`, the built plugin, and the single-click preview setting on
+(`show.diff.preview.as.editor.tab.with.single.click=true`, `LOCAL_CHANGES_DETAILS_PREVIEW_SHOWN=true`).
+
+- **IC 2025.1.3 (`IC-251.26927.53`, `runIde`).** Selecting the summarized file row opened
+  `TabPreviewDiffVirtualFile` by the single-click path. Moving the caret in its editor kept the file row selected and the
+  preview open (`runs 0 -> 1`, request `LocalChangeListDiffRequest` with the `Cart.java` title). Selecting
+  `method total()  changed` directly then selected the declaration row, closed the preview (`previewOpen=false`) and
+  left `NoDiffRequest`.
+- **IU 2026.3 (`IU-263.7307.200`, extracted distribution).** The same settings were on. The tool window layout kept the
+  splitter preview for the single-click path, so the probe opened the same platform editor preview through
+  `DiffDataKeys.EDITOR_TAB_DIFF_PREVIEW`. Moving the caret in the preview kept the file row selected and the preview open
+  (`runs 0 -> 1`). Selecting `method total()  changed` directly kept the file open but rebuilt it to `NoDiffRequest` with
+  no title, the 2026.3 empty-preview symptom.
+- **Local Changes splitter, IC 2025.1.3.** The probe found `PreviewDiffSplitterComponent` as an ancestor of the tree,
+  selected the summarized file row and moved the caret in the splitter editor. The file row stayed selected, the splitter
+  stayed open, and its request kept the `Cart.java` title (`runs 0 -> 1`). Selecting `method total()  changed` directly
+  selected the declaration row and cleared the splitter request (`request=null`).
+- **Local Changes splitter, IU 2026.3.** The same check found the splitter component and passed: the caret kept the file
+  row and the splitter request, while selecting the declaration directly selected the helper row and cleared the request.
+
+The probe selected the declaration directly only to reproduce the platform symptom. In the fixed build, moving the caret
+in either preview maps to the file row, so the follower never selects the declaration there; normal editors and diff
+sides still map declarations in `ChangesCaretFollowTest`. The R3 preview behavior is therefore checked on both target
+releases in both preview forms; the remaining R1–R10 manual steps are outstanding.
+
+**Running-IDE check: outstanding.** The R1–R10 manual steps in
+[changes-tree/05 details](specs/changes-tree/05-changes-tree-caret-follow-details.md#manual-check-outstanding) have not been
+run in a running IDE. They must still be run on IntelliJ IDEA 2025.1 and the latest release, including the R7 intermediate
+pending rebuild (step 5) and the R10 hidden-row fallback (step 6a), in Local Changes and in the Commit tool window. The
+feature is not claimed as manually verified.
+
 ## 2026-11-07: Changes tree row parity (issues #111 and #108)
 
 [changes-tree/02](specs/changes-tree/02-changes-tree-declarations.md) R17 to R20 and issue #111: a summarized file row must open the same preview, diff or source as a plain row under the same settings, on double-click and Enter. This run replaced the plugin's own Commit preview with the platform's handlers, and installed the tree setup in every Local Changes and Commit tree.

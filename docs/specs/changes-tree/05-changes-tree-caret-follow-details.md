@@ -1,6 +1,6 @@
 # Changes tree caret follow: details
 
-Status: proposed, 2026-11-05
+Status: implemented, 2026-11-07
 
 Feature: [Changes tree caret follow](05-changes-tree-caret-follow.md)
 
@@ -18,15 +18,15 @@ a `ProjectActivity` registered in `smartdiff-vcs.xml`, and is disposed with the 
   its model property change, to retry once the rebuilt model is installed.
 - `SmartDiffSettings.CHANGED`, for the toggle.
 
-It finds the live tree through public API:
-`ChangesViewContentManager.getInstance(project).findContent(ChangesViewContentManager.LOCAL_CHANGES)?.component`, then
-`UIUtil.findComponentOfType(component, ChangesListView::class.java)`. This is the same tree in Local Changes and the Commit
-tool window. `ChangesViewManager.selectFile` is not enough because it selects only the file's row. The service follows
-only while the tree is showing; a closed tool window or another tab is left alone. If the tree is not there, the service
-does nothing; the next caret move after it opens follows.
+It finds the live tree through the public `ToolWindowManager` and the `Version Control` and `Commit` tool windows, the
+same way `ChangesTreeSetup` reaches the tree: walk each content's components and take the first `ChangesListView`. This is
+the same tree in Local Changes and the Commit tool window and avoids the VCS implementation class, which moved modules
+between 2025.1 and 2026.3. `ChangesViewManager.selectFile` is not enough because it selects only the file's row. The
+service follows only while the tree is showing; a closed tool window or another tab is left alone. If the tree is not
+there, the service does nothing; the next caret move after it opens follows.
 
 The service never wraps or replaces the tree, its renderer or its model. It only reads the live nodes and changes their
-selection and expansion through `JTree` and `TreeUtil`.
+selection and expansion through `JTree`.
 
 ### Data
 
@@ -84,13 +84,24 @@ All of this runs on the EDT, except the summary comparison that already runs in 
    - If the side's content names no file, the other content's `highlightFile` is used to find the change, while the side
      still decides which range is used. This covers a renamed file whose old side has no current file. If neither content
      names a file, the event is ignored.
+   - If the editor is inside the platform's selection-following Changes preview, remember that and use the file row only.
+     The preview can be an editor tab or the Local Changes splitter. For an editor tab, either the tree's
+     `DiffDataKeys.EDITOR_TAB_DIFF_PREVIEW` matches the tab's file, or the tab file is named
+     `TabPreviewDiffVirtualFile` or `DiffPreview`. For the splitter, the editor's component has a
+     `PreviewDiffSplitterComponent` ancestor. A helper declaration row selects no `Change` in either preview, which closes
+     the editor-tab preview on 2025.1 and empties it on 2026.3, and empties the splitter request. Normal editors and diff
+     windows keep the declaration mapping.
 3. **Find the change and its row.** Walk the live tree's file nodes in tree order and take the first whose `Change` has a
-   matching side path: `afterRevision.file` on the new side, `beforeRevision.file` on the old side, compared as
-   `VcsUtil.getFilePath(file)` with `FilePath.equals`. This also handles a moved or renamed file, whose two paths differ. If
-   no row is there, nothing is selected.
-4. **Check the summary.** If the row is not a `SummaryChangeNode`, or `snapshot` is `None` or `Pending`, select the file
-   row. If it is `Stale`, keep the current selection and retry on the rebuild. A `Fresh` summary with no `items` also falls
-   back to the file row.
+   matching side path: `afterRevision.file` on the new side, `beforeRevision.file` on the old side, compared by path and
+   directory kind, since a content may hold a different `FilePath` implementation. This also handles a moved or renamed
+   file, whose two paths differ. If no row is there, nothing is selected.
+4. **Check the summary.** `Pending` selects the file row and remembers the target, so a plain pending row gets the file
+   row and the retry survives an intermediate rebuild. `Stale` keeps the current selection and remembers the target for
+   the rebuild; if that rebuild contains only a plain pending row, the next pass sees `Pending` and selects the file row.
+   `None` selects the file row and ends the follow. A `Fresh` summary on a row that is not a `SummaryChangeNode` also
+   selects the file row and retries, because the summary row is installed by a rebuild; a `Fresh` summary with no `items`
+   falls back to the file row and keeps no retry. In a selection-following preview the target is always the file row,
+   even when the `Fresh` summary names a declaration.
 5. **Find the innermost changed declaration.** Walk the summary's `OutlineItem` tree, from the top level down, with the
    source offset. A row is a candidate only when it is a change itself (`kind == ItemKind.CHANGE` and `tags.isNotEmpty()`);
    groups, candidates, container-only rows and the `File region` row are not. A row contains the caret when its side range
@@ -101,30 +112,37 @@ All of this runs on the EDT, except the summary comparison that already runs in 
    wins. With no candidate, fall back to the file row.
 6. **Select and expand.** Build the target row's `OutlinePath` from the rows on the path. Under the file node, find the
    `DeclarationNode` whose `path` has the same steps (the same kind and title at each level, groups matched by kind as
-   `OutlinePath.find` does). Call `TreeUtil.selectPath(tree, TreePath(target))`: it makes the file and the rows above the
-   target visible, selects the target and scrolls it into view. For the file row call `TreeUtil.selectNode(tree, fileRow)`.
-   If the declaration row cannot be found, for example because the tree has not rebuilt yet, keep the current selection
-   and remember the target; the model listener retries after the rebuild. If the rebuilt tree still has no such row, select
-   the file row. If the tree is updating its model, do nothing; the model listener retries. Wrap the selection in a
-   `following` flag so the tree's own selection listener does not treat it as a user selection.
+   `OutlinePath.find` does). Expand every row above the target with `JTree.expandPath`, set `JTree.selectionPath` and
+   call `JTree.scrollPathToVisible`; `TreeUtil.selectPath` only scrolls to a path whose rows already have bounds, so the
+   service expands the ancestors first. For the file row, do the same with its path. If the declaration row cannot be
+   found, for example because the tree has not rebuilt yet, keep the current selection and remember the target; the model
+   listener retries after the rebuild. If the rebuilt tree still has no such row, select the file row. If the tree is
+   updating its model, do nothing; the model listener retries. Wrap the selection in a `following` flag so the tree's own
+   selection listener does not treat it as a user selection.
+7. **Use the shown rows.** The tree's filter and its Declarations toggle decide which rows exist. When the declaration
+   under the caret is hidden, take the deepest shown row on its path, including the target's own row when the filter keeps
+   it as a container without labels, as `OutlinePath.find` does; that is the nearest shown row above the hidden change,
+   the same fallback as changes-tree/02 R12. If no row on the path is shown, select the file row. With Declarations off
+   there are no declaration rows, so the file row is selected (R10).
 
-The file row fallback covers R2 and R8: the caret is outside every changed declaration, the file has no summary, the
-summary says it was not analyzed, the language has no engine, the file is added or deleted, or the file is after the
-500-file limit. A file row that is not in the tree is left alone.
+The file row fallback covers R2, R8 and R10: the caret is outside every changed declaration, the file has no summary, the
+summary says it was not analyzed, the language has no engine, the file is added or deleted, the file is after the
+500-file limit, or the tree's filter hidden every row on the caret's path. A file row that is not in the tree is left alone.
 
 ### Staleness, rebuilds and the tree's own selection
 
-- On an edit, the current summary becomes stale. A caret event during that time does not change the tree's selection:
-  `snapshot` returns `Stale`, and the service remembers the editor, side and caret offset, not the old row path.
-  `ChangesViewModifier.TOPIC` marks that a rebuild is coming; when the tree's model changes, the service maps the
-  remembered caret against the new summary again. The model listener is attached to the current `ChangesListView.model`
-  and reattached when the model property changes, so the retry runs against the rebuilt tree, not the old one. The retry
-  goes through the same 100 ms timer, so a burst of model events follows once.
-  If the new summary still contains the row, it is selected; if it does not, the file row is selected. While the summary
-  is stale the follower never picks a row from it. R7 is about what the follower chooses, not about preserving a row
-  through a platform rebuild: if an unrelated rebuild removes the old row first, the platform's own selection restoration
-  applies, and the follower retries when the new summary arrives. A stale summary therefore never makes the follower
-  select a row at an offset from the old text.
+- On an edit, the current summary becomes stale. A caret event during that time does not use the old summary or change
+  the tree's selection: `snapshot` returns `Stale`, and the service remembers the editor, side and caret offset, not the
+  old row path. `ChangesViewModifier.TOPIC` marks that a rebuild is coming; when the tree's model changes, the service
+  maps the remembered caret against the new summary again. The model listener is attached to the current
+  `ChangesListView.model` and reattached when the model property changes, so the retry runs against the rebuilt tree,
+  not the old one. The retry goes through the same 100 ms timer, so a burst of model events follows once.
+  If the new summary still contains the row, it is selected; if it does not, the file row is selected. A stale summary
+  therefore never makes the follower select a row at an offset from the old text.
+- If the rebuilt model shows only a plain row because the new summary is still pending, the rebuild also forgets the old
+  cache entry, so `snapshot` is `Pending`: the service selects that file row, keeps the remembered target and retries
+  when the summary arrives. This is the intermediate pending rebuild in R7. It never selects a declaration from the old
+  summary while the new one is pending.
 - A rebuild restores the user's expanded rows through the platform. Following after a rebuild re-expands only the rows it
   needs to show the target.
 - The service installs one `TreeSelectionListener` and one mouse/key listener on the live tree. A mouse press or key press
@@ -137,6 +155,22 @@ summary says it was not analyzed, the language has no engine, the file is added 
   is dropped. A later caret move in the editor follows again.
 - If the setting is turned off, a pending follow is cancelled and the tree is left as it is. Turning it on does not move
   the tree until the next caret or editor-selection event.
+
+### Selection-following preview
+
+The platform's single-click Changes preview has two forms: an editor tab, and the Local Changes splitter. In both, the
+tree selection chooses the diff request. A declaration row is a helper node, so selecting one selects no `Change`; the
+platform then closes the editor-tab preview on 2025.1, shows an empty `NoDiffRequest` in the editor tab on 2026.3, and
+empties the splitter request. When the caret is in either preview, following therefore selects the file row and keeps the
+preview open. Normal editors and diff tabs that were opened explicitly keep the declaration mapping.
+
+The service recognises the preview from the editor that contains the caret. For the splitter, a public component check
+walks the editor's component ancestors for `PreviewDiffSplitterComponent`, the class of the Local Changes splitter. For the
+editor tab, `FileEditorManager` gives the tab and its `DiffEditorViewerFileEditor`, and the tree's
+`DiffDataKeys.EDITOR_TAB_DIFF_PREVIEW` gives the platform preview object, whose `previewFile` is compared with the tab's
+file. For a tool window that does not expose the data key, the platform's preview tab names,
+`TabPreviewDiffVirtualFile` and `DiffPreview`, are the fallback. This check runs only for a `Fresh` summary, after the
+subtree has already been found, so other follow paths are unchanged.
 
 ### Setting
 
@@ -163,7 +197,7 @@ the cached summary and changes the tree selection.
 ### No focus, inclusion or diff side effects
 
 - The service calls no `ToolWindow.activate`, `IdeFocusManager.requestFocus`, `EditorFocusManager` or `DiffManager`
-  method. `TreeUtil.selectPath` and `JTree` selection do not take focus, so the caret and the editor's focus stay where
+  method. `JTree` selection does not take focus, so the caret and the editor's focus stay where
   they are (R5).
 - Declaration rows are helper nodes (changes-tree/02), so selecting one selects no change. Selecting the file row is a
   tree selection, not a checkbox change, so the commit's inclusion and count stay the same (R5). The test asserts the
@@ -177,8 +211,8 @@ the cached summary and changes the tree selection.
 - The mapping uses the cached `FileSummary` and its `OutlineItem` ranges. It never calls `ContentRevision.content` or
   `FileDocumentManager.getDocument(...).text` on the EDT; the only document access is the modification stamp used by
   `ChangesSummaryService.version` for staleness.
-- The tree is reached through public `ChangesViewContentManager`, `ChangesListView` and `JTree`/`TreeUtil` API. The diff
-  side is read through public `DiffDataKeys.DIFF_VIEWER`, `TwosideTextDiffViewer`, `DocumentContent.highlightFile` and
+- The tree is reached through public `ToolWindowManager`, `ChangesListView` and `JTree` API. The diff side is read
+  through public `DiffDataKeys.DIFF_VIEWER`, `TwosideTextDiffViewer`, `DocumentContent.highlightFile` and
   `FileDocumentManager`.
 - The service adds no reflection and no `@ApiStatus.Internal`, `@ApiStatus.Experimental` or deprecated member. The
   existing experimental usages are unchanged: the `changesViewNodeAction` extension that opens a declaration and the
@@ -189,8 +223,10 @@ the cached summary and changes the tree selection.
 
 If there is no live tree, no matching file row, no summary or no public way to identify the side, the service does nothing
 and the editor keeps working. A later caret move, editor switch or tree rebuild tries again. If a rebuilt tree still lacks
-the remembered declaration row, the service selects the file row so the tree does not stay on a row that is gone. Errors
-from the mapping are logged once and do not show a dialog; the tree keeps its selection.
+the remembered declaration row, the service selects the file row so the tree does not stay on a row that is gone. While
+the tool window is closed, or another tab of it is selected, the tree is not showing, so the service does nothing; the
+next caret move after the tree opens follows. Errors from the mapping are logged once and do not show a dialog; the tree
+keeps its selection.
 
 ### Thresholds and limits
 
@@ -204,15 +240,21 @@ from the mapping are logged once and do not show a dialog; the tree keeps its se
 ## Tests
 
 The new test class is `ChangesCaretFollowTest` in `src/test/kotlin/.../ui/changes/`. It builds the
-tree with the platform's `TreeModelBuilder` as `ChangesSummaryTest` does, and uses a recording `DiffManager` and a
-recording focus owner to check the side effects. The diff-side mapping is also checked in `OutlineIntegrationTest`, which
-already opens real two-sided diff panels.
+tree with the platform's `TreeModelBuilder` as `ChangesSummaryTest` does, uses a recording `DiffManager`, a real focus
+owner behind a fixed `KeyboardFocusManager`, a `DefaultInclusionModel` for the commit count, and a `FixedDataManager` for
+the production viewer lookup. It also opens real two-sided and three-sided diff panels through
+`DiffManager.createRequestPanel`, as `OutlineIntegrationTest` does, for the side mapping, finds a live tree in a
+temporary Version Control tool window, opens a `TabPreviewDiffVirtualFile` diff editor tab with a real
+`DiffEditorViewerFileEditor` for the editor-tab preview mapping, and puts the viewer in a `PreviewDiffSplitterComponent`
+for the Local Changes splitter mapping.
 
 The test seam is internal to the plugin: a `@TestOnly` `followNow(editor, offset)` method runs the same mapping and
 selection path as the debounce timer, and `waitForPendingFollow()` drains the timer and any queued model retry. The test
-installs the live `ChangesListView` and `ChangesSummaryService` through package-private constructor parameters, while
-production finds the tree through `ChangesViewContentManager`. This keeps global caret events, focus and timer delays out
-of the assertions.
+installs the live `ChangesListView`, `ChangesSummaryService`, focus owner and diff viewer through package-private
+constructor parameters, while production finds the tree through `ToolWindowManager` and the viewer through
+`DiffDataKeys.DIFF_VIEWER`. This keeps global caret events, focus and timer delays out of the assertions. The two R7
+tests install the intermediate pending model and wait for the follower's timer to run, not only for the test-only drain,
+so they check that the rebuilt model restarts the retry.
 
 The fixtures are the `ChangesSummaryTest` Cart text (a class with a changed method and an added method), a file with
 unchanged code between changes, a changed class header, an added file, a deleted file, a plain-text file in an unsupported
@@ -222,17 +264,23 @@ language, a file over the size limit and a file with a timed-out or failed summa
 | --- | --- |
 | R1 | `ChangesCaretFollowTest` `test the innermost changed declaration under the caret is selected and the file expands`: a caret in a changed method selects the method, not its class; a caret in a changed class outside its methods selects the class; the file row is expanded and the row is visible |
 | R2 | `ChangesCaretFollowTest` `test the caret outside every changed declaration selects the file row`: a caret in unchanged code of a changed file selects the file row and no declaration row |
-| R3 | `ChangesCaretFollowTest` `test a plain editor maps to the new side range`; `ChangesCaretFollowTest` `test the old and new sides of a two-sided diff map to their own ranges`; `OutlineIntegrationTest` `test the caret in each diff editor follows on that side`; `MergeOutlineIntegrationTest` `test the caret in a three-sided diff does not move the Changes tree` |
-| R4 | `SmartDiffSettingsTest` `test defaults` (settings/01 R13, the new setting is on); `ChangesCaretFollowTest` `test the setting turns following off` (settings/01 R15): with the setting off, a caret event leaves the tree selection unchanged; `ChangesSummaryTest` `test changing only the follow setting neither clears the summary cache nor rebuilds the tree` (settings/01 R14) |
-| R5 | `ChangesCaretFollowTest` `test following leaves focus and commit inclusion alone with the platform preview off and on`: the editor keeps focus, the included changes and the commit count are unchanged, with preview off the recording `DiffManager` receives no request, and with preview on only the platform's own preview may open, as for a click |
+| R3 | `ChangesCaretFollowTest` `test a plain editor maps to the new side range`; `test the old and new sides of a two-sided diff map to their own ranges`; `test the caret in a three-sided diff does not move the Changes tree`; `test a merge viewer leaves the Changes tree alone`; `test a selection-following preview keeps the file row instead of selecting a declaration`; `test a splitter preview keeps the file row instead of selecting a declaration`; `test the old side uses the other path only when its own content names no file` |
+| R4 | `SmartDiffSettingsTest` `test defaults` (settings/01 R13, the new setting is on); `ChangesCaretFollowTest` `test the setting turns following off` (settings/01 R15): with the setting off, a caret event leaves the tree selection unchanged; `ChangesCaretFollowTest` `test changing only the follow setting neither clears the summary cache nor rebuilds the tree`, `test outline and merge display changes neither clear the summary cache nor rebuild the tree` and `test an engine default change refreshes and recomputes the tree` (settings/01 R14) |
+| R5 | `ChangesCaretFollowTest` `test following leaves focus and commit inclusion alone with the platform preview off and on`: the editor keeps its real focus owner, the included changes and the commit count are unchanged, with preview off the recording `DiffManager` receives no request, and with preview on only the platform's own preview may open, as for a click |
 | R6 | `ChangesCaretFollowTest` `test following leaves the tree alone while the tree has focus`; `ChangesCaretFollowTest` `test a tree selection is not overwritten by a late caret event`: click a row while a caret follow is pending, then let the timer fire; the clicked row stays; `ChangesCaretFollowTest` `test caret moves are debounced`: several events in a row produce one follow after the delay |
-| R7 | `ChangesCaretFollowTest` `test a stale summary leaves the current row and selects the caret row after the rebuild`: after an edit, a caret event before the rebuild leaves the row selected; after the rebuild the row under the caret is selected |
-| R8 | `ChangesCaretFollowTest` `test a file without a summary selects only the file row`: pending, not analyzed, unsupported language, added and deleted files, and a file after the 500-file limit each select the file row |
-| R9 | `ChangesCaretFollowTest` `test following reads no revision content on the UI thread`: a `ContentRevision` whose `content` fails when read on the EDT is never read; Plugin Verifier report: no new internal, experimental or deprecated usage from the follower, and the existing usages stay unchanged |
-| R1–R9 | Manual check: run the steps below on IntelliJ IDEA 2025.1 and the latest release |
+| R7 | `ChangesCaretFollowTest` `test a stale summary keeps the row through an intermediate pending rebuild and follows when the summary arrives`: after an edit, a caret event before the rebuild leaves the row selected; the intermediate pending model keeps the retry, and the row under the caret is selected after the summary arrives. `test a pending summary keeps retrying through an intermediate rebuild and selects the declaration when it arrives` covers the same retry from the first pending state |
+| R8 | `ChangesCaretFollowTest` `test a file without a summary selects only the file row` (added, deleted and unsupported files); `test a pending file selects only the file row`; `test a fresh summary with no items clears the pending retry`; `test a not analyzed file selects only the file row`; `test a file after the 500-file limit selects only its file row` |
+| R9 | `ChangesCaretFollowTest` `test following reads no revision content on the UI thread`: a `ContentRevision` whose `content` fails when read on the EDT is never read; `test a caret event and start from a background thread are marshalled to the EDT`; Plugin Verifier report: no new internal, experimental, deprecated or override-only usage from the follower, and the existing usages stay unchanged |
+| Failure logging | `ChangesCaretFollowTest` `test a mapping failure is logged once and leaves the tree unchanged` |
+| R10 | `ChangesCaretFollowTest` `test the tree filter hides the caret row and selects the nearest shown row above`: with the changed method's own label hidden, the shown class container or file row is selected, and with Declarations off the file row is selected |
+| R1–R10 | Manual check: **outstanding** as of 2026-11-08. The automated checks above pass; the steps below have not yet been run in a running IDE. |
 
-### Manual check
+### Manual check (outstanding)
 
+Not yet run in a running IDE as of 2026-11-08. The R3 preview behavior in both the editor tab and the Local Changes
+splitter is recorded in [validation](../../VALIDATION.md); the remaining steps below are still required on IntelliJ IDEA
+2025.1 and the latest release for R1–R10, including the R7 intermediate pending rebuild in step 5 and the R10 hidden-row
+check in step 6a.
 Run this on IntelliJ IDEA 2025.1 and the latest release, in the Local Changes view and in the Commit tool window:
 
 1. Open a modified Java file with at least two changed methods. Move the caret through each changed method, through
@@ -240,29 +288,24 @@ Run this on IntelliJ IDEA 2025.1 and the latest release, in the Local Changes vi
    then the file row, then the class row.
 2. Open the file's two-sided diff and repeat in the new and old editors. Each side selects the row for its own range.
    Open a three-sided diff or merge window and move the caret in each pane; the Changes tree does not move.
+2a. Turn on the platform's single-click Changes preview in both forms: the editor tab and the Local Changes splitter. Move
+   the caret in each preview. The file row stays selected and the preview stays open; the tree does not select a
+   declaration row.
 3. Hold an arrow key and type quickly. The tree follows after the pause, not on every key.
 4. Click another row in the tree while a caret follow is pending. The clicked row stays selected.
-5. Edit a changed method and move the caret before the summary finishes. The old row stays selected until the new summary
-   arrives, then the row under the caret is selected.
+5. Edit a changed method and move the caret before the summary finishes. The old row stays selected while the summary is
+   stale; if the tree rebuilds with a plain pending row, it selects that file row and keeps retrying, then selects the row
+   under the caret when the new summary arrives.
 6. Open an added file, a file in an unsupported language, a file over the size limit, a file after the 500-file limit and
    the old side of a deleted file's diff. Only the file row is selected, and the tree shows no declaration row.
+6a. Hide the change type of the method under the caret in the tree's filter. The nearest shown row above it is selected;
+   with every declaration hidden, or with Declarations off, the file row is selected (R10).
 7. Turn "Follow the caret in the Changes tree" off and move the caret. The tree does not change. Turn it on and move the
    caret again; it follows. Confirm that toggling it does not clear the summaries or rebuild the tree.
 8. Repeat with the platform's single-click diff preview off and on. With it off, no diff opens. With it on, only the
    platform's own preview follows the selection, as it does for a click; the follower opens no diff itself.
 9. Throughout, the caret stays in the editor, and the file checkboxes and the commit count do not change.
 
-## Open questions
-
-- **Where should the toggle live?** This spec puts it on the SMART Diff settings page (R4). Option: also add it to the
-  Changes view's View Options menu, next to the platform's own options; the Changes tree hide/filter work extends that
-  menu. Adding it there later does not change R4.
-- **Should the `File region` row be followable?** This spec selects the file row for changed source outside declarations
-  (R2). Option: select the `File region` row when the caret is in changed imports or other file-level source, which would
-  frame that region in a diff but is more surprising in a plain editor.
-- **What should happen while the Changes tool window is closed?** This spec does nothing and catches up on the next
-  caret move after the window opens. Option: keep the model updated while the window is closed, so it is already correct
-  when the window opens.
-- **How should the tree's filter affect following?** The tree's own change type filter is specified separately. When it
-  hides the row under the caret, following should fall back to the nearest shown row above, as changes-tree/02 R12 does
-  when opening a row; that filter's spec owns the behavior, while this feature keeps the mapping from caret to row.
+The toggle stays on the SMART Diff settings page (R4); adding it to the Changes view's View Options menu later would not
+change R4. The `File region` row is not followable: changed source outside declarations selects the file row (R2), which
+is less surprising in a plain editor. A closed tool window is caught up on the next caret move after it opens.

@@ -10,8 +10,17 @@ import com.intellij.openapi.util.Key
 class OutlinePath(val steps: List<Step>) {
 
     class Step(val kind: ItemKind, val title: String) {
-        fun matches(item: OutlineItem): Boolean = item.kind == kind && (item.isGroup || item.title == title)
+        private val isGroup: Boolean
+            get() = kind == ItemKind.FORMATTING_GROUP || kind == ItemKind.UNCERTAIN_GROUP || kind == ItemKind.UNANALYZED_GROUP
+
+        fun matches(item: OutlineItem): Boolean = item.kind == kind && (isGroup || item.title == title)
+
+        fun matches(other: Step): Boolean = kind == other.kind && (isGroup || title == other.title)
     }
+
+    /** Whether [other] names the same rows, with groups matched by kind as [find] does. */
+    fun matches(other: OutlinePath): Boolean =
+        steps.size == other.steps.size && steps.indices.all { steps[it].matches(other.steps[it]) }
 
     /**
      * The rows from the top level down to this path's row, among [items]; shorter when a row is not there, for example
