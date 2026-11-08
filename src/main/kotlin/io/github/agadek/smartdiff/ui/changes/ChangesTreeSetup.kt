@@ -1,24 +1,12 @@
 package io.github.agadek.smartdiff.ui.changes
 
-import com.intellij.diff.chains.DiffRequestProducerException
-import com.intellij.diff.editor.DiffEditorTabFilesManager
-import com.intellij.diff.editor.DiffViewerVirtualFile
-import com.intellij.diff.impl.CacheDiffRequestProcessor
-import com.intellij.diff.impl.DiffEditorViewer
-import com.intellij.diff.impl.DiffRequestProcessor
-import com.intellij.diff.requests.DiffRequest
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
-import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
-import com.intellij.openapi.vcs.VcsApplicationSettings
 import com.intellij.openapi.vcs.changes.Change
-import com.intellij.openapi.vcs.changes.ui.ChangesBrowserNode
 import com.intellij.openapi.vcs.changes.ui.ChangesListView
-import com.intellij.openapi.vcs.changes.ui.VcsTreeModelData
 import com.intellij.openapi.wm.ToolWindowId
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.util.Processor
@@ -37,11 +25,12 @@ import javax.swing.tree.TreePath
  *
  * A row with children is not a leaf, so the Changes tree would expand it on a double-click and skip Enter for it.
  * While the tree has declaration rows, the press listener stops the second press of a double-click on a
- * [SummaryChangeNode] or [DeclarationNode] before the platform's tree UI sees it, and the tree's handlers open the
- * summary through the platform and the declaration through [DeclarationNodeAction]. Other rows keep their normal
- * double-click expansion. The declaration action cannot be reached through `ChangesViewNodeAction` alone: the platform
- * looks the selected node up with `VcsTreeModelData.selected(...).iterateNodes()`, which filters out helper nodes, so
- * the handlers use the selected path instead.
+ * [SummaryChangeNode] or [DeclarationNode] before the platform's tree UI sees it. The handlers open the row through the
+ * platform's own double-click and Enter handlers, so the preview, diff or source is the same as for a file without a
+ * summary, and open a declaration through [DeclarationNodeAction]. Other rows keep their normal double-click expansion.
+ * The declaration action cannot be reached through `ChangesViewNodeAction` alone: the platform looks the selected node up
+ * with `VcsTreeModelData.selected(...).iterateNodes()`, which filters out helper nodes, so the handlers use the selected
+ * path instead.
  */
 internal object ChangesTreeSetup {
 
@@ -51,28 +40,30 @@ internal object ChangesTreeSetup {
     /** The tree's toggle click count before the setup changed it. */
     private val SAVED_TOGGLE_CLICK_COUNT = Key.create<Int>("smartdiff.changes.tree.savedToggleClickCount")
 
-    /** The public editor preview used for the Commit tool window's preview-on-double-click setting. */
-    private val PREVIEW = Key.create<PreviewSession>("smartdiff.changes.tree.preview")
-
-    private enum class RowContext { LOCAL, COMMIT }
-
-    /** Applies the setup to the project's Changes tree after the tree has been built, on the EDT. */
+    /**
+     * Applies the setup to every Changes tree in the project after the trees have been built, on the EDT.
+     *
+     * [suppressExpansion] comes from the tree model being built, not from the tree's current model: the platform may
+     * still show the previous model when this runs, and the first rebuild that adds declaration rows must already get
+     * the setup.
+     */
     fun schedule(project: Project, suppressExpansion: Boolean) {
         ApplicationManager.getApplication().invokeLater({
             if (!project.isDisposed) installIn(project, suppressExpansion)
         }, ModalityState.nonModal(), project.disposed)
     }
 
-    /** Finds the Local Changes or Commit tree and applies the setup to it. */
+    /**
+     * Finds every Local Changes and Commit tree and applies the setup to each of them. [suppressExpansion] comes from
+     * one rebuilt tree, so it is combined with each tree's own declaration rows: an empty tree must not clear the
+     * handlers of another tree that still shows rows.
+     */
     fun installIn(project: Project, suppressExpansion: Boolean) {
         val manager = ToolWindowManager.getInstance(project)
         for (id in listOf(ToolWindowId.VCS, ToolWindowId.COMMIT)) {
             val toolWindow = manager.getToolWindow(id) ?: continue
             for (content in toolWindow.contentManager.contents) {
-                findChangesTree(content.component)?.let {
-                    configure(it, suppressExpansion)
-                    return
-                }
+                findChangesTrees(content.component).forEach { configure(it, suppressExpansion || hasDeclarationRows(it)) }
             }
         }
     }
@@ -150,32 +141,40 @@ internal object ChangesTreeSetup {
     private fun openDeclaration(tree: ChangesListView, node: DeclarationNode): Boolean =
         DeclarationNodeAction(tree.project).handleDoubleClick(node)
 
-    private fun openFile(tree: ChangesListView, node: SummaryChangeNode): Boolean {
-        val change = node.userObject as? Change ?: return false
-        val root = node.root as? ChangesBrowserNode<*> ?: return false
-        val changes = VcsTreeModelData.allUnder(root).userObjects(Change::class.java).distinct()
-        return ChangesDiff.show(tree.project, changes, changes.indexOf(change).coerceAtLeast(0))
+    /**
+     * Opens a summarized file row through the platform's double-click handler. The platform rejects a non-leaf row as a
+     * toggle event before it chooses the preview or the source, so the handler is called with the same click at a count
+     * of one: it carries the row's location and selection but is not a toggle. If the handler declines or is absent,
+     * the platform's Enter handler makes the same choice without a double-click guard.
+     */
+    private fun openSummaryFromDoubleClick(
+        tree: ChangesListView,
+        node: SummaryChangeNode,
+        e: MouseEvent,
+        platform: Processor<in MouseEvent>?,
+    ): Boolean {
+        tree.selectionPath = TreePath(node.path)
+        if (platform != null && platform.process(singleClick(tree, e))) return true
+        return openSummaryFromEnter(tree, node, syntheticEnter(tree), requestFocus = true)
     }
 
-    /** The platform's double-click/Enter choice for a summarized file row in its current tool window. */
-    private fun activateSummary(tree: ChangesListView, node: SummaryChangeNode, requestFocus: Boolean): Boolean {
-        val settings = VcsApplicationSettings.getInstance()
-        val context = rowContext(tree)
-        return when {
-            context == RowContext.COMMIT && settings.SHOW_EDITOR_PREVIEW_ON_DOUBLE_CLICK -> openPreview(tree, node)
-            context == RowContext.LOCAL && settings.SHOW_DIFF_ON_DOUBLE_CLICK -> openFile(tree, node)
-            else -> openSource(tree, node, requestFocus)
-        }
+    /** Opens a summarized file row through the platform's Enter handler, then the source as the platform would. */
+    private fun openSummaryFromEnter(
+        tree: ChangesListView,
+        node: SummaryChangeNode,
+        e: KeyEvent,
+        requestFocus: Boolean,
+    ): Boolean {
+        tree.selectionPath = TreePath(node.path)
+        if (tree.enterKeyHandler?.process(e) == true) return true
+        return openSource(tree, node, requestFocus)
     }
 
-    private fun rowContext(tree: ChangesListView): RowContext {
-        val commit = ToolWindowManager.getInstance(tree.project).getToolWindow(ToolWindowId.COMMIT)
-        val inCommit = commit?.contentManager?.contents?.any {
-            val component = it.component ?: return@any false
-            SwingUtilities.isDescendingFrom(tree, component)
-        } == true
-        return if (inCommit) RowContext.COMMIT else RowContext.LOCAL
-    }
+    private fun singleClick(tree: ChangesListView, e: MouseEvent): MouseEvent =
+        MouseEvent(tree, e.id, e.`when`, e.modifiersEx, e.x, e.y, 1, false, e.button)
+
+    private fun syntheticEnter(tree: ChangesListView): KeyEvent =
+        KeyEvent(tree, KeyEvent.KEY_PRESSED, System.currentTimeMillis(), 0, KeyEvent.VK_ENTER, KeyEvent.CHAR_UNDEFINED)
 
     private fun openSource(tree: ChangesListView, node: SummaryChangeNode, requestFocus: Boolean): Boolean {
         val change = node.userObject as? Change ?: return false
@@ -183,82 +182,6 @@ internal object ChangesTreeSetup {
         // The platform's public navigation API; FileEditorManager.openFile is deprecated from 2026.3.
         OpenFileDescriptor(tree.project, file).navigate(requestFocus)
         return true
-    }
-
-    /** Releases the editor-preview session, for tests. */
-    internal fun disposePreview(tree: ChangesListView) {
-        (tree.getClientProperty(PREVIEW) as? PreviewSession)?.let {
-            Disposer.dispose(it)
-            tree.putClientProperty(PREVIEW, null)
-        }
-    }
-
-    private fun openPreview(tree: ChangesListView, node: SummaryChangeNode): Boolean {
-        val change = node.userObject as? Change ?: return false
-        val preview = tree.getClientProperty(PREVIEW) as? PreviewSession ?: createPreview(tree)
-        return preview.show(change)
-    }
-
-    private fun createPreview(tree: ChangesListView): PreviewSession {
-        val preview = PreviewSession(tree)
-        Disposer.register(tree.project, preview)
-        tree.putClientProperty(PREVIEW, preview)
-        return preview
-    }
-
-    /** An editor-tab preview of the selected file, using the public diff editor API. */
-    private class PreviewSession(private val tree: ChangesListView) : com.intellij.openapi.Disposable {
-        private var change: Change? = null
-        private var processor = newProcessor()
-        private var file = PreviewDiffFile(processor)
-
-        private fun newProcessor() = SingleRequestProcessor(tree.project) { change }
-
-        fun show(change: Change): Boolean {
-            // A change without a file cannot be previewed; checking that reads no revision content.
-            if (change.beforeRevision == null && change.afterRevision == null) return false
-            this.change = change
-            // Closing the preview tab disposes its viewer, so the next preview needs a new processor and file.
-            if (processor.isDisposed) {
-                processor = newProcessor()
-                file = PreviewDiffFile(processor)
-            }
-            DiffEditorTabFilesManager.getInstance(tree.project).showDiffFile(file, true)
-            // Each preview action loads fresh content: the cache keys on Change, whose equality uses only the file paths,
-            // so a new revision of the same path would otherwise reuse the previous SimpleDiffRequest.
-            processor.updateRequest(true, false, null)
-            return true
-        }
-
-        override fun dispose() {
-            Disposer.dispose(processor)
-        }
-    }
-
-    private class PreviewDiffFile(private val processor: DiffRequestProcessor) : DiffViewerVirtualFile("Changes") {
-        override fun createViewer(project: Project): DiffEditorViewer = processor
-    }
-
-    /**
-     * Feeds the preview from the selected [Change]. The provider and its name are read on the EDT, while
-     * [loadRequest] builds the request and reads the file's revisions on the background thread.
-     */
-    private class SingleRequestProcessor(
-        private val project: Project,
-        private val current: () -> Change?,
-    ) : CacheDiffRequestProcessor<Change>(project, "Changes") {
-        override fun getRequestName(provider: Change): String =
-            (provider.afterRevision ?: provider.beforeRevision)?.file?.name ?: "Changes"
-
-        override fun getCurrentRequestProvider(): Change? = current()
-
-        override fun loadRequest(provider: Change, indicator: ProgressIndicator): DiffRequest {
-            indicator.text = "Loading changes"
-            val file = (provider.afterRevision ?: provider.beforeRevision)?.file
-                ?: throw DiffRequestProducerException("The change has no file")
-            return ChangesDiff.request(project, provider, indicator)
-                ?: throw DiffRequestProducerException("Cannot read ${file.path}")
-        }
     }
 
     /**
@@ -299,7 +222,7 @@ internal object ChangesTreeSetup {
 
             val node = path.lastPathComponent
             if (node is DeclarationNode) return openDeclaration(tree, node)
-            if (node is SummaryChangeNode) return activateSummary(tree, node, requestFocus = true) || (platform?.process(e) ?: false)
+            if (node is SummaryChangeNode) return openSummaryFromDoubleClick(tree, node, e, platform)
             return platform?.process(e) ?: false
         }
     }
@@ -320,8 +243,10 @@ internal object ChangesTreeSetup {
                         if ((wrapped || !tree.model.isLeaf(node)) && openDeclaration(tree, node)) e.consume()
                         return
                     }
-                    is SummaryChangeNode -> if (!tree.model.isLeaf(node)) {
-                        if (activateSummary(tree, node, requestFocus = false)) e.consume()
+                    // A summarized row can have children, which the platform's Enter listener would skip; its handler
+                    // still applies the same preview, diff or source choice as for a leaf.
+                    is SummaryChangeNode -> {
+                        if (openSummaryFromEnter(tree, node, e, requestFocus = false)) e.consume()
                         return
                     }
                 }
@@ -334,11 +259,16 @@ internal object ChangesTreeSetup {
         }
     }
 
-    private fun findChangesTree(component: Component?): ChangesListView? {
-        if (component is ChangesListView) return component
-        if (component is Container) {
-            for (child in component.components) findChangesTree(child)?.let { return it }
+    /** Whether [tree] has declaration rows, so its summary file rows are non-leaf and need the setup. */
+    private fun hasDeclarationRows(tree: ChangesListView): Boolean =
+        tree.root.depthFirstEnumeration().asSequence().any { it is DeclarationNode }
+
+    /** Every Changes tree under [component], so a content with more than one is not left half configured. */
+    private fun findChangesTrees(component: Component?, trees: MutableList<ChangesListView> = mutableListOf()): List<ChangesListView> {
+        when (component) {
+            is ChangesListView -> if (component !in trees) trees += component
+            is Container -> component.components.forEach { findChangesTrees(it, trees) }
         }
-        return null
+        return trees
     }
 }

@@ -21,7 +21,48 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-07: Changes tree row parity (issues #111 and #108)
+
+[changes-tree/02](specs/changes-tree/02-changes-tree-declarations.md) R17 to R20 and issue #111: a summarized file row must open the same preview, diff or source as a plain row under the same settings, on double-click and Enter. This run replaced the plugin's own Commit preview with the platform's handlers, and installed the tree setup in every Local Changes and Commit tree.
+
+**Build.** `./gradlew buildPlugin` produced `build/distributions/smart-diff-0.2.0.zip`, installed in isolated `idea.plugins.path` directories. The IDEs were IntelliJ IDEA Community 2025.1.3 (`IC-251.26927.53`) through the extracted distribution and IntelliJ IDEA Ultimate 2026.3 (`IU-263.7307.200`) from the cached `idea-2026.3-aarch64.dmg`. Both loaded SMART Diff 0.2.0.
+
+**Probe.** A temporary startup probe and a `DiffExtension`, both removed before this change was committed, found the real Local Changes and Commit trees and drove `SyntheticClickEvent` double-clicks, Enter through the tree's key listeners, and single clicks on the EDT. It recorded the open-editor class names, the diff request class, the outline state and the selected row. The logs are `evidence/row-parity-2025.1.log` and `evidence/row-parity-2026.3.log` in this validation run's temporary directory; the relevant lines are quoted by class name below.
+
+### #111: summarized and plain file rows
+
+| IDE | Tool window and setting | Row | Double-click | Enter |
+| --- | --- | --- | --- | --- |
+| 2025.1 | Commit, preview on | summarized | `TabPreviewDiffVirtualFile` | `TabPreviewDiffVirtualFile` |
+| 2025.1 | Commit, preview on | plain | `TabPreviewDiffVirtualFile` | `TabPreviewDiffVirtualFile` |
+| 2025.1 | Commit, preview off | summarized | `VirtualFileImpl[Cart.java]` | `VirtualFileImpl[Cart.java]` |
+| 2025.1 | Commit, preview off | plain | `VirtualFileImpl[notes.txt]` | `VirtualFileImpl[notes.txt]` |
+| 2025.1 | Local, `SHOW_EDITOR_PREVIEW_ON_DOUBLE_CLICK` on while Commit was shown | summarized | not driven (no Local row bounds in this launch) | `TabPreviewDiffVirtualFile` |
+| 2025.1 | Local, `SHOW_EDITOR_PREVIEW_ON_DOUBLE_CLICK` on while Commit was shown | plain | not driven (no Local row bounds in this launch) | `TabPreviewDiffVirtualFile` |
+| 2026.3 | Commit, preview on | summarized | `TabPreviewDiffVirtualFile` | no preview in this launch |
+| 2026.3 | Commit, preview on | plain | `TabPreviewDiffVirtualFile` | no preview in this launch |
+| 2026.3 | Commit, preview off | summarized | `VirtualFileImpl[Cart.java]` | no preview in this launch |
+| 2026.3 | Commit, preview off | plain | `VirtualFileImpl[notes.txt]` | no preview in this launch |
+| 2026.3 | Local | summarized | `VirtualFileImpl[Cart.java]` | no preview in this launch |
+| 2026.3 | Local | plain | `VirtualFileImpl[notes.txt]` | no preview in this launch |
+
+The summarized row and the plain row produced the same surface in every pair that was driven. No `Changes[PreviewDiffFile]` tab and no `Cannot call the platform's Changes diff action` warning appeared. The Local double-click rows could not be driven because the probe's Local tree had no visible row bounds in these launches; `ChangesTreeInteractionTest` covers double-click in both tool windows and settings with the platform handler recorded, and the Commit double-clicks above show the real platform surface. Single click opened no preview for either row on either IDE, as in the 2026-11-06 record, so B3/R19 remains unverified by hand; the unit test drives the platform selection listener for both rows. **#111 stays open** for the missing 2025.1 Local double-click hand check and the B3 single-click hand check; this change references it rather than closing it.
+
+### #108: declaration double-click on 2026.3
+
+A temporary `DiffExtension` recorded the request when the real tree handler opened a declaration. The synthetic double-click was a `SyntheticClickEvent` dispatched to the tree with `tree.processMouseEvent`, so it went through the tree's double-click handler and the plugin's `ChangesDoubleClickHandler`; it was not a direct call to `DeclarationNodeAction`. The 2026.3 double-click on `method total()  changed` opened a `LocalChangeListDiffRequest`, not the fallback `SimpleDiffRequest`; the outline reported `state=Shown selected=method total()  changed visible=true` at 500 ms, 2 s and 5 s, and the log has no `Cannot call the platform's Changes diff action` warning. The same tree-level probe opened `ChainDiffVirtualFile[Diff]` on 2025.1.
+
+The physical click was not delivered: `java.awt.Robot` reported `moved=false` on 2025.1, and the 2026.3 attempt failed with `Destination component not connected to component tree hierarchy` because the tool window was not showing in the probe launch. The platform `ShowDiffAction` path with the declaration selected is verified through the real tree handler, but a physical mouse double-click is not. **#108 stays open for the physical click-through.**
+
+### Verification
+
+- `./gradlew test --tests '*ChangesTreeInteractionTest*'` — passed, including the R17/R18 comparison tests for both tool windows and settings, the first-rebuild order test, the two-tree false-schedule test, and the second-press consumption test.
+- `./gradlew clean buildPlugin check` — passed.
+- `./gradlew verifyPlugin` — compatible on both `IC-251.26927.53` and `IU-263.7307.200`, with the same 4 experimental API usages as before (the existing Scala `PsiNamedElementWithCustomPresentation` reference and `ChangesViewNodeAction`) and no deprecated API usage.
+
 ## 2026-11-07: Commit preview of a summarized row off the EDT (2025.1 and 2026.3)
+
+Superseded by the row parity record above: the plugin no longer creates its own Commit preview, so the preview is the platform's `TabPreviewDiffVirtualFile` and reads revisions through the platform. The preview-specific tests named below were replaced by the platform-handler comparisons in `ChangesTreeInteractionTest`.
 
 [changes-tree/02](specs/changes-tree/02-changes-tree-declarations.md) R19 and issue #126: opening the Commit tool window's preview of a summarized row must not read a committed revision on the UI thread. PR #127 moves the reads into the preview provider's `loadRequest` and replaces the deprecated `FileEditorManager.openFile` source fallback with `OpenFileDescriptor.navigate`.
 
