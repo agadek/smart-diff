@@ -94,6 +94,49 @@ real outline selection frames and highlights the new side) and `InliningDetectio
 manual steps remain: open a Java, Kotlin and Scala diff with an inlined helper on both target IDEs, confirm
 `inlined into …` and `code inlined from …`, the `inlined` summary count, the frame on the new side, and that hiding
 removed changes hides the removed row.
+## 2026-11-08: Changes tree caret follow fixes: R8 one-sided diff and R7 pending follow
+
+This run fixes the two failures recorded in the PR #131 manual check: a deleted or added file shown in a one-sided
+diff did not select its row (R8), and a preview caret event replaced a follow that was waiting for a summary (R7/R11).
+The feature remains `implemented` and the full R1–R11 manual check is still outstanding.
+
+**Automated evidence.** `./gradlew clean buildPlugin check` passes, including all 35 `ChangesCaretFollowTest` tests.
+Five new regressions name the requirements:
+
+- R8: `test an added file in a one-sided diff selects only its file row` and `test a deleted file in a one-sided diff
+  selects only its file row`, using a real `SimpleOnesideDiffViewer` whose content has a null `highlightFile` as the
+  platform's `ContextReferentDocumentContent` does, and, for the deleted file, a plain editor without a `DIFF_VIEWER`.
+- R3: `test a plain editor prefers the change whose new revision is the file over a rename's old path`.
+- R7/R11: `test a preview caret event does not replace a pending summary follow` and `test an unfocused editor's caret
+  event does not replace a pending summary follow`.
+
+All pass on this head. The three one-sided and rename regressions fail with `4d3c6fb` reverted; the two R7/R11
+regressions fail with `2debf54` reverted.
+
+**Running-IDE probe, IC 2025.1.3 (`IC-251.26927.53`, `runIde` sandbox).** A temporary probe, removed before this
+change was committed, opened a Git project with a changed `Cart.java` (a changed class header, two changed methods and
+an added method), `Added.java`, a deleted `Old.java`, a modified `notes.txt` and an over-limit `Large.java`. It drove
+caret moves with `moveToOffset` and the follower, opened real two- and three-sided diffs, and selected the Commit tree
+in the Commit tool window.
+
+- Passed: R1 (the innermost changed method and the changed class), R3 (the new and old sides of a real two-sided diff,
+  a three-sided diff that left the tree alone, and the platform editor-tab preview kept the file row and stayed open),
+  R4 off, R5 (focus owner and included changes unchanged), and R6 click-during-follow.
+- The probe found the real `SimpleOnesideDiffViewer` for both the added and the deleted file, which is the class the
+  fix handles. Its caret moved to the file row instead of a declaration. The follow-up found that the platform's
+  deleted-file content has a null `highlightFile`; the fallback to the editor's own file and the null-highlight test
+  above cover it.
+- The probe harness could not keep the IDE window's focus owner non-null, so several later checks (R2, R4 on, R6
+  debounce, R7, R10, the unsupported and too-large rows) are not reliable results and are not claimed as passes. The
+  full R1–R11 table in all four setups, including the IC Local Changes splitter R7 race repeated at least 6 times,
+  was not completed in this run.
+
+**Verifier.** `./gradlew verifyPlugin` is compatible on IC 2025.1.3 and the latest release, with no new internal,
+experimental or deprecated usage from the follower. The existing experimental usages remain unchanged.
+
+**Outstanding.** The full R1–R11 manual table in the Commit tool window and Local Changes, on IntelliJ IDEA 2025.1 and
+the latest release, is still required before the feature is claimed as manually verified. The new R11 step is in the
+manual check of [changes-tree/05 details](specs/changes-tree/05-changes-tree-caret-follow-details.md#manual-check-outstanding).
 
 ## 2026-11-08: Changes tree caret follow (#110): manual check outstanding
 

@@ -5,6 +5,7 @@ import com.intellij.diff.DiffExtension
 import com.intellij.diff.DiffManager
 import com.intellij.diff.DiffRequestPanel
 import com.intellij.diff.FrameDiffTool
+import com.intellij.diff.contents.DocumentContent
 import com.intellij.diff.chains.DiffRequestChain
 import com.intellij.diff.chains.SimpleDiffRequestChain
 import com.intellij.diff.editor.DiffEditorViewerFileEditor
@@ -17,6 +18,7 @@ import com.intellij.diff.merge.MergeResult
 import com.intellij.diff.merge.MergeTool
 import com.intellij.diff.requests.DiffRequest
 import com.intellij.diff.requests.SimpleDiffRequest
+import com.intellij.diff.tools.simple.SimpleOnesideDiffViewer
 import com.intellij.diff.tools.util.side.ThreesideTextDiffViewer
 import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
 import com.intellij.diff.util.ThreeSide
@@ -483,6 +485,93 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
         assertSame("a file without an engine gets only its file row", textRow, textTree.selectionPath?.lastPathComponent)
     }
 
+    fun `test an added file in a one-sided diff selects only its file row`() {
+        // changes-tree/05-changes-tree-caret-follow R8
+        maskEngines(RangeEngine())
+        val (_, addedFile) = configuredFile("AddedOneside.java", NEW_TEXT)
+        val added = Change(null, SimpleContentRevision(NEW_TEXT, VcsUtil.getFilePath(addedFile), "2"))
+        val tree = buildTree(listOf(added))
+        val addedRow = fileRow(tree, added)
+        val request = SimpleDiffRequest(
+            "AddedOneside.java",
+            DiffContentFactory.getInstance().createEmpty(),
+            contentWithoutHighlight(addedFile),
+            "old",
+            "new",
+        )
+        val viewer = openViewer(request)
+        assertTrue("the platform shows an added file one-sided", viewer is SimpleOnesideDiffViewer)
+        val oneside = viewer as SimpleOnesideDiffViewer
+        val content = oneside.side.select(oneside.request.contents) as DocumentContent
+        assertNull("the platform content has no highlight file", content.highlightFile)
+        val follower = follower(tree, viewer = viewer)
+
+        follower.followNow(oneside.editor, NEW_TEXT.indexOf("return 2"))
+
+        assertSame("an added file in a one-sided diff gets only its file row", addedRow, tree.selectionPath?.lastPathComponent)
+    }
+
+    fun `test a deleted file in a one-sided diff selects only its file row`() {
+        // changes-tree/05-changes-tree-caret-follow R8
+        maskEngines(RangeEngine())
+        val (_, deletedFile) = configuredFile("DeletedOneside.java", NEW_TEXT)
+        val deleted = Change(SimpleContentRevision(OLD_TEXT, VcsUtil.getFilePath(deletedFile), "1"), null)
+        val tree = buildTree(listOf(deleted))
+        val deletedRow = fileRow(tree, deleted)
+        val request = SimpleDiffRequest(
+            "DeletedOneside.java",
+            contentWithoutHighlight(deletedFile),
+            DiffContentFactory.getInstance().createEmpty(),
+            "old",
+            "new",
+        )
+        val viewer = openViewer(request)
+        assertTrue("the platform shows a deleted file one-sided", viewer is SimpleOnesideDiffViewer)
+        val oneside = viewer as SimpleOnesideDiffViewer
+        val content = oneside.side.select(oneside.request.contents) as DocumentContent
+        assertNull("the platform content has no highlight file", content.highlightFile)
+        val follower = follower(tree, viewer = viewer)
+
+        follower.followNow(oneside.editor, OLD_TEXT.indexOf("return 1"))
+
+        assertSame("a deleted file in a one-sided diff gets only its file row", deletedRow, tree.selectionPath?.lastPathComponent)
+
+        // On a tool window that does not publish DIFF_VIEWER the editor is a plain one over the old revision.
+        val (plainEditor, plainFile) = configuredFile("DeletedPlain.java", OLD_TEXT)
+        val plain = Change(SimpleContentRevision(OLD_TEXT, VcsUtil.getFilePath(plainFile), "1"), null)
+        val plainTree = buildTree(listOf(plain))
+        val plainRow = fileRow(plainTree, plain)
+        val plainFollower = follower(plainTree) { plainEditor.contentComponent }
+
+        plainFollower.followNow(plainEditor, OLD_TEXT.indexOf("return 1"))
+
+        assertSame("a deleted file without a diff viewer gets only its file row", plainRow, plainTree.selectionPath?.lastPathComponent)
+    }
+
+    fun `test a plain editor prefers the change whose new revision is the file over a rename's old path`() {
+        // changes-tree/05-changes-tree-caret-follow R3, R8
+        maskEngines(RangeEngine())
+        val shared = myFixture.addFileToProject("Shared.java", NEW_TEXT).virtualFile
+        val renamed = myFixture.addFileToProject("Renamed.java", NEW_TEXT).virtualFile
+        val rename = Change(
+            SimpleContentRevision(OLD_TEXT, VcsUtil.getFilePath(shared), "1"),
+            SimpleContentRevision(NEW_TEXT, VcsUtil.getFilePath(renamed), "2"),
+        )
+        val added = Change(null, SimpleContentRevision(NEW_TEXT, VcsUtil.getFilePath(shared), "3"))
+        val tree = buildTree(listOf(rename, added))
+        val addedRow = fileRow(tree, added)
+        myFixture.openFileInEditor(shared)
+        val editor = myFixture.editor
+
+        follower(tree) { editor.contentComponent }.followNow(editor, NEW_TEXT.indexOf("return 2"))
+
+        assertSame(
+            "the file's new revision wins over a rename's old path",
+            addedRow,
+            tree.selectionPath?.lastPathComponent,
+        )
+    }
+
     fun `test a pending file selects only the file row`() {
         // changes-tree/05-changes-tree-caret-follow R8
         val engine = BlockingEngine(ComparisonResult(ENGINE_ID, "1", Status.ANALYZED))
@@ -828,6 +917,90 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test a preview caret event does not replace a pending summary follow`() {
+        // changes-tree/05-changes-tree-caret-follow R7, R11
+        val engine = BlockingEngine(cartResultFor(OLD_TEXT, NEW_TEXT))
+        maskEngines(engine)
+        val (editor, file) = configuredFile("PreviewPendingCart.java", NEW_TEXT)
+        val change = change(file)
+        val tree = buildTree(listOf(change))
+        val fileRow = fileRow(tree, change)
+        val request = SimpleDiffRequest(
+            "PreviewPendingCart.java",
+            DiffContentFactory.getInstance().create(project, OLD_TEXT, file),
+            DiffContentFactory.getInstance().create(project, NEW_TEXT, file),
+            "old",
+            "new",
+        )
+        val processor = CacheDiffRequestChainProcessor(project, SimpleDiffRequestChain(request))
+        processor.updateRequest(true, null)
+        PlatformTestUtil.waitWithEventsDispatching("no splitter viewer was created", { processor.activeViewer != null }, 10)
+        val viewer = processor.activeViewer as TwosideTextDiffViewer
+        val splitter = PreviewDiffSplitterComponent(
+            object : DiffPreviewUpdateProcessor {
+                override val component: JComponent get() = processor.component
+                override fun clear() {}
+                override fun refresh(fromModelRefresh: Boolean) {}
+            },
+            "smartdiff.test.pending.splitter",
+        )
+        splitter.openPreview(false)
+        try {
+            assertTrue("the splitter editor is a preview", isSelectionFollowingPreview(project, viewer.editor1, tree))
+            val follower = follower(tree) { editor.contentComponent }
+            assertTrue("the comparison started", engine.started.await(10, TimeUnit.SECONDS))
+
+            follower.followNow(editor, NEW_TEXT.indexOf("return 2"))
+            assertSame("a pending summary selects the file row", fileRow, tree.selectionPath?.lastPathComponent)
+            assertTrue("the retry is remembered", follower.hasPendingFollow())
+
+            // The splitter loads and its old-side editor fires a caret event while the summary is pending.
+            follower.onCaretMoved(viewer.editor1, OLD_TEXT.indexOf("return 1"))
+            assertTrue("the preview caret event keeps the pending follow", follower.hasPendingFollow())
+
+            engine.release.countDown()
+            service.waitForSummaries()
+            tree.updateTreeModel(model(listOf(change)), ChangesTree.DO_NOTHING)
+            PlatformTestUtil.waitWithEventsDispatching(
+                "the declaration under the original caret is selected after the summary",
+                { (tree.selectionPath?.lastPathComponent as? DeclarationNode)?.item?.label == "method total()  changed" },
+                10,
+            )
+        } finally {
+            splitter.closePreview()
+            Disposer.dispose(processor)
+        }
+    }
+
+    fun `test an unfocused editor's caret event does not replace a pending summary follow`() {
+        // changes-tree/05-changes-tree-caret-follow R7, R11
+        val engine = BlockingEngine(cartResultFor(OLD_TEXT, NEW_TEXT))
+        maskEngines(engine)
+        val (editor, file) = configuredFile("FocusedPendingCart.java", NEW_TEXT)
+        val (otherEditor, _) = configuredFile("UnfocusedCart.java", OLD_TEXT)
+        val change = change(file)
+        val tree = buildTree(listOf(change))
+        val fileRow = fileRow(tree, change)
+        val follower = follower(tree) { editor.contentComponent }
+        assertTrue("the comparison started", engine.started.await(10, TimeUnit.SECONDS))
+
+        follower.followNow(editor, NEW_TEXT.indexOf("return 2"))
+        assertSame("a pending summary selects the file row", fileRow, tree.selectionPath?.lastPathComponent)
+        assertTrue("the retry is remembered", follower.hasPendingFollow())
+
+        follower.onCaretMoved(otherEditor, 0)
+        assertTrue("an unfocused editor's caret event keeps the pending follow", follower.hasPendingFollow())
+
+        engine.release.countDown()
+        service.waitForSummaries()
+        tree.updateTreeModel(model(listOf(change)), ChangesTree.DO_NOTHING)
+        PlatformTestUtil.waitWithEventsDispatching(
+            "the declaration under the original caret is selected after the summary",
+            { (tree.selectionPath?.lastPathComponent as? DeclarationNode)?.item?.label == "method total()  changed" },
+            10,
+        )
+    }
+
     fun `test a merge viewer leaves the Changes tree alone`() {
         // changes-tree/05-changes-tree-caret-follow R3
         maskEngines(RangeEngine())
@@ -952,6 +1125,17 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
     private fun configuredFile(name: String, text: String): Pair<Editor, VirtualFile> {
         val psi = myFixture.configureByText(name, text)
         return myFixture.editor to psi.virtualFile
+    }
+
+    /** A content whose document is the file's but whose highlight file is null, as the platform's deleted-file content is. */
+    private fun contentWithoutHighlight(file: VirtualFile): DocumentContent {
+        val delegate = DiffContentFactory.getInstance().create(
+            project,
+            com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(file)!!,
+        )
+        return object : DocumentContent by delegate {
+            override fun getHighlightFile(): VirtualFile? = null
+        }
     }
 
     private fun change(file: VirtualFile, oldText: String = OLD_TEXT, newText: String = NEW_TEXT): Change =
