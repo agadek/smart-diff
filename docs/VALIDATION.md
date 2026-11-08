@@ -21,6 +21,26 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-08: Changes tree caret follow (#110): manual check outstanding
+
+PR #131 adds the caret follow in [changes-tree/05](specs/changes-tree/05-changes-tree-caret-follow.md) R1–R10. The
+automated checks pass, but no running-IDE check has been recorded for it yet.
+
+**Automated evidence.** `./gradlew clean buildPlugin check` passes, including all 27 `ChangesCaretFollowTest` tests. They
+cover the R7 stale and pending summaries through an installed intermediate pending model, R10's hidden-row fallback with
+the filter and with Declarations off, the real viewer and merge-viewer data-context lookup, the live tree lookup in the
+Version Control tool window, the old-path fallback rule, commit inclusion, a real focus owner, background-thread
+marshalling and failure logging.
+
+**Verifier.** `./gradlew verifyPlugin` is compatible on IC-251.26927.53 and IU-263.7307.200 with the same 4 experimental
+API usages as before this change and no new internal, experimental or deprecated usage from the follower.
+
+**Running-IDE check: outstanding.** The R1–R10 manual steps in
+[changes-tree/05 details](specs/changes-tree/05-changes-tree-caret-follow-details.md#manual-check-outstanding) have not been
+run in a running IDE. They must still be run on IntelliJ IDEA 2025.1 and the latest release, including the R7 intermediate
+pending rebuild (step 5) and the R10 hidden-row fallback (step 6a), in Local Changes and in the Commit tool window. The
+feature is not claimed as manually verified.
+
 ## 2026-11-07: Changes tree row parity (issues #111 and #108)
 
 [changes-tree/02](specs/changes-tree/02-changes-tree-declarations.md) R17 to R20 and issue #111: a summarized file row must open the same preview, diff or source as a plain row under the same settings, on double-click and Enter. This run replaced the plugin's own Commit preview with the platform's handlers, and installed the tree setup in every Local Changes and Commit tree.

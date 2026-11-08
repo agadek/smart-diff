@@ -88,9 +88,12 @@ All of this runs on the EDT, except the summary comparison that already runs in 
    matching side path: `afterRevision.file` on the new side, `beforeRevision.file` on the old side, compared by path and
    directory kind, since a content may hold a different `FilePath` implementation. This also handles a moved or renamed
    file, whose two paths differ. If no row is there, nothing is selected.
-4. **Check the summary.** If the row is not a `SummaryChangeNode`, or `snapshot` is `None` or `Pending`, select the file
-   row. If it is `Stale`, keep the current selection and retry on the rebuild. A `Fresh` summary with no `items` also falls
-   back to the file row.
+4. **Check the summary.** `Pending` selects the file row and remembers the target, so a plain pending row gets the file
+   row and the retry survives an intermediate rebuild. `Stale` keeps the current selection and remembers the target for
+   the rebuild; if that rebuild contains only a plain pending row, the next pass sees `Pending` and selects the file row.
+   `None` selects the file row and ends the follow. A `Fresh` summary on a row that is not a `SummaryChangeNode` also
+   selects the file row and retries, because the summary row is installed by a rebuild; a `Fresh` summary with no `items`
+   falls back to the file row.
 5. **Find the innermost changed declaration.** Walk the summary's `OutlineItem` tree, from the top level down, with the
    source offset. A row is a candidate only when it is a change itself (`kind == ItemKind.CHANGE` and `tags.isNotEmpty()`);
    groups, candidates, container-only rows and the `File region` row are not. A row contains the caret when its side range
@@ -120,17 +123,18 @@ summary says it was not analyzed, the language has no engine, the file is added 
 
 ### Staleness, rebuilds and the tree's own selection
 
-- On an edit, the current summary becomes stale. A caret event during that time does not change the tree's selection:
-  `snapshot` returns `Stale`, and the service remembers the editor, side and caret offset, not the old row path.
-  `ChangesViewModifier.TOPIC` marks that a rebuild is coming; when the tree's model changes, the service maps the
-  remembered caret against the new summary again. The model listener is attached to the current `ChangesListView.model`
-  and reattached when the model property changes, so the retry runs against the rebuilt tree, not the old one. The retry
-  goes through the same 100 ms timer, so a burst of model events follows once.
-  If the new summary still contains the row, it is selected; if it does not, the file row is selected. While the summary
-  is stale the follower never picks a row from it. R7 is about what the follower chooses, not about preserving a row
-  through a platform rebuild: if an unrelated rebuild removes the old row first, the platform's own selection restoration
-  applies, and the follower retries when the new summary arrives. A stale summary therefore never makes the follower
-  select a row at an offset from the old text.
+- On an edit, the current summary becomes stale. A caret event during that time does not use the old summary or change
+  the tree's selection: `snapshot` returns `Stale`, and the service remembers the editor, side and caret offset, not the
+  old row path. `ChangesViewModifier.TOPIC` marks that a rebuild is coming; when the tree's model changes, the service
+  maps the remembered caret against the new summary again. The model listener is attached to the current
+  `ChangesListView.model` and reattached when the model property changes, so the retry runs against the rebuilt tree,
+  not the old one. The retry goes through the same 100 ms timer, so a burst of model events follows once.
+  If the new summary still contains the row, it is selected; if it does not, the file row is selected. A stale summary
+  therefore never makes the follower select a row at an offset from the old text.
+- If the rebuilt model shows only a plain row because the new summary is still pending, the rebuild also forgets the old
+  cache entry, so `snapshot` is `Pending`: the service selects that file row, keeps the remembered target and retries
+  when the summary arrives. This is the intermediate pending rebuild in R7. It never selects a declaration from the old
+  summary while the new one is pending.
 - A rebuild restores the user's expanded rows through the platform. Following after a rebuild re-expands only the rows it
   needs to show the target.
 - The service installs one `TreeSelectionListener` and one mouse/key listener on the live tree. A mouse press or key press
@@ -212,15 +216,19 @@ keeps its selection.
 ## Tests
 
 The new test class is `ChangesCaretFollowTest` in `src/test/kotlin/.../ui/changes/`. It builds the
-tree with the platform's `TreeModelBuilder` as `ChangesSummaryTest` does, and uses a recording `DiffManager` and a
-recording focus owner to check the side effects. It also opens real two-sided and three-sided diff panels through
-`DiffManager.createRequestPanel`, as `OutlineIntegrationTest` does, for the side mapping.
+tree with the platform's `TreeModelBuilder` as `ChangesSummaryTest` does, uses a recording `DiffManager`, a real focus
+owner behind a fixed `KeyboardFocusManager`, a `DefaultInclusionModel` for the commit count, and a `FixedDataManager` for
+the production viewer lookup. It also opens real two-sided and three-sided diff panels through
+`DiffManager.createRequestPanel`, as `OutlineIntegrationTest` does, for the side mapping, and finds a live tree in a
+temporary Version Control tool window.
 
 The test seam is internal to the plugin: a `@TestOnly` `followNow(editor, offset)` method runs the same mapping and
 selection path as the debounce timer, and `waitForPendingFollow()` drains the timer and any queued model retry. The test
 installs the live `ChangesListView`, `ChangesSummaryService`, focus owner and diff viewer through package-private
 constructor parameters, while production finds the tree through `ToolWindowManager` and the viewer through
-`DiffDataKeys.DIFF_VIEWER`. This keeps global caret events, focus and timer delays out of the assertions.
+`DiffDataKeys.DIFF_VIEWER`. This keeps global caret events, focus and timer delays out of the assertions. The two R7
+tests install the intermediate pending model and wait for the follower's timer to run, not only for the test-only drain,
+so they check that the rebuilt model restarts the retry.
 
 The fixtures are the `ChangesSummaryTest` Cart text (a class with a changed method and an added method), a file with
 unchanged code between changes, a changed class header, an added file, a deleted file, a plain-text file in an unsupported
@@ -230,18 +238,21 @@ language, a file over the size limit and a file with a timed-out or failed summa
 | --- | --- |
 | R1 | `ChangesCaretFollowTest` `test the innermost changed declaration under the caret is selected and the file expands`: a caret in a changed method selects the method, not its class; a caret in a changed class outside its methods selects the class; the file row is expanded and the row is visible |
 | R2 | `ChangesCaretFollowTest` `test the caret outside every changed declaration selects the file row`: a caret in unchanged code of a changed file selects the file row and no declaration row |
-| R3 | `ChangesCaretFollowTest` `test a plain editor maps to the new side range`; `ChangesCaretFollowTest` `test the old and new sides of a two-sided diff map to their own ranges`; `ChangesCaretFollowTest` `test the caret in a three-sided diff does not move the Changes tree` |
-| R4 | `SmartDiffSettingsTest` `test defaults` (settings/01 R13, the new setting is on); `ChangesCaretFollowTest` `test the setting turns following off` (settings/01 R15): with the setting off, a caret event leaves the tree selection unchanged; `ChangesCaretFollowTest` `test changing only the follow setting neither clears the summary cache nor rebuilds the tree` (settings/01 R14) |
-| R5 | `ChangesCaretFollowTest` `test following leaves focus and commit inclusion alone with the platform preview off and on`: the editor keeps focus, the included changes and the commit count are unchanged, with preview off the recording `DiffManager` receives no request, and with preview on only the platform's own preview may open, as for a click |
+| R3 | `ChangesCaretFollowTest` `test a plain editor maps to the new side range`; `test the old and new sides of a two-sided diff map to their own ranges`; `test the caret in a three-sided diff does not move the Changes tree`; `test a merge viewer leaves the Changes tree alone`; `test the old side uses the other path only when its own content names no file` |
+| R4 | `SmartDiffSettingsTest` `test defaults` (settings/01 R13, the new setting is on); `ChangesCaretFollowTest` `test the setting turns following off` (settings/01 R15): with the setting off, a caret event leaves the tree selection unchanged; `ChangesCaretFollowTest` `test changing only the follow setting neither clears the summary cache nor rebuilds the tree`, `test outline and merge display changes neither clear the summary cache nor rebuild the tree` and `test an engine default change refreshes and recomputes the tree` (settings/01 R14) |
+| R5 | `ChangesCaretFollowTest` `test following leaves focus and commit inclusion alone with the platform preview off and on`: the editor keeps its real focus owner, the included changes and the commit count are unchanged, with preview off the recording `DiffManager` receives no request, and with preview on only the platform's own preview may open, as for a click |
 | R6 | `ChangesCaretFollowTest` `test following leaves the tree alone while the tree has focus`; `ChangesCaretFollowTest` `test a tree selection is not overwritten by a late caret event`: click a row while a caret follow is pending, then let the timer fire; the clicked row stays; `ChangesCaretFollowTest` `test caret moves are debounced`: several events in a row produce one follow after the delay |
-| R7 | `ChangesCaretFollowTest` `test a stale summary leaves the current row and selects the caret row after the rebuild`: after an edit, a caret event before the rebuild leaves the row selected; after the rebuild the row under the caret is selected |
+| R7 | `ChangesCaretFollowTest` `test a stale summary keeps the row through an intermediate pending rebuild and follows when the summary arrives`: after an edit, a caret event before the rebuild leaves the row selected; the intermediate pending model keeps the retry, and the row under the caret is selected after the summary arrives. `test a pending summary keeps retrying through an intermediate rebuild and selects the declaration when it arrives` covers the same retry from the first pending state |
 | R8 | `ChangesCaretFollowTest` `test a file without a summary selects only the file row` (added, deleted and unsupported files); `test a pending file selects only the file row`; `test a not analyzed file selects only the file row`; `test a file after the 500-file limit selects only its file row` |
-| R9 | `ChangesCaretFollowTest` `test following reads no revision content on the UI thread`: a `ContentRevision` whose `content` fails when read on the EDT is never read; Plugin Verifier report: no new internal, experimental or deprecated usage from the follower, and the existing usages stay unchanged |
+| R9 | `ChangesCaretFollowTest` `test following reads no revision content on the UI thread`: a `ContentRevision` whose `content` fails when read on the EDT is never read; `test a caret event and start from a background thread are marshalled to the EDT`; Plugin Verifier report: no new internal, experimental, deprecated or override-only usage from the follower, and the existing usages stay unchanged |
+| Failure logging | `ChangesCaretFollowTest` `test a mapping failure is logged once and leaves the tree unchanged` |
 | R10 | `ChangesCaretFollowTest` `test the tree filter hides the caret row and selects the nearest shown row above`: with the changed method's own label hidden, the shown class container or file row is selected, and with Declarations off the file row is selected |
-| R1–R10 | Manual check: run the steps below on IntelliJ IDEA 2025.1 and the latest release |
+| R1–R10 | Manual check: **outstanding** as of 2026-11-08. The automated checks above pass; the steps below have not yet been run in a running IDE. |
 
-### Manual check
+### Manual check (outstanding)
 
+Not yet run in a running IDE as of 2026-11-08. The steps below remain required on IntelliJ IDEA 2025.1 and the latest
+release for R1–R10, including the R7 intermediate pending rebuild in step 5 and the R10 hidden-row check in step 6a.
 Run this on IntelliJ IDEA 2025.1 and the latest release, in the Local Changes view and in the Commit tool window:
 
 1. Open a modified Java file with at least two changed methods. Move the caret through each changed method, through
@@ -251,10 +262,13 @@ Run this on IntelliJ IDEA 2025.1 and the latest release, in the Local Changes vi
    Open a three-sided diff or merge window and move the caret in each pane; the Changes tree does not move.
 3. Hold an arrow key and type quickly. The tree follows after the pause, not on every key.
 4. Click another row in the tree while a caret follow is pending. The clicked row stays selected.
-5. Edit a changed method and move the caret before the summary finishes. The old row stays selected until the new summary
-   arrives, then the row under the caret is selected.
+5. Edit a changed method and move the caret before the summary finishes. The old row stays selected while the summary is
+   stale; if the tree rebuilds with a plain pending row, it selects that file row and keeps retrying, then selects the row
+   under the caret when the new summary arrives.
 6. Open an added file, a file in an unsupported language, a file over the size limit, a file after the 500-file limit and
    the old side of a deleted file's diff. Only the file row is selected, and the tree shows no declaration row.
+6a. Hide the change type of the method under the caret in the tree's filter. The nearest shown row above it is selected;
+   with every declaration hidden, or with Declarations off, the file row is selected (R10).
 7. Turn "Follow the caret in the Changes tree" off and move the caret. The tree does not change. Turn it on and move the
    caret again; it follows. Confirm that toggling it does not clear the summaries or rebuild the tree.
 8. Repeat with the platform's single-click diff preview off and on. With it off, no diff opens. With it on, only the

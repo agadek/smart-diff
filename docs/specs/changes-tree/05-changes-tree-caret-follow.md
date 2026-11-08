@@ -23,8 +23,9 @@ the tree. This is the reverse of opening a declaration from the tree.
   though the platform's own single-click preview may follow the new selection as it does for any selection.
 - **R6** Following does not change the tree while the tree has focus, a selection made in the tree is not overwritten by a
   later caret event, and caret moves are debounced so typing and arrow keys stay smooth.
-- **R7** While a file's [summary line](../../GLOSSARY.md#summary-line) is stale after an edit, following does not change
-  the tree's selection, and it selects the row under the caret when the new summary arrives.
+- **R7** While a file's [summary line](../../GLOSSARY.md#summary-line) is stale after an edit, following does not select a
+  row from the old summary; if the rebuilt tree shows only a plain pending file row, it selects that file row and keeps
+  retrying, and it selects the row under the caret when the new summary arrives.
 - **R8** A file without a summary, because it is pending, not analyzed, in an
   [unsupported language](../../GLOSSARY.md#supported-language), added, deleted or after the 500-file limit, gets only its
   file row selected.

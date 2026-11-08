@@ -1,9 +1,11 @@
 package io.github.agadek.smartdiff.ui.changes
 
 import com.intellij.diff.FrameDiffTool
+import com.intellij.diff.merge.MergeTool
 import com.intellij.diff.tools.util.DiffDataKeys
 import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
 import com.intellij.ide.DataManager
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
@@ -66,6 +68,8 @@ class ChangesTreeCaretFollower internal constructor(
     private val focusOwner: () -> Component?,
     private val treeShowing: (ChangesListView) -> Boolean = { it.isShowing },
     private val viewerOf: (Editor) -> FrameDiffTool.DiffViewer? = ::viewerFromContext,
+    private val mergeViewerOf: (Editor) -> MergeTool.MergeViewer? = ::mergeViewerFromContext,
+    private val logFailure: (Throwable) -> Unit = ::logFollowFailure,
 ) : Disposable {
 
     constructor(project: Project) : this(
@@ -77,13 +81,14 @@ class ChangesTreeCaretFollower internal constructor(
 
     private enum class Side { OLD, NEW }
 
-    private data class SideFile(val side: Side, val file: VirtualFile)
+    private data class SideFile(val side: Side, val file: VirtualFile, val fallback: Boolean)
 
     private data class PendingFollow(
         val editor: Editor,
         val offset: Int,
         val epoch: Long,
         val missingRowTried: Boolean = false,
+        val waitingForSummary: Boolean = false,
     )
 
     private sealed interface Target {
@@ -96,38 +101,61 @@ class ChangesTreeCaretFollower internal constructor(
         data object None : Target
     }
 
+    @Volatile
     private var started = false
+
+    /** Set before the queued cleanup, so a queued [start] cannot revive a disposed follower. */
+    @Volatile
+    private var disposed = false
+
     private var watchedTree: ChangesListView? = null
     private var watchedModel: TreeModel? = null
     private var following = 0
     private val selectionEpoch = AtomicLong()
+
+    /** Only touched on the EDT; [dispose] queues its cleanup when another thread calls it. */
     private var pending: PendingFollow? = null
-    private val timer = Timer(debounceDelay()) { runPending() }.apply { isRepeats = false }
+    private var timer: Timer? = null
+    private var failureLogged = false
 
     /** How many times the debounce timer ran a follow, for the debounce test. */
     @TestOnly
     internal var followRuns = 0
 
-    /** Starts listening once; safe to call more than once. The project activity creates the service at project open. */
+    /** Starts listening once on the EDT; safe to call more than once. The project activity creates the service at project open. */
     fun start() {
-        if (started || project.isDisposed) return
+        if (!ApplicationManager.getApplication().isDispatchThread) {
+            ApplicationManager.getApplication().invokeLater { start() }
+            return
+        }
+        if (started || disposed || project.isDisposed) return
         started = true
         EditorFactory.getInstance().eventMulticaster.addCaretListener(caretListener, this)
         project.messageBus.connect(this).subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, selectionChangedListener)
         project.messageBus.connect(this).subscribe(ChangesViewModifier.TOPIC, ChangesViewModifier.ChangesViewModifierListener {
-            if (pending != null) restartTimer()
+            onEdt { if (pending != null) restartTimer() }
         })
         ApplicationManager.getApplication().messageBus.connect(this).subscribe(SmartDiffSettings.CHANGED, SmartDiffSettings.Listener {
-            if (!SmartDiffSettings.getInstance().followChangesTreeCaret) cancelPending() else syncTree()
+            onEdt {
+                if (!SmartDiffSettings.getInstance().followChangesTreeCaret) cancelPending() else syncTree()
+            }
         })
         syncTree()
     }
 
     override fun dispose() {
         started = false
-        timer.stop()
-        pending = null
-        detachTree()
+        disposed = true
+        val cleanup = {
+            timer?.stop()
+            pending = null
+            detachTree()
+        }
+        if (ApplicationManager.getApplication().isDispatchThread) {
+            cleanup()
+        } else {
+            ApplicationManager.getApplication().invokeLater(cleanup)
+        }
     }
 
     /** Runs the same mapping and selection path as the debounce timer, without waiting, for tests. */
@@ -144,7 +172,7 @@ class ChangesTreeCaretFollower internal constructor(
     @TestOnly
     internal fun waitForPendingFollow() {
         val drain = {
-            timer.stop()
+            timer?.stop()
             if (pending != null) runPending()
         }
         if (ApplicationManager.getApplication().isDispatchThread) drain() else ApplicationManager.getApplication().invokeAndWait(drain)
@@ -192,11 +220,11 @@ class ChangesTreeCaretFollower internal constructor(
         override fun keyPressed(e: KeyEvent) = cancelPending()
     }
 
-    init {
-        start()
-    }
-
     internal fun onCaretMoved(editor: Editor, offset: Int) {
+        if (!ApplicationManager.getApplication().isDispatchThread) {
+            ApplicationManager.getApplication().invokeLater { onCaretMoved(editor, offset) }
+            return
+        }
         if (!started || project.isDisposed || editor.project !== project || editor.isDisposed) return
         if (!SmartDiffSettings.getInstance().followChangesTreeCaret) {
             cancelPending()
@@ -206,14 +234,25 @@ class ChangesTreeCaretFollower internal constructor(
         restartTimer()
     }
 
+    private fun onEdt(action: () -> Unit) {
+        if (ApplicationManager.getApplication().isDispatchThread) action()
+        else ApplicationManager.getApplication().invokeLater { if (!project.isDisposed) action() }
+    }
+
+    private fun timer(): Timer {
+        ApplicationManager.getApplication().assertIsDispatchThread()
+        return timer ?: Timer(debounceDelay()) { runPending() }.apply { isRepeats = false }.also { timer = it }
+    }
+
     private fun restartTimer() {
         if (!started || project.isDisposed) return
+        val timer = timer()
         timer.delay = debounceDelay()
         timer.restart()
     }
 
     private fun runPending() {
-        timer.stop()
+        timer?.stop()
         val follow = pending ?: return
         if (!started || project.isDisposed || !SmartDiffSettings.getInstance().followChangesTreeCaret) {
             pending = null
@@ -223,8 +262,21 @@ class ChangesTreeCaretFollower internal constructor(
             pending = null
             return
         }
-        val tree = syncTree()
-        if (tree == null || !treeShowing(tree)) {
+        val tree = try {
+            syncTree()
+        } catch (e: Exception) {
+            if (!failureLogged) {
+                failureLogged = true
+                logFailure(e)
+            }
+            pending = null
+            return
+        }
+        if (tree == null) {
+            if (!follow.waitingForSummary) pending = null
+            return
+        }
+        if (!treeShowing(tree)) {
             pending = null
             return
         }
@@ -239,7 +291,15 @@ class ChangesTreeCaretFollower internal constructor(
             return
         }
         followRuns++
-        follow(follow, tree)
+        try {
+            follow(follow, tree)
+        } catch (e: Exception) {
+            if (!failureLogged) {
+                failureLogged = true
+                logFailure(e)
+            }
+            pending = null
+        }
     }
 
     private fun follow(pendingFollow: PendingFollow, tree: ChangesListView) {
@@ -250,7 +310,11 @@ class ChangesTreeCaretFollower internal constructor(
                     return
                 }
                 selectFile(tree, target.row)
-                pending = if (target.retry) pendingFollow.copy(missingRowTried = false) else null
+                pending = if (target.retry) {
+                    pendingFollow.copy(missingRowTried = false, waitingForSummary = true)
+                } else {
+                    null
+                }
             }
             is Target.Declaration -> {
                 if (tree.isModelUpdateInProgress) {
@@ -263,15 +327,15 @@ class ChangesTreeCaretFollower internal constructor(
                         selectPath(tree, treePath(row))
                         pending = null
                     }
-                    !pendingFollow.missingRowTried -> pending = pendingFollow.copy(missingRowTried = true)
+                    !pendingFollow.missingRowTried -> pending = pendingFollow.copy(missingRowTried = true, waitingForSummary = true)
                     else -> {
                         selectFile(tree, target.fileRow)
                         pending = null
                     }
                 }
             }
-            Target.Stale -> pending = pendingFollow.copy(missingRowTried = false)
-            Target.None -> pending = null
+            Target.Stale -> pending = pendingFollow.copy(missingRowTried = false, waitingForSummary = true)
+            Target.None -> if (pendingFollow.waitingForSummary) pending = pendingFollow else pending = null
         }
     }
 
@@ -279,13 +343,14 @@ class ChangesTreeCaretFollower internal constructor(
         val sideFile = sideFile(editor) ?: return Target.None
         val fileRow = findFileRow(tree, sideFile) ?: return Target.None
         val change = fileRow.userObject as? Change ?: return Target.None
-        val summaryRow = fileRow as? SummaryChangeNode ?: return Target.FileRow(fileRow, retry = false)
         val settings = SmartDiffSettings.getInstance()
         return when (val snapshot = summaries.snapshot(change)) {
             SummarySnapshot.Stale -> Target.Stale
-            SummarySnapshot.None -> Target.FileRow(summaryRow, retry = false)
-            SummarySnapshot.Pending -> Target.FileRow(summaryRow, retry = true)
+            SummarySnapshot.None -> Target.FileRow(fileRow, retry = false)
+            SummarySnapshot.Pending -> Target.FileRow(fileRow, retry = true)
             is SummarySnapshot.Fresh -> {
+                val summaryRow = fileRow as? SummaryChangeNode
+                    ?: return Target.FileRow(fileRow, retry = settings.showChangesSummary || settings.showChangesDeclarations)
                 val summary = snapshot.summary
                 if (summary.items.isEmpty() || !settings.showChangesDeclarations) {
                     return Target.FileRow(summaryRow, retry = false)
@@ -301,6 +366,7 @@ class ChangesTreeCaretFollower internal constructor(
 
     /** The side and file of [editor]: its own side of a two-sided diff, or the new side of a plain editor. */
     private fun sideFile(editor: Editor): SideFile? {
+        if (mergeViewerOf(editor) != null) return null
         val viewer = viewerOf(editor)
         if (viewer != null && viewer !is TwosideTextDiffViewer) return null
         if (viewer is TwosideTextDiffViewer) {
@@ -312,10 +378,10 @@ class ChangesTreeCaretFollower internal constructor(
             val own = if (side == Side.NEW) viewer.content2.highlightFile else viewer.content1.highlightFile
             val other = if (side == Side.NEW) viewer.content1.highlightFile else viewer.content2.highlightFile
             val file = own ?: other ?: return null
-            return SideFile(side, file)
+            return SideFile(side, file, fallback = own == null)
         }
         val file = FileDocumentManager.getInstance().getFile(editor.document) ?: editor.virtualFile ?: return null
-        return SideFile(Side.NEW, file)
+        return SideFile(Side.NEW, file, fallback = false)
     }
 
     private fun findFileRow(tree: ChangesListView, sideFile: SideFile): ChangesBrowserChangeNode? {
@@ -327,7 +393,7 @@ class ChangesTreeCaretFollower internal constructor(
             val onSide = if (sideFile.side == Side.NEW) change.afterRevision?.file else change.beforeRevision?.file
             val other = if (sideFile.side == Side.NEW) change.beforeRevision?.file else change.afterRevision?.file
             // An added or deleted file names only one side; the other content found it, the side still picks the range.
-            if (samePath(onSide, sideFile.file) || samePath(other, sideFile.file)) return node
+            if (samePath(onSide, sideFile.file) || (sideFile.fallback && samePath(other, sideFile.file))) return node
         }
         return null
     }
@@ -376,7 +442,7 @@ class ChangesTreeCaretFollower internal constructor(
     }
 
     private fun cancelPending() {
-        timer.stop()
+        timer?.stop()
         pending = null
         selectionEpoch.incrementAndGet()
     }
@@ -386,6 +452,7 @@ class ChangesTreeCaretFollower internal constructor(
     }
 
     private fun syncTree(): ChangesListView? {
+        ApplicationManager.getApplication().assertIsDispatchThread()
         if (!started || project.isDisposed) return null
         val tree = treeProvider()
         if (tree !== watchedTree) {
@@ -441,7 +508,7 @@ class ChangesTreeCaretFollower internal constructor(
 
         fun getInstance(project: Project): ChangesTreeCaretFollower = project.service()
 
-        private fun liveTree(project: Project): ChangesListView? {
+        internal fun liveTree(project: Project): ChangesListView? {
             val manager = ToolWindowManager.getInstance(project)
             for (id in listOf(ToolWindowId.VCS, ToolWindowId.COMMIT)) {
                 val toolWindow = manager.getToolWindow(id) ?: continue
@@ -462,13 +529,23 @@ class ChangesTreeCaretFollower internal constructor(
     }
 }
 
-/** Creates the caret follower when a project opens, so it is listening before the first caret move. */
+/** Creates the caret follower on the EDT when a project opens, before the first caret move. */
 class ChangesTreeCaretFollowActivity : ProjectActivity {
     override suspend fun execute(project: Project) {
-        ChangesTreeCaretFollower.getInstance(project)
+        ApplicationManager.getApplication().invokeLater {
+            if (!project.isDisposed) ChangesTreeCaretFollower.getInstance(project).start()
+        }
     }
 }
 
 /** The diff viewer of [editor] from its data context, or null for a plain editor. */
-private fun viewerFromContext(editor: Editor): FrameDiffTool.DiffViewer? =
+internal fun viewerFromContext(editor: Editor): FrameDiffTool.DiffViewer? =
     DiffDataKeys.DIFF_VIEWER.getData(DataManager.getInstance().getDataContext(editor.contentComponent))
+
+/** The merge viewer of [editor], which marks a merge window that following leaves alone. */
+internal fun mergeViewerFromContext(editor: Editor): MergeTool.MergeViewer? =
+    DiffDataKeys.MERGE_VIEWER.getData(DataManager.getInstance().getDataContext(editor.contentComponent))
+
+private fun logFollowFailure(error: Throwable) {
+    Logger.getInstance(ChangesTreeCaretFollower::class.java).warn("Cannot follow the caret in the Changes tree", error)
+}

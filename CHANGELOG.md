@@ -4,6 +4,7 @@
 
 ### Added
 
+- The Changes tree follows the caret in the editor and in both sides of a two-sided diff, selecting the changed declaration under the caret or the file row, while respecting the tree's filter and Declarations toggle.
 - The Changes view's View Options menu has Structural Summary and Declarations toggles and a Hide Change Types submenu. The tree's filter is separate from the outline's, keeps hidden changes counted in the summary as `· N hidden` or `· all hidden`, and changing it rebuilds the tree without comparing files again.
 - The outline panel has its own Hide and Minimise buttons. Minimising leaves a thin strip at the right edge with the summary line or fallback reason, and clicking it or pressing Enter restores the panel at its previous width without comparing again. The Structural Outline toggle has the default shortcut `Ctrl+Alt+Shift+O` (`Cmd+Option+Shift+O` on macOS), is first in the diff toolbar, and the minimised state and panel width are remembered for the next diff.
 - The SMART Diff viewer has its own side-by-side-with-filter icon, with light and dark variants, so it can be told apart from the native viewer where the viewer switcher shows icons (2026.2 and later).

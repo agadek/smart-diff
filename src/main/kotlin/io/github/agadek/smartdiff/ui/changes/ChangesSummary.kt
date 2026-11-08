@@ -489,14 +489,25 @@ internal fun refreshChangesView(project: Project) {
  */
 class ChangesSummarySettingsListener : SmartDiffSettings.Listener {
     private var lastTreeRevision = SmartDiffSettings.getInstance().treeRevision
+    private var lastAnalysisRevision = SmartDiffSettings.getInstance().analysisRevision
+    private var lastEngineRevision = EngineDefaults.getInstance().revision
+    private var lastConfidence = SmartDiffSettings.getInstance().confidence.format()
 
     override fun settingsChanged() {
         val settings = SmartDiffSettings.getInstance()
+        val engineRevision = EngineDefaults.getInstance().revision
+        val confidence = settings.confidence.format()
         val projects = ProjectManager.getInstance().openProjects.filterNot { it.isDisposed }
         for (project in projects) project.serviceIfCreated<ChangesSummaryService>()?.settingsChanged()
         // The analysis stamp above still notices engine, limit and layout changes made before this listener existed.
-        if (settings.treeRevision == lastTreeRevision) return
+        val treeChanged = settings.treeRevision != lastTreeRevision
+        val analysisChanged = settings.analysisRevision != lastAnalysisRevision ||
+            engineRevision != lastEngineRevision || confidence != lastConfidence
         lastTreeRevision = settings.treeRevision
+        lastAnalysisRevision = settings.analysisRevision
+        lastEngineRevision = engineRevision
+        lastConfidence = confidence
+        if (!treeChanged && !analysisChanged) return
         for (project in projects) refreshChangesView(project)
     }
 }

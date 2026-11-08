@@ -63,8 +63,8 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         private set
 
     /**
-     * Moves when any setting except [followChangesTreeCaret] changes, so the settings listener can rebuild the tree only
-     * when something other than following changed (settings/01 R14).
+     * Moves when a setting the Changes tree shows or analyzes changes, so the settings listener can rebuild the tree
+     * only when something other than following or another display-only setting changed (settings/01 R14).
      */
     @Volatile
     var treeRevision: Long = 0
@@ -189,14 +189,13 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         listOf(maxChars, maxDeclarations, timeoutMillis, formattingOnlyInline)
 
     /**
-     * Every setting except [followChangesTreeCaret]. Following only starts or stops selection, so changing it keeps the
-     * tree and its summaries as they are (settings/01 R14).
+     * The settings the Changes tree shows or analyzes. Outline, merge and follow settings are display-only for this
+     * tree, so changing them keeps the tree and its summaries as they are (settings/01 R14).
      */
     private fun SettingsState.treeSignature(): List<Any> =
         listOf(
-            showOutline, outlineMinimised, showChangesSummary, showChangesDeclarations, formattingOnlyInline,
-            mergeGroupedBySide, mergeHideBothSides, hiddenChangeTypes, hiddenChangesTreeChangeTypes,
-            maxChars, maxDeclarations, timeoutMillis,
+            showChangesSummary, showChangesDeclarations, hiddenChangesTreeChangeTypes,
+            formattingOnlyInline, maxChars, maxDeclarations, timeoutMillis,
         )
 
     /** Told after the settings page is applied, so views that show results outside a diff can update. */

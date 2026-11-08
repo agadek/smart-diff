@@ -96,6 +96,26 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
         assertEquals("following does not rebuild the tree", tree, settings.treeRevision)
     }
 
+    fun `test only the changes tree and analysis settings move the tree revision`() {
+        // settings/01-settings-page R14; outline, merge and follow display settings do not rebuild the tree
+        settings.loadState(SmartDiffSettings.SettingsState())
+        val tree = settings.treeRevision
+
+        settings.followChangesTreeCaret = false
+        settings.showOutline = false
+        settings.outlineMinimised = true
+        settings.mergeGroupedBySide = false
+        settings.mergeHideBothSides = true
+        settings.hiddenChangeTypes = setOf(ChangeType.ADDED)
+        assertEquals("display-only settings keep the tree revision", tree, settings.treeRevision)
+
+        settings.showChangesSummary = false
+        assertEquals("a Changes tree display setting moves the tree revision", tree + 1, settings.treeRevision)
+
+        settings.hiddenChangesTreeChangeTypes = setOf(ChangeType.MOVED)
+        assertEquals("the tree filter moves the tree revision", tree + 2, settings.treeRevision)
+    }
+
     fun `test only analysis settings move the analysis revision`() {
         // changes-tree/04-hide-and-filter R6, R18: display toggles and filters keep the summary cache
         settings.loadState(SmartDiffSettings.SettingsState())
