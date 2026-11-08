@@ -25,7 +25,7 @@ Its report is written to `build/reports/smartdiff-validation/merge/`.
 
 The release checks for 0.3.0 from the release branch head on `chore/release-0.3.0`, with `DeclarationEngine.VERSION` 9,
 `ReferencePass.VERSION` 1 and Scala plugin 2025.1.32. **Publishing is blocked:** the automated checks below pass, but the
-[#110 R1–R10 manual check](#2026-11-08-changes-tree-caret-follow-110-r7-and-r8-failed) was run and **R7 and R8 failed**,
+[#110 R1–R10 manual check](#2026-11-08-changes-tree-caret-follow-110-r7-and-r8-failed) was run and **R7 and R8 failed**;
 the fix is in PR #137, and the R7/R8 re-check is outstanding. Do not merge `main`, which carries #132
 (relationships/04 step 2) as 0.4.0 work. The remaining #111 and #108 hand checks also stay open. The [manual runIde
 checklist](releases/0.3.0-manual-check.md) records the failed run and the re-check.
