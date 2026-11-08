@@ -6,6 +6,12 @@ import com.intellij.diff.DiffManager
 import com.intellij.diff.DiffRequestPanel
 import com.intellij.diff.FrameDiffTool
 import com.intellij.diff.chains.DiffRequestChain
+import com.intellij.diff.chains.SimpleDiffRequestChain
+import com.intellij.diff.editor.DiffEditorViewerFileEditor
+import com.intellij.diff.editor.DiffViewerVirtualFile
+import com.intellij.diff.impl.CacheDiffRequestChainProcessor
+import com.intellij.diff.impl.DiffEditorViewer
+import com.intellij.diff.impl.DiffRequestProcessor
 import com.intellij.diff.merge.MergeRequest
 import com.intellij.diff.merge.MergeResult
 import com.intellij.diff.merge.MergeTool
@@ -22,7 +28,10 @@ import com.intellij.openapi.actionSystem.DataProvider
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.fileEditor.FileEditor
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.FileEditorPolicy
+import com.intellij.openapi.fileEditor.FileEditorProvider
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
@@ -732,6 +741,45 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test a selection-following preview keeps the file row instead of selecting a declaration`() {
+        // changes-tree/05-changes-tree-caret-follow R3, R5
+        maskEngines(RangeEngine())
+        val (_, file) = configuredFile("PreviewCart.java", NEW_TEXT)
+        val change = change(file)
+        val tree = summarizedTree(change)
+        val fileRow = fileRow(tree, change)
+        val classRow = declarationRow(tree, "class Cart")
+        tree.selectionPath = declarationPath(classRow)
+        val request = SimpleDiffRequest(
+            "PreviewCart.java",
+            DiffContentFactory.getInstance().create(project, OLD_TEXT, file),
+            DiffContentFactory.getInstance().create(project, NEW_TEXT, file),
+            "old",
+            "new",
+        )
+        val processor = CacheDiffRequestChainProcessor(project, SimpleDiffRequestChain(request))
+        val previewFile = PreviewDiffFile(processor)
+        val fileEditor = DiffEditorViewerFileEditor(previewFile, processor)
+        previewFile.putUserData(FileEditorProvider.KEY, PreviewFileEditorProvider(fileEditor))
+        FileEditorManager.getInstance(project).openFile(previewFile, true)
+        try {
+            processor.updateRequest(true, null)
+            PlatformTestUtil.waitWithEventsDispatching("no preview viewer was created", { processor.activeViewer != null }, 10)
+            val viewer = processor.activeViewer as TwosideTextDiffViewer
+            val editor = viewer.editor2
+            assertTrue("the production check finds the preview", isSelectionFollowingPreview(project, editor, tree))
+            assertTrue("the preview file is the platform preview tab", isPreviewVirtualFile(previewFile))
+            val follower = follower(tree, viewer = viewer)
+
+            follower.followNow(editor, NEW_TEXT.indexOf("return 2"))
+
+            assertSame("the preview keeps the file row", fileRow, tree.selectionPath?.lastPathComponent)
+            assertFalse("the preview does not select a helper declaration row", tree.selectionPath?.lastPathComponent is DeclarationNode)
+        } finally {
+            FileEditorManager.getInstance(project).closeFile(previewFile)
+        }
+    }
+
     fun `test a merge viewer leaves the Changes tree alone`() {
         // changes-tree/05-changes-tree-caret-follow R3
         maskEngines(RangeEngine())
@@ -747,6 +795,7 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
             { true },
             { null },
             { FakeMergeViewer() },
+            { _, _ -> false },
             { error("unexpected failure: $it") },
         ).also { it.start(); followers += it }
 
@@ -817,6 +866,7 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
             { true },
             { null },
             { null },
+            { _, _ -> false },
             { logs += it },
         ).also { it.start(); followers += it }
 
@@ -1049,6 +1099,20 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
         }
         override fun init(): MergeTool.ToolbarComponents = MergeTool.ToolbarComponents()
         override fun dispose() {}
+    }
+
+    private class PreviewDiffFile(private val processor: DiffRequestProcessor) :
+        DiffViewerVirtualFile("TabPreviewDiffVirtualFile") {
+
+        override fun createViewer(project: Project): DiffEditorViewer = processor
+    }
+
+    /** The test editor manager opens the editor from this provider instead of falling back to a text editor. */
+    private class PreviewFileEditorProvider(private val editor: FileEditor) : FileEditorProvider {
+        override fun accept(project: Project, file: com.intellij.openapi.vfs.VirtualFile): Boolean = true
+        override fun createEditor(project: Project, file: com.intellij.openapi.vfs.VirtualFile): FileEditor = editor
+        override fun getEditorTypeId(): String = "smartdiff.test.preview"
+        override fun getPolicy(): FileEditorPolicy = FileEditorPolicy.NONE
     }
 
     private class RecordingDiffManager : DiffManager() {

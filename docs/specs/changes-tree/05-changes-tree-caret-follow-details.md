@@ -84,6 +84,11 @@ All of this runs on the EDT, except the summary comparison that already runs in 
    - If the side's content names no file, the other content's `highlightFile` is used to find the change, while the side
      still decides which range is used. This covers a renamed file whose old side has no current file. If neither content
      names a file, the event is ignored.
+   - If the editor is inside the platform's selection-following Changes preview, remember that and use the file row only.
+     The preview is the diff editor tab that contains the editor: either the tree's
+     `DiffDataKeys.EDITOR_TAB_DIFF_PREVIEW` matches the tab's file, or the tab file is named
+     `TabPreviewDiffVirtualFile` or `DiffPreview`. A helper declaration row selects no `Change` there, which closes the
+     preview on 2025.1 and empties it on 2026.3. Normal editors and diff windows keep the declaration mapping.
 3. **Find the change and its row.** Walk the live tree's file nodes in tree order and take the first whose `Change` has a
    matching side path: `afterRevision.file` on the new side, `beforeRevision.file` on the old side, compared by path and
    directory kind, since a content may hold a different `FilePath` implementation. This also handles a moved or renamed
@@ -93,7 +98,8 @@ All of this runs on the EDT, except the summary comparison that already runs in 
    the rebuild; if that rebuild contains only a plain pending row, the next pass sees `Pending` and selects the file row.
    `None` selects the file row and ends the follow. A `Fresh` summary on a row that is not a `SummaryChangeNode` also
    selects the file row and retries, because the summary row is installed by a rebuild; a `Fresh` summary with no `items`
-   falls back to the file row and keeps no retry.
+   falls back to the file row and keeps no retry. In a selection-following preview the target is always the file row,
+   even when the `Fresh` summary names a declaration.
 5. **Find the innermost changed declaration.** Walk the summary's `OutlineItem` tree, from the top level down, with the
    source offset. A row is a candidate only when it is a change itself (`kind == ItemKind.CHANGE` and `tags.isNotEmpty()`);
    groups, candidates, container-only rows and the `File region` row are not. A row contains the caret when its side range
@@ -147,6 +153,19 @@ summary says it was not analyzed, the language has no engine, the file is added 
   is dropped. A later caret move in the editor follows again.
 - If the setting is turned off, a pending follow is cancelled and the tree is left as it is. Turning it on does not move
   the tree until the next caret or editor-selection event.
+
+### Selection-following preview
+
+The platform's single-click Changes preview is a diff editor tab whose tree selection chooses its request. A declaration
+row is a helper node, so selecting one selects no `Change`; the platform then closes the preview on 2025.1 and shows an
+empty `NoDiffRequest` on 2026.3. When the caret is in that preview, following therefore selects the file row and keeps the
+preview open. Normal editors and diff tabs that were opened explicitly keep the declaration mapping.
+
+The service recognises the preview from the diff editor tab that contains the caret editor. `FileEditorManager` gives the
+tab and its `DiffEditorViewerFileEditor`, and the tree's `DiffDataKeys.EDITOR_TAB_DIFF_PREVIEW` gives the platform's
+preview object, whose `previewFile` is compared with the tab's file. For a tool window that does not expose the data key,
+the platform's preview tab names, `TabPreviewDiffVirtualFile` and `DiffPreview`, are the fallback. This check runs only
+for a `Fresh` summary, after the subtree has already been found, so other follow paths are unchanged.
 
 ### Setting
 
@@ -219,8 +238,9 @@ The new test class is `ChangesCaretFollowTest` in `src/test/kotlin/.../ui/change
 tree with the platform's `TreeModelBuilder` as `ChangesSummaryTest` does, uses a recording `DiffManager`, a real focus
 owner behind a fixed `KeyboardFocusManager`, a `DefaultInclusionModel` for the commit count, and a `FixedDataManager` for
 the production viewer lookup. It also opens real two-sided and three-sided diff panels through
-`DiffManager.createRequestPanel`, as `OutlineIntegrationTest` does, for the side mapping, and finds a live tree in a
-temporary Version Control tool window.
+`DiffManager.createRequestPanel`, as `OutlineIntegrationTest` does, for the side mapping, finds a live tree in a
+temporary Version Control tool window, and opens a `TabPreviewDiffVirtualFile` diff editor tab with a real
+`DiffEditorViewerFileEditor` for the preview mapping.
 
 The test seam is internal to the plugin: a `@TestOnly` `followNow(editor, offset)` method runs the same mapping and
 selection path as the debounce timer, and `waitForPendingFollow()` drains the timer and any queued model retry. The test
@@ -238,7 +258,7 @@ language, a file over the size limit and a file with a timed-out or failed summa
 | --- | --- |
 | R1 | `ChangesCaretFollowTest` `test the innermost changed declaration under the caret is selected and the file expands`: a caret in a changed method selects the method, not its class; a caret in a changed class outside its methods selects the class; the file row is expanded and the row is visible |
 | R2 | `ChangesCaretFollowTest` `test the caret outside every changed declaration selects the file row`: a caret in unchanged code of a changed file selects the file row and no declaration row |
-| R3 | `ChangesCaretFollowTest` `test a plain editor maps to the new side range`; `test the old and new sides of a two-sided diff map to their own ranges`; `test the caret in a three-sided diff does not move the Changes tree`; `test a merge viewer leaves the Changes tree alone`; `test the old side uses the other path only when its own content names no file` |
+| R3 | `ChangesCaretFollowTest` `test a plain editor maps to the new side range`; `test the old and new sides of a two-sided diff map to their own ranges`; `test the caret in a three-sided diff does not move the Changes tree`; `test a merge viewer leaves the Changes tree alone`; `test a selection-following preview keeps the file row instead of selecting a declaration`; `test the old side uses the other path only when its own content names no file` |
 | R4 | `SmartDiffSettingsTest` `test defaults` (settings/01 R13, the new setting is on); `ChangesCaretFollowTest` `test the setting turns following off` (settings/01 R15): with the setting off, a caret event leaves the tree selection unchanged; `ChangesCaretFollowTest` `test changing only the follow setting neither clears the summary cache nor rebuilds the tree`, `test outline and merge display changes neither clear the summary cache nor rebuild the tree` and `test an engine default change refreshes and recomputes the tree` (settings/01 R14) |
 | R5 | `ChangesCaretFollowTest` `test following leaves focus and commit inclusion alone with the platform preview off and on`: the editor keeps its real focus owner, the included changes and the commit count are unchanged, with preview off the recording `DiffManager` receives no request, and with preview on only the platform's own preview may open, as for a click |
 | R6 | `ChangesCaretFollowTest` `test following leaves the tree alone while the tree has focus`; `ChangesCaretFollowTest` `test a tree selection is not overwritten by a late caret event`: click a row while a caret follow is pending, then let the timer fire; the clicked row stays; `ChangesCaretFollowTest` `test caret moves are debounced`: several events in a row produce one follow after the delay |
@@ -251,8 +271,9 @@ language, a file over the size limit and a file with a timed-out or failed summa
 
 ### Manual check (outstanding)
 
-Not yet run in a running IDE as of 2026-11-08. The steps below remain required on IntelliJ IDEA 2025.1 and the latest
-release for R1–R10, including the R7 intermediate pending rebuild in step 5 and the R10 hidden-row check in step 6a.
+Not yet run in a running IDE as of 2026-11-08. The R3 preview behavior is recorded in [validation](../../VALIDATION.md); the
+remaining steps below are still required on IntelliJ IDEA 2025.1 and the latest release for R1–R10, including the R7
+intermediate pending rebuild in step 5 and the R10 hidden-row check in step 6a.
 Run this on IntelliJ IDEA 2025.1 and the latest release, in the Local Changes view and in the Commit tool window:
 
 1. Open a modified Java file with at least two changed methods. Move the caret through each changed method, through
@@ -260,6 +281,8 @@ Run this on IntelliJ IDEA 2025.1 and the latest release, in the Local Changes vi
    then the file row, then the class row.
 2. Open the file's two-sided diff and repeat in the new and old editors. Each side selects the row for its own range.
    Open a three-sided diff or merge window and move the caret in each pane; the Changes tree does not move.
+2a. Turn on the platform's single-click Changes preview and move the caret in its editor. The file row stays selected and
+   the preview stays open; the tree does not select a declaration row.
 3. Hold an arrow key and type quickly. The tree follows after the pause, not on every key.
 4. Click another row in the tree while a caret follow is pending. The clicked row stays selected.
 5. Edit a changed method and move the caret before the summary finishes. The old row stays selected while the summary is

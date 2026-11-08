@@ -17,7 +17,9 @@ the tree. This is the reverse of opening a declaration from the tree.
 - **R2** When the caret is in the file but outside every changed declaration, the tree selects the file's row and no
   declaration row.
 - **R3** The caret maps to the [new side](../../GLOSSARY.md#new-side) range in a plain editor and on the new side of a
-  two-sided diff, and to the [old side](../../GLOSSARY.md#old-side) range on the old side.
+  two-sided diff, and to the [old side](../../GLOSSARY.md#old-side) range on the old side. In the platform's
+  selection-following Changes preview, following selects the file row and never a declaration row, which would close or
+  empty the preview.
 - **R4** The setting "Follow the caret in the Changes tree" turns this on and off, and it is on by default.
 - **R5** Following never moves focus out of the editor, opens a diff itself or changes what is included in the commit,
   though the platform's own single-click preview may follow the new selection as it does for any selection.

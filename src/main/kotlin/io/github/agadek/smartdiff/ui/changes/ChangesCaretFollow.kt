@@ -1,6 +1,7 @@
 package io.github.agadek.smartdiff.ui.changes
 
 import com.intellij.diff.FrameDiffTool
+import com.intellij.diff.editor.DiffEditorViewerFileEditor
 import com.intellij.diff.merge.MergeTool
 import com.intellij.diff.tools.util.DiffDataKeys
 import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
@@ -15,6 +16,7 @@ import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.CaretListener
 import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerEvent
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.project.Project
@@ -23,6 +25,7 @@ import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.vcs.FilePath
 import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vcs.changes.ChangesViewModifier
+import com.intellij.openapi.vcs.changes.EditorTabDiffPreview
 import com.intellij.openapi.vcs.changes.ui.ChangesBrowserChangeNode
 import com.intellij.openapi.vcs.changes.ui.ChangesBrowserNode
 import com.intellij.openapi.vcs.changes.ui.ChangesListView
@@ -35,7 +38,6 @@ import io.github.agadek.smartdiff.ui.OutlinePath
 import io.github.agadek.smartdiff.ui.SmartDiffSettings
 import org.jetbrains.annotations.TestOnly
 import java.awt.Component
-import java.awt.Container
 import java.awt.KeyboardFocusManager
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
@@ -69,6 +71,8 @@ class ChangesTreeCaretFollower internal constructor(
     private val treeShowing: (ChangesListView) -> Boolean = { it.isShowing },
     private val viewerOf: (Editor) -> FrameDiffTool.DiffViewer? = ::viewerFromContext,
     private val mergeViewerOf: (Editor) -> MergeTool.MergeViewer? = ::mergeViewerFromContext,
+    private val selectionFollowingPreview: (Editor, ChangesListView) -> Boolean =
+        { editor, tree -> isSelectionFollowingPreview(project, editor, tree) },
     private val logFailure: (Throwable) -> Unit = ::logFollowFailure,
 ) : Disposable {
 
@@ -355,6 +359,9 @@ class ChangesTreeCaretFollower internal constructor(
             is SummarySnapshot.Fresh -> {
                 val summary = snapshot.summary
                 val summaryRow = fileRow as? SummaryChangeNode
+                if (selectionFollowingPreview(editor, tree)) {
+                    return Target.FileRow(summaryRow ?: fileRow, retry = false)
+                }
                 if (!settings.showChangesSummary && !settings.showChangesDeclarations) {
                     return Target.FileRow(fileRow, retry = false)
                 }
@@ -525,16 +532,8 @@ class ChangesTreeCaretFollower internal constructor(
             for (id in listOf(ToolWindowId.VCS, ToolWindowId.COMMIT)) {
                 val toolWindow = manager.getToolWindow(id) ?: continue
                 for (content in toolWindow.contentManager.contents) {
-                    findChangesTree(content.component)?.let { return it }
+                    ChangesTreeSetup.findChangesTrees(content.component).firstOrNull()?.let { return it }
                 }
-            }
-            return null
-        }
-
-        private fun findChangesTree(component: Component?): ChangesListView? {
-            if (component is ChangesListView) return component
-            if (component is Container) {
-                for (child in component.components) findChangesTree(child)?.let { return it }
             }
             return null
         }
@@ -557,6 +556,32 @@ internal fun viewerFromContext(editor: Editor): FrameDiffTool.DiffViewer? =
 /** The merge viewer of [editor], which marks a merge window that following leaves alone. */
 internal fun mergeViewerFromContext(editor: Editor): MergeTool.MergeViewer? =
     DiffDataKeys.MERGE_VIEWER.getData(DataManager.getInstance().getDataContext(editor.contentComponent))
+
+/**
+ * Whether [editor] belongs to the platform's selection-following Changes preview. Selecting a declaration row there
+ * selects a helper node with no change, which closes the preview on 2025.1 and empties it on 2026.3.
+ */
+internal fun isSelectionFollowingPreview(project: Project, editor: Editor, tree: ChangesListView): Boolean {
+    val file = diffEditorFile(project, editor) ?: return false
+    val preview = DiffDataKeys.EDITOR_TAB_DIFF_PREVIEW.getData(DataManager.getInstance().getDataContext(tree))
+    if (preview is EditorTabDiffPreview && preview.previewFile == file) return true
+    return isPreviewVirtualFile(file)
+}
+
+/** The platform's Changes preview tab; the name is the one both target releases give the preview file. */
+internal fun isPreviewVirtualFile(file: VirtualFile?): Boolean =
+    file != null && file.name in PREVIEW_VIRTUAL_FILE_NAMES
+
+/** The diff editor tab that contains [editor], if any. */
+private fun diffEditorFile(project: Project, editor: Editor): VirtualFile? {
+    val manager = FileEditorManager.getInstance(project)
+    val selected = manager.selectedEditor as? DiffEditorViewerFileEditor
+    if (selected != null && editor in selected.embeddedEditors) return selected.file
+    return manager.allEditors.filterIsInstance<DiffEditorViewerFileEditor>()
+        .firstOrNull { editor in it.embeddedEditors }?.file
+}
+
+private val PREVIEW_VIRTUAL_FILE_NAMES = setOf("TabPreviewDiffVirtualFile", "DiffPreview")
 
 private fun logFollowFailure(error: Throwable) {
     Logger.getInstance(ChangesTreeCaretFollower::class.java).warn("Cannot follow the caret in the Changes tree", error)
