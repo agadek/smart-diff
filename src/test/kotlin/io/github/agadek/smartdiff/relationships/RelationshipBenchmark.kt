@@ -1611,7 +1611,6 @@ object RelationshipBenchmark {
         val json = mapOf(
             "engine" to mapOf("id" to DeclarationEngine.ID.toString(), "version" to DeclarationEngine.VERSION),
             "referencePassVersion" to report.referencePassVersion,
-            "referencePassVersion" to report.referencePassVersion,
             "ide" to ApplicationInfo.getInstance().build.asStringWithoutProductCode(),
             "scalaPlugin" to scalaVersion(),
             "smoke" to report.smoke,

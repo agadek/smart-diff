@@ -98,7 +98,9 @@ class KotlinReferenceResolver : ReferenceResolver {
             val range = element.textRange
             if (range.startOffset <= usage.start && range.endOffset >= usage.end) {
                 when (element) {
-                    is KtCallExpression, is KtQualifiedExpression -> chain = element
+                    // The smallest call, promoted once to its qualified expression so a qualifier change stays visible.
+                    is KtCallExpression -> if (chain == null) chain = element
+                    is KtQualifiedExpression -> if (chain == null || chain is KtCallExpression) chain = element
                     is KtTypeReference -> if (type == null) type = element
                     is KtExpression -> if (smallest == null) smallest = element
                     is KtImportDirective -> if (member == null) member = element
