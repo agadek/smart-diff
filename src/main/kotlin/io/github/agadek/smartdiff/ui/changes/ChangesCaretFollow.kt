@@ -425,10 +425,14 @@ class ChangesTreeCaretFollower internal constructor(
         }
         if (viewer is OnesideDiffViewer<*>) {
             // An added or deleted file is shown on the only side that has a revision: the platform picks the non-empty
-            // content and exposes it as the viewer's side.
+            // content and exposes it as the viewer's side. The platform's content can have no highlight file, so fall
+            // back to the editor's own document for the file while the viewer still decides the side.
             val side = if (viewer.side.isLeft) Side.OLD else Side.NEW
             val content = viewer.side.select(viewer.request.contents)
-            val file = (content as? DocumentContent)?.highlightFile ?: return null
+            val file = (content as? DocumentContent)?.highlightFile
+                ?: editor.virtualFile
+                ?: FileDocumentManager.getInstance().getFile(editor.document)
+                ?: return null
             return SideFile(side, file, fallback = false)
         }
         // A plain editor names one file but not its side. A deleted file, or a diff opened without DIFF_VIEWER, names only
@@ -440,21 +444,30 @@ class ChangesTreeCaretFollower internal constructor(
     private fun findFileRow(tree: ChangesListView, sideFile: SideFile): ChangesBrowserChangeNode? {
         val root = tree.model.root as? ChangesBrowserNode<*> ?: return null
         val nodes = root.depthFirstEnumeration()
+        // A plain editor has no side yet. Prefer a change whose new revision is the file, so a rename's old path does not
+        // win over the file that is now at that path; only fall back to a before revision when no new revision names it.
+        var beforeFallback: ChangesBrowserChangeNode? = null
         while (nodes.hasMoreElements()) {
             val node = nodes.nextElement() as? ChangesBrowserChangeNode ?: continue
             val change = node.userObject as? Change ?: continue
-            val matches = when (sideFile.side) {
-                null -> samePath(change.afterRevision?.file, sideFile.file) ||
-                    samePath(change.beforeRevision?.file, sideFile.file)
-                Side.NEW -> samePath(change.afterRevision?.file, sideFile.file) ||
+            when (sideFile.side) {
+                null -> {
+                    if (samePath(change.afterRevision?.file, sideFile.file)) return node
+                    if (beforeFallback == null && samePath(change.beforeRevision?.file, sideFile.file)) beforeFallback = node
+                }
+                Side.NEW -> if (samePath(change.afterRevision?.file, sideFile.file) ||
                     (sideFile.fallback && samePath(change.beforeRevision?.file, sideFile.file))
-                Side.OLD -> samePath(change.beforeRevision?.file, sideFile.file) ||
+                ) {
+                    return node
+                }
+                Side.OLD -> if (samePath(change.beforeRevision?.file, sideFile.file) ||
                     (sideFile.fallback && samePath(change.afterRevision?.file, sideFile.file))
+                ) {
+                    return node
+                }
             }
-            // An added or deleted file names only one side; the other content found it, the side still picks the range.
-            if (matches) return node
         }
-        return null
+        return beforeFallback
     }
 
     /** The same file by path and kind; a revision path may be a different [FilePath] implementation. */
