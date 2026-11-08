@@ -26,7 +26,7 @@ Non-goals for this item:
 
 - Extraction across files (a helper moved to another file). The engine compares one file at a time (§1); this needs the multi-file view first.
 - Extracting into a local function, a lambda, or a variable. They are not declarations, so the change stays inside the changed declaration.
-- Inline Method, the reverse refactoring. It uses the same detector with the sides swapped and is listed under [Later](#11-later).
+- Inline Method, the reverse refactoring. It shipped separately as [inlining detection](specs/relationships/05-inlining-detection.md), using the same detector with the sides swapped.
 - Proving that the extracted code behaves the same. "Extracted" means the tokens match, as "formatting-only" does.
 
 ## 3. Behaviour
@@ -203,7 +203,6 @@ The results and the chosen thresholds are in VALIDATION.md.
 
 ## 11. Later
 
-- **Inline detection:** the reverse, a removed method whose body now sits inside a changed declaration, labelled `inlined into …`. The same detector with the sides swapped.
 - **Cross-file extraction,** once the multi-file view can compare more than one file at a time.
 - **Extract and modify:** showing the remaining token differences between the origin and the extracted body, through `details`, once fine-grained differencing exists ([roadmap](ROADMAP.md#fine-grained-differencing)).
 

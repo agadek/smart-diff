@@ -1,6 +1,6 @@
 # Inlining detection
 
-Status: accepted, 2026-11-08
+Status: implemented, 2026-11-08
 
 **Description:** Links a [removed](../../GLOSSARY.md#removed) method or function to the declaration its code was inlined into, the reverse of [extraction detection](../declarations/05-extraction-detection.md).
 

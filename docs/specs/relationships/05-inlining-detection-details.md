@@ -1,6 +1,6 @@
 # Inlining detection: details
 
-Status: accepted, 2026-11-08
+Status: implemented, 2026-11-08
 
 Feature: [Inlining detection](05-inlining-detection.md)
 
@@ -70,11 +70,12 @@ the same `MAX_WORK` constant, one budget each, so a file costs at most twice as 
 
 ### Computed fields
 
-- A removed node whose code was inlined gets `inlinedInto: List<Subject>`, one target per link, and a details
+- A removed node whose code was inlined gets `inlinedInto: List<Inlined>`, one target per link, and a details
   `RangePair(null, newRange)` for each link.
-- A matched target gets `inlinedFrom: List<Origin>`, one removed declaration per link, and a details
-  `RangePair(null, newRange)` for each link. The `Origin`'s `declarationRange` is the removed declaration's old range and
-  its `range` is the old range of the inlined code.
+- A matched target gets `inlinedFrom: List<Inlined>`, one removed declaration per link, and a details
+  `RangePair(null, newRange)` for each link.
+- `Inlined(subject, declarationRange, oldRange, newRange)` names the other declaration and the inlined code's ranges on
+  both sides. `declarationRange` identifies the other declaration's node, because a subject is not unique in a file.
 - Both fields are computed from the same high-confidence `INLINE` relationships, so they agree. A low-confidence link
   would set neither field, but every inlining is high.
 - The outline uses `inlinedInto` for the note `inlined into …`, `inlinedFrom` for `code inlined from …`, and the details
@@ -105,23 +106,23 @@ Java, Kotlin and Scala 2/3 providers already supply, so detection works the same
 
 | Requirement | Check |
 | --- | --- |
-| R1 | `InliningDetectionTest` `a removed helper is linked to the changed caller it was inlined into`; golden fixtures for Java, Kotlin, Scala 2 and Scala 3 |
-| R2 | `InliningDetectionTest` `the target is the changed declaration that gained the code` |
-| R3 | `InliningDetectionTest` `code the target already had is not an inlining` |
-| R4 | `InliningDetectionTest` `reformatted inlined code is linked`; the `inline-method-reformatted` golden fixtures |
-| R5 | `InliningDetectionTest` `a removed body under ten tokens is not linked`; the `inline-method-short-body` golden fixtures |
-| R6 | `OutlineModelTest` `an inlining names both ends and lists at most three names` |
-| R7 | `OutlineModelTest` `an inlining names both ends and lists at most three names` |
+| R1 | `InliningDetectionTest` `a removed helper is linked to the changed caller it was inlined into`; the `inline-method-one` golden fixtures for Java, Kotlin, Scala 2 and Scala 3 |
+| R2 | `InliningDetectionTest` `the target is the changed declaration that gained the code`; `a removed helper is linked to the changed caller it was inlined into` |
+| R3 | `InliningDetectionTest` `code the target already had is not an inlining`; `code from an unchanged declaration is not an inlining` |
+| R4 | `InliningDetectionTest` `reformatted inlined code is linked`; `a few changed tokens inside the inlined code still link`; the `inline-method-reformatted` golden fixtures |
+| R5 | `InliningDetectionTest` `a removed body under ten tokens is not linked`; the `inline-method-short` golden fixtures |
+| R6 | `OutlineModelTest` `an inlining names both ends and lists at most three names`; `OutlineIntegrationTest` `an inlined helper shows both notes and frames the new side`; the `inline-method-*` golden fixtures |
+| R7 | `OutlineModelTest` `an inlining names both ends and lists at most three names`; `OutlineIntegrationTest` `an inlined helper shows both notes and frames the new side` |
 | R8 | `OutlineModelTest` `an inlining names both ends and lists at most three names`: a fifth link ends in `+2 more` |
-| R9 | `OutlineModelTest` `an inlining frames the inlined code on the new side` |
-| R10 | `OutlineModelTest` `selecting a target highlights the code inlined into it` |
-| R11 | `InliningDetectionTest` `one helper inlined into two callers links both`; `two helpers inlined into one target link both` |
-| R12 | `RelationshipModelTest` `R3 kinds are one or more`; `RelationshipChecks.inliningFieldsAgree` runs for every engine |
-| R13 | `OutlineModelTest` `the summary counts an inlining as inlined, not removed` |
-| R14 | `OutlineModelTest` `an inlining is hidden with removed changes`; `ChangesTreeFilterTest` |
-| R15 | Golden fixtures pass with detection on and off; `RelationshipBenchmark` re-runs the recorded baseline |
-| R16 | `InliningDetectionTest` and benchmark fixtures in Java, Kotlin, Scala 2 and Scala 3 |
-| R17 | `InliningDetectionTest` `detection is skipped above the work limit and the result is still analyzed` |
+| R9 | `OutlineModelTest` `an inlining frames the inlined code on the new side`; `OutlineIntegrationTest` `an inlined helper shows both notes and frames the new side` |
+| R10 | `OutlineModelTest` `an inlining frames the inlined code on the new side`: the target's details highlight the new range; `OutlineIntegrationTest` `an inlined helper shows both notes and frames the new side` |
+| R11 | `InliningDetectionTest` `one helper inlined into two callers links both`; `two helpers inlined into one target link both`; the `inline-method-two-callers` and `inline-method-two-helpers` golden fixtures |
+| R12 | `RelationshipModelTest` `R3 kinds are one or more`; `RelationshipChecks.inliningFieldsAgree` runs for every engine through `ComparisonEngineContract` |
+| R13 | `OutlineModelTest` `the summary counts an inlining as inlined, not removed`; `the summary counts every label in a fixed order` |
+| R14 | `OutlineModelTest` `an inlining is hidden with removed changes` |
+| R15 | Golden fixtures pass with detection on and off; `RelationshipBenchmark` re-runs the recorded baseline with no changed existing relationship |
+| R16 | `InliningDetectionTest` `declarations without token offsets take no part`; the `inline-method-*` golden fixtures and benchmark cases in Java, Kotlin, Scala 2 and Scala 3 |
+| R17 | `InliningDetectionTest` `detection is skipped above the work limit` and `detection checks cancellation`; the result stays `ANALYZED` |
 | R18 | `RelationshipBenchmarkTest` `inlining` cases in all four corpora, `no-new-wrong-pairs` against the baseline |
-| R19 | `InliningDetectionTest` `an inlining is a high-confidence relationship` |
-| R20 | `InliningDetectionTest` `a renamed target keeps its labels and the inlining` |
+| R19 | `InliningDetectionTest` `a removed helper is linked to the changed caller it was inlined into`: the relationship is `HIGH` |
+| R20 | `InliningDetectionTest` `an inlining is its own relationship when the target moved`; `an inlining into a renamed declaration is a separate link` |

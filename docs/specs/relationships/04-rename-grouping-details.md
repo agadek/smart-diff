@@ -141,7 +141,7 @@ R4 groups only high-confidence renames. The policy is the one the request alread
 
 **The 2026-11-07 run is the full usage gate.** R18 needs usage labels; every rename in every language is reviewed, and all 16 usage-grouping fixtures are part of the corpus.
 
-The corpus has 440 cases: 320 checked-in cases and 120 real commits (30 per language), with 108 labelled rename relationships. The engine reports 105 of them (85 high, 20 medium, 0 low) and misses 3, each listed in the report. The 16 usage-grouping fixture folders are in `relationships-corpus-full.txt`, four per language, because each contains one high rename. The earlier 2026-11-07 step-1 run had 428 cases (the existing 424 plus four Java fixtures) and was a smoke run for this gate.
+The usage gate corpus has 440 cases: 320 checked-in cases and 120 real commits (30 per language), with 108 labelled rename relationships. The later [inlining detection](05-inlining-detection.md) run adds eight checked-in inlining cases, for 448 cases, without changing a rename label. The engine reports 105 of them (85 high, 20 medium, 0 low) and misses 3, each listed in the report. The 16 usage-grouping fixture folders are in `relationships-corpus-full.txt`, four per language, because each contains one high rename. The earlier 2026-11-07 step-1 run had 428 cases (the existing 424 plus four Java fixtures) and was a smoke run for this gate.
 
 The label gains a required `usages` list on every rename relationship:
 

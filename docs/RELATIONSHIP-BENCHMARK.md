@@ -294,7 +294,7 @@ The report must contain:
 - §5.4 already defines coverage over differing characters, so Q9 is answered or §5.4 is provisional; say which.
 - "Precision does not fall below the baseline" fails on a single extra false positive in a small corpus. Gate on zero new wrong pairs plus a tolerance, or set a minimum corpus size (Q3).
 - Test data is organized by language (`java`, `kotlin`, `scala2`, `scala3`); fixtures go under `<language>/relationships/`.
-- Inlining is not implemented, so its recall starts at zero; state that its gate applies from STRUCTURAL-RELATIONSHIPS.md phase 5.
+- Inlining is implemented (2026-11-08), so its gate applies from STRUCTURAL-RELATIONSHIPS.md phase 5; its run is in [VALIDATION.md](VALIDATION.md#2026-11-08-inlining-detection).
 - §7 runs a fast subset on every pull request while Q10 asks whether to. Pick one. Done 2026-10-30.
 
 > **Model author:** OpenAI Codex (GPT-6) · 2026-10-30. Review comments; these do not change benchmark requirements.
