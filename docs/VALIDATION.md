@@ -202,7 +202,9 @@ rename the engine does not pair; its correct usage list stays in the label, so t
 The engine result is unchanged: the pass only adds reference evidence, and no existing label or classification moved.
 
 The report records `GROUPED=18`, `NOT_GROUPED=416` and `NONE=6`, with no `TIMED_OUT`. The pass median is 0 ms, p95 5 ms
-and slowest 70 ms of the 1000 ms budget (R17). The report is in `build/reports/smartdiff-relationships/`.
+and slowest 70 ms of the 1000 ms budget (R17). The report is in `build/reports/smartdiff-relationships/`. A rerun on
+2026-11-08 after rebasing onto the step-1 platform-cancellation fix (`25f6454`) has the same counts and gate result, with
+p95 5 ms and slowest 67 ms.
 
 **Usage review.** The Kotlin and Scala rename labels were generated from the pass, then reviewed against both sides:
 all 79 Kotlin and Scala labels that carry a rename relationship (67 existing, including the real commits, and 12 new
