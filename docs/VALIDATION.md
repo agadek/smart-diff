@@ -115,16 +115,18 @@ This run fixes the two failures recorded in the PR #131 manual check: a deleted 
 diff did not select its row (R8), and a preview caret event replaced a follow that was waiting for a summary (R7/R11).
 The feature remains `implemented` and the full R1–R11 manual check is still outstanding.
 
-**Automated evidence.** `./gradlew clean buildPlugin check` passes, including all 34 `ChangesCaretFollowTest` tests.
-Four new regressions name the requirements:
+**Automated evidence.** `./gradlew clean buildPlugin check` passes, including all 35 `ChangesCaretFollowTest` tests.
+Five new regressions name the requirements:
 
 - R8: `test an added file in a one-sided diff selects only its file row` and `test a deleted file in a one-sided diff
-  selects only its file row`, using a real `SimpleOnesideDiffViewer` and, for the deleted file, a plain editor without
-  a `DIFF_VIEWER`.
+  selects only its file row`, using a real `SimpleOnesideDiffViewer` whose content has a null `highlightFile` as the
+  platform's `ContextReferentDocumentContent` does, and, for the deleted file, a plain editor without a `DIFF_VIEWER`.
+- R3: `test a plain editor prefers the change whose new revision is the file over a rename's old path`.
 - R7/R11: `test a preview caret event does not replace a pending summary follow` and `test an unfocused editor's caret
   event does not replace a pending summary follow`.
 
-All four fail with the production change reverted and pass with it.
+All pass on this head. The three one-sided and rename regressions fail with `4d3c6fb` reverted; the two R7/R11
+regressions fail with `2debf54` reverted.
 
 **Running-IDE probe, IC 2025.1.3 (`IC-251.26927.53`, `runIde` sandbox).** A temporary probe, removed before this
 change was committed, opened a Git project with a changed `Cart.java` (a changed class header, two changed methods and
@@ -136,7 +138,9 @@ in the Commit tool window.
   a three-sided diff that left the tree alone, and the platform editor-tab preview kept the file row and stayed open),
   R4 off, R5 (focus owner and included changes unchanged), and R6 click-during-follow.
 - The probe found the real `SimpleOnesideDiffViewer` for both the added and the deleted file, which is the class the
-  fix handles. Its caret moved to the file row instead of a declaration.
+  fix handles. Its caret moved to the file row instead of a declaration. The follow-up found that the platform's
+  deleted-file content has a null `highlightFile`; the fallback to the editor's own file and the null-highlight test
+  above cover it.
 - The probe harness could not keep the IDE window's focus owner non-null, so several later checks (R2, R4 on, R6
   debounce, R7, R10, the unsupported and too-large rows) are not reliable results and are not claimed as passes. The
   full R1–R11 table in all four setups, including the IC Local Changes splitter R7 race repeated at least 6 times,

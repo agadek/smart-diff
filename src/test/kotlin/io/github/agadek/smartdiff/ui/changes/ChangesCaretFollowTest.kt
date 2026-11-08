@@ -5,6 +5,7 @@ import com.intellij.diff.DiffExtension
 import com.intellij.diff.DiffManager
 import com.intellij.diff.DiffRequestPanel
 import com.intellij.diff.FrameDiffTool
+import com.intellij.diff.contents.DocumentContent
 import com.intellij.diff.chains.DiffRequestChain
 import com.intellij.diff.chains.SimpleDiffRequestChain
 import com.intellij.diff.editor.DiffEditorViewerFileEditor
@@ -494,15 +495,18 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
         val request = SimpleDiffRequest(
             "AddedOneside.java",
             DiffContentFactory.getInstance().createEmpty(),
-            DiffContentFactory.getInstance().create(project, NEW_TEXT, addedFile),
+            contentWithoutHighlight(addedFile),
             "old",
             "new",
         )
         val viewer = openViewer(request)
         assertTrue("the platform shows an added file one-sided", viewer is SimpleOnesideDiffViewer)
+        val oneside = viewer as SimpleOnesideDiffViewer
+        val content = oneside.side.select(oneside.request.contents) as DocumentContent
+        assertNull("the platform content has no highlight file", content.highlightFile)
         val follower = follower(tree, viewer = viewer)
 
-        follower.followNow((viewer as SimpleOnesideDiffViewer).editor, NEW_TEXT.indexOf("return 2"))
+        follower.followNow(oneside.editor, NEW_TEXT.indexOf("return 2"))
 
         assertSame("an added file in a one-sided diff gets only its file row", addedRow, tree.selectionPath?.lastPathComponent)
     }
@@ -516,16 +520,19 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
         val deletedRow = fileRow(tree, deleted)
         val request = SimpleDiffRequest(
             "DeletedOneside.java",
-            DiffContentFactory.getInstance().create(project, OLD_TEXT, deletedFile),
+            contentWithoutHighlight(deletedFile),
             DiffContentFactory.getInstance().createEmpty(),
             "old",
             "new",
         )
         val viewer = openViewer(request)
         assertTrue("the platform shows a deleted file one-sided", viewer is SimpleOnesideDiffViewer)
+        val oneside = viewer as SimpleOnesideDiffViewer
+        val content = oneside.side.select(oneside.request.contents) as DocumentContent
+        assertNull("the platform content has no highlight file", content.highlightFile)
         val follower = follower(tree, viewer = viewer)
 
-        follower.followNow((viewer as SimpleOnesideDiffViewer).editor, OLD_TEXT.indexOf("return 1"))
+        follower.followNow(oneside.editor, OLD_TEXT.indexOf("return 1"))
 
         assertSame("a deleted file in a one-sided diff gets only its file row", deletedRow, tree.selectionPath?.lastPathComponent)
 
@@ -539,6 +546,30 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
         plainFollower.followNow(plainEditor, OLD_TEXT.indexOf("return 1"))
 
         assertSame("a deleted file without a diff viewer gets only its file row", plainRow, plainTree.selectionPath?.lastPathComponent)
+    }
+
+    fun `test a plain editor prefers the change whose new revision is the file over a rename's old path`() {
+        // changes-tree/05-changes-tree-caret-follow R3, R8
+        maskEngines(RangeEngine())
+        val shared = myFixture.addFileToProject("Shared.java", NEW_TEXT).virtualFile
+        val renamed = myFixture.addFileToProject("Renamed.java", NEW_TEXT).virtualFile
+        val rename = Change(
+            SimpleContentRevision(OLD_TEXT, VcsUtil.getFilePath(shared), "1"),
+            SimpleContentRevision(NEW_TEXT, VcsUtil.getFilePath(renamed), "2"),
+        )
+        val added = Change(null, SimpleContentRevision(NEW_TEXT, VcsUtil.getFilePath(shared), "3"))
+        val tree = buildTree(listOf(rename, added))
+        val addedRow = fileRow(tree, added)
+        myFixture.openFileInEditor(shared)
+        val editor = myFixture.editor
+
+        follower(tree) { editor.contentComponent }.followNow(editor, NEW_TEXT.indexOf("return 2"))
+
+        assertSame(
+            "the file's new revision wins over a rename's old path",
+            addedRow,
+            tree.selectionPath?.lastPathComponent,
+        )
     }
 
     fun `test a pending file selects only the file row`() {
@@ -1094,6 +1125,17 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
     private fun configuredFile(name: String, text: String): Pair<Editor, VirtualFile> {
         val psi = myFixture.configureByText(name, text)
         return myFixture.editor to psi.virtualFile
+    }
+
+    /** A content whose document is the file's but whose highlight file is null, as the platform's deleted-file content is. */
+    private fun contentWithoutHighlight(file: VirtualFile): DocumentContent {
+        val delegate = DiffContentFactory.getInstance().create(
+            project,
+            com.intellij.openapi.fileEditor.FileDocumentManager.getInstance().getDocument(file)!!,
+        )
+        return object : DocumentContent by delegate {
+            override fun getHighlightFile(): VirtualFile? = null
+        }
     }
 
     private fun change(file: VirtualFile, oldText: String = OLD_TEXT, newText: String = NEW_TEXT): Change =
