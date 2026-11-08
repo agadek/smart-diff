@@ -28,8 +28,11 @@ data class Relationship(
             "relationship endpoints must be sorted by range start: $this"
         }
         require(kinds.toList() == kinds.sortedBy { it.ordinal }) { "relationship kinds must be in enum order: $this" }
-        require(evidence.toList() == evidence.sortedBy { EvidenceOrder.of(it) }) {
+        require(evidence.toList() == evidence.sortedWith(EvidenceOrder)) {
             "relationship evidence must be in type order: $this"
+        }
+        require(RelationshipKind.RENAME in kinds || evidence.none { it is Evidence.Reference }) {
+            "reference evidence is allowed only on a RENAME relationship: $this"
         }
     }
 }
@@ -81,6 +84,15 @@ sealed interface Evidence {
     data class Position(val oldIndex: Int, val newIndex: Int) : Evidence
 
     /**
+     * One usage that changed only to follow the rename (relationships/04 R12): [symbol] is the new-side declaration the
+     * usage resolves to, and the two ranges are the usage on each side. It never adds an endpoint.
+     *
+     * Only a [RelationshipKind.RENAME] relationship carries it, after [Position] and before [Score], and several are
+     * ordered by old range start, then new range start.
+     */
+    data class Reference(val symbol: Subject.Declaration, val oldRange: TextRange, val newRange: TextRange) : Evidence
+
+    /**
      * The engine's numeric score, kept for debugging and the benchmark (R6). It is never shown as a percentage, and a
      * [Confidence] is what the API exposes.
      */
@@ -88,13 +100,23 @@ sealed interface Evidence {
 }
 
 /** The fixed order of evidence types that a [Relationship] follows (R19). */
-internal object EvidenceOrder {
+internal object EvidenceOrder : Comparator<Evidence> {
     fun of(evidence: Evidence): Int = when (evidence) {
         is Evidence.Name -> 0
         is Evidence.Content -> 1
         is Evidence.Structure -> 2
         is Evidence.Position -> 3
-        is Evidence.Score -> 4
+        is Evidence.Reference -> 4
+        is Evidence.Score -> 5
+    }
+
+    override fun compare(first: Evidence, second: Evidence): Int {
+        val byType = of(first).compareTo(of(second))
+        if (byType != 0) return byType
+        if (first is Evidence.Reference && second is Evidence.Reference) {
+            return compareValuesBy(first, second, { it.oldRange.start }, { it.newRange.start })
+        }
+        return 0
     }
 }
 

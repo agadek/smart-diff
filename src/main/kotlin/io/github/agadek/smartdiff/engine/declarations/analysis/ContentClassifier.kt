@@ -3,7 +3,7 @@ package io.github.agadek.smartdiff.engine.declarations.analysis
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.declarations.model.Token
 import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
-import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy
+import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 
 /**
  * Classifies the own source of a matched declaration, or of the file region (technical specification §8). The first

@@ -8,6 +8,7 @@ expected:
     - kinds: [RENAME]
       old: { path: "class Basket", kind: METHOD, name: "price", signature: "(int)" }
       new: { path: "class Basket", kind: METHOD, name: "cost", signature: "(long)" }
+      usages: []
   changes:
     - subject: { path: "", kind: CLASS, name: "Basket", signature: null }
       presence: MATCHED

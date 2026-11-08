@@ -13,6 +13,7 @@ expected:
     - kinds: [RENAME]
       old: { path: "class NumberUtilsTest", kind: METHOD, name: "TestLang747", signature: "" }
       new: { path: "class NumberUtilsTest", kind: METHOD, name: "testLang747", signature: "" }
+      usages: []
   changes:
     - subject: { path: "class NumberUtilsTest", kind: METHOD, name: "testLang747", signature: "" }
       presence: MATCHED

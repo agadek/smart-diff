@@ -13,6 +13,7 @@ expected:
     - kinds: [RENAME]
       old: { path: "class JsonUtf8Reader", kind: METHOD, name: "skipTo", signature: "String" }
       new: { path: "class JsonUtf8Reader", kind: METHOD, name: "skipToEndOfBlockComment", signature: "" }
+      usages: []
   changes:
     - subject: { path: "class JsonUtf8Reader", kind: FIELD, name: "CLOSING_BLOCK_COMMENT", signature: null }
       presence: ADDED

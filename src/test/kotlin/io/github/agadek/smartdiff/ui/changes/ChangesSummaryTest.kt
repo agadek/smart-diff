@@ -44,12 +44,18 @@ import com.intellij.util.ThreeState
 import com.intellij.util.ui.UIUtil
 import com.intellij.vcsUtil.VcsUtil
 import io.github.agadek.smartdiff.engine.api.Cancellation
+import io.github.agadek.smartdiff.engine.api.ChangeNode
+import io.github.agadek.smartdiff.engine.api.Content
+import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.api.Limits
+import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.Status
+import io.github.agadek.smartdiff.engine.api.Subject
+import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory
 import io.github.agadek.smartdiff.ui.OutlineController
 import io.github.agadek.smartdiff.ui.OutlinePath
@@ -284,6 +290,24 @@ class ChangesSummaryTest : BasePlatformTestCase() {
         assertEquals("not analyzed: analysis failed", ChangesSummaryService.summary(failed("engine test failed: boom")))
         assertEquals("not analyzed: analysis failed", ChangesSummaryService.summary(failed(null)))
         assertNull(ChangesSummaryService.summary(ComparisonResult(engine, "1", Status.UNSUPPORTED)))
+    }
+
+    fun `test relationships 04 R19 the changes tree summary has no usage note`() {
+        // relationships/04-rename-grouping R19
+        val engine = EngineId("test")
+        val renamed = ChangeNode(
+            Subject.Declaration(DeclarationKind.METHOD, "sum", ""), TextRange(0, 1), TextRange(0, 1), Presence.MATCHED,
+            renamedFrom = Subject.Declaration(DeclarationKind.METHOD, "total", ""),
+        )
+        val changed = ChangeNode(Subject.Declaration(DeclarationKind.METHOD, "twice", ""), TextRange(2, 3), TextRange(2, 3), Presence.MATCHED, content = Content.CHANGED)
+        val result = ComparisonResult(engine, "1", Status.ANALYZED, changes = listOf(renamed, changed))
+
+        val summary = ChangesSummaryService.summary(result)
+
+        assertNotNull(summary)
+        assertFalse(summary!!.contains("usage"))
+        assertFalse(summary.contains("usages renamed"))
+        assertEquals("1 changed", summary.substringBefore(" ·").trim())
     }
 
     fun `test a file over the size limit says it was not analyzed`() {

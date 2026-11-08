@@ -29,6 +29,8 @@ abstract class ComparisonEngineContractTest {
 
     @Test fun `relationship ranges lie inside their side`() = contract.`relationship ranges lie inside their side`()
 
+    @Test fun `references name a new endpoint and only a rename`() = contract.`references name a new endpoint and only a rename`()
+
     @Test fun `extraction fields agree and no relationship repeats`() = contract.`extraction fields agree and no relationship repeats`()
 
     @Test fun `relationships are in a fixed order`() = contract.`relationships are in a fixed order`()

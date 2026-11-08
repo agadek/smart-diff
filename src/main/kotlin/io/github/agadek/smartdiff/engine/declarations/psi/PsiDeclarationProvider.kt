@@ -13,7 +13,7 @@ import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.declarations.model.Declaration
 import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
 import io.github.agadek.smartdiff.engine.declarations.model.FileRegion
-import io.github.agadek.smartdiff.engine.declarations.model.WhitespacePolicy
+import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 
 /** What a provider says about a PSI element that is a declaration (technical specification §6.4, §6.5, §6.8). */
 class DeclarationInfo(

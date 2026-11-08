@@ -44,6 +44,7 @@ import javax.swing.tree.TreeSelectionModel
 class OutlinePanel internal constructor(private val controller: OutlineController) : JPanel(BorderLayout()) {
 
     internal val summary = JBLabel()
+    internal val usageNote = JBLabel()
     internal val banner = JBLabel("Some source was not analyzed; see the Unanalyzed group.", AllIcons.General.Warning, SwingConstants.LEADING)
     internal val engines = ComboBox<ComparisonEngine>()
     internal val tree = Tree(DefaultTreeModel(DefaultMutableTreeNode()))
@@ -103,12 +104,18 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         }
         val header = JPanel(BorderLayout()).apply {
             border = JBUI.Borders.empty(2, 6, 2, 0)
-            add(summary, BorderLayout.CENTER)
+            add(JPanel(BorderLayout()).apply {
+                isOpaque = false
+                add(summary, BorderLayout.NORTH)
+                add(usageNote, BorderLayout.SOUTH)
+            }, BorderLayout.CENTER)
             add(actions, BorderLayout.EAST)
             add(banner, BorderLayout.SOUTH)
         }
         banner.isVisible = false
         banner.border = JBUI.Borders.emptyTop(2)
+        usageNote.foreground = UIUtil.getContextHelpForeground()
+        usageNote.isVisible = false
 
         tree.isRootVisible = false
         tree.showsRootHandles = true
@@ -158,6 +165,7 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         controller.navigator.clear()
         absence.text = ""
         banner.isVisible = false
+        usageNote.isVisible = false
         when (state) {
             OutlineState.Hidden -> {
                 summary.text = ""
@@ -172,6 +180,8 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
                 Status.ANALYZED, Status.PARTIAL -> {
                     summary.text = state.summary
                     banner.isVisible = state.result.status == Status.PARTIAL
+                    usageNote.text = state.usageNote.orEmpty()
+                    usageNote.isVisible = state.usageNote != null
                     setTree(state.items)
                     tree.emptyText.text = if (state.hiddenCount > 0) "All changes are hidden by the filter" else "No structural changes"
                     (body.layout as CardLayout).show(body, TREE)
@@ -233,6 +243,13 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
 
     internal fun selectedItem(): OutlineItem? =
         (tree.selectionPath?.lastPathComponent as? DefaultMutableTreeNode)?.userObject as? OutlineItem
+
+    /** The selected row by title and ancestors, so it can be selected again after the grouped result replaces the model. */
+    internal fun selectedPath(): OutlinePath? {
+        val path = tree.selectionPath ?: return null
+        val items = path.path.drop(1).mapNotNull { (it as? DefaultMutableTreeNode)?.userObject as? OutlineItem }
+        return if (items.isEmpty()) null else OutlinePath.of(items)
+    }
 
     private fun select(item: OutlineItem?) {
         controller.navigator.select(item)
