@@ -1,10 +1,16 @@
 class Invoice {
-    String render(String name) {
-        return heading(name) + "!";
+    String render(String name, int count) {
+        return heading(name, count) + "!";
     }
 
-    private String heading(String name) {
-        String h = "Report: " + name;
-        return h;
+    String summary(String name, int count) {
+        return heading(name, count) + "?";
+    }
+
+    private String heading(String name, int count) {
+        StringBuilder text = new StringBuilder("Invoice: ");
+        text.append(name).append(count);
+        text.append(" lines");
+        return text.toString();
     }
 }

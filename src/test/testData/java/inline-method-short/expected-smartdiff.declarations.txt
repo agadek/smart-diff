@@ -1,0 +1,4 @@
+status: ANALYZED
+class Note  old 1-9  new 1-5
+  method title(String)  changed  old 2-4  new 2-4
+  method prefix(String)  removed  old 6-8

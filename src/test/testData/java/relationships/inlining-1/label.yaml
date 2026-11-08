@@ -6,17 +6,17 @@ split: tuning
 expected:
   relationships:
     - kinds: [INLINE]
-      old: { path: "class Order", kind: METHOD, name: "heading", signature: "(String)" }
-      new: { path: "class Order", kind: METHOD, name: "render", signature: "(String)" }
+      old: { path: "class Order", kind: METHOD, name: "heading", signature: "String,int" }
+      new: { path: "class Order", kind: METHOD, name: "render", signature: "String,int" }
   changes:
     - subject: { path: "", kind: CLASS, name: "Order", signature: null }
       presence: MATCHED
       content: UNCHANGED
-    - subject: { path: "class Order", kind: METHOD, name: "render", signature: "(String)" }
+    - subject: { path: "class Order", kind: METHOD, name: "render", signature: "String,int" }
       presence: MATCHED
       content: CHANGED
-    - subject: { path: "class Order", kind: METHOD, name: "heading", signature: "(String)" }
+    - subject: { path: "class Order", kind: METHOD, name: "heading", signature: "String,int" }
       presence: REMOVED
       content: UNCHANGED
   ambiguous: []
-notes: "The helper is inlined into its caller; inlining detection is not implemented yet."
+notes: "The helper is inlined into its caller."

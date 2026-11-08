@@ -10,6 +10,7 @@ import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.api.Evidence
+import io.github.agadek.smartdiff.engine.api.Inlined
 import io.github.agadek.smartdiff.engine.api.Origin
 import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.RangePair
@@ -56,7 +57,7 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
 
         val matching = DeclarationMatcher.match(old, new, confidence, cancellation)
         val tree = Tree(old, new, matching, cancellation)
-        tree.detectExtractions()
+        tree.detectLinks()
         val changes = tree.build()
         val fileRegion = fileRegion(old, new)
         val partial = fileRegion?.content == Content.UNANALYZED || changes.any { it.hasUnanalyzed() }
@@ -140,10 +141,17 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
         var relationships: List<Relationship> = emptyList()
             private set
 
-        /** Links added declarations to the code they were extracted from, after matching and classification. */
-        fun detectExtractions() {
-            val extractions = ExtractionDetector.detect(matching, { content(it) == Content.CHANGED }, cancellation)
-            relationships = (matching.relationships + extractions).sortedWith(ORDER)
+        /**
+         * Links added declarations to the code they were extracted from, and removed declarations to the changed
+         * declarations their code was inlined into, after matching and classification (relationships/05 R1, R12).
+         */
+        fun detectLinks() {
+            val changed = { match: Match -> content(match) == Content.CHANGED }
+            val extractions = ExtractionDetector.detectLinks(matching, changed, cancellation).map { it.relationship }
+            // A low pair is shown as added and removed, so its new declaration is not a target (relationships/02 R13).
+            val inlinings = ExtractionDetector.detectInliningLinks(matching, { changed(it) && !isLow(it) }, cancellation)
+                .map { it.relationship }
+            relationships = (matching.relationships + extractions + inlinings).sortedWith(ORDER)
         }
 
         /** The MATCH relationship of a pair, high or medium, which carries its rename, move and kind change. */
@@ -153,8 +161,8 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
 
         /** The pairs whose match is low: the matcher paired them, but the tree leaves both sides added and removed (R13). */
         private val lowMatches: Set<Pair<TextRange, TextRange>> by lazy {
-            relationships
-                .filter { RelationshipKind.EXTRACT !in it.kinds && it.confidence == Confidence.LOW }
+            matching.relationships
+                .filter { RelationshipKind.RENAME in it.kinds && it.confidence == Confidence.LOW }
                 .mapTo(HashSet()) { it.old.first().range to it.new.first().range }
         }
 
@@ -168,6 +176,14 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
             usableExtractions.groupBy { it.new.first().range }
         }
 
+        /** The inlining links, by the removed declaration's old range and by the target's new range (R18, R36). */
+        private val inliningBySource: Map<TextRange, List<Relationship>> by lazy {
+            usableInlinings.groupBy { it.old.first().range }
+        }
+        private val inliningByTarget: Map<TextRange, List<Relationship>> by lazy {
+            usableInlinings.groupBy { it.new.first().range }
+        }
+
         /**
          * The subject each matched declaration shows, by its old range. An extraction's [Origin] names its source as
          * the outline shows it, on the matched node, so the note keeps the name and signature it has today (R9).
@@ -177,12 +193,19 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
 
         /** The high or medium matches; a low one stays in the list and sets no field (R13). */
         private val usableMatches: List<Relationship> by lazy {
-            relationships.filter { RelationshipKind.EXTRACT !in it.kinds && it.confidence != Confidence.LOW }
+            relationships.filter {
+                it.kinds.none { kind -> kind == RelationshipKind.EXTRACT || kind == RelationshipKind.INLINE } &&
+                    it.confidence != Confidence.LOW
+            }
         }
 
         /** A low link stays in the list but sets none of the computed fields (R13). */
         private val usableExtractions: List<Relationship> by lazy {
             relationships.filter { RelationshipKind.EXTRACT in it.kinds && it.confidence != Confidence.LOW }
+        }
+
+        private val usableInlinings: List<Relationship> by lazy {
+            relationships.filter { RelationshipKind.INLINE in it.kinds && it.confidence != Confidence.LOW }
         }
 
         fun build(): List<ChangeNode> {
@@ -237,12 +260,24 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
         private fun oldOnly(declaration: Declaration): Builder {
             val uncertain = uncertainOld[declaration]
             return if (uncertain != null) Builder { children -> uncertain(uncertain, onOldSide = true, children) }
-            else Builder { children -> node(declaration, declaration.range, null, Presence.REMOVED, children) }
+            else Builder { children ->
+                val node = node(declaration, declaration.range, null, Presence.REMOVED, children)
+                val inlined = targetsOf(declaration.range)
+                if (inlined.isEmpty()) node
+                else node.copy(
+                    inlinedInto = inlined.map { link ->
+                        val target = link.new.first()
+                        Inlined(target.subject, target.range, contentOf(link).oldRange, contentOf(link).newRange)
+                    },
+                    details = node.details + inlined.map { RangePair(null, contentOf(it).newRange) }.distinct(),
+                )
+            }
         }
 
         private fun matched(match: Match, children: List<ChangeNode>): ChangeNode {
             val link = matchLinks[match.old.range to match.new.range]
             val extracted = extractionBySource[match.old.range].orEmpty()
+            val inlined = inliningsOf(match.new.range)
             val node = node(
                 declaration = match.new,
                 oldRange = match.old.range,
@@ -258,11 +293,18 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
                     ?.old?.first()?.subject?.let { (it as? Subject.Declaration)?.kind },
                 content = content(match),
             )
-            if (extracted.isEmpty()) return node
             // The extracted code is highlighted on the old side, apart from the lines that really changed.
-            return node.copy(
+            val withExtractions = if (extracted.isEmpty()) node else node.copy(
                 extractedTo = extracted.map { it.new.first().subject },
                 details = node.details + extracted.map { RangePair(contentOf(it).oldRange, null) }.distinct(),
+            )
+            // The inlined code is highlighted on the new side, where it was added to this declaration.
+            return if (inlined.isEmpty()) withExtractions else withExtractions.copy(
+                inlinedFrom = inlined.map { link ->
+                    val source = link.old.first()
+                    Inlined(source.subject, source.range, contentOf(link).oldRange, contentOf(link).newRange)
+                },
+                details = withExtractions.details + inlined.map { RangePair(null, contentOf(it).newRange) }.distinct(),
             )
         }
 
@@ -273,6 +315,18 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
          */
         private fun sourcesOf(target: TextRange): List<Relationship> =
             extractionByTarget[target].orEmpty().sortedWith(
+                compareByDescending<Relationship> { contentOf(it).share() }.thenBy { it.old.first().range.start },
+            )
+
+        /** A removed declaration's inlining targets: largest covered share first, then in new-side order (R6, R18). */
+        private fun targetsOf(source: TextRange): List<Relationship> =
+            inliningBySource[source].orEmpty().sortedWith(
+                compareByDescending<Relationship> { contentOf(it).share() }.thenBy { it.new.first().range.start },
+            )
+
+        /** A target's inlining sources: largest covered share first, then in old-side order (R7, R18). */
+        private fun inliningsOf(target: TextRange): List<Relationship> =
+            inliningByTarget[target].orEmpty().sortedWith(
                 compareByDescending<Relationship> { contentOf(it).share() }.thenBy { it.old.first().range.start },
             )
 

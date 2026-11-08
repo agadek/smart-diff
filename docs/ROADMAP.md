@@ -71,7 +71,7 @@ Proposed 2026-11-01 as the next item after 0.2.0. The benchmark harness, the ful
 | Relationship model, with today's fields computed from it | [relationships/02](specs/relationships/02-relationship-model.md) (implemented 2026-11-04) | The outline, Changes tree and merge outline are unchanged, the contract checks relationships, and the benchmark reads the list with the baseline's scores |
 | Better pairing over the whole file | [relationships/03](specs/relationships/03-relationship-matching.md) (implemented 2026-11-04) | The benchmark shows no new wrong pairs and no lower held-out precision; the benchmark output is unchanged, and two corpus files now pair reordered renames |
 | Rename grouped with its usages | [relationships/04](specs/relationships/04-rename-grouping.md) | Implemented (2026-11-07): Java, Kotlin K2 and Scala 2/3 usages group into the rename; the full 440-case usage gate passes with no wrongly grouped usage, while unresolved or also-changed usages stay ordinary changes |
-| Inlining detection | [relationships/05](specs/relationships/05-inlining-detection.md) | The inlining cases pass, and every linked declaration stays visible |
+| Inlining detection | [relationships/05](specs/relationships/05-inlining-detection.md) | Implemented (2026-11-08): the inlining cases pass in all four corpora and every linked declaration stays visible |
 | Refactorings view | [relationships/06](specs/relationships/06-refactorings-view.md) | The view shows every change the container tree shows |
 | Validation and release | [relationships/07](specs/relationships/07-relationship-validation.md) | The results are in VALIDATION.md and the release checks pass |
 | Relationships across files | Not specified; only if the product scope is extended | A separate design and benchmark exist |
@@ -140,7 +140,7 @@ A second comparison engine that highlights changed expressions inside declaratio
 
 ### Extraction detection
 
-Link an added method or function to the code it was extracted from. When most of its body repeats one run of code that a changed declaration on the old side no longer has, label it "extracted from <declaration>" and frame that code on the old side when it is selected; the source declaration shows the extracted code in its details. Extracting into a new class is covered through the class's added methods. Implemented in 0.1.1 for Java, Kotlin, Scala 2 and Scala 3. Specified in [EXTRACTION-DETECTION.md](EXTRACTION-DETECTION.md); inline detection and cross-file extraction stay [later](EXTRACTION-DETECTION.md#11-later).
+Link an added method or function to the code it was extracted from. When most of its body repeats one run of code that a changed declaration on the old side no longer has, label it "extracted from <declaration>" and frame that code on the old side when it is selected; the source declaration shows the extracted code in its details. Extracting into a new class is covered through the class's added methods. Implemented in 0.1.1 for Java, Kotlin, Scala 2 and Scala 3. Specified in [EXTRACTION-DETECTION.md](EXTRACTION-DETECTION.md). The reverse, inlining, is [relationships/05](specs/relationships/05-inlining-detection.md) and is implemented (2026-11-08); cross-file extraction stays [later](EXTRACTION-DETECTION.md#11-later).
 
 ### Rename grouping across usages
 

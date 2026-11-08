@@ -69,7 +69,11 @@ sealed interface Evidence {
     /** The old and new names of a rename. */
     data class Name(val old: String, val new: String) : Evidence
 
-    /** [shared] of the target's [total] tokens were tiled from the extracted code, whose old range is [oldRange]. */
+    /**
+     * [shared] of the [total] tokens were tiled between the two sides: an extraction's target body from the extracted
+     * code, or an inlining's removed body from the target's added code. [oldRange] and [newRange] are the tiled code's
+     * ranges on each side.
+     */
     data class Content(val shared: Int, val total: Int, val oldRange: TextRange, val newRange: TextRange) : Evidence
 
     /** The container path, and for a kind change the kind, on each side. */

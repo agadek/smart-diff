@@ -1,6 +1,6 @@
 # Relationship model
 
-Status: implemented, 2026-11-04; reference evidence (R5, R17, R19 and R34) arrives with [rename grouping](04-rename-grouping.md), 2026-11-05; the step 2 Kotlin and Scala resolvers are implemented, 2026-11-07.
+Status: implemented, 2026-11-04; reference evidence (R5, R17, R19 and R34) arrives with [rename grouping](04-rename-grouping.md), 2026-11-05; the step 2 Kotlin and Scala resolvers are implemented, 2026-11-07; the inlining links (R35 and R36) arrive with [inlining detection](05-inlining-detection.md), 2026-11-08.
 
 **Description:** Adds a list of [relationships](../../GLOSSARY.md#relationship) to every comparison result: which old declarations and new declarations belong together, how sure the engine is, and why.
 
@@ -14,8 +14,8 @@ Status: implemented, 2026-11-04; reference evidence (R5, R17, R19 and R34) arriv
 - **R4** A relationship has a confidence of high, medium or low.
 - **R5** (reference evidence with [rename grouping](04-rename-grouping.md)) A relationship has a list of evidence: name, content, structure, position, reference or score; content and reference evidence carry the old and new ranges they connect, and name, structure, position and score evidence carry no ranges.
 - **R6** The engine's numeric score is kept in the evidence and is never shown as a percentage.
-- **R7** The list of relationships is the only source for renames, moves, kind changes and extraction links.
-- **R8** The rename, move, kind change and extraction fields of a change are computed from the relationships.
+- **R7** The list of relationships is the only source for renames, moves, kind changes, extraction links and inlining links.
+- **R8** The rename, move, kind change, extraction and inlining fields of a change are computed from the relationships.
 - **R9** With today's matcher, the outline, the Changes tree and the merge outline show the same rows and labels as before.
 - **R10** The golden fixtures pass unchanged.
 - **R11** A high-confidence relationship pairs its declarations.
@@ -25,7 +25,7 @@ Status: implemented, 2026-11-04; reference evidence (R5, R17, R19 and R34) arriv
 - **R15** A registry key sets the thresholds in a running IDE, and tests and the benchmark set them directly.
 - **R16** Every endpoint names a declaration that appears in the result tree.
 - **R17** Every endpoint and content or reference evidence range lies inside its side's text.
-- **R18** The extraction fields of a source and of its target come from the same relationship, so they always agree.
+- **R18** The extraction fields of a source and of its target, and the inlining fields of a removed declaration and of its target, come from the same relationship, so they always agree.
 - **R19** Relationships, their kinds and their evidence come in a fixed order, so two runs give equal results.
 - **R20** A relationship never hides a difference: the nothing-hidden rule holds with or without it.
 - **R21** A result that is not analyzed or partly analyzed has relationships only for declarations it analyzed.
@@ -42,6 +42,8 @@ Status: implemented, 2026-11-04; reference evidence (R5, R17, R19 and R34) arriv
 - **R32** The benchmark counts a repeated relationship as a wrong pair.
 - **R33** The benchmark report counts the reported relationships of each kind by confidence.
 - **R34** (with [rename grouping](04-rename-grouping.md)) The engine returns no reference evidence; the reference pass adds it to a rename relationship.
+- **R35** (with [inlining detection](05-inlining-detection.md)) An inlining relationship has high confidence.
+- **R36** (with [inlining detection](05-inlining-detection.md)) An inlining has one relationship for each removed declaration and target, with the inlined code as its content evidence.
 
 ## Out of scope
 

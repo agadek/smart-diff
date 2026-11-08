@@ -25,6 +25,8 @@ the default engine per language and the analysis limits.
 
 In Local Changes and the Commit tool window, each changed file shows its summary, such as `2 changed · 1 added`. Expand
 the file to see its changed declarations, and double-click one to open the file's diff with that declaration selected.
+A helper extracted into a new declaration is labelled `extracted from <source>`, and a removed helper whose code moved
+into a caller is labelled `inlined into <target>`; selecting either frames the moved code on the other side.
 
 ## Requirements
 

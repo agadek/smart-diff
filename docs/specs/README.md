@@ -112,6 +112,6 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [02 Relationship model](relationships/02-relationship-model.md) | implemented, 2026-11-04 (reference evidence with 04) |
 | [03 Relationship matching](relationships/03-relationship-matching.md) | implemented, 2026-11-04 |
 | [04 Rename grouping](relationships/04-rename-grouping.md) | implemented, 2026-11-07 |
-| [05 Inlining detection](relationships/05-inlining-detection.md) | proposed, 2026-11-01 |
+| [05 Inlining detection](relationships/05-inlining-detection.md) | implemented, 2026-11-08 |
 | [06 Refactorings view](relationships/06-refactorings-view.md) | proposed, 2026-11-01 |
 | [07 Relationship validation](relationships/07-relationship-validation.md) | proposed, 2026-11-01 |

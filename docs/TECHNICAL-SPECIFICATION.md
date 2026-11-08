@@ -169,6 +169,8 @@ data class ChangeNode(
     val kindChangedFrom: DeclarationKind?, // only for MATCHED: the old kind of a declaration that changed kind (M4b)
     val extractedFrom: List<Origin>,       // only for ADDED: old-side code it was extracted from
     val extractedTo: List<Subject>,        // only for MATCHED: where code removed from it went
+    val inlinedInto: List<Inlined>,        // only for REMOVED: where its code was inlined
+    val inlinedFrom: List<Inlined>,        // only for MATCHED: the removed code it took
 )
 
 sealed interface Subject {
@@ -179,13 +181,16 @@ sealed interface Subject {
 
 data class Candidate(val subject: Subject, val range: TextRange)    // range on the side where the node is absent
 data class Origin(val subject: Subject, val declarationRange: TextRange, val range: TextRange)   // old side; range inside declarationRange
+data class Inlined(val subject: Subject, val declarationRange: TextRange, val oldRange: TextRange, val newRange: TextRange)
 data class RangePair(val old: TextRange?, val new: TextRange?)      // at least one side
 data class TextRange(val start: Int, val end: Int)           // [start, end)
 ```
 
 `DeclarationKind` is part of the API so engines share labels: `CLASS, INTERFACE, ENUM, RECORD, ANNOTATION_TYPE, OBJECT, CONSTRUCTOR, METHOD, FUNCTION, FIELD, PROPERTY, ENUM_CONSTANT, TYPE_ALIAS, INITIALIZER`, and with the Scala provider (§6.8) `TRAIT, GIVEN, EXTENSION`.
 
-A `ChangeNode` is *reported* if it is not `MATCHED`, or is moved, renamed or signature changed, or its content is not `UNCHANGED`, or any child is reported. A *rename candidate* is a `MATCHED` node with `renamedFrom` set: the engine paired two subjects with different names because their content is similar, which may be wrong, so the outline always shows it (§10). An *extraction* is an `ADDED` node with `extractedFrom` set: its code came from the old side of a changed node, named by its old range in `declarationRange`, which lists the extracted code in its `details` ([extraction detection](EXTRACTION-DETECTION.md)). A link adds information and changes no classification. Engines may include unreported nodes for navigation; the outline hides them.
+The result also carries `relationships`, the list of renames, moves, kind changes, extractions and inlinings with their confidence and evidence, described in [relationships/02](specs/relationships/02-relationship-model.md).
+
+A `ChangeNode` is *reported* if it is not `MATCHED`, or is moved, renamed or signature changed, or its content is not `UNCHANGED`, or any child is reported. A *rename candidate* is a `MATCHED` node with `renamedFrom` set: the engine paired two subjects with different names because their content is similar, which may be wrong, so the outline always shows it (§10). An *extraction* is an `ADDED` node with `extractedFrom` set: its code came from the old side of a changed node, named by its old range in `declarationRange`, which lists the extracted code in its `details` ([extraction detection](EXTRACTION-DETECTION.md)). An *inlining* is a `REMOVED` node with `inlinedInto` set: its code went into a changed node, whose `inlinedFrom` names it, and the inlined range is framed on the new side ([inlining detection](specs/relationships/05-inlining-detection.md)). A link adds information and changes no classification. Engines may include unreported nodes for navigation; the outline hides them.
 
 The result types are data classes, so results compare by value (the contract suite's determinism check relies on it). Adding fields to the result is allowed; renaming or removing them requires updating every engine and the contract tests.
 

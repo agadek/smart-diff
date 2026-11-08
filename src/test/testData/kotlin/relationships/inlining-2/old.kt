@@ -1,10 +1,16 @@
 class Invoice {
-    fun render(name: String): String {
-        return heading(name) + "!"
+    fun render(name: String, count: Int): String {
+        return heading(name, count) + "!"
     }
 
-    private fun heading(name: String): String {
-        val h = "Report: " + name
-        return h
+    fun summary(name: String, count: Int): String {
+        return heading(name, count) + "?"
+    }
+
+    private fun heading(name: String, count: Int): String {
+        val text = StringBuilder("Invoice: ")
+        text.append(name).append(count)
+        text.append(" lines")
+        return text.toString()
     }
 }

@@ -21,6 +21,80 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-08: inlining detection
+
+[Inlining detection](specs/relationships/05-inlining-detection.md) is implemented. A removed method or function whose
+body was moved into a changed declaration is an `INLINE` relationship; the removed row is labelled `inlined into
+<target>`, the target `code inlined from <declaration>`, and the summary counts it as `inlined` instead of `removed`.
+The engine is `smartdiff.declarations` 10, because the result now carries the `INLINE` relationships; the reference pass
+is 2.
+
+**Benchmark.** `RelationshipBenchmarkTest` ran the full 448-case corpus: 328 checked-in cases (the 320 of the
+[2026-11-07 usage gate](#2026-11-07-rename-grouping-usage-gate) plus eight inlining fixtures) and 120 real commits.
+
+```shell
+./gradlew test --tests '*RelationshipBenchmarkTest*' \
+  -Psmartdiff.relationships.corpus=src/test/testData/relationships-corpus-full.txt \
+  -Psmartdiff.relationships.gate=no-new-wrong-pairs \
+  -Psmartdiff.relationships.baseline=src/test/testData/relationships-baseline/report.json
+```
+
+**Result:** engine 10 on IDE `251.26927.53` with Scala plugin `2025.1.32`; corpus revision `7ad6f58cfe8f`; gate
+`no-new-wrong-pairs` **passed**, with no wrong or forced pair. The run has no shortfall and is not a smoke run.
+Precision is 1.000 on both splits; recall is 0.945 on the tuning split and 0.821 on the held-out split. Inlining is
+reported in every corpus at precision 1.000 and recall 1.000: six links in Java, Kotlin, Scala 2 and Scala 3, 24 in all,
+with no wrong or missed link. The rename, move, kind-change and extraction counts and scores are those of the
+2026-11-07 usage gate: 105 of the 108 labelled renames reported, and the same extraction recall per corpus. No existing
+relationship changed.
+
+**Limits.** `LimitsBenchmarkTest` ran the same six large real files as the previous limits runs, two per language
+(`LocalCacheTest.java`, `FuturesTest.java`, `CallTest.kt`, `CacheTest.kt`, `ZIO.scala`, `ZManaged.scala`), with both the
+extraction and the inlining pass on:
+
+```shell
+./gradlew test --tests '*LimitsBenchmarkTest*' -Psmartdiff.limits.corpus=<file listing paths>
+```
+
+The median comparison time is 46–177 ms per file and variant, and the slowest is 177 ms, against the 5000 ms analysis
+limit. The reference pass is 0–4 ms and no pass timed out.
+
+**Two-sided corpus.** `CorpusValidationTest` ran the [2026-11-04 two-sided list](#2026-11-04-two-sided-corpus-rerun)
+with every clone's commit pinned:
+
+```shell
+./gradlew test --tests '*CorpusValidationTest*' -Psmartdiff.validation.corpus=<list>
+```
+
+**Result:** 1970 files from 386 commits: 1968 `ANALYZED` and 2 `PARTIAL`, no fallback, and no `hidden` or `empty`
+flag. 126 files are flagged. The new `inlining` flag finds one file, and `inlining-near-miss` one:
+
+- **okhttp `c4acb20e98` `android-test/src/androidTest/java/okhttp/android/test/EchTest.kt`: right.** The removed
+  `OkHttpClient.get(String)` helper's call/execute/use/body logic is pasted into `cloudflareUsesEch()` and
+  `policyDisabledHostDoesNotUseEch()`, with the call split into a local and assertions added. Both targets are changed
+  and the link is the reverse of an extraction; the reviewer reaches the moved code from either row.
+- **okhttp `d1e57f3520` `okhttp-testing-support/src/main/kotlin/okhttp3/sockets/FakeSocket.kt`: right to leave
+  unlinked.** `connectedSocket()` is removed and its expression is rewritten into `getInputStream()` and
+  `getOutputStream()` with a different terminal call (`bufferedSocket` → `inputStream`/`outputStream`). The tiles cover
+  0.95 of the removed body but only 0.72 of the tiled tokens are new in each target, below `MIN_REMOVED` 0.75, so the
+  run keeps it as a near miss. Linking it would claim a straight inlining for a changed rewrite.
+
+The Java and Kotlin half has 1289 files and the one inlining file; the Scala half has 681 files and none. The other
+flags are the recorded kinds and are listed in `build/reports/smartdiff-validation/report.md`; this run adds no
+`hidden`, `empty` or new wrong inlining. The full report is in `build/reports/smartdiff-validation/`.
+
+**Verifier.** `./gradlew verifyPlugin` is Compatible on IC-251.26927.53 and IU-263.7307.200 with the existing 4
+experimental API usages and no deprecated usage; the inlining change adds no internal, experimental or deprecated API
+usage.
+
+**Manual runIde check: outstanding.** The labels, summary, framing on selection and hiding removed changes have to be
+checked in a running IDE on 2025.1 and 2026.3, as the feature's details ask. This environment has no interactive desktop
+for the click path, so the check has not been run and is not claimed as passed. The automated evidence is
+`OutlineModelTest` (labels, `inlined` count, the removed filter and the new-side range), `OutlineIntegrationTest` (the
+real outline selection frames and highlights the new side) and `InliningDetectionTest`; the
+manual steps remain: open a Java, Kotlin and Scala diff with an inlined helper on both target IDEs, confirm
+`inlined into …` and `code inlined from …`, the `inlined` summary count, the frame on the new side, and that hiding
+removed changes hides the removed row.
+
 ## 2026-11-08: Changes tree caret follow (#110): manual check outstanding
 
 PR #131 adds the caret follow in [changes-tree/05](specs/changes-tree/05-changes-tree-caret-follow.md) R1–R10. The
@@ -968,8 +1042,8 @@ not a measured perfect score.
 so the Scala 2 `cats-0a776c7-applicative` move of `replicateA_` matches its label and the former cross-container move
 limitation is fixed.
 
-**Known limitations:** inlining detection is not implemented, so every INLINE label is missed and its recall starts
-at zero (relationships/05). Extraction to several sources links only one source in the synthetic case (24 misses over
+**Known limitations:** inlining detection was not implemented in that run, so every INLINE label was missed and its
+recall started at zero (relationships/05); it is implemented in the [2026-11-08 run](#2026-11-08-inlining-detection). Extraction to several sources links only one source in the synthetic case (24 misses over
 four corpora), and the Scala parser marks the two capture-checking real-commit files and the incomplete Scala
 parse-error cases differently from the hand labels (UNANALYZED versus CHANGED); those are listed in `report.md`, not
 counted as shortfalls.

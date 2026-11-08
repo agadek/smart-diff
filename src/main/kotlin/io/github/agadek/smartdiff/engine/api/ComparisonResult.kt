@@ -122,6 +122,22 @@ data class ChangeNode(
     /** Only for [Presence.MATCHED]: the added subjects that code removed from this one was extracted to. */
     @get:Deprecated(RELATIONSHIP_FIELD, ReplaceWith("relationships"))
     val extractedTo: List<Subject> = emptyList(),
+    /**
+     * Only for [Presence.REMOVED]: the changed declarations that this declaration's code was inlined into, most of its
+     * body first. A link adds information and is never a match (relationships/05 R6, R9).
+     *
+     * Computed from a [Relationship] of kind [RelationshipKind.INLINE] (relationships/02 R7, R8, R35).
+     */
+    @get:Deprecated(RELATIONSHIP_FIELD, ReplaceWith("relationships"))
+    val inlinedInto: List<Inlined> = emptyList(),
+    /**
+     * Only for [Presence.MATCHED]: the removed declarations whose code this subject took, most of the body first
+     * (relationships/05 R7, R10).
+     *
+     * Computed from a [Relationship] of kind [RelationshipKind.INLINE] (relationships/02 R7, R8, R36).
+     */
+    @get:Deprecated(RELATIONSHIP_FIELD, ReplaceWith("relationships"))
+    val inlinedFrom: List<Inlined> = emptyList(),
 ) {
     /** Whether this node is a change by itself, not only because of its children. */
     val isChangedItself: Boolean
@@ -164,6 +180,19 @@ data class Origin(
     val declarationRange: TextRange,
     /** The old-side range of the extracted code, inside [declarationRange]. */
     val range: TextRange,
+)
+
+/**
+ * One end of an inlining as a change node shows it: the other declaration, and the inlined code's ranges on both
+ * sides. [declarationRange] identifies the other declaration's node; a subject is not unique in a file.
+ */
+data class Inlined(
+    val subject: Subject,
+    val declarationRange: TextRange,
+    /** The inlined code's range on the old side, inside the removed declaration. */
+    val oldRange: TextRange,
+    /** The inlined code's range on the new side, inside the target. */
+    val newRange: TextRange,
 )
 
 /** A span on the old side, the new side, or both; null where it has no extent on that side. */

@@ -120,6 +120,49 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertEquals(JAVA_NEW.indexOf("void bye()"), shown.viewer.editor2.caretModel.offset)
     }
 
+    fun `test an inlined helper shows both notes and frames the new side`() {
+        // relationships/05-inlining-detection R6, R7, R9, R10, R13
+        val old = """
+            class Order {
+                String render(String name) {
+                    return heading(name) + "!";
+                }
+
+                private String heading(String name) {
+                    String h = "Report: " + name;
+                    return h;
+                }
+            }
+        """.trimIndent()
+        val new = """
+            class Order {
+                String render(String name) {
+                    String h = "Report: " + name;
+                    return h + "!";
+                }
+            }
+        """.trimIndent()
+        val shown = open(history(old, new, "Order.java"))
+        val outline = shown.awaitResult()
+
+        assertEquals("1 changed · 1 inlined", outline.panel.summary.text)
+        assertEquals(
+            listOf(
+                "class Order",
+                "  method render(String)  changed, code inlined from heading(String)",
+                "  method heading(String)  removed, inlined into render(String)",
+            ),
+            rows(outline),
+        )
+
+        select(outline, "method heading(String)  removed, inlined into render(String)")
+        assertHighlightedAt(shown.viewer.editor1, old.indexOf("private String heading"))
+        assertHighlightedAt(shown.viewer.editor2, new.indexOf("String h ="))
+
+        select(outline, "method render(String)  changed, code inlined from heading(String)")
+        assertHighlightedAt(shown.viewer.editor2, new.indexOf("String h ="))
+    }
+
     fun `test a selected moved row keeps its frames aligned while scrolling`() {
         // outline/01-structural-outline R25
         val shown = open(history(MOVED_OLD, MOVED_NEW, "Moved.java"))

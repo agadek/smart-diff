@@ -31,6 +31,8 @@ src/test/testData/java/relationships/formatting-only-3
 src/test/testData/java/relationships/inlining-1
 src/test/testData/java/relationships/inlining-2
 src/test/testData/java/relationships/inlining-3
+src/test/testData/java/relationships/inlining-4
+src/test/testData/java/relationships/inlining-5
 src/test/testData/java/relationships/kind-change-1
 src/test/testData/java/relationships/kind-change-2
 src/test/testData/java/relationships/kind-change-3
@@ -111,6 +113,8 @@ src/test/testData/kotlin/relationships/formatting-only-3
 src/test/testData/kotlin/relationships/inlining-1
 src/test/testData/kotlin/relationships/inlining-2
 src/test/testData/kotlin/relationships/inlining-3
+src/test/testData/kotlin/relationships/inlining-4
+src/test/testData/kotlin/relationships/inlining-5
 src/test/testData/kotlin/relationships/kind-change-1
 src/test/testData/kotlin/relationships/kind-change-2
 src/test/testData/kotlin/relationships/kind-change-3
@@ -192,6 +196,8 @@ src/test/testData/scala2/relationships/formatting-only-3
 src/test/testData/scala2/relationships/inlining-1
 src/test/testData/scala2/relationships/inlining-2
 src/test/testData/scala2/relationships/inlining-3
+src/test/testData/scala2/relationships/inlining-4
+src/test/testData/scala2/relationships/inlining-5
 src/test/testData/scala2/relationships/kind-change-1
 src/test/testData/scala2/relationships/kind-change-2
 src/test/testData/scala2/relationships/kind-change-3
@@ -271,6 +277,8 @@ src/test/testData/scala3/relationships/formatting-only-3
 src/test/testData/scala3/relationships/inlining-1
 src/test/testData/scala3/relationships/inlining-2
 src/test/testData/scala3/relationships/inlining-3
+src/test/testData/scala3/relationships/inlining-4
+src/test/testData/scala3/relationships/inlining-5
 src/test/testData/scala3/relationships/kind-change
 src/test/testData/scala3/relationships/kind-change-1
 src/test/testData/scala3/relationships/kind-change-2

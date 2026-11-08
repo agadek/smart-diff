@@ -120,9 +120,10 @@ object OutlineModel {
     }
 
     /**
-     * The file summary line, such as `3 changed · 1 extracted · 1 added · 2 removed · 1 moved · 2 formatting-only`. An
-     * added declaration extracted from old code counts as extracted instead of added. It counts every change, hidden or
-     * not, and ends with how many are [hidden], such as `· 2 hidden`.
+     * The file summary line, such as `3 changed · 1 extracted · 1 added · 1 inlined · 1 removed · 1 moved`. An added
+     * declaration extracted from old code counts as extracted instead of added; a removed declaration inlined into
+     * another counts as inlined instead of removed. It counts every change, hidden or not, and ends with how many are
+     * [hidden], such as `· 2 hidden`.
      */
     fun summary(
         result: ComparisonResult,
@@ -133,12 +134,17 @@ object OutlineModel {
     ): String {
         val usages = Usages(result, oldText, newText, whitespacePolicy)
         val counts = LinkedHashMap<String, Int>()
-        listOf(Tag.CHANGED.text, EXTRACTED, Tag.ADDED.text, Tag.REMOVED.text, Tag.MOVED.text, Tag.FORMATTING_ONLY.text,
+        listOf(Tag.CHANGED.text, EXTRACTED, Tag.ADDED.text, INLINED, Tag.REMOVED.text, Tag.MOVED.text, Tag.FORMATTING_ONLY.text,
             Tag.RENAME_CANDIDATE.text, Tag.USAGES_RENAMED.text, Tag.UNCERTAIN.text, Tag.UNANALYZED.text).forEach { counts[it] = 0 }
         fun count(node: ChangeNode) {
             if (node.isChangedItself || usages.hasUsages(node)) {
-                tags(node, usages.isRenameOnly(node)).map { if (it == Tag.ADDED && node.extractedFrom.isNotEmpty()) EXTRACTED else it.text }
-                    .filter { it in counts }.forEach { counts[it] = counts.getValue(it) + 1 }
+                tags(node, usages.isRenameOnly(node)).map {
+                    when {
+                        it == Tag.ADDED && node.extractedFrom.isNotEmpty() -> EXTRACTED
+                        it == Tag.REMOVED && node.inlinedInto.isNotEmpty() -> INLINED
+                        else -> it.text
+                    }
+                }.filter { it in counts }.forEach { counts[it] = counts.getValue(it) + 1 }
             }
             node.children.forEach(::count)
         }
@@ -200,6 +206,7 @@ object OutlineModel {
     private fun name(subject: Subject.Declaration): String = (subject.receiver?.let { "$it." } ?: "") + subject.name
 
     private const val EXTRACTED = "extracted"
+    private const val INLINED = "inlined"
 
     /** Names after which a note says how many more there are. */
     private const val MAX_NAMES = 3
@@ -211,15 +218,21 @@ object OutlineModel {
     private class Links(result: ComparisonResult) {
         private val parents = IdentityHashMap<ChangeNode, ChangeNode?>()
 
-        /** Matched nodes by their old range, which an origin names its source by. */
+        /** Matched nodes by their old range, which an extraction origin names its source by. */
         private val sources = HashMap<TextRange, ChangeNode>()
 
         /** The added nodes extracted from each source, by the source's old range. */
         private val targets = HashMap<TextRange, MutableList<ChangeNode>>()
 
+        /** Every node by its range on each side, which an inlining link names the other end by. */
+        private val oldNodes = HashMap<TextRange, ChangeNode>()
+        private val newNodes = HashMap<TextRange, ChangeNode>()
+
         init {
             fun visit(node: ChangeNode, parent: ChangeNode?) {
                 parents[node] = parent
+                node.oldRange?.let { oldNodes.putIfAbsent(it, node) }
+                node.newRange?.let { newNodes.putIfAbsent(it, node) }
                 if (node.presence == Presence.MATCHED && node.oldRange != null) sources.putIfAbsent(node.oldRange, node)
                 node.extractedFrom.forEach { targets.getOrPut(it.declarationRange, ::mutableListOf) += node }
                 node.children.forEach { visit(it, node) }
@@ -227,20 +240,35 @@ object OutlineModel {
             result.changes.forEach { visit(it, null) }
         }
 
-        /** `extracted from …` for an added node, `code extracted to …` for a source; null for neither. */
+        /** The notes of both link kinds: `extracted from …`, `code extracted to …`, `inlined into …` and the reverse. */
         fun note(node: ChangeNode): String? {
+            val notes = mutableListOf<String>()
             if (node.extractedFrom.isNotEmpty()) {
-                return "extracted from " + names(node.extractedFrom.map { origin ->
+                notes += "extracted from " + names(node.extractedFrom.map { origin ->
                     val source = sources[origin.declarationRange]
                     label(origin.subject, source?.let { parents[it] }, parents[node], qualify = source != null)
                 })
             }
-            if (node.extractedTo.isEmpty()) return null
-            val extracted = node.oldRange?.let { targets[it] }.orEmpty()
-            return "code extracted to " + names(node.extractedTo.map { subject ->
-                val target = extracted.firstOrNull { it.subject == subject }
-                label(subject, target?.let { parents[it] }, parents[node], qualify = target != null)
-            })
+            if (node.extractedTo.isNotEmpty()) {
+                val extracted = node.oldRange?.let { targets[it] }.orEmpty()
+                notes += "code extracted to " + names(node.extractedTo.map { subject ->
+                    val target = extracted.firstOrNull { it.subject == subject }
+                    label(subject, target?.let { parents[it] }, parents[node], qualify = target != null)
+                })
+            }
+            if (node.inlinedFrom.isNotEmpty()) {
+                notes += "code inlined from " + names(node.inlinedFrom.map { inlined ->
+                    val source = oldNodes[inlined.declarationRange]
+                    label(inlined.subject, source?.let { parents[it] }, parents[node], qualify = source != null)
+                })
+            }
+            if (node.inlinedInto.isNotEmpty()) {
+                notes += "inlined into " + names(node.inlinedInto.map { inlined ->
+                    val target = newNodes[inlined.declarationRange]
+                    label(inlined.subject, target?.let { parents[it] }, parents[node], qualify = target != null)
+                })
+            }
+            return notes.takeIf { it.isNotEmpty() }?.joinToString(", ")
         }
 
         /** The name and signature of [subject], after its container's name when that is not [other]'s container. */
@@ -388,16 +416,20 @@ object OutlineModel {
                 return OutlineItem(ItemKind.CHANGE, title(node), emptyList(), node.oldRange, node.newRange, children = children)
             }
             if (!node.isChangedItself && children.isEmpty() && grouped.isEmpty()) return null
-            // An extraction frames the code it came from on the old side, where it is otherwise absent.
+            // An extraction frames the code it came from on the old side, where it is otherwise absent; an inlining
+            // frames the code it went into on the new side, where the removed declaration is absent.
             val oldRange = node.oldRange ?: node.extractedFrom.firstOrNull()?.range
-            val details = node.details + grouped.map { RangePair(it.oldRange, it.newRange) } +
+            val newRange = node.newRange ?: node.inlinedInto.firstOrNull()?.newRange
+            val details = node.details + node.inlinedInto.map { RangePair(null, it.newRange) } +
+                node.inlinedFrom.map { RangePair(null, it.newRange) } +
+                grouped.map { RangePair(it.oldRange, it.newRange) } +
                 usages.renameReferences(node).map { RangePair(it.oldRange, it.newRange) }
             val usageNote = usages.renameOf(node)?.let { relationship ->
                 val count = usages.renameReferences(node).size
                 if (count == 0) null else if (count == 1) "1 usage" else "$count usages"
             }
             return OutlineItem(
-                ItemKind.CHANGE, title(node), tags(node, usages.isRenameOnly(node)), oldRange, node.newRange,
+                ItemKind.CHANGE, title(node), tags(node, usages.isRenameOnly(node)), oldRange, newRange,
                 details.distinct(), children, listOfNotNull(usageNote, links.note(node)).joinToString(", ").ifEmpty { null },
             )
         }

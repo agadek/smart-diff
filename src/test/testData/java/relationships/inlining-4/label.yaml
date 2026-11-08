@@ -1,0 +1,22 @@
+case: inlining-4
+language: JAVA
+corpus: java
+category: inlining
+split: tuning
+expected:
+  relationships:
+    - kinds: [INLINE]
+      old: { path: "class Receipt", kind: METHOD, name: "line", signature: "String,int" }
+      new: { path: "class Receipt", kind: METHOD, name: "total", signature: "String,int" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Receipt", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Receipt", kind: METHOD, name: "total", signature: "String,int" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Receipt", kind: METHOD, name: "line", signature: "String,int" }
+      presence: REMOVED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A reformatted helper is inlined into its caller."

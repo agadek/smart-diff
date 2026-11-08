@@ -44,15 +44,48 @@ internal class Extraction(
     )
 }
 
+/** One inlining link as detection found it, with the shares its thresholds compare (relationships/05 R1, R2, R19). */
+internal class Inlining(
+    /** The removed declaration whose code was inlined. */
+    val source: Declaration,
+    /** The changed declaration that gained the code. */
+    val target: Match,
+    /** The old-side range of the inlined code, inside the removed declaration. */
+    val origin: TextRange,
+    /** The new-side range of the inlined code, inside the target. */
+    val inlined: TextRange,
+    /** The share of the removed body that the tiles covered. */
+    val covered: Double,
+    /** The share of the tiled target tokens that are new in the target. */
+    val added: Double,
+    /** The removed body tokens the tiles covered. */
+    val shared: Int,
+    /** All of the removed body's tokens. */
+    val total: Int,
+) {
+    /** The [RelationshipKind.INLINE] relationship of this link (relationships/02 R35, R36). */
+    val relationship: Relationship = Relationship(
+        kinds = EnumSet.of(RelationshipKind.INLINE),
+        old = listOf(RelationshipEndpoint(declarationSubject(source), source.range)),
+        new = listOf(RelationshipEndpoint(declarationSubject(target.new), target.new.range)),
+        confidence = Confidence.HIGH,
+        evidence = listOf(
+            Evidence.Content(shared, total, origin, inlined),
+            Evidence.Score(covered),
+        ),
+    )
+}
+
 /**
- * Links added methods and functions to the code they were extracted from (extraction detection specification §4). It
- * runs after matching and classification and never changes what they decided: a link is extra information on an added
- * declaration, never a match.
+ * Links added methods and functions to the code they were extracted from (extraction detection specification §4), and
+ * removed methods and functions to the changed declarations their code was inlined into (relationships/05). It runs
+ * after matching and classification and never changes what they decided: a link is extra information, never a match.
  *
- * Code is compared as significant tokens, `(type, text)` pairs without whitespace and comments, so reformatting the
- * extracted code does not stop detection. A source's **removed tokens** are the old tokens that an alignment of its old
- * and new tokens deletes; code the new side still has never counts. A target's body is tiled with a source's old
- * tokens by greedy string tiling, which lets a match survive a few changed tokens.
+ * Code is compared as significant tokens, `(type, text)` pairs without whitespace and comments, so reformatting moved
+ * code does not stop detection. A source's **removed tokens** are the old tokens that an alignment of its old and new
+ * tokens deletes; a target's **added tokens** are the new tokens that the reversed alignment inserts. An extraction
+ * tiles an added target's body with a source's old tokens; an inlining tiles a removed body with a changed target's new
+ * tokens. Greedy string tiling lets a match survive a few changed tokens.
  */
 object ExtractionDetector {
     /** Bodies with fewer significant tokens match by chance. */
@@ -61,23 +94,25 @@ object ExtractionDetector {
     /** The shortest run of tokens a tile may have. */
     const val MIN_TILE = 5
 
-    /** The share of the target's body that must be tiled. */
+    /** The share of the moved body (an extraction target or a removed declaration) that must be tiled. */
     const val MIN_SHARE = 0.65
 
-    /** The share of the tiled source tokens that must have been removed from the source. */
+    /** The share of tiled tokens that must be removed (extraction) or added (inlining) on the other side. */
     const val MIN_REMOVED = 0.75
 
-    /** Token pairs compared for one file at most; above it detection is skipped for the file. */
+    /** Token pairs compared for one pass of one file at most; above it that pass is skipped for the file. */
     const val MAX_WORK = 20_000_000L
 
-    /** The thresholds a link must pass; the validation lowers them to find near misses (§8). */
+    /** The thresholds a link of either pass must pass; the validation lowers them to find near misses (§8). */
     data class Thresholds(val minShare: Double = MIN_SHARE, val minRemoved: Double = MIN_REMOVED)
 
     /** The share of a target's adjacent token pairs a source's removed tokens must have before the pair is tiled. */
     private const val MIN_PAIRS = 0.5
 
     private val TARGET_KINDS = setOf(DeclarationKind.METHOD, DeclarationKind.FUNCTION)
-    private val SOURCE_KINDS = setOf(
+
+    /** The declarations that own code and can therefore lose or gain it. */
+    private val CODE_OWNER_KINDS = setOf(
         DeclarationKind.METHOD, DeclarationKind.FUNCTION, DeclarationKind.CONSTRUCTOR,
         DeclarationKind.INITIALIZER, DeclarationKind.FIELD, DeclarationKind.PROPERTY,
     )
@@ -96,6 +131,19 @@ object ExtractionDetector {
     ): List<Relationship> = detectLinks(matching, changed, cancellation, maxWork, thresholds).map { it.relationship }
 
     /**
+     * The inlining links from [matching]'s removed declarations to the changed declarations their code went into
+     * (relationships/05 R1, R2, R19); [changed] tells which matches are targets. Returns an empty list when the work
+     * would exceed [maxWork].
+     */
+    fun detectInlinings(
+        matching: Matching,
+        changed: (Match) -> Boolean,
+        cancellation: Cancellation,
+        maxWork: Long = MAX_WORK,
+        thresholds: Thresholds = Thresholds(),
+    ): List<Relationship> = detectInliningLinks(matching, changed, cancellation, maxWork, thresholds).map { it.relationship }
+
+    /**
      * The links [detect] turns into relationships, with the shares it measured. The corpus validation uses them to list
      * the links lower thresholds would make (§8); the result never carries them.
      */
@@ -105,6 +153,13 @@ object ExtractionDetector {
         cancellation: Cancellation,
         maxWork: Long = MAX_WORK,
         thresholds: Thresholds = Thresholds(),
+    ): List<Extraction> = detectLinks(matching, changed, Budget(maxWork, cancellation), thresholds)
+
+    private fun detectLinks(
+        matching: Matching,
+        changed: (Match) -> Boolean,
+        budget: Budget,
+        thresholds: Thresholds,
     ): List<Extraction> {
         val keys = Keys()
         val targets = matching.added.filter { it.kind in TARGET_KINDS }.mapNotNull { declaration ->
@@ -112,10 +167,9 @@ object ExtractionDetector {
             keys.significant(declaration) { it in body }?.takeIf { it.size >= MIN_TOKENS }?.let { Target(declaration, it) }
         }
         if (targets.isEmpty()) return emptyList()
-        val candidates = matching.matches.filter { it.old.kind in SOURCE_KINDS && changed(it) }
+        val candidates = matching.matches.filter { it.old.kind in CODE_OWNER_KINDS && changed(it) }
         if (candidates.isEmpty()) return emptyList()
 
-        val budget = Budget(maxWork, cancellation)
         val found = try {
             val sources = candidates.mapNotNull { match ->
                 val old = keys.significant(match.old) ?: return@mapNotNull null
@@ -136,6 +190,53 @@ object ExtractionDetector {
             .flatMap { links -> links.sortedWith(compareByDescending<Extraction> { it.covered }.thenBy { it.source.old.range.start }) }
     }
 
+    /**
+     * The inlining links, with the shares they measured (relationships/05). The result is ordered by removed declaration
+     * and then largest covered share first, then new-side target order, like the extraction links (relationships/02 R18).
+     */
+    internal fun detectInliningLinks(
+        matching: Matching,
+        changed: (Match) -> Boolean,
+        cancellation: Cancellation,
+        maxWork: Long = MAX_WORK,
+        thresholds: Thresholds = Thresholds(),
+    ): List<Inlining> = detectInliningLinks(matching, changed, Budget(maxWork, cancellation), thresholds)
+
+    private fun detectInliningLinks(
+        matching: Matching,
+        changed: (Match) -> Boolean,
+        budget: Budget,
+        thresholds: Thresholds,
+    ): List<Inlining> {
+        val keys = Keys()
+        val sources = matching.removed.filter { it.kind in TARGET_KINDS }.mapNotNull { declaration ->
+            val body = declaration.body ?: return@mapNotNull null
+            keys.significant(declaration) { it in body }?.takeIf { it.size >= MIN_TOKENS }?.let { Removed(declaration, it) }
+        }
+        if (sources.isEmpty()) return emptyList()
+        val candidates = matching.matches.filter { it.new.kind in CODE_OWNER_KINDS && changed(it) }
+        if (candidates.isEmpty()) return emptyList()
+
+        val found = try {
+            val targets = candidates.mapNotNull { match ->
+                val old = keys.significant(match.old) ?: return@mapNotNull null
+                val new = keys.significant(match.new) ?: return@mapNotNull null
+                val added = removed(new.keys, old.keys, budget)
+                if (added.none { it }) return@mapNotNull null
+                Changed(match, new, added)
+            }
+            val pairs = sources.flatMap { source -> targets.filter { overlaps(source, it) }.map { source to it } }
+            pairs.mapNotNull { (source, target) -> inline(source, target, budget, thresholds) }
+        } catch (e: OverBudget) {
+            return emptyList()
+        }
+        return found
+            .groupBy { it.source }
+            .values
+            .sortedBy { links -> links.first().source.range.start }
+            .flatMap { links -> links.sortedWith(compareByDescending<Inlining> { it.covered }.thenBy { it.target.new.range.start }) }
+    }
+
     private class Target(val declaration: Declaration, val tokens: Significant) {
         val pairs: Map<Long, Int> by lazy { pairs(tokens.keys, IntArray(tokens.size) { it }) }
     }
@@ -144,12 +245,29 @@ object ExtractionDetector {
         val removedPairs: Map<Long, Int> by lazy { pairs(old.keys, old.keys.indices.filter { removed[it] }.toIntArray()) }
     }
 
+    private class Removed(val declaration: Declaration, val tokens: Significant) {
+        val pairs: Map<Long, Int> by lazy { pairs(tokens.keys, IntArray(tokens.size) { it }) }
+    }
+
+    private class Changed(val match: Match, val tokens: Significant, val added: BooleanArray) {
+        val addedPairs: Map<Long, Int> by lazy { pairs(tokens.keys, tokens.keys.indices.filter { added[it] }.toIntArray()) }
+    }
+
     /** §4.6: whether the source's removed tokens have enough of the target's adjacent token pairs to be worth tiling. */
     private fun overlaps(target: Target, source: Source): Boolean {
         val wanted = target.pairs
         val total = wanted.values.sum()
         if (total == 0) return false
         val shared = wanted.entries.sumOf { (pair, count) -> minOf(count, source.removedPairs[pair] ?: 0) }
+        return shared >= MIN_PAIRS * total
+    }
+
+    /** The reverse pre-check: whether the target's added tokens have enough of the removed body's adjacent pairs. */
+    private fun overlaps(source: Removed, target: Changed): Boolean {
+        val wanted = source.pairs
+        val total = wanted.values.sum()
+        if (total == 0) return false
+        val shared = wanted.entries.sumOf { (pair, count) -> minOf(count, target.addedPairs[pair] ?: 0) }
         return shared >= MIN_PAIRS * total
     }
 
@@ -172,6 +290,32 @@ object ExtractionDetector {
             removed = removed.toDouble() / tiled,
             shared = tiled,
             total = target.tokens.size,
+        )
+    }
+
+    /** §4.4 swapped: the inlining of [source]'s body into [target], if the tiles cover enough and are new there. */
+    private fun inline(source: Removed, target: Changed, budget: Budget, thresholds: Thresholds): Inlining? {
+        val tiles = tile(source.tokens.keys, target.tokens.keys, budget)
+        val tiled = tiles.sumOf { it.length }
+        if (tiled == 0 || tiled < thresholds.minShare * source.tokens.size) return null
+        val added = tiles.sumOf { tile -> (tile.source until tile.source + tile.length).count { target.added[it] } }
+        if (added < thresholds.minRemoved * tiled) return null
+        val firstTarget = tiles.minOf { it.target }
+        val lastTarget = tiles.maxOf { it.target + it.length }
+        val firstSource = tiles.minOf { it.source }
+        val lastSource = tiles.maxOf { it.source + it.length }
+        if (lastSource - firstSource > 2 * tiled) return null
+        val origin = TextRange(source.tokens.starts[firstTarget], source.tokens.ends[lastTarget - 1])
+        val inlined = TextRange(target.tokens.starts[firstSource], target.tokens.ends[lastSource - 1])
+        return Inlining(
+            source = source.declaration,
+            target = target.match,
+            origin = origin,
+            inlined = inlined,
+            covered = tiled.toDouble() / source.tokens.size,
+            added = added.toDouble() / tiled,
+            shared = tiled,
+            total = source.tokens.size,
         )
     }
 

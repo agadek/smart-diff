@@ -1,0 +1,4 @@
+status: ANALYZED
+class Receipt  old 1-12  new 1-10
+  method total(String,int)  changed  code inlined from line(String,int) old 7-10 new 3-8  old 2-4  new 2-9
+  method line(String,int)  removed  inlined into total(String,int)  old 6-11

@@ -1,0 +1,4 @@
+status: ANALYZED
+class Order  old 1-9  new 1-6
+  function render(String,Int)  changed  code inlined from heading(String,Int) old 6-9 new 3-6  old 2-3  new 2-6
+  function heading(String,Int)  removed  inlined into render(String,Int)  old 5-9
