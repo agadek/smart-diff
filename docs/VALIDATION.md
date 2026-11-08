@@ -21,11 +21,119 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
-## 2026-11-08: Changes tree caret follow (#110): manual check outstanding
+## 2026-11-08: 0.3.0 release checks
+
+The release checks for 0.3.0 from the release branch head on `chore/release-0.3.0`, with `DeclarationEngine.VERSION` 9,
+`ReferencePass.VERSION` 1 and Scala plugin 2025.1.32. **Publishing is blocked:** the automated checks below pass, but the
+[#110 R1–R10 manual check](#2026-11-08-changes-tree-caret-follow-110-r7-and-r8-failed) was run and **R7 and R8 failed**,
+so a fix is required and must be backported to `release/0.3.0`. Do not merge `main`, which carries #132
+(relationships/04 step 2) as 0.4.0 work. The remaining #111 and #108 hand checks also stay open. The [manual runIde
+checklist](releases/0.3.0-manual-check.md) records the failed run and the re-check.
+
+### Corpus and pins
+
+- Two-sided: `two-sided-2026-11-04.txt` from the clone set, with every clone's HEAD at the list's pin. The report is in
+  `build/reports/smartdiff-validation/`.
+- Merge: `merges-2026-11-02.txt`, the recorded 2026-11-01 list with the same pinned HEADs. The report is in
+  `build/reports/smartdiff-validation/merge/`.
+- Pinned HEADs: okhttp `2b6399483639405e9277d33a3a1d355d5fabda1c`, guava
+  `b157643c41f9ee6a38732b4fa1a590ba187912d9`, commons-lang `b9b30efb01e861a16503232bb96b684107e73199`, Exposed
+  `09f814c61c22851b76840ccb65c1ac2c4db97452`, moshi `889013ec2edb8d8034902662a1dc8c4f3b3f8111`,
+  spring-petclinic `500158f732419217507c7656904b8e6aa1bcc0d6`, cats `e28985fe2a0d7123a8fb84cbb70c72b5e3d935ca`,
+  zio `df4c5b29ddaa1df8a7ffe122cd5b5d783b60c706`, scala3 `3e003afbf3854d9b3189a51a47258d0b9e31e792`.
+
+### Two-sided corpus
+
+`./gradlew test --tests '*CorpusValidationTest*' -Psmartdiff.validation.corpus=<two-sided-2026-11-04.txt>`:
+**1970 files from 386 commits**, 1968 `ANALYZED` and 2 `PARTIAL`, no fallback, and no `hidden` or `empty` flag. 125 files
+are flagged: 15 extraction, 8 extraction-near-miss, 23 noisy, 26 rename, 61 rename-candidate, 2 same-name, 2 status
+and 1 uncertain.
+
+Every flagged file was reviewed by comparing the full report with the recorded 2026-11-04 run: `summary.tsv` has the
+same 1970 rows with the same status, hunks, reported and formatting-only counts, flags and dialect, with only the
+milliseconds changed, and `report.md` is identical after removing the timings. So the flagged set and every diagnostic
+are the ones already reviewed in [2026-11-04: relationship matching](#2026-11-04-relationship-matching); no new flag
+or changed file needs a new review. The 3 rows that differ from the earlier [2026-11-04 two-sided
+rerun](#2026-11-04-two-sided-corpus-rerun) are the same 3 reviewed there:
+
+| File | Commit | Change | Review |
+| --- | --- | --- | --- |
+| guava `AbstractBiMapTest.java`, both copies | `67b6ad17db` | the two renamed tests are rename candidates; reported 15 → 13 | right: both tests were renamed and their bodies changed from `IdentityHashMap` to the new `InvalidatingEntryMap` |
+| spring-petclinic `PetControllerTests.java` | `37c7f98bf1` | `testProcessCreationFormWithBlankName` → `processCreationFormWithBlankName` is a rename candidate; reported 11 → 10 | right: the method was renamed by dropping the `test` prefix and its body is unchanged |
+
+The 2 `PARTIAL` files are scala3 `tests/neg/i7746.scala` and `library/src/scala/collection/immutable/LazyListIterable.scala`;
+both are parse-limited Scala sources, as in the recorded run, and the rest of each file is analyzed. Time: overall median
+7 ms, p95 72 ms and slowest 579 ms (zio `ZIO.scala`); Java/Kotlin median 4 ms, p95 25 ms and slowest 147 ms; Scala 2
+median 23 ms, p95 145 ms and slowest 579 ms; Scala 3 median 15.5 ms, p95 175 ms and slowest 371 ms. All 1970 files take
+41.7 s. No file is over the 5 s analysis limit.
+
+### Merge validation result
+
+`./gradlew test --tests '*CorpusValidationTest*' -Psmartdiff.validation.merges=<merges-2026-11-02.txt>`: **275 files from
+121 merge commits**, with 2 files missing from a parent or the base and no skipped merge commit. Flags: 49
+`both-sides-clean`, 12 `conflict-one-side` and 6 `status`; 66 rows are flagged (60 behavior flags and 6 status rows).
+Coverage is Java 50, Kotlin 67, Scala 2 117 and Scala 3 41 files. There is no join mismatch and no thrown comparison;
+the merge median is 27 ms and the one-base-side comparison median 22 ms.
+
+As for the two-sided corpus, `summary.tsv` has the same 275 rows with the same language, dialect, conflicts and flags,
+and `report.md` is identical after removing the timings, to the [2026-11-04 relationship matching
+run](#2026-11-04-relationship-matching) and its merge validation. Every flagged file is therefore the reviewed set from
+that run; the 6 `status` files are the
+known Scala 3 parse-limited sources listed in its fallbacks, and the 49 `both-sides-clean` and 12 `conflict-one-side`
+files are the recorded diagnostics. The report says `ready=false` only because it requires those files to be reviewed;
+no join mismatch exists.
+
+### Relationship benchmark
+
+`./gradlew test --tests '*RelationshipBenchmarkTest*'` with
+`-Psmartdiff.relationships.corpus=src/test/testData/relationships-corpus-full.txt`,
+`-Psmartdiff.relationships.gate=no-new-wrong-pairs` and
+`-Psmartdiff.relationships.baseline=src/test/testData/relationships-baseline/report.json`: **428 cases** (308 checked-in,
+including the four Java usage-grouping fixtures, and 120 real commits), precision **1.000**, recall **0.829**, 203
+reported pairs of 245 labelled. There is no wrong or forced pair, no hidden file and no unlabelled file; the 6 fallbacks
+are the known Scala 3 parse-limited cases. The `no-new-wrong-pairs` gate **passed** against the checked-in baseline, with
+`newGatePairs=[]`, and the report is byte-identical apart from timings to the [2026-11-07 rename grouping step 1
+run](#2026-11-07-rename-grouping-step-1-benchmark). The 93 renames are 73 high, 20 medium and 0 low; reference evidence
+found 19 usages, all matched, with `GROUPED=5`, `NOT_GROUPED=417` and `NONE=6`, and a slowest reference pass of 352 ms of
+the 1000 ms budget.
+
+The report says `Status: smoke run` because usage grouping is still step 1 for Java only; it is not the 440-case usage
+gate and is not a release gate until [relationships/07](specs/relationships/07-relationship-validation.md) is accepted.
+The known classification-mismatch list is unchanged from the 2026-11-07 run, and no pair or classification moved.
+
+### Build and Plugin Verifier
+
+- `./gradlew clean buildPlugin check` passed; `build/distributions/smart-diff-0.3.0.zip` has SHA-256
+  `49fd127437c74b03a88fd9ed78be024da6a5f98c7ff956d0b34773fac571c13d`.
+- `./gradlew verifyPlugin` is **compatible** on `IC-251.26927.53` and `IU-263.7307.200`, with **4 experimental API
+  usages** on each (the 4 in the 0.2.0 report below), **no internal API usage** and **no deprecated API usage**.
+- The 0.2.0 verifier report in the 0.2.0 release worktree records the same 4 experimental usages on `IC-251.26927.53` and
+  `IU-262.11879.100`, with no internal or deprecated usage. No usage is new in 0.3.0.
+
+The four uses, identical in 0.2.0 and 0.3.0:
+
+1. Experimental interface `com.intellij.psi.PsiNamedElementWithCustomPresentation`, referenced in the Scala plugin's
+   `org.jetbrains.plugins.scala.lang.psi.api.toplevel.ScNamedElement` (the Scala provider's PSI use).
+2. Experimental method `ChangesViewNodeAction.createNodeHoverIcon(ChangesBrowserNode)`, overridden in
+   `io.github.agadek.smartdiff.ui.changes.DeclarationNodeAction`.
+3. Experimental method `ChangesViewNodeAction.handleDoubleClick(ChangesBrowserNode)`, overridden in
+   `io.github.agadek.smartdiff.ui.changes.DeclarationNodeAction`.
+4. Experimental interface `ChangesViewNodeAction`, referenced in
+   `io.github.agadek.smartdiff.ui.changes.DeclarationNodeAction`.
+
+### Manual checks and blockers
+
+The automated release record above is complete. Publishing is blocked by the caret-follow manual check: it ran and
+**R7 and R8 failed**, so a fix is required and must be backported to `release/0.3.0` before the tag. Do not merge `main`,
+which carries #132 (relationships/04 step 2) as 0.4.0 work. The remaining #111 and #108 physical-click and single-click
+hand checks also stay open. The [manual runIde checklist](releases/0.3.0-manual-check.md) records the failed run and the
+re-check. 0.3.0 is prepared, not published.
+
+## 2026-11-08: Changes tree caret follow (#110): R7 and R8 failed
 
 PR #131 adds the caret follow in [changes-tree/05](specs/changes-tree/05-changes-tree-caret-follow.md) R1–R10. The
-automated checks pass, and the preview blocker has a running-IDE check; the full R1–R10 manual check has not been recorded
-yet.
+automated checks pass, and the preview blocker has a running-IDE check. The R1–R10 manual run was executed on
+2026-11-08; **R7 and R8 failed**, so a fix is required and must be backported to `release/0.3.0` before the tag.
 
 **Automated evidence.** `./gradlew clean buildPlugin check` passes, including all 30 `ChangesCaretFollowTest` tests. They
 cover the R7 stale and pending summaries through an installed intermediate pending model, R10's hidden-row fallback with
@@ -61,13 +169,13 @@ modified `Cart.java`, the built plugin, and the single-click preview setting on
 The probe selected the declaration directly only to reproduce the platform symptom. In the fixed build, moving the caret
 in either preview maps to the file row, so the follower never selects the declaration there; normal editors and diff
 sides still map declarations in `ChangesCaretFollowTest`. The R3 preview behavior is therefore checked on both target
-releases in both preview forms; the remaining R1–R10 manual steps are outstanding.
+releases in both preview forms. The separate R1–R10 manual run then failed R7 and R8; those are the release blockers.
 
-**Running-IDE check: outstanding.** The R1–R10 manual steps in
-[changes-tree/05 details](specs/changes-tree/05-changes-tree-caret-follow-details.md#manual-check-outstanding) have not been
-run in a running IDE. They must still be run on IntelliJ IDEA 2025.1 and the latest release, including the R7 intermediate
-pending rebuild (step 5) and the R10 hidden-row fallback (step 6a), in Local Changes and in the Commit tool window. The
-feature is not claimed as manually verified.
+**Running-IDE check: run; R7 and R8 failed.** The R1–R10 manual run was executed on IntelliJ IDEA 2025.1 and the latest
+release, in Local Changes and in the Commit tool window. R7 (the stale summary and the intermediate pending rebuild) and
+R8 (files without a summary) failed; the other steps are not claimed as passed here. A fix is required and must be
+backported to `release/0.3.0`; do not merge `main`, which carries #132 (relationships/04 step 2) as 0.4.0 work. The
+[manual checklist](releases/0.3.0-manual-check.md) records the failed run and the re-check.
 
 ## 2026-11-07: Changes tree row parity (issues #111 and #108)
 
