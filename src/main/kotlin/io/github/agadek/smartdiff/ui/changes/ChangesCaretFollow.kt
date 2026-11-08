@@ -122,6 +122,10 @@ class ChangesTreeCaretFollower internal constructor(
     @TestOnly
     internal var followRuns = 0
 
+    /** Whether a retry is still remembered, for the tests that check it is cleared. */
+    @TestOnly
+    internal fun hasPendingFollow(): Boolean = pending != null
+
     /** Starts listening once on the EDT; safe to call more than once. The project activity creates the service at project open. */
     fun start() {
         if (!ApplicationManager.getApplication().isDispatchThread) {
@@ -349,11 +353,19 @@ class ChangesTreeCaretFollower internal constructor(
             SummarySnapshot.None -> Target.FileRow(fileRow, retry = false)
             SummarySnapshot.Pending -> Target.FileRow(fileRow, retry = true)
             is SummarySnapshot.Fresh -> {
-                val summaryRow = fileRow as? SummaryChangeNode
-                    ?: return Target.FileRow(fileRow, retry = settings.showChangesSummary || settings.showChangesDeclarations)
                 val summary = snapshot.summary
-                if (summary.items.isEmpty() || !settings.showChangesDeclarations) {
-                    return Target.FileRow(summaryRow, retry = false)
+                val summaryRow = fileRow as? SummaryChangeNode
+                if (!settings.showChangesSummary && !settings.showChangesDeclarations) {
+                    return Target.FileRow(fileRow, retry = false)
+                }
+                if (summary.items.isEmpty()) {
+                    return Target.FileRow(summaryRow ?: fileRow, retry = false)
+                }
+                if (!settings.showChangesDeclarations) {
+                    return Target.FileRow(summaryRow ?: fileRow, retry = false)
+                }
+                if (summaryRow == null) {
+                    return Target.FileRow(fileRow, retry = settings.showChangesSummary || settings.showChangesDeclarations)
                 }
                 val path = innermost(summary.items, sideFile.side, offset)
                     ?: return Target.FileRow(summaryRow, retry = false)

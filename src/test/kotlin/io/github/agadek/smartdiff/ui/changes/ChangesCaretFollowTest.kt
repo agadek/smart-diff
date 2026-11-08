@@ -490,6 +490,24 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
         service.waitForSummaries()
     }
 
+    fun `test a fresh summary with no items clears the pending retry`() {
+        // changes-tree/05-changes-tree-caret-follow R2, R8
+        maskEngines(RangeEngine { ComparisonResult(ENGINE_ID, "1", Status.ANALYZED) })
+        settings.showChangesSummary = false
+        settings.showChangesDeclarations = true
+        val (editor, file) = configuredFile("EmptyCart.java", NEW_TEXT)
+        val change = change(file)
+        val tree = summarizedTree(change)
+        val row = fileRow(tree, change)
+        assertFalse("a summary with no rows adds no summary row", row is SummaryChangeNode)
+        val follower = follower(tree) { editor.contentComponent }
+
+        follower.followNow(editor, NEW_TEXT.indexOf("return 2"))
+
+        assertSame("the file row is selected", row, tree.selectionPath?.lastPathComponent)
+        assertFalse("a fresh summary with no rows keeps no retry", follower.hasPendingFollow())
+    }
+
     fun `test a not analyzed file selects only the file row`() {
         // changes-tree/05-changes-tree-caret-follow R8
         maskEngines(RangeEngine { ComparisonResult(ENGINE_ID, "1", Status.TOO_LARGE) })
