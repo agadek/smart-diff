@@ -18,12 +18,16 @@ import com.intellij.diff.merge.MergeResult
 import com.intellij.diff.merge.MergeTool
 import com.intellij.diff.requests.DiffRequest
 import com.intellij.diff.requests.SimpleDiffRequest
+import com.intellij.diff.tools.fragmented.UnifiedDiffTool
+import com.intellij.diff.tools.fragmented.UnifiedDiffViewer
 import com.intellij.diff.tools.simple.SimpleOnesideDiffViewer
 import com.intellij.diff.tools.util.side.ThreesideTextDiffViewer
 import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
+import com.intellij.diff.util.DiffUserDataKeysEx
 import com.intellij.diff.util.ThreeSide
 import com.intellij.diff.DiffContentFactory
 import com.intellij.ide.DataManager
+import com.intellij.ide.impl.HeadlessDataManager
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.DataProvider
@@ -59,6 +63,7 @@ import com.intellij.platform.vcs.impl.shared.changes.DiffPreviewUpdateProcessor
 import com.intellij.platform.vcs.impl.shared.changes.PreviewDiffSplitterComponent
 import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.PlatformTestUtil
+import com.intellij.testFramework.assertNoErrorLogged
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
 import com.intellij.ui.content.ContentFactory
@@ -94,6 +99,7 @@ import javax.swing.AbstractAction
 import javax.swing.Action
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.SwingUtilities
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreePath
 
@@ -825,8 +831,9 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
         val disposable = Disposer.newDisposable(testRootDisposable)
         ApplicationManager.getApplication().replaceService(DataManager::class.java, FixedDataManager(context), disposable)
         try {
-            assertSame("the production lookup finds the diff viewer", viewer, viewerFromContext(editor))
-            assertSame("the production lookup finds the merge viewer", mergeViewer, mergeViewerFromContext(editor))
+            val viewers = viewersFromContext(editor)
+            assertSame("the production lookup finds the diff viewer", viewer, viewers.viewer)
+            assertSame("the production lookup finds the merge viewer", mergeViewer, viewers.mergeViewer)
         } finally {
             Disposer.dispose(disposable)
         }
@@ -911,6 +918,69 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
 
             assertSame("the splitter preview keeps the file row", fileRow, tree.selectionPath?.lastPathComponent)
             assertFalse("the splitter preview does not select a declaration row", tree.selectionPath?.lastPathComponent is DeclarationNode)
+        } finally {
+            splitter.closePreview()
+            Disposer.dispose(processor)
+        }
+    }
+
+    fun `test the splitter unified viewer lookup reads one data context and reports no read-access error`() {
+        // changes-tree/05-changes-tree-caret-follow R12
+        maskEngines(RangeEngine())
+        val (_, file) = configuredFile("UnifiedSplitterCart.java", NEW_TEXT)
+        val tree = summarizedTree(change(file))
+        val request = SimpleDiffRequest(
+            "UnifiedSplitterCart.java",
+            DiffContentFactory.getInstance().create(project, OLD_TEXT, file),
+            DiffContentFactory.getInstance().create(project, NEW_TEXT, file),
+            "old",
+            "new",
+        )
+        val chain = SimpleDiffRequestChain(request)
+        chain.putUserData(DiffUserDataKeysEx.FORCE_DIFF_TOOL, UnifiedDiffTool.INSTANCE)
+        val processor = CacheDiffRequestChainProcessor(project, chain)
+        processor.updateRequest(true, null)
+        PlatformTestUtil.waitWithEventsDispatching(
+            "no splitter unified viewer was created",
+            { processor.activeViewer is UnifiedDiffViewer },
+            10,
+        )
+        val viewer = processor.activeViewer as UnifiedDiffViewer
+        val splitter = PreviewDiffSplitterComponent(
+            object : DiffPreviewUpdateProcessor {
+                override val component: JComponent get() = processor.component
+                override fun clear() {}
+                override fun refresh(fromModelRefresh: Boolean) {}
+            },
+            "smartdiff.test.splitter.unified",
+        )
+        splitter.openPreview(false)
+        try {
+            assertNotNull(
+                "the unified viewer is inside the splitter",
+                SwingUtilities.getAncestorOfClass(PreviewDiffSplitterComponent::class.java, viewer.editor.contentComponent),
+            )
+            val counting = CountingHeadlessDataManager()
+            ApplicationManager.getApplication().replaceService(DataManager::class.java, counting, testRootDisposable)
+            HeadlessDataManager.fallbackToProductionDataManager(testRootDisposable)
+            val follower = ChangesTreeCaretFollower(
+                project = project,
+                treeProvider = { tree },
+                summaries = service,
+                focusOwner = { null },
+                treeShowing = { true },
+                logFailure = { error("unexpected failure: $it") },
+            ).also {
+                it.start()
+                followers += it
+            }
+
+            assertNoErrorLogged {
+                follower.followNow(viewer.editor, 0)
+            }
+
+            assertEquals("the follow reads one data context", 1, counting.componentContextCalls)
+            assertEquals("the follow runs once", 1, follower.followRuns)
         } finally {
             splitter.closePreview()
             Disposer.dispose(processor)
@@ -1014,8 +1084,7 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
             service,
             { editor.contentComponent },
             { true },
-            { null },
-            { FakeMergeViewer() },
+            { ContextViewers(null, FakeMergeViewer()) },
             { _, _ -> false },
             { error("unexpected failure: $it") },
         ).also { it.start(); followers += it }
@@ -1085,8 +1154,7 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
             service,
             { editor.contentComponent },
             { true },
-            { null },
-            { null },
+            { ContextViewers(null, null) },
             { _, _ -> false },
             { logs += it },
         ).also { it.start(); followers += it }
@@ -1182,8 +1250,7 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
             summaries = service,
             focusOwner = focus,
             treeShowing = { true },
-            viewerOf = { viewer },
-            mergeViewerOf = { null },
+            viewersOf = { ContextViewers(viewer, null) },
             logFailure = { error("unexpected failure: $it") },
         ).also {
             it.start()
@@ -1321,6 +1388,16 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
         override fun customizeDataContext(dataContext: DataContext, data: Any): DataContext = context
         override fun <T : Any> saveInDataContext(dataContext: DataContext?, key: Key<T>, data: T?) {}
         override fun <T : Any> loadFromDataContext(dataContext: DataContext, key: Key<T>): T? = null
+    }
+
+    private class CountingHeadlessDataManager : HeadlessDataManager() {
+        var componentContextCalls = 0
+            private set
+
+        override fun getDataContext(component: Component): DataContext {
+            componentContextCalls++
+            return super.getDataContext(component)
+        }
     }
 
     private class FakeMergeViewer : MergeTool.MergeViewer {

@@ -14,7 +14,8 @@
 - Renamed or reordered methods and functions whose body also changed are more often shown as one `rename candidate` row, for example two tests renamed in the same commit, instead of one removed and one added row. When several renames or reordered declarations compete, the outline chooses over the whole file and leaves a genuine tie as two changes.
 
 ### Fixed
-
+- Following the caret in a diff no longer logs `Read access is allowed from inside read-action only`: the diff viewer lookup builds one data context inside an application read action.
+- Opening a Java, Kotlin or Scala diff no longer logs `Slow operations are prohibited on EDT`: the outline checks the project file index on its pooled thread, and a file outside the project keeps the engine result.
 - A selected moved declaration's frames stay aligned on both sides while scrolling, in a two-sided diff and in the three-sided merge outline, instead of drifting apart when the unchanged code around them differs.
 - Following the caret in either platform Changes preview, the editor tab or the Local Changes splitter, keeps the preview open by selecting the file row, instead of a declaration row that used to close or empty it.
 - Following the caret in an added or deleted file's one-sided diff now selects that file's row, including a deleted file opened without a diff viewer in the Commit tool window.

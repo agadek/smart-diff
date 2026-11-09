@@ -21,6 +21,64 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-09: 0.3.0 backport of the two EDT fixes (#138, #140)
+
+The 0.3.0 branch now carries the read-action fix from #138 (`3c7f961..aa56b03`) and the outline file-index fix from #140
+(`e9060ce`, `a89437c`). The cherry-picks kept this branch's 0.3.0 CHANGELOG and validation record; the two fixes are in
+the 0.3.0 Fixed list.
+
+**Automated evidence.** `./gradlew clean buildPlugin check` and `./gradlew verifyPlugin` pass; `smart-diff-0.3.0` is
+Compatible on IC-251.26927.53 and IU-263.7307.200. The CI verifier artifact records 3 experimental API usages, all
+existing `ChangesViewNodeAction` overrides or reference in `DeclarationNodeAction`; a local run that resolves the Scala
+plugin also lists its existing `PsiNamedElementWithCustomPresentation` reference (4 locally). There is no deprecated or
+internal usage.
+
+**Release-artifact log check: probe-assisted, 2026-11-09.** The built `smart-diff-0.3.0.zip` ran on IC 2025.1.3 and IU
+2026.3 with the same scenario as the two PR records: Java, Kotlin and Scala diffs from the Local Changes splitter preview
+and the Commit tool window, native two-sided and unified viewers, a plain editor, one-sided added/deleted diffs, and a
+file outside the content roots. On IC 2025.1.3 the combined build logged 0 `Read access is allowed from inside
+read-action only` and 0 `Slow operations are prohibited on EDT` entries against SMART Diff; the `origin/main` control
+logged 8 and 4. On IU 2026.3 both were 0, as was the control. Physical input remains untested because macOS Assistive
+access is not granted here, so the click path stays a manual check.
+
+## 2026-11-08: outline finish reads no project file index on the EDT (#139)
+
+`OutlineController.finish` read `ProjectFileIndex.isInContent` through `ReferencePass.isApplicable` on the EDT. The
+first read makes the workspace index data up to date, so opening a diff logged `Slow operations are prohibited on EDT`.
+The pass now splits R3: the EDT calls `ReferencePass.canRun`, which checks only the project, the file and the result;
+`ReferencePass.run` performs the file index check on its pooled thread. A file outside the project returns the engine
+result with status `NOT_GROUPED`, so `finishPass` replaces the engine result and clears the `Resolving usages…` note. R2
+is unchanged: the engine result is still shown before the pass starts.
+
+**Automated evidence.** `./gradlew clean buildPlugin check` passes. Two new `OutlineIntegrationTest` tests name R3:
+
+- `test relationships 04 R3 opening a diff reads the project file index off the EDT` opens a real diff with a local file,
+  records every `ProjectFileIndex.isInContent` call through the pass's test seam, and asserts at least one call and none
+  on the EDT. On `origin/main` the same call happens in `finish`, on the EDT.
+- `test relationships 04 R3 a file outside the project keeps the engine result and no note` opens a diff whose
+  `highlightFile` is outside the content roots and asserts the engine summary stays and the `Resolving usages…` note is
+  gone.
+
+`ReferencePassTest` passes unchanged, including `test R3 no file or a file outside the project keeps the engine result`.
+The seam is internal and set only by the test; production reads the project file index.
+
+**Running-IDE check: probe-assisted, 2026-11-09.** The built plugin ran on IC 2025.1.3 (`IC-251.26927.53`) and IU
+2026.3 (`IU-263.7307.200`) with a Git project containing Java, Kotlin and Scala changes. A temporary startup probe opened
+Java, Kotlin and Scala diffs from the Local Changes splitter preview (`PreviewDiffSplitterComponent` with
+`UnifiedLocalChangeListDiffViewer`) and the Commit tool window, from native two-sided `SimpleDiffViewer` and native
+`UnifiedDiffViewer` requests, and from a request whose file is outside the content roots. The `origin/main` control build
+(`3c7f961`) logged 4 `Slow operations are prohibited on EDT` entries against SMART Diff on IC 2025.1.3, all through
+`ReferencePass.isApplicable` from `OutlineController.finish`; this build logged 0 while the same diffs opened. On IU
+2026.3 the control build also logged 0, so that IDE neither reproduces nor contradicts the warning. The check is
+probe-assisted, not a physical click path: macOS Assistive access is not granted here, so the real mouse and keyboard
+gestures were not delivered.
+
+**Verifier.** `./gradlew verifyPlugin` is Compatible on IC-251.26927.53 and IU-263.7307.200. The CI verifier artifact
+records 3 experimental API usages, all `ChangesViewNodeAction` overrides or reference in `DeclarationNodeAction`, the
+same 3 as `origin/main`; a local run that resolves the Scala plugin also lists its existing
+`PsiNamedElementWithCustomPresentation` reference. There is no deprecated usage, and this change adds no internal,
+experimental or deprecated API usage.
+
 ## 2026-11-08: 0.3.0 release checks
 
 The release checks for 0.3.0 from the release branch head on `chore/release-0.3.0`, with `DeclarationEngine.VERSION` 9,
@@ -128,6 +186,42 @@ The automated release record above is complete. Publishing is blocked by the car
 which carries #132 (relationships/04 step 2) as 0.4.0 work. The remaining #111 and #108 physical-click and single-click
 hand checks also stay open. The [manual runIde checklist](releases/0.3.0-manual-check.md) records the failed run and the
 re-check. 0.3.0 is prepared, not published.
+
+## 2026-11-08: Changes tree caret follow read access (issue #136)
+
+Issue #136: on IC 2025.1.3 the follower's diff viewer lookup built the editor's data context on every key from the
+debounce timer. Building the context snapshots the diff viewer's component, and `OnesideTextDiffViewer` /
+`UnifiedDiffViewer.getNavigatable` needs read access, so the platform logged `Read access is allowed from inside
+read-action only` against the plugin, about four times during a Local Changes run. The lookup now builds one data
+context for both `DIFF_VIEWER` and `MERGE_VIEWER` inside one application read action on the EDT. Behavior, the side
+mapping and the public API are unchanged
+([changes-tree/05](specs/changes-tree/05-changes-tree-caret-follow.md) R12).
+
+**Automated evidence.** `./gradlew buildPlugin check` passes, including all 36 `ChangesCaretFollowTest` tests. The new
+regression `test the splitter unified viewer lookup reads one data context and reports no read-access error` forces the
+Local Changes splitter's real `UnifiedDiffViewer`, runs one follow through the production lookup, and asserts that it
+reads one data context and logs no error.
+
+Headless tests run inside the platform's write-intent read action, which already allows read access on the test thread,
+so they cannot reproduce the warning itself. The test guards the single-context lookup and the absent logged error; the
+running-IDE check below covers the real read-access path.
+
+**Running-IDE check: probe-assisted, 2026-11-09.** The built plugin ran on IC 2025.1.3 (`IC-251.26927.53`) and IU
+2026.3 (`IU-263.7307.200`) with a Git project containing Java, Kotlin and Scala changes. A temporary startup probe opened
+the Local Changes splitter preview (`PreviewDiffSplitterComponent` with `UnifiedLocalChangeListDiffViewer`) and the
+Commit tool window's `FilteringDiffViewer`, moved the caret in a plain editor, in a native two-sided `SimpleDiffViewer`
+on both sides, in a native `UnifiedDiffViewer`, and in added and deleted one-sided diffs. The `origin/main` control build
+(`3c7f961`) logged 8 `Read access is allowed from inside read-action only` entries against SMART Diff on IC 2025.1.3,
+all through `viewerFromContext` / `mergeViewerFromContext` at `ChangesCaretFollow.kt:607` and `:611`; this build logged
+0. The check is probe-assisted, not a physical click path: macOS Assistive access is not granted here, so the real
+mouse and keyboard gestures were not delivered. On IU 2026.3 the control build also logged 0, so that IDE neither
+reproduces nor contradicts the warning.
+
+**Verifier.** `./gradlew verifyPlugin` is compatible on IC 2025.1.3 (`IC-251.26927.53`) and the latest release
+(`IU-263.7307.200`, 2026.3). The CI verifier artifact records 3 experimental API usages, all existing
+`ChangesViewNodeAction` overrides or reference in `DeclarationNodeAction`; a local run that resolves the Scala plugin
+also lists its existing `PsiNamedElementWithCustomPresentation` reference (4 locally). There is no deprecated or
+internal usage, and this change adds no experimental usage.
 
 ## 2026-11-08: Changes tree caret follow fixes: R8 one-sided diff and R7 pending follow
 

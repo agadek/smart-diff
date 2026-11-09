@@ -70,15 +70,29 @@ object ReferencePass {
     /** Whether a resolver handles [languageId]; the benchmark requires usage labels for those languages (R18). */
     fun supports(languageId: String): Boolean = ReferenceResolvers.all.any { it.supports(languageId) }
 
-    /** R3: the outline runs the pass only for an analyzed result whose file belongs to the open project. */
-    fun isApplicable(project: Project?, file: VirtualFile?, result: ComparisonResult): Boolean {
+    /**
+     * The cheap part of R3, safe on the event dispatch thread: the outline runs the pass only for an analyzed result
+     * with a project file. Whether the file belongs to the project is [run]'s job, on the pooled thread, because the
+     * first project file index read can make the workspace index data up to date and must not run on the EDT.
+     */
+    fun canRun(project: Project?, file: VirtualFile?, result: ComparisonResult): Boolean {
         if (project == null || file == null) return false
-        if (result.status != ResultStatus.ANALYZED && result.status != ResultStatus.PARTIAL) return false
-        return try {
-            ApplicationManager.getApplication().runReadAction(Computable { ProjectFileIndex.getInstance(project).isInContent(file) })
-        } catch (e: Exception) {
-            false
-        }
+        return result.status == ResultStatus.ANALYZED || result.status == ResultStatus.PARTIAL
+    }
+
+    /**
+     * Test seam: the project file index check [run] performs on the pooled thread. Null uses the project file index;
+     * a test can observe the calling thread and its result. Production never sets it.
+     */
+    internal var inContentCheck: ((Project, VirtualFile) -> Boolean)? = null
+
+    /** R3's project file index check. Only [run] calls it, on the pooled thread, never on the EDT. */
+    private fun isInContent(project: Project, file: VirtualFile): Boolean = try {
+        ApplicationManager.getApplication().runReadAction(
+            Computable { inContentCheck?.invoke(project, file) ?: ProjectFileIndex.getInstance(project).isInContent(file) },
+        )
+    } catch (e: Exception) {
+        false
     }
 
     /** The outline entry point: applies R3 and returns the engine's result when the file is not in the project. */
@@ -89,8 +103,13 @@ object ReferencePass {
         result: ComparisonResult,
         cancellation: Cancellation,
     ): Outcome {
-        if (!isApplicable(project, file, result)) return Outcome(result, Status.NOT_GROUPED)
-        return runWith(project ?: ProjectManager.getInstance().defaultProject, request, result, cancellation, ReferenceResolvers.all, BUDGET_MILLIS)
+        if (!canRun(project, file, result)) return Outcome(result, Status.NOT_GROUPED)
+        val openProject = project ?: return Outcome(result, Status.NOT_GROUPED)
+        val diffFile = file ?: return Outcome(result, Status.NOT_GROUPED)
+        // The file index is read here, on the pooled thread: its first read can be slow and is forbidden on the EDT.
+        if (DumbService.isDumb(openProject)) return Outcome(result, Status.NOT_GROUPED, dumb = true)
+        if (!isInContent(openProject, diffFile)) return Outcome(result, Status.NOT_GROUPED)
+        return runWith(openProject, request, result, cancellation, ReferenceResolvers.all, BUDGET_MILLIS)
     }
 
     /** The benchmark entry point: the same resolvers and light copies, with no project file (R3). */
