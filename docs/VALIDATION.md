@@ -140,22 +140,23 @@ timer restarted after the model property change, and the new summary selected th
 | R2 | Pass. A caret in `package demo;` selected the file row. |
 | R3, two-sided | Pass. Physical clicks on the old and new editors selected `method total()` for their own side. |
 | R3, editor-tab preview | Pass. A caret moved in the `Commit: Cart.java` preview kept `Cart.java` selected and the preview open. |
-| R3, splitter preview | **Inconclusive.** On IC 2025.1 a single click in the Commit view opened only the editor-tab preview. On IU 2026.3, invoking `Show Local Changes` switched the tool window but left the changes tree with 0 rows, and no splitter preview appeared. The splitter could not be produced with both preview settings on. |
+| R3, splitter preview | **Inconclusive.** Retried on IC 2025.1 with `show.diff.preview.as.editor.tab.with.single.click=false`, `LOCAL_CHANGES_DETAILS_PREVIEW_SHOWN=true` and a restart. The Commit tool window still showed its commit message; the `Show Local Changes` action did not switch the content, a single click produced no preview, and no splitter appeared inside the tool window. The IU retry with this combination was not run. |
 | R4 | Pass. Follow off left the tree unchanged; follow on followed the next caret move. |
 | R5 | **Partial.** With the editor-tab preview off, a caret move to the file row opened no preview and the editor kept focus. With it on, the platform's `Commit: Cart.java` preview followed the file row and focus moved to that preview tab. Every file row stayed `not checked`, and the header stayed `7 files`. This UI has no commit-count label, so the commit contents/count were not fully measured; preview-off inclusion was not separately re-driven. |
 | R6 | Pass. 30 physical Right keys produced 2 selection updates, the last 1.041 s after the burst, not 30 follows. The click race was repeated 6 times and the clicked `notes.txt` row stayed selected each time. |
 | R7 | Pass with the corrected caret offset (above). |
 | R8 | Pass. Added `Added.java`, unsupported `notes.txt`, too-large `Large.java` and the old side of deleted `Old.java` all selected only their file row. In a 505-file project, `File0053.java` (one of the rows after the 500 summarised files) selected only its file row; `File0505.java` was still inside the first 500 and keeps its summary. |
 | R10 | Pass. Hiding `CHANGED` selected the shown `class Filter`; Declarations off selected the file row. |
-| R11 | **Inconclusive.** The splitter preview could not be produced (see R3) and no stale-summary window was captured with the editor-tab preview. |
+| R11 | **Inconclusive.** The splitter preview could not be produced with the editor-tab-off/Local-Changes-on combination, and no stale-summary window was captured with the editor-tab preview. |
 
 ### #111 and #112 residuals
 
 - **#111 double-click/Enter:** on IC 0.3.0 a physical double-click and Enter on `Cart.java` opened `Commit: Cart.java`, and on `notes.txt` opened `Commit: notes.txt`; the summarized and plain rows matched with the editor-tab preview on. On IU 2026.3 the same pairs matched with the editor-tab preview on (`Commit: Cart.java` / `Commit: notes.txt`) and off (plain `Cart.java` / `notes.txt`), and with Declarations off the open behavior still matched for both rows. The "no expand arrow with Declarations off" check was not confirmed: a Right press still changed the row count.
 - **#144 / B3-R19, editor tab:** with `show.diff.preview.as.editor.tab.with.single.click=true` and
   `LOCAL_CHANGES_DETAILS_PREVIEW_SHOWN=true`, a physical single click opened `Commit: notes.txt` for a plain row and
-  `Commit: Cart.java` for a summarized row. This is the editor-tab surface. The splitter surface and a SMART Diff-off
-  control were not run, so the splitter half remains inconclusive.
+  `Commit: Cart.java` for a summarized row. This is the editor-tab surface. The corrected editor-tab-off/Local-Changes-on
+  combination did not produce a splitter, and a SMART Diff-off control was not run; the splitter half remains
+  inconclusive.
 - **Directory rows:** with directory grouping on, a physical Right expanded `fixture-main` and a physical double-click
   collapsed it on IC 2025.1; the `Changes` changelist row expanded and collapsed the same way. The IU 2026.3 directory/changelist rows and a 0.3.0 declaration-row double-click/Enter were not run.
 - **R16:** not driven; no real failing diff was set up.
