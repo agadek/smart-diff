@@ -26,6 +26,7 @@ import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.markup.HighlighterLayer
 import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectFileIndex
@@ -1113,6 +1114,68 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertEquals("Not present on the old side", outline.panel.absence.text)
     }
 
+    fun `test relationships 06 R2 a settings page change rebuilds an open outline without comparing again`() {
+        // relationships/06-refactorings-view R2
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+        val before = outline.state as OutlineState.Shown
+
+        settings.outlineView = OutlineView.REFACTORINGS
+        ApplicationManager.getApplication().messageBus.syncPublisher(SmartDiffSettings.CHANGED).settingsChanged()
+
+        assertEquals("Refactorings", rows(outline).first())
+        assertSame("the setting change reuses the kept result", before.result, (outline.state as OutlineState.Shown).result)
+
+        settings.outlineView = OutlineView.CONTAINER_TREE
+        ApplicationManager.getApplication().messageBus.syncPublisher(SmartDiffSettings.CHANGED).settingsChanged()
+
+        assertEquals("class Greeter", rows(outline).first())
+    }
+
+    fun `test relationships 06 R17 the summary and hidden count are identical in both views`() {
+        // relationships/06-refactorings-view R17
+        val old = method("total")
+        val new = method("sum")
+        val engine = ResultEngine().apply {
+            status = Status.ANALYZED
+            changes = listOf(
+                ChangeNode(new, TextRange(0, 5), TextRange(0, 3), Presence.MATCHED, content = Content.CHANGED, renamedFrom = old),
+                ChangeNode(method("other"), TextRange(6, 11), TextRange(6, 11), Presence.MATCHED, content = Content.CHANGED),
+            )
+            relationships = listOf(
+                Relationship(
+                    java.util.EnumSet.of(RelationshipKind.RENAME),
+                    listOf(RelationshipEndpoint(old, TextRange(0, 5))),
+                    listOf(RelationshipEndpoint(new, TextRange(0, 3))),
+                    Confidence.HIGH,
+                    listOf(Evidence.Name("total", "sum")),
+                ),
+            )
+        }
+        maskEngines(engine)
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+
+        assertEquals("2 changed · 1 rename candidate", outline.panel.summary.text)
+        val containerHidden = (outline.state as OutlineState.Shown).hiddenCount
+
+        outline.setOutlineView(OutlineView.REFACTORINGS)
+
+        assertEquals("the refactorings view uses the same summary line", "2 changed · 1 rename candidate", outline.panel.summary.text)
+        assertEquals("the refactorings view counts the same hidden changes", containerHidden, (outline.state as OutlineState.Shown).hiddenCount)
+        assertTrue(
+            "the changed endpoint keeps its label: ${rows(outline)}",
+            rows(outline).any { it.contains("method total → sum()  rename candidate, changed") },
+        )
+
+        outline.setHidden(ChangeType.CHANGED, true)
+        assertEquals("2 changed · 1 rename candidate · 1 hidden", outline.panel.summary.text)
+        val refactoringsHidden = (outline.state as OutlineState.Shown).hiddenCount
+
+        outline.setOutlineView(OutlineView.CONTAINER_TREE)
+
+        assertEquals("the container tree keeps the same summary after filtering", "2 changed · 1 rename candidate · 1 hidden", outline.panel.summary.text)
+        assertEquals("both views count the same hidden change", refactoringsHidden, (outline.state as OutlineState.Shown).hiddenCount)
+    }
+
     fun `test relationships 06 R10 R11 R12 selecting the rename frames every endpoint and usage with its own colour`() {
         // relationships/06-refactorings-view R10, R11, R12
         val local = myFixture.addFileToProject("local/Order.java", USAGE_NEW).virtualFile
@@ -1146,6 +1209,7 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
             setOf(RelationshipPalette.colour(0)),
             highs.map { it.getTextAttributes(null)?.backgroundColor }.toSet(),
         )
+        assertTrue("the palette stays above the navigator's usage detail", highs.all { it.layer >= HighlighterLayer.SELECTION })
         assertTrue("both editors have the usage colour", highs.any { it.document === shown.viewer.editor1.document } && highs.any { it.document === shown.viewer.editor2.document })
 
         outline.setOutlineView(OutlineView.CONTAINER_TREE)

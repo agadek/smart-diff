@@ -59,6 +59,25 @@ same 3 as `origin/main`; a local run that resolves the Scala plugin also lists i
 `PsiNamedElementWithCustomPresentation` reference. There is no deprecated usage, and this change adds no internal,
 experimental or deprecated API usage.
 
+## 2026-11-09: refactorings view manual check
+
+[The refactorings view](specs/relationships/06-refactorings-view.md) is implemented and its automated checks pass, but
+the **manual IDE check is outstanding**: the interaction has not been exercised in a running IDE by a reviewer, so this
+section records **inconclusive**, not a pass. The remaining check covers the Java, Kotlin and Scala cases with rename
+plus usages, extraction, inlining and move, in the light and dark themes, with the change type filter, the relationship
+kind filter and both views, at real diff sizes and with the real keymap.
+
+The images under [docs/screenshots/refactorings-view](screenshots/refactorings-view/) are **automated evidence only**:
+they are rendered from the real diff viewer and outline by `RefactoringsScreenshotTest`, without an interactive display.
+They show that the views and colours render, but they do not replace the manual check.
+
+```shell
+SMARTDIFF_SCREENSHOTS=1 ./gradlew test --tests 'io.github.agadek.smartdiff.ui.RefactoringsScreenshotTest'
+```
+
+The automated results for this change are `./gradlew clean buildPlugin check` and `./gradlew verifyPlugin`; the manual
+check stays open until a reviewer runs the plugin in the IDE.
+
 ## 2026-11-08: inlining detection
 
 [Inlining detection](specs/relationships/05-inlining-detection.md) is implemented. A removed method or function whose

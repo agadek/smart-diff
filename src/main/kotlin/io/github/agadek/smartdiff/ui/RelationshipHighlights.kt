@@ -12,8 +12,8 @@ import io.github.agadek.smartdiff.engine.api.TextRange
 
 /**
  * The usages of each shown rename in the editors, in that rename's palette colour (relationships/06 R12). The marks
- * are exact-range highlights under the selection layer, so they add a background without replacing the diff's own
- * colours or the navigator's frame and usage highlights.
+ * are exact-range highlights at the selection layer, above the navigator's usage detail, so a selected usage keeps its
+ * rename colour without replacing the diff's own colours or the navigator's frame.
  */
 internal class RelationshipHighlights(private val viewer: TwosideTextDiffViewer) {
 
@@ -44,7 +44,7 @@ internal class RelationshipHighlights(private val viewer: TwosideTextDiffViewer)
         val highlighter = editor.markupModel.addRangeHighlighter(
             start,
             end,
-            HighlighterLayer.SELECTION - 2,
+            HighlighterLayer.SELECTION,
             attributes,
             HighlighterTargetArea.EXACT_RANGE,
         )

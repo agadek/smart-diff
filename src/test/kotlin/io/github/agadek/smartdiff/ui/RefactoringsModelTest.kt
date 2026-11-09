@@ -1,5 +1,6 @@
 package io.github.agadek.smartdiff.ui
 
+import com.intellij.ui.JBColor
 import io.github.agadek.smartdiff.engine.api.Candidate
 import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
@@ -232,8 +233,8 @@ class RefactoringsModelTest {
         assertEquals("the hidden changes and the covered rename are gone from Other changes", emptyList<String>(), other.children.titleOnly())
         assertEquals("both views count the same hidden changes", 2, OutlineModel.hiddenCount(result, setOf(ChangeType.CHANGED, ChangeType.MOVED)))
         assertEquals(
-            "both views show the same summary",
-            OutlineModel.summary(result, setOf(ChangeType.CHANGED, ChangeType.MOVED)),
+            "the summary counts every change and the hidden ones",
+            "1 changed · 1 moved · 2 hidden",
             OutlineModel.summary(result, setOf(ChangeType.CHANGED, ChangeType.MOVED)),
         )
     }
@@ -286,13 +287,35 @@ class RefactoringsModelTest {
         val shownOther = otherChanges(shown)
         assertTrue("the unanalyzed declaration is never covered", shownOther.any { it.title == "method broken()" && Tag.UNANALYZED in it.tags })
         assertTrue("the uncertain declaration keeps its group", shownOther.any { it.title == "Uncertain (1)" })
-        assertEquals("the changed declaration is shown by its relationship row", 2, refactorings(shown).children.size)
+        assertTrue("the changed declaration keeps its changed label", shownOther.any { it.title == "method changed()" && Tag.CHANGED in it.tags })
+        assertEquals("both relationships are rows", 2, refactorings(shown).children.size)
 
         val hidden = RefactoringsModel.build(result, "", "", formattingInline = false, hiddenKinds = setOf(RelationshipKind.MOVE))
         val hiddenOther = otherChanges(hidden)
         assertTrue("a hidden relationship never hides the changed declaration", hiddenOther.any { it.title == "method changed()" && Tag.CHANGED in it.tags })
         assertTrue("a hidden relationship never hides the unanalyzed declaration", hiddenOther.any { it.title == "method broken()" })
         assertEquals(listOf(RefactoringsModel.NO_REFACTORINGS), refactorings(hidden).children.map { it.label })
+    }
+
+    @Test
+    fun `R15 a changed endpoint keeps its changed label in Other changes`() {
+        val old = method("total")
+        val new = method("sum")
+        val changed = node("sum", Presence.MATCHED, TextRange(0, 5), TextRange(0, 3), content = Content.CHANGED)
+            .copy(renamedFrom = old)
+        val result = ComparisonResult(
+            EngineId("e"), "1", Status.ANALYZED,
+            changes = listOf(changed),
+            relationships = listOf(rename("total", 0, 5, "sum", 0, 3)),
+        )
+
+        val other = otherChanges(result)
+
+        assertEquals(
+            "the changed declaration keeps both its rename and changed labels",
+            listOf("method total → sum()  rename candidate, changed"),
+            other.map { it.label },
+        )
     }
 
     @Test
@@ -323,26 +346,32 @@ class RefactoringsModelTest {
     }
 
     @Test
-    fun `R17 the summary line is the same for both views`() {
+    fun `R3 rows are sorted by the first new-side position, not by the result order`() {
         val result = ComparisonResult(
             EngineId("e"), "1", Status.ANALYZED,
-            changes = listOf(
-                node("renamed", Presence.MATCHED, TextRange(0, 5), TextRange(0, 3)),
-                node("extracted", Presence.ADDED, null, TextRange(10, 15)),
-                node("changed", Presence.MATCHED, TextRange(20, 25), TextRange(20, 25), content = Content.CHANGED),
-            ),
             relationships = listOf(
-                rename("renamed", 0, 5, "sum", 0, 3),
-                relationship(EnumSet.of(RelationshipKind.EXTRACT), method("source"), 10, 15, method("extracted"), 10, 15),
+                rename("late", 0, 4, "late", 30, 34),
+                rename("early", 0, 4, "early", 10, 14),
+                rename("middle", 0, 4, "middle", 20, 24),
             ),
         )
-        val summary = OutlineModel.summary(result)
 
-        RefactoringsModel.build(result, "", "", formattingInline = false)
-        OutlineModel.build(result, "", "", formattingInline = false)
+        assertEquals(
+            listOf("rename early → early  high", "rename middle → middle  high", "rename late → late  high"),
+            refactorings(result).children.map { it.label },
+        )
+    }
 
-        assertEquals("the refactorings view does not change the summary", summary, OutlineModel.summary(result))
-        assertTrue(summary, summary.contains("1 changed"))
+    @Test
+    fun `R12 the light and dark palettes each have six distinct colours`() {
+        try {
+            JBColor.setDark(false)
+            assertEquals(RelationshipPalette.SIZE, (0 until RelationshipPalette.SIZE).map { RelationshipPalette.colour(it).rgb }.distinct().size)
+            JBColor.setDark(true)
+            assertEquals(RelationshipPalette.SIZE, (0 until RelationshipPalette.SIZE).map { RelationshipPalette.colour(it).rgb }.distinct().size)
+        } finally {
+            JBColor.setDark(false)
+        }
     }
 
     private fun refactorings(result: ComparisonResult) =

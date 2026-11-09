@@ -232,6 +232,22 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
         assertEquals(listOf("JAVA", "kotlin", "Scala"), languages)
     }
 
+    fun `test R2 the settings page round-trips the outline view`() {
+        // relationships/06-refactorings-view R2
+        settings.loadState(SmartDiffSettings.SettingsState())
+        settings.outlineView = OutlineView.REFACTORINGS
+        val configurable = SmartDiffConfigurable()
+        try {
+            assertNotNull(configurable.createComponent())
+            configurable.reset()
+            assertFalse(configurable.isModified)
+            configurable.apply()
+        } finally {
+            configurable.disposeUIResources()
+        }
+        assertEquals("applying the page keeps the chosen view", OutlineView.REFACTORINGS, settings.outlineView)
+    }
+
     fun `test the settings page opens and saves without changes`() {
         val configurable = SmartDiffConfigurable()
         try {

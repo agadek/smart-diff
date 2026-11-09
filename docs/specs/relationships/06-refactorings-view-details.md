@@ -32,7 +32,7 @@ Other changes
 - The row ends with the confidence word `high`, `medium` or `low`. A medium row is prefixed `candidate `, as a rename candidate is shown today; a low row is prefixed `possible `.
 - A rename with grouped reference evidence adds `, 1 usage` or `, 12 usages` after its names. The grouped usages are children of the row.
 - Low-confidence relationships are listed as `possible …` rows and also under each of their declarations in `Other changes`, so a reader sees the candidate where the added and removed declarations are.
-- `Other changes` has the container tree's rows for every change that is in no shown relationship, so the two views show the same changes. A container that holds such a change stays as a container without labels, as in the container tree.
+- `Other changes` has the container tree's rows for every change that is in no shown relationship, plus the labels and notes of an uncertain, unanalyzed or changed declaration that a shown relationship links (R15), so the two views show the same changes. A container that holds such a change stays as a container without labels, as in the container tree.
 - Expanding a relationship shows its evidence: the name pair, shared content, containers, positions and the resolved symbol of each usage. The engine's numeric score stays in the evidence and is not shown as a percentage.
 
 ### Endpoints, selection and colour
@@ -47,7 +47,7 @@ Each rename gets a colour from a fixed palette of 6, in row order among the show
 - A second menu, the [relationship kind filter](../../GLOSSARY.md#relationship-kind-filter), hides relationship kinds: rename, move, kind change, extraction and inlining. A relationship row is hidden when every one of its kinds is hidden.
 - A declaration of a hidden relationship still appears in `Other changes`, because it is then in no shown relationship.
 - A low-confidence relationship never covers its declarations: both stay in `Other changes` beside the `possible …` row.
-- A change type filter never hides a relationship row, and a relationship kind filter never hides an uncertain, unanalyzed or changed declaration. When a shown relationship covers a changed declaration, the relationship row itself shows that declaration, so nothing is removed from the view.
+- A change type filter never hides a relationship row. A relationship kind filter never hides an uncertain, unanalyzed or changed declaration: such a declaration keeps its labels and notes in `Other changes` beside the relationship row, so the two views still show every change.
 
 ### Failure behaviour
 
@@ -67,9 +67,9 @@ Confidence and kinds are words, not colours. The palette only marks usages; it i
 | R7, R8 | `RefactoringsModelTest` for the confidence word, the `candidate` and `possible` rows and the low links under declarations |
 | R9 | `RefactoringsModelTest` for evidence children, including names, content, containers and usage symbols |
 | R10, R11 | `OutlineNavigator` checks in `OutlineIntegrationTest` for several frames and usage highlights, and `RefactoringsModelTest` for an absent side |
-| R12 | `RefactoringsModelTest` for the palette and `OutlineIntegrationTest` for one palette colour per rename in both editors |
-| R13, R14 | `RefactoringsModelTest` for both filters, including a relationship hidden by all its kinds, and `OutlineIntegrationTest` |
-| R15 | `RefactoringsModelTest` with uncertain, unanalyzed and changed declarations beside shown, hidden and low relationships, and `OutlineIntegrationTest` |
+| R12 | `RefactoringsModelTest` for the light and dark palette and the seventh rename; `OutlineIntegrationTest` for one palette colour per rename in both editors, above the navigator's usage detail |
+| R13, R14 | `RefactoringsModelTest` for both filters, including a relationship hidden by all its kinds and an exact filtered summary, and `OutlineIntegrationTest` |
+| R15 | `RefactoringsModelTest` with uncertain, unanalyzed and changed declarations beside shown, hidden and low relationships, including a changed endpoint that keeps its `changed` label in `Other changes`; `OutlineIntegrationTest` for the hidden relationship and changed label |
 | R16 | `RefactoringsModelTest` for a result with no relationships and for all kinds hidden |
-| R17 | `RefactoringsModelTest` and `OutlineIntegrationTest` comparing both views' summary for every case |
+| R17 | `OutlineIntegrationTest` drives the container tree and refactorings view through the controller and panel and asserts the same summary text and hidden count, before and after hiding a change type |
 | R18 | `OutlineIntegrationTest` with the outline toggle and native diff in both views |

@@ -1,9 +1,10 @@
 # Refactorings view screenshots
 
-These images show the two-sided outline and both editors for the refactorings view introduced in
-[relationships/06](../../specs/relationships/06-refactorings-view.md). They are rendered from the real diff viewer and
-outline in `RefactoringsScreenshotTest`, without opening a window, because the build environment has no interactive
-display. The dark images use the Darcula editor scheme and the Darcula look and feel.
+These images are **automated evidence only**. They show the two-sided outline and both editors for the refactorings view
+introduced in [relationships/06](../../specs/relationships/06-refactorings-view.md), rendered from the real diff viewer
+and outline by `RefactoringsScreenshotTest` without opening a window. The build environment has no interactive display,
+so the [manual IDE check](../../VALIDATION.md#2026-11-09-refactorings-view-manual-check) remains outstanding and this folder
+does not record a manual pass. The dark images use the Darcula editor scheme and the Darcula look and feel.
 
 | Image | Shows |
 | --- | --- |

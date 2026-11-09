@@ -98,6 +98,7 @@ class OutlineController internal constructor(
         private set
 
     private var running: Job? = null
+    private var settingsSubscribed = false
 
     /**
      * Test seam: the reference pass this controller runs; null uses [ReferencePass.run]. The outcome is still checked
@@ -112,6 +113,12 @@ class OutlineController internal constructor(
 
     internal fun start() {
         viewer.component.putClientProperty(CONTROLLER, this)
+        if (!settingsSubscribed) {
+            settingsSubscribed = true
+            // The settings page publishes CHANGED after Apply, so the view and filters update without a new comparison.
+            ApplicationManager.getApplication().messageBus.connect(this)
+                .subscribe(SmartDiffSettings.CHANGED, SmartDiffSettings.Listener { rebuild() })
+        }
         val listener = object : DocumentListener {
             override fun documentChanged(event: DocumentEvent) = documentChanged()
         }

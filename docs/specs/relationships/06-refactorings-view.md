@@ -22,7 +22,7 @@ Status: implemented, 2026-11-09
 - **R12** Each rename has its own theme-safe highlight colour for its usages in both editors, from a palette of 6 that repeats.
 - **R13** The [change type filter](../../GLOSSARY.md#change-type-filter) works in both views.
 - **R14** The [relationship kind filter](../../GLOSSARY.md#relationship-kind-filter) hides relationships by kind, and a relationship row is hidden when all of its kinds are hidden.
-- **R15** A relationship never hides an [uncertain](../../GLOSSARY.md#uncertain), [unanalyzed](../../GLOSSARY.md#unanalyzed) or changed declaration.
+- **R15** A relationship never hides an [uncertain](../../GLOSSARY.md#uncertain), [unanalyzed](../../GLOSSARY.md#unanalyzed) or changed declaration, which keeps its labels and notes in `Other changes` beside the relationship row.
 - **R16** A file with no relationships shows `No refactorings found` under `Refactorings` and then `Other changes`.
 - **R17** The [summary line](../../GLOSSARY.md#summary-line) is the same in both views.
 - **R18** The [outline toggle](../../GLOSSARY.md#outline-toggle) and the native diff work as before in both views.

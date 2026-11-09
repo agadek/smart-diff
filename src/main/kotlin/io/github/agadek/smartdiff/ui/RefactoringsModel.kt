@@ -203,7 +203,7 @@ object RefactoringsModel {
         }
     }
 
-    /** The ranges of every endpoint a shown, high or medium relationship covers (R15). */
+    /** The ranges of every endpoint a shown, high or medium relationship covers, except rows that keep their labels (R15). */
     private class Coverage(val old: Set<TextRange>, val new: Set<TextRange>) {
         fun covers(item: OutlineItem): Boolean =
             item.oldRange?.let { it in old } == true || item.newRange?.let { it in new } == true
@@ -251,7 +251,7 @@ object RefactoringsModel {
     /**
      * The container tree's row [item] as `Other changes` shows it: a covered declaration is left out, a covered
      * container keeps the rows inside it, and a low-confidence link is added under each of its declarations. An
-     * uncertain or unanalyzed row is never covered, because a relationship must not hide it (R15).
+     * uncertain, unanalyzed or changed row is never covered, because a relationship must not hide it (R15).
      */
     private fun otherChanges(
         item: OutlineItem,
@@ -262,8 +262,7 @@ object RefactoringsModel {
         val links = (item.oldRange?.let { lowLinks[it] }.orEmpty() + item.newRange?.let { lowLinks[it] }.orEmpty())
             .distinct()
         val allChildren = children + links
-        val protected = Tag.UNCERTAIN in item.tags || Tag.UNANALYZED in item.tags
-        val covered = !protected && coverage.covers(item)
+        val covered = !keepsItsOwnLabels(item) && coverage.covers(item)
         if (covered) {
             if (allChildren.isEmpty()) return null
             return item.asContainer(allChildren)
@@ -271,5 +270,14 @@ object RefactoringsModel {
         // A container with no labels of its own disappears when every child is covered, as with the change type filter.
         if (item.tags.isEmpty() && item.children.isNotEmpty() && allChildren.isEmpty()) return null
         return if (allChildren == item.children) item else item.withChildren(allChildren)
+    }
+
+    /**
+     * A row whose change must stay in `Other changes` even when a relationship links it: an uncertain, unanalyzed or
+     * changed declaration keeps its own labels and notes beside the relationship row (R15).
+     */
+    private fun keepsItsOwnLabels(item: OutlineItem): Boolean = item.tags.any {
+        it == Tag.UNCERTAIN || it == Tag.UNANALYZED || it == Tag.CHANGED || it == Tag.SIGNATURE_CHANGED ||
+            it == Tag.FORMATTING_ONLY || it == Tag.USAGES_RENAMED
     }
 }
