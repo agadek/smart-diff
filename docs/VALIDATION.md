@@ -68,7 +68,7 @@ timer restarted after the model property change, and the new summary selected th
 | R3, editor-tab preview | Pass. A caret moved in the `Commit: Cart.java` preview kept `Cart.java` selected and the preview open. |
 | R3, splitter preview | **Inconclusive.** On IC 2025.1 a single click in the Commit view opened only the editor-tab preview. On IU 2026.3, invoking `Show Local Changes` switched the tool window but left the changes tree with 0 rows, and no splitter preview appeared. The splitter could not be produced with both preview settings on. |
 | R4 | Pass. Follow off left the tree unchanged; follow on followed the next caret move. |
-| R5 | Pass for preview output and inclusion; commit count unavailable. With the editor-tab preview off, a caret move to the file row opened no preview and the editor kept focus. With it on, the platform's `Commit: Cart.java` preview followed the file row and focus moved to that preview tab. In both cases every file row stayed `not checked`, and the header stayed `7 files`; this UI has no commit-count label. |
+| R5 | **Partial.** With the editor-tab preview off, a caret move to the file row opened no preview and the editor kept focus. With it on, the platform's `Commit: Cart.java` preview followed the file row and focus moved to that preview tab. Every file row stayed `not checked`, and the header stayed `7 files`. This UI has no commit-count label, so the commit contents/count were not fully measured; preview-off inclusion was not separately re-driven. |
 | R6 | Pass. 30 physical Right keys produced 2 selection updates, the last 1.041 s after the burst, not 30 follows. The click race was repeated 6 times and the clicked `notes.txt` row stayed selected each time. |
 | R7 | Pass with the corrected caret offset (above). |
 | R8 | Pass. Added `Added.java`, unsupported `notes.txt`, too-large `Large.java` and the old side of deleted `Old.java` all selected only their file row. In a 505-file project, `File0053.java` (one of the rows after the 500 summarised files) selected only its file row; `File0505.java` was still inside the first 500 and keeps its summary. |
@@ -85,14 +85,16 @@ timer restarted after the model property change, and the new summary selected th
 - **Directory rows:** with directory grouping on, a physical Right expanded `fixture-main` and a physical double-click
   collapsed it. The `Changes` changelist row expanded and collapsed the same way.
 - **R16:** not driven; no real failing diff was set up.
-- **#108:** not re-run on 0.3.0; the 2026-11-09 0.2.0 record remains the last physical result.
+- **#108:** not re-run on 0.3.0; the 2026-11-09 0.2.0 record remains the last physical result. The declaration action
+  is unchanged by #137/#142, so the result is accepted for 0.3.0 rather than re-run on `f912d8c`.
 - **#112 residual:** M3, M6, M7, M8 and M9 were not run in this release-head check.
 - **Release plan A/B:** the two-sided and merge outline checks on Java, Kotlin, Scala 2 and Scala 3 were not run; the fixture has Java only.
 
-**Tag blockers:** R3 splitter and three-sided, R5 commit count, R11, #111 R16 and the IU/preview-off/Declarations-off
+**Tag blockers:** R3 splitter preview, R5 commit count/inclusion, R11, #111 R16 and the IU/preview-off/Declarations-off
 matrix, #144 splitter and SMART-off control, directory/changelist rows on IU, the A/B outline checks, and #112
-M3/M6/M7/M8/M9 remain. IU 2026.3 was used for the 500-file limit; its Local Changes view could not be populated for the
-splitter check. No product code was changed.
+M3/M6/M7/M8/M9 remain. Three-sided diffs and merge windows are out of scope for #110's R3 (the mapping returns without
+touching the tree); the separate merge-outline A/B check is a release gate. IU 2026.3 was used for the 500-file limit;
+its Local Changes view could not be populated for the splitter check. No product code was changed.
 
 ## 2026-11-09: 0.3.0 backport of the two EDT fixes (#138, #140)
 
