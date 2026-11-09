@@ -302,16 +302,17 @@ language, a file over the size limit and a file with a timed-out or failed summa
 | Failure logging | `ChangesCaretFollowTest` `test a mapping failure is logged once and leaves the tree unchanged` |
 | R10 | `ChangesCaretFollowTest` `test the tree filter hides the caret row and selects the nearest shown row above`: with the changed method's own label hidden, the shown class container or file row is selected, and with Declarations off the file row is selected |
 | R11 | `ChangesCaretFollowTest` `test a preview caret event does not replace a pending summary follow` and `test an unfocused editor's caret event does not replace a pending summary follow`: while a summary is pending, a caret event from the Local Changes splitter or from an editor without focus leaves the remembered editor and offset in place, and the declaration under the original caret is selected once the summary arrives |
-| R1–R11 | Manual check: **outstanding** as of 2026-11-08. A running-IDE probe on IC 2025.1 in the Commit tool window passed R1, R3 (both sides, three-sided, editor-tab preview), R4 off, R5, R6 click and found the real one-sided viewer for R8; the harness's null focus owner made the remaining rows unreliable, so the full four-setup table and the IC Local Changes R7 race are not claimed as passes. See [validation](../../VALIDATION.md#2026-11-08-changes-tree-caret-follow-fixes-r8-one-sided-diff-and-r7-pending-follow). |
+| R1–R11 | Manual check: **partial**, 2026-11-09. R1, R2, R4, R10 and R3's two-sided mapping passed with physical input on IC 2025.1.3; R3's preview leg, R5 inclusion, R7, R8's 500-file limit, R9/R16 and the directory/changelist rows remain, and the single-click preview check is inconclusive. See [validation](../../VALIDATION.md#2026-11-09-changes-tree-manual-checks-on-ic-202513-and-iu-20263-108-110-111). |
 
-### Manual check (outstanding)
+### Manual check (partial, 2026-11-09)
 
-Not yet fully run in a running IDE as of 2026-11-08. A probe on IC 2025.1 in the Commit tool window checked R1, R3,
-R4 off, R5 and R6 click against a real project and found the real one-sided viewer for R8; the probe's null focus owner
-made the remaining rows unreliable, so nothing beyond that is claimed. The R3 preview behavior in both the editor tab
-and the Local Changes splitter is recorded in [validation](../../VALIDATION.md). The steps below are still required on
-IntelliJ IDEA 2025.1 and the latest release for R1–R11, including the R7 intermediate pending rebuild and the preview
-caret event in step 5, and the R10 hidden-row check in step 6a.
+Partially run with physical input on IntelliJ IDEA 2025.1.3 and 2026.3 on 2026-11-09. R1, R2, R4, R10 and R3's
+two-sided mapping passed; R3's preview leg, R5 inclusion, R7, R8's 500-file limit, R9/R16 and the directory/changelist
+rows remain. The single-click preview check is inconclusive because the plain row also showed no preview, so it is a
+preview-setting/platform question rather than a SMART Diff failure. See
+[the 2026-11-09 validation record](../../VALIDATION.md#2026-11-09-changes-tree-manual-checks-on-ic-202513-and-iu-20263-108-110-111).
+The steps below are still required for the remaining rows, including the R7 intermediate pending rebuild and the
+preview caret event in step 5, and the R10 hidden-row check in step 6a.
 Run this on IntelliJ IDEA 2025.1 and the latest release, in the Local Changes view and in the Commit tool window:
 
 1. Open a modified Java file with at least two changed methods. Move the caret through each changed method, through
