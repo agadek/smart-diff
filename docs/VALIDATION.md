@@ -36,6 +36,28 @@ Physical two-sided outline check on IC 2025.1.3 (`IC-251.26927.53`) with SMART D
 
 **Not run / inconclusive for section A:** per-language selection framing/Enter on Kotlin/Scala, moved-frame alignment, the change-type filter (the menu items were present but toggling did not change the outline rows in this run, so it is inconclusive), Hide/Minimise on Kotlin/Scala beyond the remembered minimised state, the width persistence, and the shortcut/toolbar-order check beyond the observed overflow placement. Section B was not run. No product code was changed.
 
+## 2026-11-09: 0.3.0 section B merge outline (`f912d8c`)
+
+Physical merge-window check on IC 2025.1.3 with the extended `.manual/fixture-multilang` merge: `main` and `side`
+conflict in Java, Kotlin, Scala 2 and Scala 3 merge files; `Merge.java` also has `both()` changed on both sides without
+a conflict, `gone()` removed on the side, and `moveMe()` moved to `MergeTarget` on the side.
+
+- **Java `Merge.java`:** the merge window title was `Merge Revisions for …/Merge.java`; the pane titles were
+  `Changes from main`, `Result` and `Changes from side`. The outline groups were `Changed on both sides` and
+  `Changed in side only`. `method both()` carried `main: changed side: changed merged without conflict`; `value()`
+  carried the conflict. `gone()` was `side: removed`; selecting it did not expose a `not tracked` note in the AX tree,
+  so that label is **not confirmed**. `moveMe()` was `side: added`, not a moved row. Three-pane navigation, frame
+  alignment, the change-type filter and the result-edit following were not driven. **Partial.**
+- **Kotlin `Merge.kt`:** the same three pane titles and side groups; `both()` was changed on both sides but without the
+  `merged without conflict` tag, because the conflict hunk covered it. `gone()` was side removed, `MergeTargetK` side
+  changed and `moveMe()` side added. **Partial.**
+- **Scala 2 and Scala 3:** merge windows were not opened in this run. The files are in the conflict state for a later
+  check. **Not run.**
+
+**Section B remaining:** `not tracked` on selection, the moved declaration and frame alignment, three-pane navigation,
+the change-type filter, the container-tree toggle/side names as full pane titles, result-edit following, and the Scala 2
+and Scala 3 merge windows. No product code was changed.
+
 ## 2026-11-09: 0.3.0 release-head manual check (`f912d8c`)
 
 This was the physical check on the exact release head `f912d8c` (`pluginVersion=0.3.0`, including #137 and #142). R7
