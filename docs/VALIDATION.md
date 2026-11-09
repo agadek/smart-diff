@@ -77,17 +77,17 @@ timer restarted after the model property change, and the new summary selected th
 
 ### #111 and #112 residuals
 
-- **#111 double-click/Enter:** on IC 0.3.0 a physical double-click and Enter on `Cart.java` opened `Commit: Cart.java`, and on `notes.txt` opened `Commit: notes.txt`; the summarized and plain rows matched with the editor-tab preview on. IU 2026.3, the preview-off rerun and the Declarations-off variant were not run.
+- **#111 double-click/Enter:** on IC 0.3.0 a physical double-click and Enter on `Cart.java` opened `Commit: Cart.java`, and on `notes.txt` opened `Commit: notes.txt`; the summarized and plain rows matched with the editor-tab preview on. On IU 2026.3 the same pairs matched with the editor-tab preview on (`Commit: Cart.java` / `Commit: notes.txt`) and off (plain `Cart.java` / `notes.txt`), and with Declarations off the open behavior still matched for both rows. The "no expand arrow with Declarations off" check was not confirmed: a Right press still changed the row count.
 - **#144 / B3-R19, editor tab:** with `show.diff.preview.as.editor.tab.with.single.click=true` and
   `LOCAL_CHANGES_DETAILS_PREVIEW_SHOWN=true`, a physical single click opened `Commit: notes.txt` for a plain row and
   `Commit: Cart.java` for a summarized row. This is the editor-tab surface. The splitter surface and a SMART Diff-off
   control were not run, so the splitter half remains inconclusive.
 - **Directory rows:** with directory grouping on, a physical Right expanded `fixture-main` and a physical double-click
-  collapsed it. The `Changes` changelist row expanded and collapsed the same way.
+  collapsed it on IC 2025.1; the `Changes` changelist row expanded and collapsed the same way. The IU 2026.3 directory/changelist rows and a 0.3.0 declaration-row double-click/Enter were not run.
 - **R16:** not driven; no real failing diff was set up.
 - **#108:** not re-run on 0.3.0; the 2026-11-09 0.2.0 record remains the last physical result. The declaration action
   is unchanged by #137/#142, so the result is accepted for 0.3.0 rather than re-run on `f912d8c`.
-- **#112 residual:** M3, M6, M7, M8 and M9 were not run in this release-head check.
+- **#112 residual:** M3's open behavior passed on IU with Declarations off, but the no-expand-arrow detail is partial; M6, M7, M8 and M9 were not run in this release-head check.
 - **Release plan A/B:** the two-sided and merge outline checks on Java, Kotlin, Scala 2 and Scala 3 were not run; the fixture has Java only.
 
 **Tag blockers:** R3 splitter preview, R5 commit count/inclusion, R11, #111 R16 and the IU/preview-off/Declarations-off
