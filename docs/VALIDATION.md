@@ -28,7 +28,9 @@ The 0.3.0 branch now carries the read-action fix from #138 (`3c7f961..aa56b03`) 
 the 0.3.0 Fixed list.
 
 **Automated evidence.** `./gradlew clean buildPlugin check` and `./gradlew verifyPlugin` pass; `smart-diff-0.3.0` is
-Compatible on IC-251.26927.53 and IU-263.7307.200 with the existing 4 experimental API usages and no deprecated or
+Compatible on IC-251.26927.53 and IU-263.7307.200. The CI verifier artifact records 3 experimental API usages, all
+existing `ChangesViewNodeAction` overrides or reference in `DeclarationNodeAction`; a local run that resolves the Scala
+plugin also lists its existing `PsiNamedElementWithCustomPresentation` reference (4 locally). There is no deprecated or
 internal usage.
 
 **Release-artifact log check: probe-assisted, 2026-11-09.** The built `smart-diff-0.3.0.zip` ran on IC 2025.1.3 and IU
@@ -216,8 +218,10 @@ mouse and keyboard gestures were not delivered. On IU 2026.3 the control build a
 reproduces nor contradicts the warning.
 
 **Verifier.** `./gradlew verifyPlugin` is compatible on IC 2025.1.3 (`IC-251.26927.53`) and the latest release
-(`IU-263.7307.200`, 2026.3) with the same 4 experimental API usages as before and no deprecated, internal or
-experimental usage from the new read action.
+(`IU-263.7307.200`, 2026.3). The CI verifier artifact records 3 experimental API usages, all existing
+`ChangesViewNodeAction` overrides or reference in `DeclarationNodeAction`; a local run that resolves the Scala plugin
+also lists its existing `PsiNamedElementWithCustomPresentation` reference (4 locally). There is no deprecated or
+internal usage, and this change adds no experimental usage.
 
 ## 2026-11-08: Changes tree caret follow fixes: R8 one-sided diff and R7 pending follow
 
