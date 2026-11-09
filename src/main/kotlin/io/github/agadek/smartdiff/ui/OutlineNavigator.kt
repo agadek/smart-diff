@@ -43,12 +43,12 @@ internal class OutlineNavigator(private val viewer: TwosideTextDiffViewer) {
     fun select(item: OutlineItem?) {
         clear()
         if (item == null || item.isGroup) return
-        val oldRange = item.oldRange
-        val newRange = item.newRange
-        val follows = oldRange != null && newRange != null && followsSynchronizedScrolling()
+        val oldRanges = listOfNotNull(item.oldRange) + item.frames.mapNotNull { it.old }
+        val newRanges = listOfNotNull(item.newRange) + item.frames.mapNotNull { it.new }
+        val follows = oldRanges.size == 1 && newRanges.size == 1 && followsSynchronizedScrolling()
         withSyncDisabled {
-            show(viewer.editor1, oldRange, item.details.mapNotNull { it.old })
-            show(viewer.editor2, newRange, item.details.mapNotNull { it.new })
+            show(viewer.editor1, oldRanges, item.details.mapNotNull { it.old })
+            show(viewer.editor2, newRanges, item.details.mapNotNull { it.new })
         }
         if (follows && frames.size == 2) {
             frameSync = FrameScrollSync(
@@ -104,11 +104,13 @@ internal class OutlineNavigator(private val viewer: TwosideTextDiffViewer) {
         return sync.scrollable.isSyncScrollEnabled
     }
 
-    private fun show(editor: Editor, range: TextRange?, details: List<TextRange>) {
-        if (range != null) {
+    private fun show(editor: Editor, ranges: List<TextRange>, details: List<TextRange>) {
+        ranges.forEachIndexed { index, range ->
             frame(editor, range)
-            // Without animation, so the scroll is done before synchronized scrolling resumes.
-            DiffUtil.scrollEditor(editor, editor.document.getLineNumber(clamp(editor, range.start)), false)
+            if (index == 0) {
+                // Without animation, so the scroll is done before synchronized scrolling resumes.
+                DiffUtil.scrollEditor(editor, editor.document.getLineNumber(clamp(editor, range.start)), false)
+            }
         }
         details.forEach { highlight(editor, it, DETAIL, HighlighterTargetArea.EXACT_RANGE) }
     }

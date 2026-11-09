@@ -6,6 +6,7 @@ import com.intellij.openapi.util.registry.Registry
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import io.github.agadek.smartdiff.engine.api.ConfidencePolicy
 import io.github.agadek.smartdiff.engine.api.Limits
+import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
 
 /** Settings | Tools | SMART Diff (technical specification §11). */
@@ -41,6 +42,46 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
         assertEquals(Limits.DEFAULT, settings.limits)
         assertEquals("nothing is hidden by default", emptySet<ChangeType>(), settings.hiddenChangeTypes)
         assertEquals("the tree filter starts with nothing hidden", emptySet<ChangeType>(), settings.hiddenChangesTreeChangeTypes)
+        assertEquals("the container tree is the default outline view", OutlineView.CONTAINER_TREE, settings.outlineView)
+        assertEquals("no relationship kind is hidden by default", emptySet<RelationshipKind>(), settings.hiddenRelationshipKinds)
+    }
+
+    fun `test R2 the outline view is stored and the container tree is the default`() {
+        // relationships/06-refactorings-view R2
+        settings.loadState(SmartDiffSettings.SettingsState())
+        assertEquals(OutlineView.CONTAINER_TREE, settings.outlineView)
+
+        settings.outlineView = OutlineView.REFACTORINGS
+        assertEquals("REFACTORINGS", settings.state.outlineView)
+        assertEquals(OutlineView.REFACTORINGS, settings.outlineView)
+
+        settings.loadState(SmartDiffSettings.SettingsState().apply { outlineView = "SOMETHING_ELSE" })
+        assertEquals("an unknown stored view keeps the container tree", OutlineView.CONTAINER_TREE, settings.outlineView)
+    }
+
+    fun `test R14 hidden relationship kinds are stored by name and unknown names are ignored`() {
+        // relationships/06-refactorings-view R14
+        settings.loadState(SmartDiffSettings.SettingsState())
+        settings.hiddenRelationshipKinds = setOf(RelationshipKind.MOVE, RelationshipKind.INLINE)
+
+        assertEquals("MOVE,INLINE", settings.state.hiddenRelationshipKinds)
+        assertEquals(setOf(RelationshipKind.MOVE, RelationshipKind.INLINE), settings.hiddenRelationshipKinds)
+
+        settings.loadState(SmartDiffSettings.SettingsState().apply { hiddenRelationshipKinds = "RENAME, UNKNOWN" })
+        assertEquals(setOf(RelationshipKind.RENAME), settings.hiddenRelationshipKinds)
+    }
+
+    fun `test R2 R14 the outline view and kind filter are display-only`() {
+        // relationships/06-refactorings-view R2, R14; settings/01 R14
+        settings.loadState(SmartDiffSettings.SettingsState())
+        val analysis = settings.analysisRevision
+        val tree = settings.treeRevision
+
+        settings.outlineView = OutlineView.REFACTORINGS
+        settings.hiddenRelationshipKinds = setOf(RelationshipKind.RENAME)
+
+        assertEquals("a view choice does not compare files again", analysis, settings.analysisRevision)
+        assertEquals("a view choice does not rebuild the Changes tree", tree, settings.treeRevision)
     }
 
     fun `test the changes tree toggles share the settings page values`() {

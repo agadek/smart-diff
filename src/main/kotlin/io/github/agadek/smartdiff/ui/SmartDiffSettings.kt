@@ -10,6 +10,7 @@ import com.intellij.openapi.util.registry.Registry
 import com.intellij.util.messages.Topic
 import io.github.agadek.smartdiff.engine.api.ConfidencePolicy
 import io.github.agadek.smartdiff.engine.api.Limits
+import io.github.agadek.smartdiff.engine.api.RelationshipKind
 
 /**
  * Application-level settings under Settings | Tools | SMART Diff (technical specification §11). The default engine per
@@ -46,6 +47,12 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
 
         /** The [ChangeType] names hidden from the outline, comma-separated. */
         var hiddenChangeTypes: String = ""
+
+        /** The [OutlineView] name the outline starts in (relationships/06 R2); `CONTAINER_TREE` by default. */
+        var outlineView: String = OutlineView.CONTAINER_TREE.name
+
+        /** The [RelationshipKind] names hidden from the refactorings view, comma-separated (relationships/06 R14). */
+        var hiddenRelationshipKinds: String = ""
 
         /** The [ChangeType] names hidden from the Changes tree, comma-separated and separate from the outline's. */
         var hiddenChangesTreeChangeTypes: String = ""
@@ -125,6 +132,18 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         get() = current.hiddenChangesTreeChangeTypes.split(',').mapNotNullTo(LinkedHashSet()) { name -> ChangeType.entries.firstOrNull { it.name == name.trim() } }
         set(value) = update { hiddenChangesTreeChangeTypes = ChangeType.entries.filter { it in value }.joinToString(",") { it.name } }
 
+    /** The outline's view, the container tree or the refactorings view (relationships/06 R1, R2). */
+    var outlineView: OutlineView
+        get() = OutlineView.entries.firstOrNull { it.name == current.outlineView } ?: OutlineView.CONTAINER_TREE
+        set(value) = update { outlineView = value.name }
+
+    /** The relationship kinds hidden from the refactorings view; a stored name that is no longer a kind is ignored. */
+    var hiddenRelationshipKinds: Set<RelationshipKind>
+        get() = current.hiddenRelationshipKinds.split(',').mapNotNullTo(LinkedHashSet()) { name ->
+            RelationshipKind.entries.firstOrNull { it.name == name.trim() }
+        }
+        set(value) = update { hiddenRelationshipKinds = RelationshipKind.entries.filter { it in value }.joinToString(",") { it.name } }
+
     /** The limits passed to engines; a stored value that is out of range falls back to its default. */
     var limits: Limits
         get() = Limits(
@@ -174,6 +193,8 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
             it.mergeHideBothSides = old.mergeHideBothSides
             it.hiddenChangeTypes = old.hiddenChangeTypes
             it.hiddenChangesTreeChangeTypes = old.hiddenChangesTreeChangeTypes
+            it.outlineView = old.outlineView
+            it.hiddenRelationshipKinds = old.hiddenRelationshipKinds
             it.maxChars = old.maxChars
             it.maxDeclarations = old.maxDeclarations
             it.timeoutMillis = old.timeoutMillis

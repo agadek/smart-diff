@@ -2,6 +2,7 @@ package io.github.agadek.smartdiff.ui
 
 import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
+import io.github.agadek.smartdiff.engine.api.Confidence
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.Evidence
@@ -54,6 +55,18 @@ enum class ItemKind {
     FORMATTING_GROUP,
     UNCERTAIN_GROUP,
     UNANALYZED_GROUP,
+
+    /** A headed list in the refactorings view, such as `Refactorings` or `Other changes` (relationships/06 R5, R16). */
+    SECTION,
+
+    /** One relationship row in the refactorings view (relationships/06 R3). */
+    RELATIONSHIP,
+
+    /** A piece of evidence under a relationship row (relationships/06 R9). */
+    EVIDENCE,
+
+    /** One grouped usage under a rename row (relationships/06 R4). */
+    USAGE,
 }
 
 /** One row of the outline tree. Ranges are offsets into the compared texts; a null range means "not present on that side". */
@@ -67,14 +80,30 @@ class OutlineItem(
     val children: List<OutlineItem> = emptyList(),
     /** Shown after the change labels, such as where extracted code came from. */
     val note: String? = null,
+    /** A relationship row's confidence as a word, never a percentage (relationships/06 R7). */
+    val confidence: Confidence? = null,
+    /** Further endpoint ranges framed with the row's primary range (relationships/06 R10). */
+    val frames: List<RangePair> = emptyList(),
+    /** A rename's palette index, or null for rows without grouped usages (relationships/06 R12). */
+    val colour: Int? = null,
 ) {
-    val isGroup: Boolean get() = kind == ItemKind.FORMATTING_GROUP || kind == ItemKind.UNCERTAIN_GROUP || kind == ItemKind.UNANALYZED_GROUP
+    val isGroup: Boolean
+        get() = kind == ItemKind.FORMATTING_GROUP || kind == ItemKind.UNCERTAIN_GROUP ||
+            kind == ItemKind.UNANALYZED_GROUP || kind == ItemKind.SECTION
 
-    /** The row's text, which is also its accessible name: the title, then the change labels and the note. */
+    /** The row's text, which is also its accessible name: the title, then the change labels, the note and the confidence. */
     val label: String get() {
-        val labels = tags.map { it.text } + listOfNotNull(note)
+        val labels = tags.map { it.text } + listOfNotNull(note, confidence?.name?.lowercase())
         return if (labels.isEmpty()) title else "$title  ${labels.joinToString(", ")}"
     }
+
+    /** A copy of this row with new children, which keeps every other field. */
+    internal fun withChildren(children: List<OutlineItem>): OutlineItem =
+        OutlineItem(kind, title, tags, oldRange, newRange, details, children, note, confidence, frames, colour)
+
+    /** A copy of this row without its own labels or details, as a container of the rows that remain. */
+    internal fun asContainer(children: List<OutlineItem>): OutlineItem =
+        OutlineItem(kind, title, emptyList(), oldRange, newRange, emptyList(), children, note = null, confidence = null, frames = emptyList())
 
     override fun toString(): String = label
 }
@@ -176,13 +205,12 @@ object OutlineModel {
         return tags(node).all { it in hiddenTags }
     }
 
-    /**
-     * A subject's title: kind, receiver, name and signature for a declaration (`method parse(String,int)`,
+    /** A subject's title: kind, receiver, name and signature for a declaration (`method parse(String,int)`,
      * `function Date.formatIsoDate()`), or a region's description.
      */
     fun title(subject: Subject): String = when (subject) {
         is Subject.Declaration -> {
-            val kind = kind(subject.kind)
+            val kind = kindName(subject.kind)
             val name = name(subject)
             (if (name.isEmpty()) kind else "$kind $name") + (subject.signature?.let { "($it)" } ?: "")
         }
@@ -196,14 +224,14 @@ object OutlineModel {
     fun title(node: ChangeNode): String {
         val from = node.renamedFrom as? Subject.Declaration
         val subject = node.subject as? Subject.Declaration
-        val kindFrom = node.kindChangedFrom?.let { kind(it) + " → " }.orEmpty()
+        val kindFrom = node.kindChangedFrom?.let { kindName(it) + " → " }.orEmpty()
         if (from == null || subject == null) return kindFrom + title(node.subject)
         return kindFrom + title(subject.copy(name = "${name(from)} → ${name(subject)}", receiver = null))
     }
 
-    private fun kind(kind: DeclarationKind): String = kind.name.lowercase().replace('_', ' ')
+    internal fun kindName(kind: DeclarationKind): String = kind.name.lowercase().replace('_', ' ')
 
-    private fun name(subject: Subject.Declaration): String = (subject.receiver?.let { "$it." } ?: "") + subject.name
+    internal fun name(subject: Subject.Declaration): String = (subject.receiver?.let { "$it." } ?: "") + subject.name
 
     private const val EXTRACTED = "extracted"
     private const val INLINED = "inlined"
@@ -455,7 +483,7 @@ object OutlineModel {
     }
 
     /** 1-based lines of [range]: `line 3` or `lines 3-5`. */
-    private fun lines(range: TextRange, text: CharSequence): String {
+    internal fun lines(range: TextRange, text: CharSequence): String {
         fun line(offset: Int): Int {
             var line = 1
             for (i in 0 until minOf(offset, text.length)) if (text[i] == '\n') line++

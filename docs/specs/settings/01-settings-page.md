@@ -1,6 +1,6 @@
 # Settings page
 
-Status: implemented, 2026-10-22
+Status: implemented, 2026-10-22; the outline view and relationship kind settings (R16 and R17) arrive with the [refactorings view](../relationships/06-refactorings-view.md), 2026-11-09.
 
 **Description:** A settings page under Settings | Tools | SMART Diff holds the plugin's options, for all projects.
 
@@ -23,8 +23,11 @@ Status: implemented, 2026-10-22
 - **R13** "Follow the caret in the Changes tree" is on by default.
 - **R14** Changing it does not clear summaries or rebuild the tree.
 - **R15** When it is off, moving the caret does not change the Changes tree selection.
+- **R16** "Outline view" chooses between the container tree, the default, and the refactorings view, and the outline toggle keeps the choice.
+- **R17** "Hide from the refactorings view" has one checkbox per relationship kind, all off by default, and matches the refactorings view's menu.
 
 ## References
 
 - [Hide and filter in the Changes tree](../changes-tree/04-hide-and-filter.md)
+- [Refactorings view](../relationships/06-refactorings-view.md)
 - [Technical specification §11](../../TECHNICAL-SPECIFICATION.md#11-settings)

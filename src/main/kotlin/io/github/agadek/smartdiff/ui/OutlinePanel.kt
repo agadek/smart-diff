@@ -20,6 +20,7 @@ import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
+import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.registry.EngineSelection
 import java.awt.BorderLayout
@@ -67,6 +68,18 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         override fun actionPerformed(e: AnActionEvent) = controller.setMinimised(true)
     }
 
+    /** Switches between the container tree and the refactorings view (relationships/06 R1). */
+    internal val viewAction = object : DumbAwareToggleAction(
+        "Refactorings view",
+        "Show relationships first, then the changes no relationship covers",
+        AllIcons.Actions.ShowAsTree,
+    ) {
+        override fun isSelected(e: AnActionEvent): Boolean = SmartDiffSettings.getInstance().outlineView == OutlineView.REFACTORINGS
+        override fun setSelected(e: AnActionEvent, state: Boolean) =
+            controller.setOutlineView(if (state) OutlineView.REFACTORINGS else OutlineView.CONTAINER_TREE)
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+    }
+
     private val body = JPanel(CardLayout())
     private var updatingEngines = false
 
@@ -82,7 +95,16 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
             templatePresentation.icon = AllIcons.General.Filter
             isPopup = true
         }
-        val toolbar = ActionManager.getInstance().createActionToolbar("SmartDiffOutline", DefaultActionGroup(filter, refresh, minimiseAction, hideAction), true)
+        val kinds = DefaultActionGroup("Hide Relationship Kinds", RelationshipKind.entries.map(::HideKindAction)).apply {
+            templatePresentation.description = "Hide kinds of relationships from the refactorings view"
+            templatePresentation.icon = AllIcons.General.Filter
+            isPopup = true
+        }
+        val toolbar = ActionManager.getInstance().createActionToolbar(
+            "SmartDiffOutline",
+            DefaultActionGroup(viewAction, filter, kinds, refresh, minimiseAction, hideAction),
+            true,
+        )
         toolbar.targetComponent = this
 
         engines.renderer = object : SimpleListCellRenderer<ComparisonEngine>() {
@@ -217,11 +239,12 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         expand(root)
     }
 
-    /** Expands everything except the formatting-only groups, which start collapsed (§10). */
+    /** Expands everything except the formatting-only groups and the relationship rows, which start collapsed (§10, R9). */
     private fun expand(node: DefaultMutableTreeNode) {
         for (child in node.children()) {
             child as DefaultMutableTreeNode
-            if ((child.userObject as OutlineItem).kind == ItemKind.FORMATTING_GROUP || child.isLeaf) continue
+            val item = child.userObject as OutlineItem
+            if (item.kind == ItemKind.FORMATTING_GROUP || item.kind == ItemKind.RELATIONSHIP || child.isLeaf) continue
             tree.expandPath(TreePath(child.path))
             expand(child)
         }
@@ -269,6 +292,13 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
     }
 
+    /** One entry of the relationship menu: checked while relationships of [kind] are hidden (relationships/06 R14). */
+    private inner class HideKindAction(private val kind: RelationshipKind) : DumbAwareToggleAction(relationshipKindText(kind)) {
+        override fun isSelected(e: AnActionEvent): Boolean = kind in SmartDiffSettings.getInstance().hiddenRelationshipKinds
+        override fun setSelected(e: AnActionEvent, state: Boolean) = controller.setHiddenRelationshipKind(kind, state)
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+    }
+
     /** Draws an item as [appendItem] does. */
     private class Renderer : ColoredTreeCellRenderer() {
         override fun customizeCellRenderer(tree: JTree, value: Any?, selected: Boolean, expanded: Boolean, leaf: Boolean, row: Int, hasFocus: Boolean) {
@@ -291,13 +321,18 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
  */
 internal fun appendItem(component: SimpleColoredComponent, item: OutlineItem) {
     component.append(item.title, if (item.isGroup) SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES else SimpleTextAttributes.REGULAR_ATTRIBUTES)
-    if (item.tags.isEmpty() && item.note == null) return
+    val hasLabels = item.tags.isNotEmpty() || item.note != null || item.confidence != null
+    if (!hasLabels) return
     component.append("  ")
     item.tags.forEachIndexed { i, tag ->
         if (i > 0) component.append(", ", SimpleTextAttributes.GRAYED_ATTRIBUTES)
         component.append(tag.text, attributes(tag))
     }
     item.note?.let { component.append((if (item.tags.isEmpty()) "" else ", ") + it, SimpleTextAttributes.GRAYED_ATTRIBUTES) }
+    item.confidence?.let {
+        val separator = if (item.tags.isEmpty() && item.note == null) "" else ", "
+        component.append(separator + it.name.lowercase(), SimpleTextAttributes.GRAYED_ATTRIBUTES)
+    }
 }
 
 private fun attributes(tag: Tag): SimpleTextAttributes {

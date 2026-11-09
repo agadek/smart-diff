@@ -72,7 +72,7 @@ Proposed 2026-11-01 as the next item after 0.2.0. The benchmark harness, the ful
 | Better pairing over the whole file | [relationships/03](specs/relationships/03-relationship-matching.md) (implemented 2026-11-04) | The benchmark shows no new wrong pairs and no lower held-out precision; the benchmark output is unchanged, and two corpus files now pair reordered renames |
 | Rename grouped with its usages | [relationships/04](specs/relationships/04-rename-grouping.md) | Implemented (2026-11-07): Java, Kotlin K2 and Scala 2/3 usages group into the rename; the full 440-case usage gate passes with no wrongly grouped usage, while unresolved or also-changed usages stay ordinary changes |
 | Inlining detection | [relationships/05](specs/relationships/05-inlining-detection.md) | Implemented (2026-11-08): the inlining cases pass in all four corpora and every linked declaration stays visible |
-| Refactorings view | [relationships/06](specs/relationships/06-refactorings-view.md) | The view shows every change the container tree shows |
+| Refactorings view | [relationships/06](specs/relationships/06-refactorings-view.md) | Implemented (2026-11-09): the view shows every change the container tree shows, with relationship rows, confidence words, evidence, kind filtering and per-rename usage colours |
 | Validation and release | [relationships/07](specs/relationships/07-relationship-validation.md) | The results are in VALIDATION.md and the release checks pass |
 | Relationships across files | Not specified; only if the product scope is extended | A separate design and benchmark exist |
 
