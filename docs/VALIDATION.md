@@ -21,6 +21,81 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-09: 0.3.0 release-head manual check (`f912d8c`)
+
+This was the physical check on the exact release head `f912d8c` (`pluginVersion=0.3.0`, including #137 and #142). R7
+passes after correcting the caret placement in the test; the remaining rows are listed below and still block the tag.
+No tag or publication was made.
+
+**Build and setup.** `./gradlew clean buildPlugin check` passed; `./gradlew verifyPlugin` is Compatible on
+`IC-251.26927.53` and `IU-263.7307.200` (4 experimental usages in the local Scala-resolving run, 3 in the CI artifact,
+no deprecated usage). IC 2025.1.3 ran through `./gradlew runIde` with SMART Diff 0.3.0 and Scala 2025.1.32. The physical
+input used the macOS Accessibility `clickhelper`; a temporary external AX reader reported the live tree selection,
+row labels and inclusion states, because Screen Recording is not granted on this machine. IU 2026.3 was not used for the
+R7/R1/R2/R4/R6/R10 part; it was used for the R8 500-file limit and the splitter attempt.
+
+### R7: passes on the release head
+
+Starting from `Cart.java` with `method total()` selected, the caret was put in `total()`, the method was edited and
+saved, then the caret was moved with **Go to Line 27** into `return items.isEmpty();` (offset **540**). An AX watcher
+recorded:
+
+```text
+0.000  method total()  changed
+~0.67  (no selection, tree rebuilding)
+0.886  Cart.java  src/main/java/demo          (plain pending file row)
+1.091  (no selection, tree rebuilding)
+1.293  then the new summary: method isEmpty() added
+```
+
+The instrumented retry showed the summary ranges `method total() new=[365,506)` and `method isEmpty() new=[512,576)`.
+At offset 540 `innermost` returned `class Cart / method isEmpty()`, `findDeclaration` found that row, and the final
+selection was `method isEmpty()  added`. The same check on the 1200-method `Slow.java` at offset 153 selected
+`method m2()  changed`.
+
+The first attempt moved the caret with four Down presses and ended at offset **577**, one character past
+`isEmpty()`'s range `[512,576)`. Selecting `class Cart` there was correct; it was a test-placement error, not an R7
+failure. The retry sequence was: `Stale` kept the old row, the model rebuild selected the plain pending file row, the
+timer restarted after the model property change, and the new summary selected the method under the caret.
+
+### Other physical rows
+
+| Row | Result |
+| --- | --- |
+| R1 | Pass. Caret in `total()`, the class header and added `isEmpty()` selected the innermost changed row and expanded the file. |
+| R2 | Pass. A caret in `package demo;` selected the file row. |
+| R3, two-sided | Pass. Physical clicks on the old and new editors selected `method total()` for their own side. |
+| R3, editor-tab preview | Pass. A caret moved in the `Commit: Cart.java` preview kept `Cart.java` selected and the preview open. |
+| R3, splitter preview | **Inconclusive.** On IC 2025.1 a single click in the Commit view opened only the editor-tab preview. On IU 2026.3, invoking `Show Local Changes` switched the tool window but left the changes tree with 0 rows, and no splitter preview appeared. The splitter could not be produced with both preview settings on. |
+| R4 | Pass. Follow off left the tree unchanged; follow on followed the next caret move. |
+| R5 | **Partial.** With the editor-tab preview off, a caret move to the file row opened no preview and the editor kept focus. With it on, the platform's `Commit: Cart.java` preview followed the file row and focus moved to that preview tab. Every file row stayed `not checked`, and the header stayed `7 files`. This UI has no commit-count label, so the commit contents/count were not fully measured; preview-off inclusion was not separately re-driven. |
+| R6 | Pass. 30 physical Right keys produced 2 selection updates, the last 1.041 s after the burst, not 30 follows. The click race was repeated 6 times and the clicked `notes.txt` row stayed selected each time. |
+| R7 | Pass with the corrected caret offset (above). |
+| R8 | Pass. Added `Added.java`, unsupported `notes.txt`, too-large `Large.java` and the old side of deleted `Old.java` all selected only their file row. In a 505-file project, `File0053.java` (one of the rows after the 500 summarised files) selected only its file row; `File0505.java` was still inside the first 500 and keeps its summary. |
+| R10 | Pass. Hiding `CHANGED` selected the shown `class Filter`; Declarations off selected the file row. |
+| R11 | **Inconclusive.** The splitter preview could not be produced (see R3) and no stale-summary window was captured with the editor-tab preview. |
+
+### #111 and #112 residuals
+
+- **#111 double-click/Enter:** on IC 0.3.0 a physical double-click and Enter on `Cart.java` opened `Commit: Cart.java`, and on `notes.txt` opened `Commit: notes.txt`; the summarized and plain rows matched with the editor-tab preview on. On IU 2026.3 the same pairs matched with the editor-tab preview on (`Commit: Cart.java` / `Commit: notes.txt`) and off (plain `Cart.java` / `notes.txt`), and with Declarations off the open behavior still matched for both rows. The "no expand arrow with Declarations off" check was not confirmed: a Right press still changed the row count.
+- **#144 / B3-R19, editor tab:** with `show.diff.preview.as.editor.tab.with.single.click=true` and
+  `LOCAL_CHANGES_DETAILS_PREVIEW_SHOWN=true`, a physical single click opened `Commit: notes.txt` for a plain row and
+  `Commit: Cart.java` for a summarized row. This is the editor-tab surface. The splitter surface and a SMART Diff-off
+  control were not run, so the splitter half remains inconclusive.
+- **Directory rows:** with directory grouping on, a physical Right expanded `fixture-main` and a physical double-click
+  collapsed it on IC 2025.1; the `Changes` changelist row expanded and collapsed the same way. The IU 2026.3 directory/changelist rows and a 0.3.0 declaration-row double-click/Enter were not run.
+- **R16:** not driven; no real failing diff was set up.
+- **#108:** not re-run on 0.3.0; the 2026-11-09 0.2.0 record remains the last physical result. The declaration action
+  is unchanged by #137/#142, so the result is accepted for 0.3.0 rather than re-run on `f912d8c`.
+- **#112 residual:** M3's open behavior passed on IU with Declarations off, but the no-expand-arrow detail is partial; M6, M7, M8 and M9 were not run in this release-head check.
+- **Release plan A/B:** the two-sided and merge outline checks on Java, Kotlin, Scala 2 and Scala 3 were not run; the fixture has Java only.
+
+**Tag blockers:** R3 splitter preview, R5 commit count/inclusion, R11, #111 R16 and the IU declaration-row check, #144
+splitter and SMART-off control, directory/changelist rows on IU, the A/B outline checks, and #112 M3's
+no-expand-arrow detail plus M6/M7/M8/M9 remain. Three-sided diffs and merge windows are out of scope for #110's R3 (the mapping returns without
+touching the tree); the separate merge-outline A/B check is a release gate. IU 2026.3 was used for the 500-file limit;
+its Local Changes view could not be populated for the splitter check. No product code was changed.
+
 ## 2026-11-09: 0.3.0 backport of the two EDT fixes (#138, #140)
 
 The 0.3.0 branch now carries the read-action fix from #138 (`3c7f961..aa56b03`) and the outline file-index fix from #140
@@ -597,7 +672,7 @@ off states, so this run cannot tell whether the speed search works. M9 remains m
 
 ### Remaining manual checks
 
-- M3 open behavior on a leaf row, after #111.
+- M3 the no-expand-arrow detail with Declarations off; the open behavior passes.
 - M6 uncertain/unanalyzed rows and hiding moved and changed together.
 - M7 commit inclusion of an all-hidden file.
 - M8 the 2026.3 restart and the outline visual comparison.
