@@ -42,11 +42,16 @@ is unchanged: the engine result is still shown before the pass starts.
 `ReferencePassTest` passes unchanged, including `test R3 no file or a file outside the project keeps the engine result`.
 The seam is internal and set only by the test; production reads the project file index.
 
-**Running-IDE check: outstanding.** The issue asks for a running-IDE check that opening a diff logs no
-`Slow operations are prohibited on EDT`. This environment has no interactive desktop, so it was not run and is not
-claimed as passed. The manual step is: start the built plugin in IC 2025.1.3 and the latest release, open a Java, Kotlin
-and Scala diff from Local Changes and the Commit tool window, and search the IDE log for
-`Slow operations are prohibited on EDT` and `SMART Diff`; none should follow opening the diff.
+**Running-IDE check: probe-assisted, 2026-11-09.** The built plugin ran on IC 2025.1.3 (`IC-251.26927.53`) and IU
+2026.3 (`IU-263.7307.200`) with a Git project containing Java, Kotlin and Scala changes. A temporary startup probe opened
+Java, Kotlin and Scala diffs from the Local Changes splitter preview (`PreviewDiffSplitterComponent` with
+`UnifiedLocalChangeListDiffViewer`) and the Commit tool window, from native two-sided `SimpleDiffViewer` and native
+`UnifiedDiffViewer` requests, and from a request whose file is outside the content roots. The `origin/main` control build
+(`3c7f961`) logged 4 `Slow operations are prohibited on EDT` entries against SMART Diff on IC 2025.1.3, all through
+`ReferencePass.isApplicable` from `OutlineController.finish`; this build logged 0 while the same diffs opened. On IU
+2026.3 the control build also logged 0, so that IDE neither reproduces nor contradicts the warning. The check is
+probe-assisted, not a physical click path: macOS Assistive access is not granted here, so the real mouse and keyboard
+gestures were not delivered.
 
 **Verifier.** `./gradlew verifyPlugin` is Compatible on IC-251.26927.53 and IU-263.7307.200. The CI verifier artifact
 records 3 experimental API usages, all `ChangesViewNodeAction` overrides or reference in `DeclarationNodeAction`, the
