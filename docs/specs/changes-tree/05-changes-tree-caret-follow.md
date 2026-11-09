@@ -37,6 +37,8 @@ the tree. This is the reverse of opening a declaration from the tree.
   nearest shown row above it, or the file row when no declaration row is shown.
 - **R11** A caret event from the platform's selection-following preview, or from an editor without focus, does not
   replace a pending follow from another editor.
+- **R12** Following logs no read-access error while it finds the diff viewer, including the platform's unified viewer in
+  the Local Changes splitter.
 
 ## Out of scope
 

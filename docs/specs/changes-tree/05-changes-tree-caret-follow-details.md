@@ -74,7 +74,11 @@ All of this runs on the EDT, except the summary comparison that already runs in 
 1. **Take the editor and the offset.** A caret event gives the editor and its caret offset. A file-editor selection
    change uses the selected text editor and its current caret offset.
 2. **Find the side and the file.**
-   - Read `DiffDataKeys.DIFF_VIEWER` from the editor's data context. If a viewer is present and is not a
+   - Build the editor's data context once inside an application read action on the EDT and read both
+     `DiffDataKeys.DIFF_VIEWER` and `DiffDataKeys.MERGE_VIEWER` from it (R12). Building the context snapshots the
+     viewer's component, whose `OnesideTextDiffViewer` / `UnifiedDiffViewer` `getNavigatable` needs read access; without
+     the read action the platform logs `Read access is allowed from inside read-action only` against the plugin. The
+     single context also avoids asking the data context twice for the same follow. If a viewer is present and is not a
      `TwosideTextDiffViewer` or an `OnesideDiffViewer`, return without touching the tree; a three-sided diff or merge
      window is out of scope.
    - If a `TwosideTextDiffViewer` is present, use it. If a plain `OnesideDiffViewer` is present, the platform is showing
@@ -232,7 +236,8 @@ the cached summary and changes the tree selection.
   `ChangesSummaryService.version` for staleness.
 - The tree is reached through public `ToolWindowManager`, `ChangesListView` and `JTree` API. The diff side is read
   through public `DiffDataKeys.DIFF_VIEWER`, `TwosideTextDiffViewer`, `DocumentContent.highlightFile` and
-  `FileDocumentManager`.
+  `FileDocumentManager`. The viewer context is built and read inside one application read action on the EDT, so the
+  platform's `getNavigatable` during the component snapshot logs no read-access error (R12).
 - The service adds no reflection and no `@ApiStatus.Internal`, `@ApiStatus.Experimental` or deprecated member. The
   existing experimental usages are unchanged: the `changesViewNodeAction` extension that opens a declaration and the
   Scala provider's `PsiNamedElementWithCustomPresentation` reference. Plugin Verifier must report no new usage from this
@@ -265,7 +270,10 @@ the production viewer lookup. It also opens real two-sided and three-sided diff 
 `DiffManager.createRequestPanel`, as `OutlineIntegrationTest` does, for the side mapping, finds a live tree in a
 temporary Version Control tool window, opens a `TabPreviewDiffVirtualFile` diff editor tab with a real
 `DiffEditorViewerFileEditor` for the editor-tab preview mapping, and puts the viewer in a `PreviewDiffSplitterComponent`
-for the Local Changes splitter mapping.
+for the Local Changes splitter mapping. The R12 test forces the splitter's real `UnifiedDiffViewer` and runs one follow
+inside `assertNoErrorLogged`, so the production lookup must read one data context and log no error. Headless tests run
+inside the platform's write-intent read action, which allows read access on the test thread, so they cannot reproduce
+the warning itself; the running-IDE check in [validation](../../VALIDATION.md) covers it.
 
 The test seam is internal to the plugin: a `@TestOnly` `followNow(editor, offset)` method runs the same mapping and
 selection path as the debounce timer, and `waitForPendingFollow()` drains the timer and any queued model retry. The test
@@ -290,6 +298,7 @@ language, a file over the size limit and a file with a timed-out or failed summa
 | R7 | `ChangesCaretFollowTest` `test a stale summary keeps the row through an intermediate pending rebuild and follows when the summary arrives`: after an edit, a caret event before the rebuild leaves the row selected; the intermediate pending model keeps the retry, and the row under the caret is selected after the summary arrives. `test a pending summary keeps retrying through an intermediate rebuild and selects the declaration when it arrives` covers the same retry from the first pending state |
 | R8 | `ChangesCaretFollowTest` `test a file without a summary selects only the file row` (added, deleted and unsupported files); `test an added file in a one-sided diff selects only its file row` and `test a deleted file in a one-sided diff selects only its file row` (a real `SimpleOnesideDiffViewer` whose content has a null `highlightFile` as the platform's does, including a deleted file without a `DIFF_VIEWER`); `test a pending file selects only the file row`; `test a fresh summary with no items clears the pending retry`; `test a not analyzed file selects only the file row`; `test a file after the 500-file limit selects only its file row` |
 | R9 | `ChangesCaretFollowTest` `test following reads no revision content on the UI thread`: a `ContentRevision` whose `content` fails when read on the EDT is never read; `test a caret event and start from a background thread are marshalled to the EDT`; Plugin Verifier report: no new internal, experimental, deprecated or override-only usage from the follower, and the existing usages stay unchanged |
+| R12 | `ChangesCaretFollowTest` `test the splitter unified viewer lookup reads one data context and reports no read-access error`: a real `UnifiedDiffViewer` in a `PreviewDiffSplitterComponent` is the editor's ancestor, one follow reads one data context, and the lookup logs no error |
 | Failure logging | `ChangesCaretFollowTest` `test a mapping failure is logged once and leaves the tree unchanged` |
 | R10 | `ChangesCaretFollowTest` `test the tree filter hides the caret row and selects the nearest shown row above`: with the changed method's own label hidden, the shown class container or file row is selected, and with Declarations off the file row is selected |
 | R11 | `ChangesCaretFollowTest` `test a preview caret event does not replace a pending summary follow` and `test an unfocused editor's caret event does not replace a pending summary follow`: while a summary is pending, a caret event from the Local Changes splitter or from an editor without focus leaves the remembered editor and offset in place, and the declaration under the original caret is selected once the summary arrives |
