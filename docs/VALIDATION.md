@@ -71,12 +71,12 @@ Physical tree checks on IC 2025.1.3 with `.manual/fixture-multilang`.
   `Cart.java` cannot become all hidden because its rename-candidate row is never hidden; that is the correct exception.
 - **M8, inconclusive.** The tree filter and both toggles were not set on IU 2026.3 with real input, and the IU restart
   with the isolated paths was not run in this step. The IC settings were changed, but only the IC session was observed.
-- **M9, partial/failed.** The tree filter was restored so `Cart.java` showed its declaration rows. Typing `total`
-  opened the tree speed-search field with that text, but pressing Enter left the selection on `Cart.java` rather than
-  the `method total()  changed` row. Retrying with the prefix `method total`, and with `method `, put that exact text
-  in the speed-search field but again left the file row selected; the filtered rows showed `Cart.java`, `Order.java`
-  and even `class Order`, but not `method total()`. The shown-declaration half is not met; the hidden-row half is
-  trivially not found.
+- **M9, pass with the declaration visibly expanded.** `Cart.java` and its `class Cart` row were explicitly expanded;
+  the tree showed 32 rows and `method total()  changed` was visible. With the tree focused, typing `method total` moved
+  the selection from `Cart.java` to `method total()  changed`. After hiding the Changed type, `method total()` was
+  absent and the tree had 30 rows; typing `method total` again left the selection on the nearest shown row
+  (`method label → name()  rename candidate`) and did not select the hidden row. The earlier failures were with the
+  class row collapsed, so the declaration row was not on screen.
 
 No product code was changed.
 
