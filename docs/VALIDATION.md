@@ -21,6 +21,70 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-09: 0.3.0 release-head manual check (`f912d8c`)
+
+This was the physical check on the exact release head `f912d8c` (`pluginVersion=0.3.0`, including #137 and #142).
+**The check stopped at R7:** the release head reproduces the stale-summary retry failure, so the tag is **blocked** and
+no tag or publication was made.
+
+**Build and setup.** `./gradlew clean buildPlugin check` passed; `./gradlew verifyPlugin` is Compatible on
+`IC-251.26927.53` and `IU-263.7307.200` (4 experimental usages in the local Scala-resolving run, 3 in the CI artifact,
+no deprecated usage). IC 2025.1.3 ran through `./gradlew runIde` with SMART Diff 0.3.0 and Scala 2025.1.32. The physical
+input used the macOS Accessibility `clickhelper`; a temporary external AX reader reported the live tree selection,
+row labels and inclusion states, because Screen Recording is not granted on this machine. The IU 2026.3 run was not
+started after the IC R7 failure.
+
+### R7: failed on the release head
+
+Starting from `Cart.java` with `method total()` selected, the caret was put in `total()`, the method was edited and
+saved, then the caret was moved into `isEmpty()` (offset 577, inside `return items.isEmpty();`). An AX watcher recorded:
+
+```text
+0.000  method total()  changed
+0.673  (no selection, tree rebuilding)
+0.886  Cart.java  src/main/java/demo          (plain pending file row)
+1.091  (no selection, tree rebuilding)
+1.293  class Cart  changed                     (new summary arrived)
+```
+
+The rebuilt tree collapsed the class and selected the **class** row; the row under the caret, `method isEmpty() added`,
+was not selected. The same sequence on the 1200-method `Slow.java` ended on the plain `Slow.java` file row after the
+new summary arrived, not on the changed method under the caret. This is the R7 failure the release gate is meant to
+catch; no product code was changed.
+
+### Other physical rows
+
+| Row | Result |
+| --- | --- |
+| R1 | Pass. Caret in `total()`, the class header and added `isEmpty()` selected the innermost changed row and expanded the file. |
+| R2 | Pass. A caret in `package demo;` selected the file row. |
+| R3, two-sided | Pass. Physical clicks on the old and new editors selected `method total()` for their own side. |
+| R3, editor-tab preview | Pass. A caret moved in the `Commit: Cart.java` preview kept `Cart.java` selected and the preview open. |
+| R3, splitter preview | **Inconclusive.** No splitter preview appeared in the Local Changes tool window in this run; the editor-tab form was observed instead. |
+| R4 | Pass. Follow off left the tree unchanged; follow on followed the next caret move. |
+| R5 | Partial. The editor kept focus, all file rows stayed `not checked`, and the editor-tab preview was the platform's own. The preview-off case and the commit count were not measured. |
+| R6 | Pass. 30 physical Right keys produced 2 selection updates, the last 1.041 s after the burst, not 30 follows. The click race was repeated 6 times and the clicked `notes.txt` row stayed selected each time. |
+| R7 | **Failed** (above). |
+| R8 | Partial. `Added.java`, `notes.txt`, deleted `Old.java` and too-large `Large.java` were plain file rows with no declaration rows; the added/deleted caret path and the 500-file limit were not re-driven before the stop. |
+| R10 | Pass. Hiding `CHANGED` selected the shown `class Filter`; Declarations off selected the file row. |
+| R11 | Not run; the splitter preview was not available. |
+
+### #111 and #112 residuals
+
+- **#144 / B3-R19, editor tab:** with `show.diff.preview.as.editor.tab.with.single.click=true` and
+  `LOCAL_CHANGES_DETAILS_PREVIEW_SHOWN=true`, a physical single click opened `Commit: notes.txt` for a plain row and
+  `Commit: Cart.java` for a summarized row. This is the editor-tab surface. The splitter surface and a SMART Diff-off
+  control were not run, so the splitter half remains inconclusive.
+- **Directory rows:** with directory grouping on, a physical Right expanded `fixture-main` and a physical double-click
+  collapsed it. The `Changes` changelist row expanded and collapsed the same way.
+- **R16:** not driven; no real failing diff was set up.
+- **#108:** not re-run on 0.3.0; the 2026-11-09 0.2.0 record remains the last physical result.
+- **#112 residual:** M3, M6, M7, M8 and M9 were not run in this release-head check.
+
+**Tag blockers:** R7 must be fixed and physically re-checked; R3 splitter and three-sided, R5 preview-off/inclusion,
+R8's 500-file limit and old deleted side, R11, #111 R16 and the 0.3.0 #111 double-click/Enter matrix, #144 splitter and
+SMART-off control, and #112 M3/M6/M7/M8/M9 remain. IU 2026.3 was not run. No product code was changed.
+
 ## 2026-11-09: 0.3.0 backport of the two EDT fixes (#138, #140)
 
 The 0.3.0 branch now carries the read-action fix from #138 (`3c7f961..aa56b03`) and the outline file-index fix from #140
