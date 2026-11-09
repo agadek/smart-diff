@@ -31,8 +31,8 @@ No tag or publication was made.
 `IC-251.26927.53` and `IU-263.7307.200` (4 experimental usages in the local Scala-resolving run, 3 in the CI artifact,
 no deprecated usage). IC 2025.1.3 ran through `./gradlew runIde` with SMART Diff 0.3.0 and Scala 2025.1.32. The physical
 input used the macOS Accessibility `clickhelper`; a temporary external AX reader reported the live tree selection,
-row labels and inclusion states, because Screen Recording is not granted on this machine. IU 2026.3 was not run in this
-part.
+row labels and inclusion states, because Screen Recording is not granted on this machine. IU 2026.3 was not used for the
+R7/R1/R2/R4/R6/R10 part; it was used for the R8 500-file limit and the splitter attempt.
 
 ### R7: passes on the release head
 
