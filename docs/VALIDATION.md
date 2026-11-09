@@ -45,10 +45,11 @@ a conflict, `gone()` removed on the side, and `moveMe()` moved to `MergeTarget` 
 - **Java `Merge.java`:** the merge window title was `Merge Revisions for …/Merge.java`; the pane titles were
   `Changes from main`, `Result` and `Changes from side`. The outline groups were `Changed on both sides` and
   `Changed in side only`. `method both()` carried `main: changed side: changed merged without conflict`; `value()`
-  carried the conflict. Selecting `method gone()  side: removed` left the label exactly as that, and no `not tracked`
-  note was visible in the AX tree; the `not tracked` row is **partial/failed** on this evidence. `moveMe()` was
+  carried the conflict. Selecting `method gone()  side: removed` showed the result-pane note **`Not present in the right pane`**, not
+  `not tracked`; the requested label is **partial/failed** on this evidence. The row label stayed `side: removed`. `moveMe()` was
   `side: added`, not a moved row, so the moved-frame check is **inconclusive** and scrolling was not meaningful.
-  Three-pane navigation, the change-type filter and result-edit following were not driven. **Partial.**
+  Selecting `both()` left the row label `merged without conflict` and an empty result-pane note. Three-pane navigation,
+  the change-type filter and result-edit following were not driven. **Partial.**
 - **Kotlin `Merge.kt`:** the same three pane titles and side groups; `both()` was changed on both sides but without the
   `merged without conflict` tag, because the conflict hunk covered it. `gone()` was side removed, `MergeTargetK` side
   changed and `moveMe()` side added. **Partial.**
