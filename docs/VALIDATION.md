@@ -21,6 +21,24 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-09: 0.3.0 backport of the two EDT fixes (#138, #140)
+
+The 0.3.0 branch now carries the read-action fix from #138 (`3c7f961..aa56b03`) and the outline file-index fix from #140
+(`e9060ce`, `a89437c`). The cherry-picks kept this branch's 0.3.0 CHANGELOG and validation record; the two fixes are in
+the 0.3.0 Fixed list.
+
+**Automated evidence.** `./gradlew clean buildPlugin check` and `./gradlew verifyPlugin` pass; `smart-diff-0.3.0` is
+Compatible on IC-251.26927.53 and IU-263.7307.200 with the existing 4 experimental API usages and no deprecated or
+internal usage.
+
+**Release-artifact log check: probe-assisted, 2026-11-09.** The built `smart-diff-0.3.0.zip` ran on IC 2025.1.3 and IU
+2026.3 with the same scenario as the two PR records: Java, Kotlin and Scala diffs from the Local Changes splitter preview
+and the Commit tool window, native two-sided and unified viewers, a plain editor, one-sided added/deleted diffs, and a
+file outside the content roots. On IC 2025.1.3 the combined build logged 0 `Read access is allowed from inside
+read-action only` and 0 `Slow operations are prohibited on EDT` entries against SMART Diff; the `origin/main` control
+logged 8 and 4. On IU 2026.3 both were 0, as was the control. Physical input remains untested because macOS Assistive
+access is not granted here, so the click path stays a manual check.
+
 ## 2026-11-08: outline finish reads no project file index on the EDT (#139)
 
 `OutlineController.finish` read `ProjectFileIndex.isInContent` through `ReferencePass.isApplicable` on the EDT. The
