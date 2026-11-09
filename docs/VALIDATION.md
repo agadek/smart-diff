@@ -60,6 +60,22 @@ a conflict, `gone()` removed on the side, and `moveMe()` moved to `MergeTarget` 
 the change-type filter, the container-tree toggle/side names as full pane titles, result-edit following, and the Scala 2
 and Scala 3 merge windows. No product code was changed.
 
+## 2026-11-09: 0.3.0 #112 M7, M8, M9 (`f912d8c`)
+
+Physical tree checks on IC 2025.1.3 with `.manual/fixture-multilang`.
+
+- **M7, pass for the all-hidden file.** The tree View Options menu's Hide Change Types submenu was opened and Changed,
+  Added, Removed, Moved and Formatting-only were hidden one by one. `OnlyChanged.java` stayed in the tree, had no
+  declaration rows, and its summary ended **`· all hidden`** (`1 changed · all hidden`). The row was then checked
+  (Space) while still all hidden, and it reported **`checked`**, so it stayed included in the commit list.
+  `Cart.java` cannot become all hidden because its rename-candidate row is never hidden; that is the correct exception.
+- **M8, inconclusive.** The tree filter and both toggles were not set on IU 2026.3 with real input, and the IU restart
+  with the isolated paths was not run in this step. The IC settings were changed, but only the IC session was observed.
+- **M9, inconclusive.** With all change types hidden for the M7 setup, there was no clean shown declaration row to
+  search. The speed-search check was not driven on a clean tree.
+
+No product code was changed.
+
 ## 2026-11-09: 0.3.0 release-head manual check (`f912d8c`)
 
 This was the physical check on the exact release head `f912d8c` (`pluginVersion=0.3.0`, including #137 and #142). R7
