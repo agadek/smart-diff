@@ -73,8 +73,10 @@ Physical tree checks on IC 2025.1.3 with `.manual/fixture-multilang`.
   with the isolated paths was not run in this step. The IC settings were changed, but only the IC session was observed.
 - **M9, partial/failed.** The tree filter was restored so `Cart.java` showed its declaration rows. Typing `total`
   opened the tree speed-search field with that text, but pressing Enter left the selection on `Cart.java` rather than
-  the `method total()  changed` row; the tree still had all 28 rows. Hiding the Changed type did not make the search
-  find the row either. The shown-declaration half is not met; the hidden-row half is trivially not found.
+  the `method total()  changed` row. Retrying with the prefix `method total`, and with `method `, put that exact text
+  in the speed-search field but again left the file row selected; the filtered rows showed `Cart.java`, `Order.java`
+  and even `class Order`, but not `method total()`. The shown-declaration half is not met; the hidden-row half is
+  trivially not found.
 
 No product code was changed.
 
