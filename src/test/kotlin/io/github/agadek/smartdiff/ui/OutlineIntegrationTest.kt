@@ -23,11 +23,15 @@ import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.actionSystem.KeyboardShortcut
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
 import com.intellij.testFramework.EditorTestUtil
 import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.PlatformTestUtil
@@ -56,8 +60,10 @@ import io.github.agadek.smartdiff.references.ReferencePass
 import java.awt.event.ActionEvent
 import java.awt.event.FocusEvent
 import java.awt.event.KeyEvent
+import java.nio.file.Files
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import javax.swing.KeyStroke
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.TreePath
@@ -903,6 +909,48 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertFalse(rows(outline).any { it.contains("usage") })
         assertFalse(outline.panel.usageNote.isVisible)
         assertEquals(null, (outline.state as OutlineState.Shown).usageNote)
+    }
+
+    fun `test relationships 04 R3 opening a diff reads the project file index off the EDT`() {
+        // relationships/04-rename-grouping R3; issue #139: no slow-operation warning on the EDT
+        val local = myFixture.addFileToProject("local/Order.java", USAGE_NEW).virtualFile
+        val checks = AtomicInteger()
+        val edtChecks = AtomicInteger()
+        val previous = ReferencePass.inContentCheck
+        ReferencePass.inContentCheck = { project, file ->
+            checks.incrementAndGet()
+            if (ApplicationManager.getApplication().isDispatchThread) edtChecks.incrementAndGet()
+            ProjectFileIndex.getInstance(project).isInContent(file)
+        }
+        try {
+            val shown = open(SimpleDiffRequest("usage", DiffContents.vcsRevision(project, USAGE_OLD, "/repo/Order.java"), DiffContents.localFile(project, local), "HEAD", "Current"))
+            awaitResult(shown.outline) { state -> labels(state.items).any { it.contains("usages renamed") } }
+        } finally {
+            ReferencePass.inContentCheck = previous
+        }
+
+        assertTrue("the pass checks the file index", checks.get() > 0)
+        assertEquals("the project file index is never read on the EDT", 0, edtChecks.get())
+    }
+
+    fun `test relationships 04 R3 a file outside the project keeps the engine result and no note`() {
+        // relationships/04-rename-grouping R3; issue #139: no Resolving note lingers when the file is not applicable
+        val file = Files.createTempFile("outside-project", ".java").toFile()
+        file.writeText(USAGE_NEW)
+        VfsRootAccess.allowRootAccess(testRootDisposable, file.canonicalFile.parentFile.absolutePath)
+        val virtualFile = LocalFileSystem.getInstance().refreshAndFindFileByIoFile(file)
+        checkNotNull(virtualFile) { "the temp file was not found in the local file system" }
+        try {
+            val shown = open(SimpleDiffRequest("outside", DiffContents.vcsRevision(project, USAGE_OLD, "/repo/Order.java"), DiffContents.localFile(project, virtualFile), "HEAD", "Current"))
+            val outline = shown.outline
+            val state = awaitResult(outline) { it.usageNote == null && labels(it.items).none { label -> label.contains("usages renamed") } }
+
+            assertNull("the resolving note does not linger", state.usageNote)
+            assertFalse(outline.panel.usageNote.isVisible)
+            assertEquals("1 changed · 1 rename candidate", outline.panel.summary.text)
+        } finally {
+            file.delete()
+        }
     }
 
     fun `test relationships 04 R8 the filter never hides a grouped usage`() {

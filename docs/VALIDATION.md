@@ -21,6 +21,44 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-08: outline finish reads no project file index on the EDT (#139)
+
+`OutlineController.finish` read `ProjectFileIndex.isInContent` through `ReferencePass.isApplicable` on the EDT. The
+first read makes the workspace index data up to date, so opening a diff logged `Slow operations are prohibited on EDT`.
+The pass now splits R3: the EDT calls `ReferencePass.canRun`, which checks only the project, the file and the result;
+`ReferencePass.run` performs the file index check on its pooled thread. A file outside the project returns the engine
+result with status `NOT_GROUPED`, so `finishPass` replaces the engine result and clears the `Resolving usages…` note. R2
+is unchanged: the engine result is still shown before the pass starts.
+
+**Automated evidence.** `./gradlew clean buildPlugin check` passes. Two new `OutlineIntegrationTest` tests name R3:
+
+- `test relationships 04 R3 opening a diff reads the project file index off the EDT` opens a real diff with a local file,
+  records every `ProjectFileIndex.isInContent` call through the pass's test seam, and asserts at least one call and none
+  on the EDT. On `origin/main` the same call happens in `finish`, on the EDT.
+- `test relationships 04 R3 a file outside the project keeps the engine result and no note` opens a diff whose
+  `highlightFile` is outside the content roots and asserts the engine summary stays and the `Resolving usages…` note is
+  gone.
+
+`ReferencePassTest` passes unchanged, including `test R3 no file or a file outside the project keeps the engine result`.
+The seam is internal and set only by the test; production reads the project file index.
+
+**Running-IDE check: probe-assisted, 2026-11-09.** The built plugin ran on IC 2025.1.3 (`IC-251.26927.53`) and IU
+2026.3 (`IU-263.7307.200`) with a Git project containing Java, Kotlin and Scala changes. A temporary startup probe opened
+Java, Kotlin and Scala diffs from the Local Changes splitter preview (`PreviewDiffSplitterComponent` with
+`UnifiedLocalChangeListDiffViewer`) and the Commit tool window, from native two-sided `SimpleDiffViewer` and native
+`UnifiedDiffViewer` requests, and from a request whose file is outside the content roots. The `origin/main` control build
+(`3c7f961`) logged 4 `Slow operations are prohibited on EDT` entries against SMART Diff on IC 2025.1.3, all through
+`ReferencePass.isApplicable` from `OutlineController.finish`; this build logged 0 while the same diffs opened. On IU
+2026.3 the control build also logged 0, so that IDE neither reproduces nor contradicts the warning. The check is
+probe-assisted, not a physical click path: macOS Assistive access is not granted here, so the real mouse and keyboard
+gestures were not delivered.
+
+**Verifier.** `./gradlew verifyPlugin` is Compatible on IC-251.26927.53 and IU-263.7307.200. The CI verifier artifact
+records 3 experimental API usages, all `ChangesViewNodeAction` overrides or reference in `DeclarationNodeAction`, the
+same 3 as `origin/main`; a local run that resolves the Scala plugin also lists its existing
+`PsiNamedElementWithCustomPresentation` reference. There is no deprecated usage, and this change adds no internal,
+experimental or deprecated API usage.
+
 ## 2026-11-08: inlining detection
 
 [Inlining detection](specs/relationships/05-inlining-detection.md) is implemented. A removed method or function whose
