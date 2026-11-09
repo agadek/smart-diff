@@ -66,8 +66,9 @@ Changes, with the preview setting on and off. All actions were physical.
 | B5, declaration rows | Partial. A physical double-click and a physical Enter on `method total()` each opened the `Diff` tab with that outline row selected (R9 and R14). The R16 fallback was not triggered, and directory and changelist rows were not re-driven. |
 | B3 / R19, single click | **Inconclusive, not a SMART Diff regression.** With the window active, the tree focused and `ChangesView.SingleClickPreview` selected, a physical single click opened no preview for `notes.txt` or `Cart.java`; the plain row fails too. Both `show.diff.preview.as.editor.tab.with.single.click=true` and `LOCAL_CHANGES_DETAILS_PREVIEW_SHOWN=true`, the splitter/editor-tab distinction, and a SMART Diff-off control were not tested. Screenshot: [docs/screenshots/changes-tree-manual-2026-11-09/111-ic-2025.1-single-click-no-preview.png](screenshots/changes-tree-manual-2026-11-09/111-ic-2025.1-single-click-no-preview.png). |
 
-B3/R19 is a preview-setting/platform behavior question, not a SMART Diff failure. **#111 stays open** for R9/R16 and the
-directory/changelist rows; the preview leg is listed as inconclusive.
+B3/R19 is a preview-setting/platform behavior question, not a SMART Diff failure. **#111 stays open** for R16 (the
+fallback when the declaration diff cannot open) and the directory/changelist rows; R9 (Enter) and R14 (double-click)
+passed. The preview leg is listed as inconclusive.
 
 ### #110: caret follow
 
@@ -78,7 +79,7 @@ Local Changes splitter preview. The tree used Local Changes on IC-2025.1.3.
 | --- | --- |
 | R1 | Pass. A physical arrow in `total()`, in the changed class header and in added `isEmpty()` expanded `Cart.java` and selected the innermost changed row; a plain editor and a two-sided diff were both used. |
 | R2 | Pass. A caret in `package demo;`, outside every changed declaration, selected the file row. A caret in unchanged `subtotal()` correctly selects the changed class row because the class declaration contains it. |
-| R3 | Partial. Physical clicks in the new and old editors of the two-sided `Cart.java` diff selected `method total()` for their own side. A three-sided diff was not run, and the preview leg (editor tab and Local Changes splitter) was not verified; the B3 single-click result is inconclusive. |
+| R3 | Partial. Physical clicks in the new and old editors of the two-sided `Cart.java` diff selected `method total()` for their own side. The preview leg (editor tab and Local Changes splitter) was not verified; the B3 single-click result is inconclusive. Three-sided diffs and merge windows are out of scope: the mapping returns without touching the tree. |
 | R4 | Pass. With the follow setting off a physical arrow left the tree unchanged; with it on the next arrow followed. Toggling did not clear the summaries or rebuild away the rows. |
 | R5 | Partial. After following, the focus owner stayed `EditorComponentImpl`; commit inclusion was not measured in this run. |
 | R6 | Partial. 30 physical Right keys produced 2 follow runs, not 30, so typing is debounced. A click race was repeated 6 times and the clicked row stayed selected after the last one; each run was not measured separately. |
@@ -86,7 +87,11 @@ Local Changes splitter preview. The tree used Local Changes on IC-2025.1.3.
 | R8 | Partial. Added `Added.java`, deleted `Old.java`, unsupported `notes.txt` and too-large `Large.java` each selected only the file row. The 500-file limit was not run. |
 | R9 | Pass by verifier: `verifyPlugin` is compatible on both builds. The local Scala-resolving run reports the 4 existing experimental usages; the CI artifact reports 3. No deprecated usage. |
 | R10 | Pass. With `CHANGED` hidden and the caret in `parse()`, the tree selected the shown `class Filter` container; with Declarations off it selected the file row. |
-**#110 stays open** for R3's three-sided and preview legs, R5 inclusion, R7 and R8's 500-file limit.
+| R11 | Not verified. The pending-summary retry path was not driven with a caret event from the Local Changes splitter or from an unfocused editor; `ChangesCaretFollowTest` covers both automatically. |
+
+**#110 stays open** for R3's preview leg (editor tab and Local Changes splitter), R5 commit inclusion, R6 per-run
+timing and click-race measurement, R7's stale/pending summary row, R8's 500-file limit and R11. R12 is covered
+automatically by `ChangesCaretFollowTest` and is not a manual row.
 
 ### Verification
 

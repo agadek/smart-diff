@@ -302,24 +302,25 @@ language, a file over the size limit and a file with a timed-out or failed summa
 | Failure logging | `ChangesCaretFollowTest` `test a mapping failure is logged once and leaves the tree unchanged` |
 | R10 | `ChangesCaretFollowTest` `test the tree filter hides the caret row and selects the nearest shown row above`: with the changed method's own label hidden, the shown class container or file row is selected, and with Declarations off the file row is selected |
 | R11 | `ChangesCaretFollowTest` `test a preview caret event does not replace a pending summary follow` and `test an unfocused editor's caret event does not replace a pending summary follow`: while a summary is pending, a caret event from the Local Changes splitter or from an editor without focus leaves the remembered editor and offset in place, and the declaration under the original caret is selected once the summary arrives |
-| R1–R11 | Manual check: **partial**, 2026-11-09. R1, R2, R4, R10 and R3's two-sided mapping passed with physical input on IC 2025.1.3; R3's preview leg, R5 inclusion, R7, R8's 500-file limit, R9/R16 and the directory/changelist rows remain, and the single-click preview check is inconclusive. See [validation](../../VALIDATION.md#2026-11-09-changes-tree-manual-checks-on-ic-202513-and-iu-20263-108-110-111). |
+| R1–R11 | Manual check: **partial**, 2026-11-09. R1, R2, R4, R9, R10 and R3's two-sided mapping passed with physical input on IC 2025.1.3; R3's preview leg, R5 inclusion, R6 per-run timing and click-race measurement, R7, R8's 500-file limit and R11 remain, and the single-click preview check is inconclusive. R12 is covered automatically by `ChangesCaretFollowTest`. See [validation](../../VALIDATION.md#2026-11-09-changes-tree-manual-checks-on-ic-202513-and-iu-20263-108-110-111). |
 
 ### Manual check (partial, 2026-11-09)
 
-Partially run with physical input on IntelliJ IDEA 2025.1.3 and 2026.3 on 2026-11-09. R1, R2, R4, R10 and R3's
-two-sided mapping passed; R3's preview leg, R5 inclusion, R7, R8's 500-file limit, R9/R16 and the directory/changelist
-rows remain. The single-click preview check is inconclusive because the plain row also showed no preview, so it is a
-preview-setting/platform question rather than a SMART Diff failure. See
+Partially run with physical input on IntelliJ IDEA 2025.1.3 and 2026.3 on 2026-11-09. R1, R2, R4, R9, R10 and R3's
+two-sided mapping passed; R3's preview leg, R5 inclusion, R6 per-run timing and click-race measurement, R7, R8's
+500-file limit and R11 remain. R12 is covered automatically. The single-click preview check is inconclusive because the
+plain row also showed no preview, so it is a preview-setting/platform question rather than a SMART Diff failure. See
 [the 2026-11-09 validation record](../../VALIDATION.md#2026-11-09-changes-tree-manual-checks-on-ic-202513-and-iu-20263-108-110-111).
-The steps below are still required for the remaining rows, including the R7 intermediate pending rebuild and the
-preview caret event in step 5, and the R10 hidden-row check in step 6a.
+The steps below are still required for the remaining rows, including the R5 commit-inclusion check, the R6 per-run
+timing and click-race measurement, the R7 intermediate pending rebuild, the R8 500-file limit and the R11 preview
+caret event in step 5.
 Run this on IntelliJ IDEA 2025.1 and the latest release, in the Local Changes view and in the Commit tool window:
 
 1. Open a modified Java file with at least two changed methods. Move the caret through each changed method, through
    unchanged code in the same file, and into a changed class header. The tree expands the file and selects the method,
    then the file row, then the class row.
 2. Open the file's two-sided diff and repeat in the new and old editors. Each side selects the row for its own range.
-   Open a three-sided diff or merge window and move the caret in each pane; the Changes tree does not move.
+   Three-sided diffs and merge windows are out of scope and covered by the automated test that the tree does not move.
 2a. Turn on the platform's single-click Changes preview in both forms: the editor tab and the Local Changes splitter. Move
    the caret in each preview. The file row stays selected and the preview stays open; the tree does not select a
    declaration row.
