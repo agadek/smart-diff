@@ -80,6 +80,21 @@ Physical tree checks on IC 2025.1.3 with `.manual/fixture-multilang`.
 
 No product code was changed.
 
+## 2026-11-09: 0.3.0 #112 M6 and M8 (`f912d8c`)
+
+Physical checks on IC 2025.1.3 with `.manual/fixture-multilang`.
+
+- **M6, partial.** `Cart.java` was extended in the working tree with a moved-and-changed `compute` method and a
+  `total()` return-type change. With the Changed type hidden, `method compute(int,int)  moved, changed` stayed and the
+  changed rows disappeared. The return-type change was labelled `changed`, not `signature changed`, so the
+  signature-change case is **inconclusive** (the fixture did not produce that label). Hiding Moved at the same time did
+  not remove `compute` in this run; the menu toggle did not visibly apply, so the "hide both" case is **inconclusive**.
+  The uncertain/unanalyzed never-hidden case and the hidden-container-with-shown-children case were not produced.
+- **M8, inconclusive.** IU 2026.3 was not driven with non-default tree filter/toggles and restarted with the same
+  isolated paths, and the Settings | Tools | SMART Diff comparison was not done.
+
+No product code was changed.
+
 ## 2026-11-09: 0.3.0 release-head manual check (`f912d8c`)
 
 This was the physical check on the exact release head `f912d8c` (`pluginVersion=0.3.0`, including #137 and #142). R7
