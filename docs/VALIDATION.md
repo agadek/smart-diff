@@ -90,9 +90,9 @@ timer restarted after the model property change, and the new summary selected th
 - **#112 residual:** M3's open behavior passed on IU with Declarations off, but the no-expand-arrow detail is partial; M6, M7, M8 and M9 were not run in this release-head check.
 - **Release plan A/B:** the two-sided and merge outline checks on Java, Kotlin, Scala 2 and Scala 3 were not run; the fixture has Java only.
 
-**Tag blockers:** R3 splitter preview, R5 commit count/inclusion, R11, #111 R16 and the IU/preview-off/Declarations-off
-matrix, #144 splitter and SMART-off control, directory/changelist rows on IU, the A/B outline checks, and #112
-M3/M6/M7/M8/M9 remain. Three-sided diffs and merge windows are out of scope for #110's R3 (the mapping returns without
+**Tag blockers:** R3 splitter preview, R5 commit count/inclusion, R11, #111 R16 and the IU declaration-row check, #144
+splitter and SMART-off control, directory/changelist rows on IU, the A/B outline checks, and #112 M3's
+no-expand-arrow detail plus M6/M7/M8/M9 remain. Three-sided diffs and merge windows are out of scope for #110's R3 (the mapping returns without
 touching the tree); the separate merge-outline A/B check is a release gate. IU 2026.3 was used for the 500-file limit;
 its Local Changes view could not be populated for the splitter check. No product code was changed.
 
@@ -672,7 +672,7 @@ off states, so this run cannot tell whether the speed search works. M9 remains m
 
 ### Remaining manual checks
 
-- M3 open behavior on a leaf row, after #111.
+- M3 the no-expand-arrow detail with Declarations off; the open behavior passes.
 - M6 uncertain/unanalyzed rows and hiding moved and changed together.
 - M7 commit inclusion of an all-hidden file.
 - M8 the 2026.3 restart and the outline visual comparison.
