@@ -26,6 +26,7 @@ import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.markup.HighlighterLayer
 import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectFileIndex
@@ -43,12 +44,17 @@ import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
+import io.github.agadek.smartdiff.engine.api.Confidence
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.Evidence
 import io.github.agadek.smartdiff.engine.api.Limits
 import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.RangePair
+import io.github.agadek.smartdiff.engine.api.Relationship
+import io.github.agadek.smartdiff.engine.api.RelationshipEndpoint
+import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
@@ -1062,6 +1068,212 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertFalse(labels(state.items).any { it.contains("usages renamed") })
     }
 
+    fun `test relationships 06 R1 R2 R16 R18 the toolbar switches views and keeps the summary and native diff`() {
+        // relationships/06-refactorings-view R1, R2, R16, R17, R18
+        val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+        val outline = shown.awaitResult()
+        val summary = outline.panel.summary.text
+        val event = TestActionEvent.createTestEvent(outline.panel.viewAction)
+        assertFalse("the container tree is the default", outline.panel.viewAction.isSelected(event))
+        val containerRows = rows(outline)
+
+        outline.panel.viewAction.setSelected(event, true)
+
+        assertEquals(OutlineView.REFACTORINGS, settings.outlineView)
+        assertTrue(outline.panel.viewAction.isSelected(event))
+        assertEquals(
+            listOf(
+                "Refactorings",
+                "  No refactorings found",
+                "Other changes",
+                "  class Greeter",
+                "    method hello()  changed",
+                "    method bye()  added",
+            ),
+            rows(outline),
+        )
+        assertEquals("the summary line is the same in both views", summary, outline.panel.summary.text)
+        assertTrue(UIUtil.isAncestor(shown.viewer.component, shown.viewer.editor1.component))
+        assertTrue(UIUtil.isAncestor(shown.viewer.component, shown.viewer.editor2.component))
+
+        outline.panel.viewAction.setSelected(event, false)
+
+        assertEquals(OutlineView.CONTAINER_TREE, settings.outlineView)
+        assertEquals(containerRows, rows(outline))
+
+        outline.panel.viewAction.setSelected(event, true)
+        outline.setOutlineVisible(false)
+        assertFalse("the native diff stays when the outline is off", UIUtil.isAncestor(shown.viewer.component, outline.panel))
+        assertTrue(UIUtil.isAncestor(shown.viewer.component, shown.viewer.editor1.component))
+        assertTrue(UIUtil.isAncestor(shown.viewer.component, shown.viewer.editor2.component))
+        outline.setOutlineVisible(true)
+        awaitResult(outline) { state -> state.items.firstOrNull()?.title == "Refactorings" }
+        assertEquals("the view choice survives hiding and showing the outline", "Refactorings", rows(outline).first())
+
+        select(outline, "method bye()  added")
+        assertEquals("Not present on the old side", outline.panel.absence.text)
+    }
+
+    fun `test relationships 06 R2 a settings page change rebuilds an open outline without comparing again`() {
+        // relationships/06-refactorings-view R2
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+        val before = outline.state as OutlineState.Shown
+
+        settings.outlineView = OutlineView.REFACTORINGS
+        ApplicationManager.getApplication().messageBus.syncPublisher(SmartDiffSettings.CHANGED).settingsChanged()
+
+        assertEquals("Refactorings", rows(outline).first())
+        assertSame("the setting change reuses the kept result", before.result, (outline.state as OutlineState.Shown).result)
+
+        settings.outlineView = OutlineView.CONTAINER_TREE
+        ApplicationManager.getApplication().messageBus.syncPublisher(SmartDiffSettings.CHANGED).settingsChanged()
+
+        assertEquals("class Greeter", rows(outline).first())
+    }
+
+    fun `test relationships 06 R17 the summary and hidden count are identical in both views`() {
+        // relationships/06-refactorings-view R17
+        val old = method("total")
+        val new = method("sum")
+        val engine = ResultEngine().apply {
+            status = Status.ANALYZED
+            changes = listOf(
+                ChangeNode(new, TextRange(0, 5), TextRange(0, 3), Presence.MATCHED, content = Content.CHANGED, renamedFrom = old),
+                ChangeNode(method("other"), TextRange(6, 11), TextRange(6, 11), Presence.MATCHED, content = Content.CHANGED),
+            )
+            relationships = listOf(
+                Relationship(
+                    java.util.EnumSet.of(RelationshipKind.RENAME),
+                    listOf(RelationshipEndpoint(old, TextRange(0, 5))),
+                    listOf(RelationshipEndpoint(new, TextRange(0, 3))),
+                    Confidence.HIGH,
+                    listOf(Evidence.Name("total", "sum")),
+                ),
+            )
+        }
+        maskEngines(engine)
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+
+        assertEquals("2 changed · 1 rename candidate", outline.panel.summary.text)
+        val containerHidden = (outline.state as OutlineState.Shown).hiddenCount
+
+        outline.setOutlineView(OutlineView.REFACTORINGS)
+
+        assertEquals("the refactorings view uses the same summary line", "2 changed · 1 rename candidate", outline.panel.summary.text)
+        assertEquals("the refactorings view counts the same hidden changes", containerHidden, (outline.state as OutlineState.Shown).hiddenCount)
+        assertTrue(
+            "the changed endpoint keeps its label: ${rows(outline)}",
+            rows(outline).any { it.contains("method total → sum()  rename candidate, changed") },
+        )
+
+        outline.setHidden(ChangeType.CHANGED, true)
+        assertEquals("2 changed · 1 rename candidate · 1 hidden", outline.panel.summary.text)
+        val refactoringsHidden = (outline.state as OutlineState.Shown).hiddenCount
+
+        outline.setOutlineView(OutlineView.CONTAINER_TREE)
+
+        assertEquals("the container tree keeps the same summary after filtering", "2 changed · 1 rename candidate · 1 hidden", outline.panel.summary.text)
+        assertEquals("both views count the same hidden change", refactoringsHidden, (outline.state as OutlineState.Shown).hiddenCount)
+    }
+
+    fun `test relationships 06 R10 R11 R12 selecting the rename frames every endpoint and usage with its own colour`() {
+        // relationships/06-refactorings-view R10, R11, R12
+        val local = myFixture.addFileToProject("local/Order.java", USAGE_NEW).virtualFile
+        val shown = open(SimpleDiffRequest("usage", DiffContents.vcsRevision(project, USAGE_OLD, "/repo/Order.java"), DiffContents.localFile(project, local), "HEAD", "Current"))
+        val outline = shown.outline
+        awaitResult(outline) { state -> labels(state.items).any { it.contains("usages renamed") } }
+        outline.setOutlineView(OutlineView.REFACTORINGS)
+
+        assertTrue(rows(outline).toString(), rows(outline).any { it.trimStart().startsWith("rename total → sum, 1 usage  high") })
+        select(outline, "rename total → sum, 1 usage  high")
+
+        val oldStart = USAGE_OLD.indexOf("int total()")
+        val newStart = USAGE_NEW.indexOf("int sum()")
+        val oldUsage = USAGE_OLD.indexOf("total() * 2")
+        val newUsage = USAGE_NEW.indexOf("sum() * 2")
+        assertTrue(
+            "the old declaration is framed: ${outline.navigator.shown.map { it.startOffset }}",
+            outline.navigator.shown.any { it.document === shown.viewer.editor1.document && it.startOffset == oldStart },
+        )
+        assertTrue(
+            "the new declaration is framed: ${outline.navigator.shown.map { it.startOffset }}",
+            outline.navigator.shown.any { it.document === shown.viewer.editor2.document && it.startOffset == newStart },
+        )
+        assertTrue("the old usage is framed", outline.navigator.shown.any { it.document === shown.viewer.editor1.document && it.startOffset == oldUsage })
+        assertTrue("the new usage is framed", outline.navigator.shown.any { it.document === shown.viewer.editor2.document && it.startOffset == newUsage })
+
+        val highs = outline.usageHighlights.shown
+        assertEquals("one usage is highlighted on each side", 2, highs.size)
+        assertEquals(
+            "the usage has the first palette colour",
+            setOf(RelationshipPalette.colour(0)),
+            highs.map { it.getTextAttributes(null)?.backgroundColor }.toSet(),
+        )
+        assertTrue("the palette stays above the navigator's usage detail", highs.all { it.layer >= HighlighterLayer.SELECTION })
+        assertTrue("both editors have the usage colour", highs.any { it.document === shown.viewer.editor1.document } && highs.any { it.document === shown.viewer.editor2.document })
+
+        outline.setOutlineView(OutlineView.CONTAINER_TREE)
+        assertTrue("the container tree does not add usage colours", outline.usageHighlights.shown.isEmpty())
+        assertEquals("the container tree is back", "method total → sum()  rename candidate, 1 usage", rows(outline).single { it.contains("rename candidate") }.trimStart())
+    }
+
+    fun `test relationships 06 R13 R14 the change filter and the kind filter work in the refactorings view`() {
+        // relationships/06-refactorings-view R13, R14
+        val local = myFixture.addFileToProject("local/Order.java", USAGE_NEW).virtualFile
+        val shown = open(SimpleDiffRequest("usage", DiffContents.vcsRevision(project, USAGE_OLD, "/repo/Order.java"), DiffContents.localFile(project, local), "HEAD", "Current"))
+        val outline = shown.outline
+        awaitResult(outline) { state -> labels(state.items).any { it.contains("usages renamed") } }
+        outline.setOutlineView(OutlineView.REFACTORINGS)
+
+        outline.setHidden(ChangeType.CHANGED, true)
+
+        assertTrue("a relationship has no change type: ${rows(outline)}", rows(outline).any { it.trimStart() == "rename total → sum, 1 usage  high" })
+        assertTrue("a grouped usage is never hidden", rows(outline).any { it.contains("method twice()  usages renamed") })
+
+        outline.setHidden(ChangeType.CHANGED, false)
+        outline.setHiddenRelationshipKind(RelationshipKind.RENAME, true)
+
+        assertFalse("the hidden rename row is gone", rows(outline).any { it.trimStart().startsWith("rename total") })
+        assertTrue("the hidden relationship leaves its declaration in Other changes", rows(outline).any { it.contains("method total → sum()  rename candidate, 1 usage") })
+        assertTrue("the grouped usage stays", rows(outline).any { it.contains("method twice()  usages renamed") })
+
+        outline.setHiddenRelationshipKind(RelationshipKind.RENAME, false)
+        assertTrue(rows(outline).any { it.trimStart() == "rename total → sum, 1 usage  high" })
+    }
+
+    fun `test relationships 06 R15 a hidden relationship never hides a changed declaration`() {
+        // relationships/06-refactorings-view R15
+        val old = method("total")
+        val new = method("sum")
+        val engine = ResultEngine().apply {
+            status = Status.ANALYZED
+            changes = listOf(
+                ChangeNode(
+                    new, TextRange(0, 5), TextRange(0, 3), Presence.MATCHED,
+                    content = Content.CHANGED, renamedFrom = old,
+                ),
+            )
+            relationships = listOf(
+                Relationship(
+                    java.util.EnumSet.of(RelationshipKind.RENAME),
+                    listOf(RelationshipEndpoint(old, TextRange(0, 5))),
+                    listOf(RelationshipEndpoint(new, TextRange(0, 3))),
+                    Confidence.HIGH,
+                    listOf(Evidence.Name("total", "sum")),
+                ),
+            )
+        }
+        maskEngines(engine)
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+        outline.setOutlineView(OutlineView.REFACTORINGS)
+
+        outline.setHiddenRelationshipKind(RelationshipKind.RENAME, true)
+
+        assertTrue("the changed declaration is still shown", rows(outline).any { it.contains("method total → sum()") })
+    }
+
+    private fun method(name: String) = Subject.Declaration(DeclarationKind.METHOD, name, "")
+
     private fun labels(items: List<OutlineItem>): List<String> = items.flatMap { listOf(it.label) + labels(it.children) }
 
     private inner class Shown(val panel: DiffRequestPanel, val disposable: Disposable, val request: SimpleDiffRequest, val viewer: TwosideTextDiffViewer) {
@@ -1187,10 +1399,13 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         @Volatile
         var unanalyzed: List<RangePair> = emptyList()
 
+        @Volatile
+        var relationships: List<Relationship> = emptyList()
+
         override fun supports(languageId: String) = true
 
         override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult =
-            ComparisonResult(id, version, status, changes = changes, unanalyzed = unanalyzed, fallbackReason = reason)
+            ComparisonResult(id, version, status, changes = changes, unanalyzed = unanalyzed, fallbackReason = reason, relationships = relationships)
     }
 
     /** Supports Java only, so a Kotlin diff has no engine when this factory masks the real ones. */

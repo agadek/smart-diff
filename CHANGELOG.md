@@ -4,6 +4,7 @@
 
 ### Added
 
+- The refactorings view: a second structural outline, one toolbar toggle away, lists each rename, move, kind change, extraction and inlining before `Other changes`. Rows show both names, their kinds and a confidence word; a rename lists its grouped usages and a low-confidence row also appears under both declarations. Expanding a row shows its evidence, selecting it frames every endpoint and usage, and each rename's usages get their own theme-safe colour in both editors. The change type filter, a separate hide-by-kind menu and the same summary line work in both views.
 - The Changes tree follows the caret in the editor and in both sides of a two-sided diff, selecting the changed declaration under the caret or the file row, while respecting the tree's filter and Declarations toggle.
 - The Changes view's View Options menu has Structural Summary and Declarations toggles and a Hide Change Types submenu. The tree's filter is separate from the outline's, keeps hidden changes counted in the summary as `· N hidden` or `· all hidden`, and changing it rebuilds the tree without comparing files again.
 - Inlining detection: a removed method or function whose body was moved into a changed declaration is labelled `inlined into <target>`, and the target is labelled `code inlined from <declaration>`. Selecting the removed declaration frames the code on the new side, selecting the target highlights it, the summary counts it as `inlined` instead of `removed`, and hiding removed changes hides it. Java, Kotlin and Scala 2/3 are covered.

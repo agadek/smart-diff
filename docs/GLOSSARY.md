@@ -283,6 +283,11 @@ _Avoid_: change category
 The menu of change types to hide, in the structural outline or in the Changes tree. Each view remembers its own filter.
 _Avoid_: hide filter, outline filter
 
+### Relationship kind filter
+
+The menu of relationship kinds to hide in the refactorings view: rename, move, kind change, extraction and inlining.
+_Avoid_: refactoring filter, relationship filter
+
 ### Outline toggle
 
 The Structural Outline toolbar button or the outline's Hide button that shows or hides the structural outline in one diff window.

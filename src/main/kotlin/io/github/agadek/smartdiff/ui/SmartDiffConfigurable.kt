@@ -13,6 +13,7 @@ import com.intellij.ui.dsl.builder.bindSelected
 import com.intellij.ui.dsl.builder.panel
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.registry.EngineDefaults
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
 import javax.swing.JList
@@ -49,6 +50,10 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                 row { radioButton("Collapsed in a group", false) }
                 row { radioButton("Inline", true) }
             }.bind(settings::formattingOnlyInline)
+            buttonsGroup("Outline view:") {
+                row { radioButton("Container tree", OutlineView.CONTAINER_TREE) }
+                row { radioButton("Refactorings", OutlineView.REFACTORINGS) }
+            }.bind(settings::outlineView)
             buttonsGroup("Hide from the outline:") {
                 for (type in ChangeType.entries) {
                     row {
@@ -60,6 +65,19 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                 }
                 row {
                     comment("Hidden changes still count in the file summary. Uncertain and unanalyzed changes are always shown.")
+                }
+            }
+            buttonsGroup("Hide from the refactorings view:") {
+                for (kind in RelationshipKind.entries) {
+                    row {
+                        checkBox(relationshipKindText(kind)).bindSelected(
+                            { kind in settings.hiddenRelationshipKinds },
+                            { hide -> settings.hiddenRelationshipKinds = if (hide) settings.hiddenRelationshipKinds + kind else settings.hiddenRelationshipKinds - kind },
+                        )
+                    }
+                }
+                row {
+                    comment("Hidden relationships still leave their declarations in Other changes.")
                 }
             }
             buttonsGroup("Hide from the Changes tree:") {

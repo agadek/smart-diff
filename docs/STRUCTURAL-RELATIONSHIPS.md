@@ -315,7 +315,7 @@ The current golden fixtures, contract corpus, corpus validation and limits bench
 | 3 | Improve matching and ambiguity handling, including global assignment if the benchmark justifies it | Measured improvement over baseline, no unacceptable precision loss, deterministic and within limits |
 | 4 | Add reference-aware rename grouping behind the chosen context design | Labelled intra-file reference cases pass; unreliable references remain ordinary changes |
 | 5 | Generalise extraction and add inlining relationships | Implemented 2026-11-08: one-to-many and many-to-one fixtures pass; every endpoint remains visible |
-| 6 | Add the refactorings view, evidence display, navigation and relationship filtering | Viewer tests pass; native diff remains the fallback |
+| 6 | Add the refactorings view, evidence display, navigation and relationship filtering | Implemented 2026-11-09: viewer tests pass; every container-tree change is covered; the native diff remains the fallback |
 | 7 | Cross-file/multi-file work, only if the product scope is extended | A separate API and benchmark exist; not part of phases 0 to 6 |
 | 8 | Validation and release gate | Benchmark, corpus validation, Plugin Verifier and nothing-hidden checks are clean |
 

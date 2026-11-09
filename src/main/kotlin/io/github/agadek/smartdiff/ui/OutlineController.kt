@@ -19,6 +19,7 @@ import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 import io.github.agadek.smartdiff.engine.api.compareSafely
@@ -77,6 +78,7 @@ class OutlineController internal constructor(
     val panel = OutlinePanel(this)
     internal val navigator = OutlineNavigator(viewer)
     internal val strip = OutlineStrip { setMinimised(false) }
+    internal val usageHighlights = RelationshipHighlights(viewer)
 
     var state: OutlineState = OutlineState.Hidden
         private set
@@ -96,6 +98,7 @@ class OutlineController internal constructor(
         private set
 
     private var running: Job? = null
+    private var settingsSubscribed = false
 
     /**
      * Test seam: the reference pass this controller runs; null uses [ReferencePass.run]. The outcome is still checked
@@ -110,6 +113,12 @@ class OutlineController internal constructor(
 
     internal fun start() {
         viewer.component.putClientProperty(CONTROLLER, this)
+        if (!settingsSubscribed) {
+            settingsSubscribed = true
+            // The settings page publishes CHANGED after Apply, so the view and filters update without a new comparison.
+            ApplicationManager.getApplication().messageBus.connect(this)
+                .subscribe(SmartDiffSettings.CHANGED, SmartDiffSettings.Listener { rebuild() })
+        }
         val listener = object : DocumentListener {
             override fun documentChanged(event: DocumentEvent) = documentChanged()
         }
@@ -159,6 +168,7 @@ class OutlineController internal constructor(
     private fun hideOutline() {
         cancel()
         navigator.clear()
+        usageHighlights.clear()
         (viewer as? FilteringDiffViewer)?.hide(HiddenLines.NONE)
         removeStrip()
         splitter.secondComponent = null
@@ -201,6 +211,7 @@ class OutlineController internal constructor(
         if (engine == null) {
             // A previous result may have faded native changes; the message below promises the native diff shows every change.
             (viewer as? FilteringDiffViewer)?.hide(HiddenLines.NONE)
+            usageHighlights.clear()
             return show(OutlineState.NoEngine(Language.findLanguageByID(languageId)?.displayName ?: languageId))
         }
 
@@ -286,6 +297,26 @@ class OutlineController internal constructor(
     fun setHidden(type: ChangeType, hide: Boolean) {
         val settings = SmartDiffSettings.getInstance()
         settings.hiddenChangeTypes = if (hide) settings.hiddenChangeTypes + type else settings.hiddenChangeTypes - type
+        rebuild()
+    }
+
+    /** Switches this outline and every later one to [view], without comparing the file again (relationships/06 R1, R2). */
+    fun setOutlineView(view: OutlineView) {
+        val settings = SmartDiffSettings.getInstance()
+        if (settings.outlineView == view) return
+        settings.outlineView = view
+        rebuild()
+    }
+
+    /** Hides or shows relationships of [kind] in the refactorings view, without comparing the file again (R14). */
+    fun setHiddenRelationshipKind(kind: RelationshipKind, hide: Boolean) {
+        val settings = SmartDiffSettings.getInstance()
+        settings.hiddenRelationshipKinds = if (hide) settings.hiddenRelationshipKinds + kind else settings.hiddenRelationshipKinds - kind
+        rebuild()
+    }
+
+    /** Rebuilds the shown rows from the kept result for a display-only setting change. */
+    private fun rebuild() {
         val shown = state as? OutlineState.Shown ?: return
         val request = shownRequest ?: return
         showResult(request, shown.result, shown.usageNote, keepSelection = true, policy = shown.whitespacePolicy)
@@ -302,7 +333,15 @@ class OutlineController internal constructor(
         val hidden = settings.hiddenChangeTypes
         val whitespacePolicy = policy ?: whitespacePolicy(languageId)
         val selection = if (keepSelection) panel.selectedPath() else null
-        val items = OutlineModel.build(result, request.oldText, request.newText, settings.formattingOnlyInline, hidden, whitespacePolicy)
+        val view = settings.outlineView
+        val items = if (view == OutlineView.REFACTORINGS) {
+            RefactoringsModel.build(
+                result, request.oldText, request.newText, settings.formattingOnlyInline, hidden,
+                settings.hiddenRelationshipKinds, whitespacePolicy,
+            )
+        } else {
+            OutlineModel.build(result, request.oldText, request.newText, settings.formattingOnlyInline, hidden, whitespacePolicy)
+        }
         shownRequest = request
         show(
             OutlineState.Shown(
@@ -314,6 +353,11 @@ class OutlineController internal constructor(
                 whitespacePolicy,
             ),
         )
+        if (view == OutlineView.REFACTORINGS) {
+            usageHighlights.show(result, settings.hiddenRelationshipKinds)
+        } else {
+            usageHighlights.clear()
+        }
         when {
             keepSelection && selection != null -> panel.reveal(selection)
             !keepSelection -> reveal?.let(panel::reveal)
@@ -326,6 +370,7 @@ class OutlineController internal constructor(
         if (disposed || !isOutlineVisible) return
         cancel()
         navigator.releaseScrollSync()
+        usageHighlights.clear()
         (viewer as? FilteringDiffViewer)?.forgetHidden()
         debounce.restart()
     }
@@ -337,7 +382,10 @@ class OutlineController internal constructor(
     }
 
     private fun show(state: OutlineState) {
-        if (state !is OutlineState.Shown) shownRequest = null
+        if (state !is OutlineState.Shown) {
+            shownRequest = null
+            usageHighlights.clear()
+        }
         this.state = state
         panel.show(state)
         strip.show(stripDetail(state))
@@ -366,6 +414,7 @@ class OutlineController internal constructor(
         disposed = true
         cancel()
         navigator.clear()
+        usageHighlights.clear()
         removeStrip()
         state = OutlineState.Hidden
         panel.show(OutlineState.Hidden)

@@ -1,6 +1,6 @@
 # Change labels
 
-Status: implemented, 2026-11-04; the `usages renamed` additions (R1, R4, R6, R9, R11 and R14) arrive with [rename grouping](../relationships/04-rename-grouping.md), 2026-11-05; the Kotlin and Scala step 2 is implemented, 2026-11-07; the inlining note and count (R5, R6 and R15) arrive with [inlining detection](../relationships/05-inlining-detection.md), 2026-11-08.
+Status: implemented, 2026-11-04; the `usages renamed` additions (R1, R4, R6, R9, R11 and R14) arrive with [rename grouping](../relationships/04-rename-grouping.md), 2026-11-05; the Kotlin and Scala step 2 is implemented, 2026-11-07; the inlining note and count (R5, R6 and R15) arrive with [inlining detection](../relationships/05-inlining-detection.md), 2026-11-08; the [refactorings view](../relationships/06-refactorings-view.md) shows the same labels under `Other changes`, 2026-11-09.
 
 **Description:** One set of user-facing [labels](../../GLOSSARY.md#label) says how each change is classified, how the [summary line](../../GLOSSARY.md#summary-line) counts it, and whether the [change type filter](../../GLOSSARY.md#change-type-filter) can hide it.
 
@@ -26,7 +26,7 @@ Status: implemented, 2026-11-04; the `usages renamed` additions (R1, R4, R6, R9,
 
 ## Out of scope
 
-- Relationship confidence and evidence in the row, which come with the [refactorings view](../relationships/06-refactorings-view.md).
+- Relationship confidence and evidence inside a declaration row; the [refactorings view](../relationships/06-refactorings-view.md) shows them on its own relationship rows.
 - Changing matching or classification. This feature names the current result; it adds no rule.
 
 ## References
