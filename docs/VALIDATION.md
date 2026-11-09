@@ -68,15 +68,16 @@ timer restarted after the model property change, and the new summary selected th
 | R3, editor-tab preview | Pass. A caret moved in the `Commit: Cart.java` preview kept `Cart.java` selected and the preview open. |
 | R3, splitter preview | **Inconclusive.** No splitter preview appeared in the Local Changes tool window in this run; the editor-tab form was observed instead. |
 | R4 | Pass. Follow off left the tree unchanged; follow on followed the next caret move. |
-| R5 | Partial. The editor kept focus, all file rows stayed `not checked`, and the editor-tab preview was the platform's own. The preview-off case and the commit count were not measured. |
+| R5 | Partial. With the editor-tab preview off, a caret move to the file row opened no preview and the editor kept focus; all file rows stayed `not checked`. With it on, the platform's `Commit: Cart.java` preview followed the file row and focus moved to that preview tab. The commit count is not displayed by this UI and was not measured. |
 | R6 | Pass. 30 physical Right keys produced 2 selection updates, the last 1.041 s after the burst, not 30 follows. The click race was repeated 6 times and the clicked `notes.txt` row stayed selected each time. |
 | R7 | Pass with the corrected caret offset (above). |
-| R8 | Partial. `Added.java`, `notes.txt`, deleted `Old.java` and too-large `Large.java` were plain file rows with no declaration rows; the added/deleted caret path and the 500-file limit were not re-driven. |
+| R8 | Pass. Added `Added.java`, unsupported `notes.txt`, too-large `Large.java` and the old side of deleted `Old.java` all selected only their file row. In a 505-file project, `File0053.java` (one of the rows after the 500 summarised files) selected only its file row; `File0505.java` was still inside the first 500 and keeps its summary. |
 | R10 | Pass. Hiding `CHANGED` selected the shown `class Filter`; Declarations off selected the file row. |
 | R11 | Not run; the splitter preview was not available. |
 
 ### #111 and #112 residuals
 
+- **#111 double-click/Enter:** on 0.3.0 a physical double-click and Enter on `Cart.java` opened `Commit: Cart.java`, and on `notes.txt` opened `Commit: notes.txt`; the summarized and plain rows matched with the editor-tab preview on. The preview-off rerun and the Declarations-off variant were not run on 0.3.0.
 - **#144 / B3-R19, editor tab:** with `show.diff.preview.as.editor.tab.with.single.click=true` and
   `LOCAL_CHANGES_DETAILS_PREVIEW_SHOWN=true`, a physical single click opened `Commit: notes.txt` for a plain row and
   `Commit: Cart.java` for a summarized row. This is the editor-tab surface. The splitter surface and a SMART Diff-off
@@ -87,9 +88,9 @@ timer restarted after the model property change, and the new summary selected th
 - **#108:** not re-run on 0.3.0; the 2026-11-09 0.2.0 record remains the last physical result.
 - **#112 residual:** M3, M6, M7, M8 and M9 were not run in this release-head check.
 
-**Tag blockers:** R3 splitter and three-sided, R5 preview-off/inclusion, R8's 500-file limit and old deleted side, R11,
-#111 R16 and the 0.3.0 double-click/Enter matrix, #144 splitter and SMART-off control, and #112 M3/M6/M7/M8/M9 remain.
-IU 2026.3 is not yet run for this release head. No product code was changed.
+**Tag blockers:** R3 splitter and three-sided, R5 commit count, R11, #111 R16 and the Declarations-off/preview-off matrix,
+#144 splitter and SMART-off control, directory/changelist rows on IU, and #112 M3/M6/M7/M8/M9 remain. IU 2026.3 was
+started for the 500-file limit only. No product code was changed.
 
 ## 2026-11-09: 0.3.0 backport of the two EDT fixes (#138, #140)
 
