@@ -113,9 +113,16 @@ Headless tests run inside the platform's write-intent read action, which already
 so they cannot reproduce the warning itself. The test guards the single-context lookup and the absent logged error; the
 running-IDE check below covers the real read-access path.
 
-**Running-IDE check: outstanding.** Open Local Changes on IntelliJ IDEA 2025.1.3 with the splitter preview on, move the
-caret in a changed file, and confirm the IDE error log has no `Read access is allowed from inside read-action only`
-entry that names SMART Diff.
+**Running-IDE check: probe-assisted, 2026-11-09.** The built plugin ran on IC 2025.1.3 (`IC-251.26927.53`) and IU
+2026.3 (`IU-263.7307.200`) with a Git project containing Java, Kotlin and Scala changes. A temporary startup probe opened
+the Local Changes splitter preview (`PreviewDiffSplitterComponent` with `UnifiedLocalChangeListDiffViewer`) and the
+Commit tool window's `FilteringDiffViewer`, moved the caret in a plain editor, in a native two-sided `SimpleDiffViewer`
+on both sides, in a native `UnifiedDiffViewer`, and in added and deleted one-sided diffs. The `origin/main` control build
+(`3c7f961`) logged 8 `Read access is allowed from inside read-action only` entries against SMART Diff on IC 2025.1.3,
+all through `viewerFromContext` / `mergeViewerFromContext` at `ChangesCaretFollow.kt:607` and `:611`; this build logged
+0. The check is probe-assisted, not a physical click path: macOS Assistive access is not granted here, so the real
+mouse and keyboard gestures were not delivered. On IU 2026.3 the control build also logged 0, so that IDE neither
+reproduces nor contradicts the warning.
 
 **Verifier.** `./gradlew verifyPlugin` is compatible on IC 2025.1.3 (`IC-251.26927.53`) and the latest release
 (`IU-263.7307.200`, 2026.3) with the same 4 experimental API usages as before and no deprecated, internal or
