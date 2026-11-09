@@ -21,6 +21,21 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-09: 0.3.0 section A two-sided outline (`f912d8c`)
+
+Physical two-sided outline check on IC 2025.1.3 (`IC-251.26927.53`) with SMART Diff 0.3.0 and the
+`.manual/fixture-multilang` repository. The repository is in a real merge conflict; `notes.txt` is plain text.
+
+| Language | Result |
+| --- | --- |
+| Java `Cart.java` | Outline opened with summary `2 changed · 1 added · 1 removed · 1 moved · 2 formatting-only · 1 rename candidate`. Rows: `class Cart`, `method total() changed`, `method add(String) changed`, `method label → name() rename candidate`, `method legacy() removed`, `method isEmpty() added`, `Formatting-only (1)`, `class CartHelper`, `method compute(int,int) moved, formatting-only`. No signature-changed, uncertain or unanalyzed row is provided by the fixture. Selecting a row and Enter moved the sniffed carets in both diff editors (old offset 142, new 84 for `method total()`). Hide removed the outline and left both editors; Minimise left the strip `Structural outline, minimised: 2 changed …`; clicking the strip restored the outline. The moved-alignment and change-type-filter rows were not driven. The toolbar action is present but AX reports it in overflow, not visibly first; the `⌥⇧⌘O` shortcut did not toggle it in this run. |
+| Kotlin `Cart.kt` | Outline opened with summary `4 changed · 1 added · 1 removed · 1 moved · 1 formatting-only · 1 rename candidate`. Rows include `function total() changed`, `add(String) changed`, `label → name() rename candidate`, `price() changed`, `legacy() removed`, `isEmpty() added`, `compute(Int,Int) moved, formatting-only`. The intended formatting-only change to `price()` was labelled **changed**, not formatting-only, so the row is partial. No signature/uncertain/unanalyzed rows. Framing, filter and toolbar rows were not driven. |
+| Scala 2 `Cart2.scala` | Same shape and labels as Kotlin: summary `4 changed · 1 added · 1 removed · 1 moved · 1 formatting-only · 1 rename candidate`; `price()` is changed rather than formatting-only, so partial. The file parses without a parse-error row. |
+| Scala 3 `Cart3.scala` | The Scala 3 enum/`given`/indentation file parsed without a parse-error row. Summary `3 changed · 1 added · 1 removed · 1 moved · 1 rename candidate`; `price()` is changed and `compute` is moved without the formatting-only tag, so the Scala 3 row is **partial**; no formatting-only row is present. |
+| `notes.txt` | Double-click opened the native diff and no structural outline. No engine-reason strip was shown; plain text is left alone by the plugin's design, so this row is partial rather than a pass for the "reason" part. |
+
+**Not run for section A:** per-language selection framing/Enter, moved-frame alignment, the change-type filter (including never hiding uncertain/rename/unanalyzed), the Hide/Minimise/strip checks on Kotlin/Scala, the shortcut/toolbar-order checks beyond Java, and the minimised width/state persistence. Section B was not run. No product code was changed.
+
 ## 2026-11-09: 0.3.0 release-head manual check (`f912d8c`)
 
 This was the physical check on the exact release head `f912d8c` (`pluginVersion=0.3.0`, including #137 and #142). R7
