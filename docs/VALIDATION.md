@@ -21,6 +21,46 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-10: 0.3.0 section A outline rows (`f912d8c`)
+
+Physical checks on IntelliJ IDEA Ultimate 2026.3 (`IU-263.7307.200`) with the release build and
+`.manual/fixture-multilang`, using the diff editor's Structural Outline panel and its own Hide Change Types menu (not the
+Changes tree View Options).
+
+- **Java change-type filter, partial.** `Cart.java` opened with 9 outline rows. Hiding Changed left 7 rows;
+  `method total()  changed` and `method add(String)  changed` disappeared, while `method compute(int,int)  moved,
+  changed` and `method label → name()  rename candidate` stayed. Hiding Added left 8 rows and removed
+  `method isEmpty()  added`; hiding Removed left 8 rows and removed `method legacy()  removed`; hiding
+  Formatting-only left 8 rows and removed `Formatting-only (1)`. The rename candidate stayed in every case. Hiding Moved
+  left 9 rows: the fixture has no moved-only Java row and `compute` is moved and changed, so it stayed while Changed
+  was shown. The Moved disappearance is therefore **inconclusive**, not a pass. All types were restored afterwards.
+- **Moved-declaration frame alignment, partial/inconclusive.** Selecting `method compute(int,int)  moved, changed` put
+  both editor carets on the declaration (left 187, right 414). Scrolling five lines in the left pane moved both vertical
+  scrollbars (left 38→229, right 91→141) and kept the outline row selected. The frame overlay itself could not be
+  observed: macOS screen capture is blocked on this machine (it returns the desktop wallpaper) and the painted range is
+  not exposed in the accessibility tree. Synchronized scrolling and selection passed; "frames stay aligned" is not
+  claimed as a pass.
+- **Kotlin selection/Enter, partial.** In `Cart.kt`, selecting `function total()  changed` moved both carets to offset
+  60; Enter moved the focused right caret to 64. Selecting `function price()  changed` moved the left caret to 297 and
+  the right to 237; Enter moved the right caret to 241. The declaration is navigated on both sides and the focused
+  caret jumps; the frame overlay was not observable, so the framing half is inconclusive.
+- **Scala 2, inconclusive.** `Cart2.scala` showed no structural outline. The IU 2026.3 log records
+  `plugin org.intellij.scala is not resolved` and `dependent <depends> config 'smartdiff-scala.xml' ... excluded`, so
+  the Scala extension is not loaded in this isolated installation. Scala 2 selection/Enter and Hide/Minimise were not
+  run.
+- **Kotlin Hide/Minimise and remembered state, pass.** Hide removed the outline and left both editors at 478 px each.
+  The `⌥⇧⌘O` shortcut restored it at 540 px. Minimise left the 24 px strip
+  `Structural outline, minimised: 1 changed. Click or press Enter to restore.` and both editors at 466 px. Opening a new
+  `OnlyChanged.java` diff showed the same 24 px minimised strip without a new comparison, so the minimised state and
+  its width were remembered. A manual width resize was not driven; only the default 540/24 widths were observed.
+- **Structural Outline toolbar/shortcut, partial.** Find Action listed `Structural Outline ⌥⇧⌘O`, and the physical
+  shortcut hid and showed the panel on `Cart.java`. The action is registered first in `Diff.ViewerToolbar`
+  (`plugin.xml` anchor `first`), but IU 2026.3's Commit diff exposed no diff-toolbar button in the accessibility tree and
+  no overflow entry; only Find Action and the minimised strip were reachable. The runtime "first in the toolbar"
+  placement is **inconclusive**, not a pass.
+
+No product code was changed.
+
 ## 2026-11-09: 0.3.0 section A two-sided outline (`f912d8c`)
 
 Physical two-sided outline check on IC 2025.1.3 (`IC-251.26927.53`) with SMART Diff 0.3.0 and the
@@ -34,7 +74,7 @@ Physical two-sided outline check on IC 2025.1.3 (`IC-251.26927.53`) with SMART D
 | Scala 3 `Cart3.scala` | The Scala 3 enum/`given`/indentation file parsed without a parse-error row. Summary `3 changed · 1 added · 1 removed · 1 moved · 1 rename candidate`; `price()` is changed and `compute` is moved without the formatting-only tag, so the Scala 3 row is **partial**; no formatting-only row is present. |
 | `notes.txt` | Double-click opened the native diff and no structural outline. No engine-reason strip was shown; plain text is left alone by the plugin's design, so this row is partial rather than a pass for the "reason" part. |
 
-**Not run / inconclusive for section A:** per-language selection framing/Enter on Kotlin/Scala, moved-frame alignment, the change-type filter (the menu items were present but toggling did not change the outline rows in this run, so it is inconclusive), Hide/Minimise on Kotlin/Scala beyond the remembered minimised state, the width persistence, and the shortcut/toolbar-order check beyond the observed overflow placement. Section B was not run. No product code was changed.
+**Not run / inconclusive for section A (2026-11-09; superseded for Java/Kotlin by the 2026-11-10 record):** per-language selection framing/Enter on Kotlin/Scala, moved-frame alignment, the change-type filter, Hide/Minimise on Kotlin/Scala, the width persistence, and the shortcut/toolbar-order check. Section B was not run. No product code was changed.
 
 ## 2026-11-09: 0.3.0 section B merge outline (`f912d8c`)
 
@@ -197,7 +237,8 @@ timer restarted after the model property change, and the new summary selected th
 - **Release plan A/B:** the two-sided and merge outline checks on Java, Kotlin, Scala 2 and Scala 3 were not run; the fixture has Java only.
 
 **Tag blockers:** R3 splitter preview, R5 commit count/inclusion, R11 and #111 R16, #144 splitter and SMART-off
-control, the A/B outline checks, and #112 M3's no-expand-arrow detail plus M6 remain. Three-sided diffs and merge windows are out of scope for #110's R3 (the mapping returns without
+control, the remaining section A outline rows (moved-frame alignment, Kotlin framing, Scala 2, toolbar placement) and
+the B outline checks, and #112 M3's no-expand-arrow detail plus M6 remain. Three-sided diffs and merge windows are out of scope for #110's R3 (the mapping returns without
 touching the tree); the separate merge-outline A/B check is a release gate. IU 2026.3 was used for the 500-file limit;
 its Local Changes view could not be populated for the splitter check. No product code was changed.
 
