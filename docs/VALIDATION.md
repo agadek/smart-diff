@@ -324,7 +324,8 @@ timer restarted after the model property change, and the new summary selected th
 - **R16:** not driven; no real failing diff was set up.
 - **#108:** not re-run on 0.3.0; the 2026-11-09 0.2.0 record remains the last physical result. The declaration action
   is unchanged by #137/#142, so the result is accepted for 0.3.0 rather than re-run on `f912d8c`.
-- **#112 residual:** M7 and M9 pass. M8 passes on IU 2026.3; the IC 2025.1 restart/settings comparison is partial.
+- **#112 residual:** M7 and M9 pass on IC 2025.1 and IU 2026.3. M8 passes on IU 2026.3; the IC 2025.1
+  restart/settings comparison is partial.
   M3's open behavior passed on IU with Declarations off, but the no-expand-arrow detail is partial; M6 is partial.
 - **Release plan A/B:** partially run on the multi-language fixture. Java two-sided labels/filters/selection pass;
   Kotlin/Scala 2/Scala 3 labels/filters/selection are partial; Java/Scala 2/Scala 3 merge panes/groups pass. The
@@ -336,7 +337,7 @@ control, the remaining section A outline rows (moved-frame alignment, Kotlin/Sca
 formatting-only filter cases, toolbar placement, Kotlin/Scala 2/Scala 3 formatting-only labels, the `notes.txt` reason
 strip, the Java moved-only filter case, and a custom resized width) and the B result-frame/navigation rows, the
 moved-merge fixture and the Kotlin merge container toggle, and #112 M3's no-expand-arrow detail, M6, the IC 2025.1 M8
-comparison and the IU M7/M9 runs remain. Three-sided diffs and merge windows are out of scope for #110's R3 (the mapping returns without
+comparison remains. Three-sided diffs and merge windows are out of scope for #110's R3 (the mapping returns without
 touching the tree); the separate merge-outline A/B check is a release gate. IU 2026.3 was used for the 500-file limit;
 its Local Changes view could not be populated for the splitter check. No product code was changed.
 
