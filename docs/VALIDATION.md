@@ -21,6 +21,45 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-10: 0.3.0 Scala 2/3 section A on IU 2026.3 (`f912d8c`)
+
+**Plugin installation.** IU 2026.3's isolated plugin path had no Scala plugin. The Marketplace Scala build
+**2026.3.26** (`scala-intellij-bin-2026.3.26.zip`, `since-build=263.6800`, `until-build=263.*`) was downloaded and
+extracted as `.manual/0.3.0-iu-plugins/Scala`. After a restart with the same `.manual/iu-isolated.properties`, the log
+records `Loaded custom plugins: ... Scala (org.intellij.scala, 2026.3.26)` and no current `smartdiff-scala.xml`
+exclusion. `Cart2.scala` and `Cart3.scala` then opened with a structural outline.
+
+- **Scala 2 outline, partial.** `Cart2.scala` showed 9 rows: `class Cart2`, `function total()  changed`,
+  `function add(String)  changed`, `function label → name()  rename candidate`, `function price()  changed`,
+  `function legacy()  removed`, `function isEmpty()  added`, `class CartHelper2  changed`, and
+  `function compute(Int,Int)  moved, formatting-only`. `price()` is labelled changed rather than formatting-only, so the
+  formatting-only recall remains partial.
+- **Scala 2 filter, partial.** Hiding Changed left 6 rows (total, add and price disappeared); hiding Added left 8 rows
+  (isEmpty disappeared); hiding Removed left 8 rows (legacy disappeared). Hiding Moved alone left 9 rows and hiding
+  Formatting-only alone left 9 rows, because `compute` carries both types; hiding both left 8 rows and removed
+  `compute` with its empty container. The rename candidate stayed in every case. The single-type Moved and
+  Formatting-only cases are inconclusive, not passes.
+- **Scala 2 selection/Enter, partial.** Selecting `function total()  changed` put both carets at offset 58; Enter moved
+  the focused right caret to 60. The frame overlay could not be observed (screen capture is blocked), so framing is
+  inconclusive.
+- **Scala 2 Hide/Minimise, pass.** Hide left both editors at 478 px; the shortcut restored the outline at 540 px.
+  Minimise left the 24x775 strip `Structural outline, minimised: 4 changed · 1 added · 1 removed · 1 moved · 1
+  formatting-only · 1 rename candidate. ...` and both editors at 466 px.
+- **Scala 3 outline, partial.** `Cart3.scala` showed 9 rows: `class Cart3`, `function total()  changed`,
+  `function add(String)  changed`, `function label → name()  rename candidate`, `function price()  changed`,
+  `function legacy()  removed`, `function isEmpty()  added`, `class CartHelper3`, and `function compute(Int,Int)
+  moved`. There is no formatting-only row, consistent with the earlier Scala 3 record.
+- **Scala 3 filter, pass for the provided rows.** Hiding Changed left 6 rows; Added left 8; Removed left 8; Moved left
+  7 and removed `compute` plus its empty container; Formatting-only left 9 because there is no formatting-only row.
+  The rename candidate stayed in every case.
+- **Scala 3 selection/Enter, partial.** Selecting `function total()  changed` put both carets at offset 170; Enter
+  moved the focused right caret to 172. Framing again could not be observed.
+- **Scala 3 Hide/Minimise, pass.** Hide left both editors at 478 px; the shortcut restored the outline at 424 px.
+  Minimise left the same 24x775 strip with the Scala 3 summary; opening `Cart2.scala` afterwards kept the 24 px strip
+  and 466 px panes, and opening `Cart3.scala` again did the same. The minimised state and width are remembered.
+
+No product code was changed.
+
 ## 2026-11-10: 0.3.0 section A outline rows (`f912d8c`)
 
 Physical checks on IntelliJ IDEA Ultimate 2026.3 (`IU-263.7307.200`) with the release build and
@@ -44,10 +83,10 @@ Changes tree View Options).
   60; Enter moved the focused right caret to 64. Selecting `function price()  changed` moved the left caret to 297 and
   the right to 237; Enter moved the right caret to 241. The declaration is navigated on both sides and the focused
   caret jumps; the frame overlay was not observable, so the framing half is inconclusive.
-- **Scala 2, inconclusive.** `Cart2.scala` showed no structural outline. The IU 2026.3 log records
-  `plugin org.intellij.scala is not resolved` and `dependent <depends> config 'smartdiff-scala.xml' ... excluded`, so
-  the Scala extension is not loaded in this isolated installation. Scala 2 selection/Enter and Hide/Minimise were not
-  run.
+- **Scala 2 before the plugin install, inconclusive.** `Cart2.scala` showed no structural outline and the IU 2026.3
+  log recorded `plugin org.intellij.scala is not resolved` and excluded `smartdiff-scala.xml`. Scala 2
+  selection/Enter and Hide/Minimise were not run in that step; the later 2026-11-10 Scala 2/3 record installs Scala
+  2026.3.26 and covers them.
 - **Kotlin Hide/Minimise and remembered state, pass.** Hide removed the outline and left both editors at 478 px each.
   The `⌥⇧⌘O` shortcut restored it at 540 px. Minimise left the 24 px strip
   `Structural outline, minimised: 1 changed. Click or press Enter to restore.` and both editors at 466 px. Opening a new
@@ -237,8 +276,9 @@ timer restarted after the model property change, and the new summary selected th
 - **Release plan A/B:** the two-sided and merge outline checks on Java, Kotlin, Scala 2 and Scala 3 were not run; the fixture has Java only.
 
 **Tag blockers:** R3 splitter preview, R5 commit count/inclusion, R11 and #111 R16, #144 splitter and SMART-off
-control, the remaining section A outline rows (moved-frame alignment, Kotlin framing, Scala 2, toolbar placement) and
-the B outline checks, and #112 M3's no-expand-arrow detail plus M6 remain. Three-sided diffs and merge windows are out of scope for #110's R3 (the mapping returns without
+control, the remaining section A outline rows (moved-frame alignment, Kotlin/Scala framing, Scala 2's single moved and
+formatting-only filter cases, toolbar placement) and the B outline checks, and #112 M3's no-expand-arrow detail plus M6
+remain. Three-sided diffs and merge windows are out of scope for #110's R3 (the mapping returns without
 touching the tree); the separate merge-outline A/B check is a release gate. IU 2026.3 was used for the 500-file limit;
 its Local Changes view could not be populated for the splitter check. No product code was changed.
 
