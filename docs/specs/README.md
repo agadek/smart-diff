@@ -86,6 +86,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [03 Coverage and scale](changes-tree/03-coverage-and-scale.md) | implemented, 2026-11-04 |
 | [04 Hide and filter](changes-tree/04-hide-and-filter.md) | implemented, 2026-11-06 |
 | [05 Changes tree caret follow](changes-tree/05-changes-tree-caret-follow.md) | implemented, 2026-11-07 |
+| [06 Summaries for added and deleted files](changes-tree/06-added-deleted-file-summaries.md) | accepted, 2026-11-10 |
 
 ## Settings
 

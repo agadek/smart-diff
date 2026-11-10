@@ -21,6 +21,11 @@ _Avoid_: right, target, after
 The IDE's own line and word diff for the same comparison.
 _Avoid_: text diff, default diff, raw diff
 
+### One-sided diff
+
+A diff of an added or deleted file that shows only the side where the file exists, the [new side](#new-side) for an added file and the [old side](#old-side) for a deleted file.
+_Avoid_: one-side diff, single diff
+
 ### Comparison engine
 
 One interchangeable way of comparing the old side and new side and producing a structural outline. A user can choose between engines that support the same language.
