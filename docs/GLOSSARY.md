@@ -263,6 +263,11 @@ _Avoid_: coverage score, hidden share
 The tree of changed declarations and file regions shown for one comparison.
 _Avoid_: semantic view, structure diff, change tree
 
+### Container tree
+
+The structural outline's default view: the file's declarations in their containers, with no relationship rows first. The refactorings view is the other view.
+_Avoid_: outline view, plain tree
+
 ### Refactorings view
 
 The view of the structural outline that lists relationships first and the other changes after them. A toolbar button switches between it and the container tree.

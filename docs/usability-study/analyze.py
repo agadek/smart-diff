@@ -49,36 +49,72 @@ def _correct(value: str) -> bool:
     raise ValueError(f"unknown correct value: {value!r}")
 
 
+TASKS = ("T1", "T2", "T3", "T4", "T5")
+CONDITIONS = ("native", "outline")
+
+
 def _median(values: list[float]) -> float:
     if not values:
         raise ValueError("no values")
     return statistics.median(values)
 
 
+def _complete(rows: list[dict[str, str]]) -> tuple[set[str], dict[tuple[str, str, str], float]]:
+    """Return the participants and the rows keyed by participant/task/condition, or fail."""
+    seen: dict[tuple[str, str, str], float] = {}
+    participants: set[str] = set()
+    for row in rows:
+        participant = (row.get("participant") or "").strip()
+        task = (row.get("task") or "").strip()
+        if not participant or not task:
+            raise ValueError("each row needs participant and task")
+        if task not in TASKS:
+            raise ValueError(f"unknown task: {task!r}")
+        condition = _condition(row.get("condition", ""))
+        try:
+            time_seconds = float(row.get("time_seconds", ""))
+        except ValueError as error:
+            raise ValueError(f"bad time for {participant} {task} {condition}: {row.get('time_seconds')!r}") from error
+        if time_seconds <= 0:
+            raise ValueError(f"time must be positive for {participant} {task} {condition}")
+        key = (participant, task, condition)
+        if key in seen:
+            raise ValueError(f"duplicate row for {participant} {task} {condition}")
+        seen[key] = time_seconds
+        participants.add(participant)
+    for participant in participants:
+        for task in TASKS:
+            for condition in CONDITIONS:
+                if (participant, task, condition) not in seen:
+                    raise ValueError(f"missing row for {participant} {task} {condition}")
+    return participants, seen
+
+
 def analyze(rows: list[dict[str, str]]) -> int:
     if not rows:
         print("INCONCLUSIVE: the results sheet is empty.")
+        return 2
+    try:
+        participants, seen = _complete(rows)
+    except ValueError as error:
+        print(f"INCONCLUSIVE: the results sheet is incomplete: {error}")
         return 2
 
     native_times: list[float] = []
     outline_times: list[float] = []
     native_wrong = 0
     outline_wrong = 0
-    participants: set[str] = set()
-    per_task: dict[str, dict[str, list[float]]] = {}
-    per_task_wrong: dict[str, dict[str, int]] = {}
+    per_task: dict[str, dict[str, list[float]]] = {task: {"native": [], "outline": []} for task in TASKS}
+    per_task_wrong: dict[str, dict[str, int]] = {task: {"native": 0, "outline": 0} for task in TASKS}
 
     for row in rows:
         participant = (row.get("participant") or "").strip()
         task = (row.get("task") or "").strip()
-        if not participant or not task:
-            raise ValueError("each row needs participant and task")
         condition = _condition(row.get("condition", ""))
-        time_seconds = float(row.get("time_seconds", "0"))
+        time_seconds = float(row.get("time_seconds", ""))
         correct = _correct(row.get("correct", ""))
-        participants.add(participant)
-        per_task.setdefault(task, {"native": [], "outline": []})[condition].append(time_seconds)
-        per_task_wrong.setdefault(task, {"native": 0, "outline": 0})[condition] += 0 if correct else 1
+        per_task[task][condition].append(time_seconds)
+        per_task_wrong[task][condition] += 0 if correct else 1
         if condition == "native":
             native_times.append(time_seconds)
             native_wrong += 0 if correct else 1
@@ -125,29 +161,45 @@ def analyze_pilot(rows: list[dict[str, str]]) -> int:
     if not rows:
         print("INCONCLUSIVE: the pilot sheet is empty.")
         return 2
-    by_task: dict[tuple[str, str], dict[str, float]] = {}
+    by_pair: dict[tuple[str, str, str], float] = {}
+    participants: set[str] = set()
     for row in rows:
         participant = (row.get("participant") or "").strip()
         task = (row.get("task") or "").strip()
         run = (row.get("run") or "").strip()
         if not participant or not task or run not in {"1", "2"}:
-            raise ValueError("each pilot row needs participant, task and run 1 or 2")
-        by_task.setdefault((participant, task), {})[run] = float(row.get("time_seconds", "0"))
-    differences: list[float] = []
-    for (participant, task), runs in sorted(by_task.items()):
-        if "1" not in runs or "2" not in runs:
-            print(f"incomplete pilot pair: {participant} {task}")
-            continue
-        first, second = runs["1"], runs["2"]
-        baseline = min(first, second)
-        difference = abs(first - second) / baseline * 100.0 if baseline else 0.0
-        differences.append(difference)
-        print(f"{participant} {task}: run 1 {first:.1f} s, run 2 {second:.1f} s, difference {difference:.1f}%")
-    if not differences:
-        print("INCONCLUSIVE: no complete pilot pairs.")
-        return 2
-    median_difference = _median(differences)
-    print()
+            print("INCONCLUSIVE: each pilot row needs participant, task and run 1 or 2")
+            return 2
+        if task not in TASKS:
+            print(f"INCONCLUSIVE: unknown task {task!r}")
+            return 2
+        try:
+            time_seconds = float(row.get("time_seconds", ""))
+        except ValueError:
+            print(f"INCONCLUSIVE: bad time for {participant} {task} run {run}")
+            return 2
+        if time_seconds <= 0:
+            print(f"INCONCLUSIVE: time must be positive for {participant} {task} run {run}")
+            return 2
+        key = (participant, task, run)
+        if key in by_pair:
+            print(f"INCONCLUSIVE: duplicate pilot row for {participant} {task} run {run}")
+            return 2
+        by_pair[key] = time_seconds
+        participants.add(participant)
+    for participant in participants:
+        for task in TASKS:
+            for run in ("1", "2"):
+                if (participant, task, run) not in by_pair:
+                    print(f"INCONCLUSIVE: missing pilot row for {participant} {task} run {run}")
+                    return 2
+    run1 = [by_pair[(p, t, "1")] for p in participants for t in TASKS]
+    run2 = [by_pair[(p, t, "2")] for p in participants for t in TASKS]
+    first = _median(run1)
+    second = _median(run2)
+    median_difference = abs(first - second) / min(first, second) * 100.0
+    print(f"pilot participants: {len(participants)}")
+    print(f"native run 1 median: {first:.1f} s; run 2 median: {second:.1f} s")
     print(f"median run-to-run difference: {median_difference:.1f} percentage points")
     if median_difference < 10.0:
         print("PILOT OK: the 20% threshold is above the observed variation.")
@@ -177,15 +229,18 @@ def _self_test() -> int:
     if analyze(rows_for(4, 75)) != 2:
         print("self-test failed: four participants should be inconclusive", file=sys.stderr)
         return 1
+    incomplete = [r for r in rows_for(5, 75) if not (r["participant"] == "P05" and r["task"] == "T5" and r["condition"] == "outline")]
+    if analyze(incomplete) != 2:
+        print("self-test failed: an incomplete matrix should be inconclusive", file=sys.stderr)
+        return 1
     if analyze(rows_for(5, 75, outline_wrong_first=True)) != 1:
         print("self-test failed: a faster but wrong outline should fail", file=sys.stderr)
         return 1
-    pilot = [
-        {"participant": "P01", "task": "T1", "run": "1", "time_seconds": "100"},
-        {"participant": "P01", "task": "T1", "run": "2", "time_seconds": "105"},
-        {"participant": "P02", "task": "T1", "run": "1", "time_seconds": "80"},
-        {"participant": "P02", "task": "T1", "run": "2", "time_seconds": "84"},
-    ]
+    pilot = []
+    for participant, first, second in (("P01", "100", "105"), ("P02", "80", "84")):
+        for task in TASKS:
+            pilot.append({"participant": participant, "task": task, "run": "1", "time_seconds": first})
+            pilot.append({"participant": participant, "task": task, "run": "2", "time_seconds": second})
     if analyze_pilot(pilot) != 0:
         print("self-test failed: a 5% pilot should be ok", file=sys.stderr)
         return 1

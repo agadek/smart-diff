@@ -8,7 +8,7 @@ Feature: [Usability validation](06-usability-validation.md)
 
 ### Tasks
 
-Each task is one commit or saved diff that touches at least 3 declarations in one file, with at least two hunks outside each other's context. The expected answer names the declaration and the kind of change, taken from `git show` and checked against the outline. Tasks cover one Java file, one Kotlin file and one Scala file, plus one kind change and one rename candidate, so the study does not measure only the easy cases.
+Each task is one commit or saved diff that touches at least two [declarations](../../GLOSSARY.md#declaration) in one file, with at least two hunks outside each other's context. The expected answer names the declaration and the kind of change, taken from `git show` and checked against the outline. Tasks cover Java, Kotlin and Scala, plus one [kind change](../../GLOSSARY.md#kind-change) and one [rename candidate](../../GLOSSARY.md#rename-candidate), so the study does not measure only the easy cases.
 
 The task sheet shows the diff without the outline for the native condition, and the same diff with the outline for the structural condition. Both conditions use the same IDE version, font size and window size.
 
@@ -23,7 +23,7 @@ The study is done by the maintainer, not by an external lab. Participants may be
 
 ### Why these thresholds
 
-The 20% threshold is a choice: it is large enough to matter for a reviewer's time and small enough to be plausible for a study this size. No pilot has measured the run-to-run variation yet, so the threshold may change after one (see [Open questions](#open-questions)). The accuracy guard keeps a faster but wrong answer from passing. The sample is small on purpose: it is a release check, not a research result.
+The 20% threshold is a choice: it is large enough to matter for a reviewer's time and small enough to be plausible for a study this size. The pilot in the Decisions section measures the run-to-run variation before the main study; if the variation is 20 points or more, the study is reported as inconclusive rather than lowering the threshold. The accuracy guard keeps a faster but wrong answer from passing. The sample is small on purpose: it is a release check, not a research result.
 
 ### Failure behavior
 
@@ -36,10 +36,11 @@ The kit is in `docs/usability-study/`:
 - `protocol.md` — setup, the two conditions, the order schedule, timing rules and the right-answer rule.
 - `tasks.md` — the five pinned tasks, with the repository, commit, parent, file, question and expected answer.
 - `facilitator-script.md` — the words the facilitator reads.
-- `results-sheet-template.csv` — one anonymous row per participant, task and condition.
+- `results-sheet-template.csv` and `attendance-sheet-template.csv` — the anonymous result and qualification sheets.
+- `pilot-sheet-template.csv` — the two native runs for the pilot.
 - `analyze.py` — turns a filled sheet into the R6/R7 numbers and the pass/inconclusive result.
 
-The study compares the container tree with the native diff. The refactorings view is not a condition: it changes the question and is an optional view, so adding it would make the sample too small to interpret.
+The study compares the [container tree](../../GLOSSARY.md#container-tree) with the native diff. The refactorings view is not a condition: it changes the question and is an optional view, so adding it would make the sample too small to interpret.
 
 ## Decisions
 
@@ -52,8 +53,9 @@ The study compares the container tree with the native diff. The refactorings vie
 | Requirement | Check |
 | --- | --- |
 | R1, R2 | `tasks.md` pins each task to a real commit, file and parent, and each expected answer is checked against `git show` and the outline before the study |
-| R3, R4 | The attendance sheet with anonymous participant codes; fewer than 5 participants is reported as inconclusive |
-| R5 | The order schedule in `protocol.md` and the order column in the results sheet |
+| R3 | The attendance sheet records `qualified=yes` for every participant; fewer than 5 participants is reported as inconclusive |
+| R4 | `analyze.py` requires every participant to have every task in both conditions and rejects missing or duplicate rows |
+| R5 | The order schedule in `protocol.md`; the facilitator follows it for every participant |
 | R6 | The per-task result table from `results-sheet-template.csv` |
 | R7 | `analyze.py` computes the median times, the relative difference and the wrong-answer counts; the pilot rule above decides whether 20% is above variation |
 | R8, R9 | The dated VALIDATION.md section and the stored task sheet; `analyze.py` can be run again on a later sheet |

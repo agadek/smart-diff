@@ -30,7 +30,7 @@ The script needs `git` and the pinned corpus clone. It writes no participant dat
 
 - T1 is Java, T2 and T5 are Kotlin, T3 is Scala 2 and T4 is Scala 3, so all supported languages appear.
 - T2 is the rename-candidate case; T3 is the kind-change case.
-- Each file changes at least three declarations in at least two hunks outside each other's context, as the details require.
+- Each file changes at least two declarations in at least two hunks outside each other's context, as the details require.
 - T1's added method, T2's rename, T3's kind change, T4's removal and T5's added helper each have one unambiguous answer.
 
 If a task's outline does not show the expected answer in the dry run, replace that task with another pinned commit and record the replacement before the study.
