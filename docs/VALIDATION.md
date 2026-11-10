@@ -60,6 +60,33 @@ a conflict, `gone()` removed on the side, and `moveMe()` moved to `MergeTarget` 
 the change-type filter, the container-tree toggle/side names as full pane titles, result-edit following, and the Scala 2
 and Scala 3 merge windows. No product code was changed.
 
+## 2026-11-10: 0.3.0 M8 and IU #111 (`f912d8c`)
+
+Physical checks on IntelliJ IDEA Ultimate 2026.3 (`IU-263.7307.200`) with the release build, `.manual/fixture-multilang`
+and the isolated paths in `.manual/iu-isolated.properties`.
+
+- **M8, pass.** In the Commit tool window, Structural Summary was turned **off**, Declarations **on**, and Changed hidden
+  in the tree's Hide Change Types submenu. Opening the `Cart.java` diff still showed `method total()  changed` and
+  `method add(String)  changed` in the structural outline (9 rows), and Moved was then hidden in the outline's own Hide
+  Change Types submenu. The tree rebuilt with 22 rows and still hid the changed declarations. Settings | Tools |
+  SMART Diff showed Show structural summary **0**, Show declarations **1**, Hide from the outline Moved **1** and Hide
+  from the Changes tree Changed **1**.
+- **M8 restart.** IU was quit with the isolated paths and restarted with the same `IDEA_PROPERTIES` and project. The tree
+  reopened with 16 rows; `Cart.java` and `class Cart` expanded to 22 rows and the changed declarations were still
+  absent. View Options showed Structural Summary **not checked**, Declarations **checked** and Changed **checked**.
+  Settings still showed the same four values. The `Cart.java` outline reopened with the same 9 rows, the changed rows
+  visible, and Moved still checked. The tree filter did not change the outline filter, and hiding Moved in the outline
+  did not change the tree rows.
+- **#111 declaration rows, pass.** With Changed shown, `method total()  changed` was selected in the tree. Enter opened
+  the `Cart.java` diff and selected `method total()  changed` in the structural outline. With all editor tabs closed, a
+  physical double-click on the same row opened the diff the same way and selected the same row. Both were driven with
+  the real key and mouse paths.
+- **#111 changelist and directory rows, pass.** The `Changes` changelist row collapsed from 24 to 2 rows with Left and
+  expanded from 2 to 12 rows with Right. With Directory grouping on, the `src/main  7 files` directory row expanded
+  from 7 to 10 rows with Right and collapsed back to 7 with Left.
+
+No product code was changed.
+
 ## 2026-11-09: 0.3.0 #112 M7, M8, M9 (`f912d8c`)
 
 Physical tree checks on IC 2025.1.3 with `.manual/fixture-multilang`.
@@ -158,17 +185,19 @@ timer restarted after the model property change, and the new summary selected th
   combination did not produce a splitter, and a SMART Diff-off control was not run; the splitter half remains
   inconclusive.
 - **Directory rows:** with directory grouping on, a physical Right expanded `fixture-main` and a physical double-click
-  collapsed it on IC 2025.1; the `Changes` changelist row expanded and collapsed the same way. The IU 2026.3 directory/changelist rows and a 0.3.0 declaration-row double-click/Enter were not run.
+  collapsed it on IC 2025.1; the `Changes` changelist row expanded and collapsed the same way. On IU 2026.3 the
+  `Changes` changelist row and the `src/main` directory row both expanded and collapsed with physical Right/Left, and
+  declaration-row Enter and double-click both opened the diff with `method total()  changed` selected; see the
+  2026-11-10 record.
 - **R16:** not driven; no real failing diff was set up.
 - **#108:** not re-run on 0.3.0; the 2026-11-09 0.2.0 record remains the last physical result. The declaration action
   is unchanged by #137/#142, so the result is accepted for 0.3.0 rather than re-run on `f912d8c`.
-- **#112 residual:** M7 and M9 pass. M3's open behavior passed on IU with Declarations off, but the no-expand-arrow
-  detail is partial; M6 is partial and M8 was not driven in this release-head check.
+- **#112 residual:** M7, M8 and M9 pass. M3's open behavior passed on IU with Declarations off, but the
+  no-expand-arrow detail is partial; M6 is partial.
 - **Release plan A/B:** the two-sided and merge outline checks on Java, Kotlin, Scala 2 and Scala 3 were not run; the fixture has Java only.
 
-**Tag blockers:** R3 splitter preview, R5 commit count/inclusion, R11, #111 R16 and the IU declaration-row check, #144
-splitter and SMART-off control, directory/changelist rows on IU, the A/B outline checks, and #112 M3's
-no-expand-arrow detail plus M6/M8 remain. Three-sided diffs and merge windows are out of scope for #110's R3 (the mapping returns without
+**Tag blockers:** R3 splitter preview, R5 commit count/inclusion, R11 and #111 R16, #144 splitter and SMART-off
+control, the A/B outline checks, and #112 M3's no-expand-arrow detail plus M6 remain. Three-sided diffs and merge windows are out of scope for #110's R3 (the mapping returns without
 touching the tree); the separate merge-outline A/B check is a release gate. IU 2026.3 was used for the 500-file limit;
 its Local Changes view could not be populated for the splitter check. No product code was changed.
 
