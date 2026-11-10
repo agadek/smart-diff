@@ -101,6 +101,347 @@ automatically by `ChangesCaretFollowTest` and is not a manual row.
   deprecated usage in either.
 - The temporary probe and its descriptor changes were removed before the final build; no product code changed in this
   run.
+## 2026-11-10: 0.3.0 #112 M7 and M9 on IU 2026.3 (`f912d8c`)
+
+Physical Changes-tree checks on IntelliJ IDEA Ultimate 2026.3 with the release build, `.manual/fixture-multilang` and
+the same `.manual/iu-isolated.properties` paths.
+
+- **M7, pass.** All five types in the tree's View Options → Hide Change Types were set to hidden. `OnlyChanged.java` stayed
+  in the tree with 16 rows, had no expandable rows (Right moved to the next row and left the row count at 16), and its
+  summary read **`1 changed · all hidden`**. Space changed its suffix from `not checked` to **`checked`**, so it stayed
+  included. Structural Summary had been off from the M8 run; it was turned on to make the summary visible.
+- **M9, pass.** `Cart.java` and its `class Cart` row were expanded; `method total()  changed` was visible and the tree
+  had 21 rows. With the tree focused, typing `method total` put that text in the speed-search field and selected
+  **`method total()  changed`**. Hiding Changed reduced the tree to 18 rows and removed the row; typing `method total`
+  again left the nearest shown row **`method label → name()  rename candidate`** selected, not the hidden declaration.
+
+No product code was changed.
+
+## 2026-11-10: 0.3.0 section B merge rows on IU 2026.3 (`f912d8c`)
+
+Physical merge-window checks on IU 2026.3 with the unresolved `.manual/fixture-multilang` merge (Java `Merge.java`,
+Scala 2 `Merge2.scala`, Scala 3 `Merge3.scala`).
+
+- **Java panes and groups, pass.** The merge window showed `Changes from main`, `Result` and `Changes from side`. The
+  grouped outline had `Changed on both sides` with `method value()` and
+  `method both()  merged without conflict`, and `Changed in side only` with `method gone()  side: removed` and
+  `method moveMe()  side: added`. The container-tree toggle switched to the class tree and back.
+- **Java filter, pass.** With all types shown the outline had 6 rows. Hiding Changed left 3 rows (the side-only group
+  only); after restoring Changed, hiding Removed left 5 rows; hiding Added as well left 4 rows. Restoring all returned
+  6 rows.
+- **Java three-pane navigation, partial.** Selecting `value()` put the result caret at offset 36 and Enter moved it to
+  40; selecting `both()` put it at 137 and Enter moved it to 141. Clicking the left pane focused its editor (caret 128)
+  and clicking the right pane moved focus there (caret 119), so all three panes are reachable. The left and right frames
+  are painted state and are not exposed to the accessibility tree, so "frames on both sides" is not claimed.
+- **Java result-edit following, partial.** Deleting the `value()` block from the editable result kept the 6 outline rows
+  (the outline itself is computed once) and refreshed the note; selecting `value()` then showed exactly `not tracked`.
+  Inserting a blank line before `both()` and selecting that row again moved its mapped result caret from 92 to 97, so the
+  anchor follows the edit. The painted frame itself is not observable.
+- **`not tracked`, pass.** In the Java result, deleting `value()` and selecting its row showed exactly `not tracked`.
+  The same deletion in the Scala 2 `Merge2.scala` result also showed exactly `not tracked`. Deleting `gone()` instead
+  showed `not tracked; Not present in the right pane`, because the side lacks `gone()` as well.
+- **Scala 2 merge window, pass for the panes/groups.** `Merge2.scala` showed the same `Changes from main`/`Result`/
+  `Changes from side` titles. The grouped outline had `Changed on both sides` (`function value()`, `function both()`;
+  no merged tag because both sides changed the same declaration) and `Changed in side only` (`function gone()  side:
+  removed`, `class MergeTarget2  side: changed`, `function moveMe()  side: added`). The container-tree layout showed
+  `class Merge2` and `class MergeTarget2`.
+- **Scala 3 merge window, pass for the panes/groups.** `Merge3.scala` showed the same three titles, with `Changed on
+  both sides` (`value`, `both`; no merged tag) and `Changed in side only` (`gone` removed, `moveMe` added). The
+  container-tree/grouped choice carried over from the Scala 2 window.
+- **Moved declaration, inconclusive.** The fixture has no real base move: the only `moveMe()` row is `side: added`, and
+  the base `moveMe()` stays in place. There is no moved declaration to select for frame alignment.
+
+No product code was changed.
+
+## 2026-11-10: 0.3.0 Scala 2/3 section A on IU 2026.3 (`f912d8c`)
+
+**Plugin installation.** IU 2026.3's isolated plugin path had no Scala plugin. The Marketplace Scala build
+**2026.3.26** (`scala-intellij-bin-2026.3.26.zip`, `since-build=263.6800`, `until-build=263.*`) was downloaded and
+extracted as `.manual/0.3.0-iu-plugins/Scala`. After a restart with the same `.manual/iu-isolated.properties`, the log
+records `Loaded custom plugins: ... Scala (org.intellij.scala, 2026.3.26)` and no current `smartdiff-scala.xml`
+exclusion. `Cart2.scala` and `Cart3.scala` then opened with a structural outline.
+
+- **Scala 2 outline, partial.** `Cart2.scala` showed 9 rows: `class Cart2`, `function total()  changed`,
+  `function add(String)  changed`, `function label → name()  rename candidate`, `function price()  changed`,
+  `function legacy()  removed`, `function isEmpty()  added`, `class CartHelper2  changed`, and
+  `function compute(Int,Int)  moved, formatting-only`. `price()` is labelled changed rather than formatting-only, so the
+  formatting-only recall remains partial.
+- **Scala 2 filter, partial.** Hiding Changed left 6 rows (total, add and price disappeared); hiding Added left 8 rows
+  (isEmpty disappeared); hiding Removed left 8 rows (legacy disappeared). Hiding Moved alone left 9 rows and hiding
+  Formatting-only alone left 9 rows, because `compute` carries both types; hiding both left 8 rows and removed
+  `compute` with its empty container. The rename candidate stayed in every case. The single-type Moved and
+  Formatting-only cases are inconclusive, not passes.
+- **Scala 2 selection/Enter, partial.** Selecting `function total()  changed` put both carets at offset 58; Enter moved
+  the focused right caret to 60. The frame overlay could not be observed (screen capture is blocked), so framing is
+  inconclusive.
+- **Scala 2 Hide/Minimise, pass.** Hide left both editors at 478 px; the shortcut restored the outline at 540 px.
+  Minimise left the 24x775 strip `Structural outline, minimised: 4 changed · 1 added · 1 removed · 1 moved · 1
+  formatting-only · 1 rename candidate. ...` and both editors at 466 px.
+- **Scala 3 outline, partial.** `Cart3.scala` showed 9 rows: `class Cart3`, `function total()  changed`,
+  `function add(String)  changed`, `function label → name()  rename candidate`, `function price()  changed`,
+  `function legacy()  removed`, `function isEmpty()  added`, `class CartHelper3`, and `function compute(Int,Int)
+  moved`. There is no formatting-only row, consistent with the earlier Scala 3 record.
+- **Scala 3 filter, pass for the provided rows.** Hiding Changed left 6 rows; Added left 8; Removed left 8; Moved left
+  7 and removed `compute` plus its empty container; Formatting-only left 9 because there is no formatting-only row.
+  The rename candidate stayed in every case.
+- **Scala 3 selection/Enter, partial.** Selecting `function total()  changed` put both carets at offset 170; Enter
+  moved the focused right caret to 172. Framing again could not be observed.
+- **Scala 3 Hide/Minimise, pass.** Hide left both editors at 478 px; the shortcut restored the outline at 424 px.
+  Minimise left the same 24x775 strip with the Scala 3 summary; opening `Cart2.scala` afterwards kept the 24 px strip
+  and 466 px panes, and opening `Cart3.scala` again did the same. The minimised state and width are remembered.
+
+No product code was changed.
+
+## 2026-11-10: 0.3.0 section A outline rows (`f912d8c`)
+
+Physical checks on IntelliJ IDEA Ultimate 2026.3 (`IU-263.7307.200`) with the release build and
+`.manual/fixture-multilang`, using the diff editor's Structural Outline panel and its own Hide Change Types menu (not the
+Changes tree View Options).
+
+- **Java change-type filter, partial.** `Cart.java` opened with 9 outline rows. Hiding Changed left 7 rows;
+  `method total()  changed` and `method add(String)  changed` disappeared, while `method compute(int,int)  moved,
+  changed` and `method label → name()  rename candidate` stayed. Hiding Added left 8 rows and removed
+  `method isEmpty()  added`; hiding Removed left 8 rows and removed `method legacy()  removed`; hiding
+  Formatting-only left 8 rows and removed `Formatting-only (1)`. The rename candidate stayed in every case. Hiding Moved
+  left 9 rows: the fixture has no moved-only Java row and `compute` is moved and changed, so it stayed while Changed
+  was shown. The Moved disappearance is therefore **inconclusive**, not a pass. All types were restored afterwards.
+- **Moved-declaration frame alignment, partial/inconclusive.** Selecting `method compute(int,int)  moved, changed` put
+  both editor carets on the declaration (left 187, right 414). Scrolling five lines in the left pane moved both vertical
+  scrollbars (left 38→229, right 91→141) and kept the outline row selected. The frame overlay itself could not be
+  observed: macOS screen capture is blocked on this machine (it returns the desktop wallpaper) and the painted range is
+  not exposed in the accessibility tree. Synchronized scrolling and selection passed; "frames stay aligned" is not
+  claimed as a pass.
+- **Kotlin selection/Enter, partial.** In `Cart.kt`, selecting `function total()  changed` moved both carets to offset
+  60; Enter moved the focused right caret to 64. Selecting `function price()  changed` moved the left caret to 297 and
+  the right to 237; Enter moved the right caret to 241. The declaration is navigated on both sides and the focused
+  caret jumps; the frame overlay was not observable, so the framing half is inconclusive.
+- **Scala 2 before the plugin install, inconclusive.** `Cart2.scala` showed no structural outline and the IU 2026.3
+  log recorded `plugin org.intellij.scala is not resolved` and excluded `smartdiff-scala.xml`. Scala 2
+  selection/Enter and Hide/Minimise were not run in that step; the later 2026-11-10 Scala 2/3 record installs Scala
+  2026.3.26 and covers them.
+- **Kotlin Hide/Minimise and remembered state, pass.** Hide removed the outline and left both editors at 478 px each.
+  The `⌥⇧⌘O` shortcut restored it at 540 px. Minimise left the 24 px strip
+  `Structural outline, minimised: 1 changed. Click or press Enter to restore.` and both editors at 466 px. Opening a new
+  `OnlyChanged.java` diff showed the same 24 px minimised strip without a new comparison, so the minimised state and
+  its width were remembered. A manual width resize was not driven; only the default 540/24 widths were observed.
+- **Structural Outline toolbar/shortcut, partial.** Find Action listed `Structural Outline ⌥⇧⌘O`, and the physical
+  shortcut hid and showed the panel on `Cart.java`. The action is registered first in `Diff.ViewerToolbar`
+  (`plugin.xml` anchor `first`), but IU 2026.3's Commit diff exposed no diff-toolbar button in the accessibility tree and
+  no overflow entry; only Find Action and the minimised strip were reachable. The runtime "first in the toolbar"
+  placement is **inconclusive**, not a pass.
+
+No product code was changed.
+
+## 2026-11-09: 0.3.0 section A two-sided outline (`f912d8c`)
+
+Physical two-sided outline check on IC 2025.1.3 (`IC-251.26927.53`) with SMART Diff 0.3.0 and the
+`.manual/fixture-multilang` repository. The repository is in a real merge conflict; `notes.txt` is plain text.
+
+| Language | Result |
+| --- | --- |
+| Java `Cart.java` | Outline opened with summary `2 changed · 1 added · 1 removed · 1 moved · 2 formatting-only · 1 rename candidate`. Rows: `class Cart`, `method total() changed`, `method add(String) changed`, `method label → name() rename candidate`, `method legacy() removed`, `method isEmpty() added`, `Formatting-only (1)`, `class CartHelper`, `method compute(int,int) moved, formatting-only`. No signature-changed, uncertain or unanalyzed row is provided by the fixture. Selecting a row and Enter moved the sniffed carets in both diff editors (old offset 142, new 84 for `method total()`). Hide removed the outline and left both editors; Minimise left the strip `Structural outline, minimised: 2 changed …`; clicking the strip restored the outline. Minimising Cart and then opening Cart.kt showed the new diff already minimised, so the minimised state is remembered; the width was not measured. Opening the Hide Change Types menu showed Changed/Added/Removed/Moved/Formatting-only, but toggling them did not change the outline rows in this run; the filter row is **inconclusive**, not a pass. The moved-alignment row was not driven. The toolbar action is present but AX reports it in overflow, not visibly first; the `⌥⇧⌘O` shortcut did not toggle it in this run, so toolbar/shortcut is **inconclusive**. |
+| Kotlin `Cart.kt` | Outline opened with summary `4 changed · 1 added · 1 removed · 1 moved · 1 formatting-only · 1 rename candidate`. Rows include `function total() changed`, `add(String) changed`, `label → name() rename candidate`, `price() changed`, `legacy() removed`, `isEmpty() added`, `compute(Int,Int) moved, formatting-only`. The intended formatting-only change to `price()` was labelled **changed**, not formatting-only, so the row is partial. The benchmark's formatting-only recall is below 1, so this is not claimed as a pass. No signature/uncertain/unanalyzed rows. Framing, filter and toolbar rows were not driven. |
+| Scala 2 `Cart2.scala` | Same shape and labels as Kotlin: summary `4 changed · 1 added · 1 removed · 1 moved · 1 formatting-only · 1 rename candidate`; `price()` is changed rather than formatting-only, so partial. The benchmark's formatting-only recall is below 1. The file parses without a parse-error row. |
+| Scala 3 `Cart3.scala` | The Scala 3 enum/`given`/indentation file parsed without a parse-error row. Summary `3 changed · 1 added · 1 removed · 1 moved · 1 rename candidate`; `price()` is changed and `compute` is moved without the formatting-only tag, so the Scala 3 row is **partial**; no formatting-only row is present. |
+| `notes.txt` | Double-click opened the native diff and no structural outline. No engine-reason strip was shown; plain text is left alone by the plugin's design, so this row is partial rather than a pass for the "reason" part. |
+
+**Not run / inconclusive for section A (2026-11-09; superseded for Java/Kotlin by the 2026-11-10 record):** per-language selection framing/Enter on Kotlin/Scala, moved-frame alignment, the change-type filter, Hide/Minimise on Kotlin/Scala, the width persistence, and the shortcut/toolbar-order check. Section B was not run. No product code was changed.
+
+## 2026-11-09: 0.3.0 section B merge outline (`f912d8c`)
+
+Physical merge-window check on IC 2025.1.3 with the extended `.manual/fixture-multilang` merge: `main` and `side`
+conflict in Java, Kotlin, Scala 2 and Scala 3 merge files; `Merge.java` also has `both()` changed on both sides without
+a conflict, `gone()` removed on the side, and `moveMe()` moved to `MergeTarget` on the side.
+
+- **Java `Merge.java`:** the merge window title was `Merge Revisions for …/Merge.java`; the pane titles were
+  `Changes from main`, `Result` and `Changes from side`. The outline groups were `Changed on both sides` and
+  `Changed in side only`. `method both()` carried `main: changed side: changed merged without conflict`; `value()`
+  carried the conflict. Selecting `method gone()  side: removed` showed the result-pane note **`Not present in the right pane`**, not
+  `not tracked`; the requested label is **partial/failed** on this evidence. The row label stayed `side: removed`. `moveMe()` was
+  `side: added`, not a moved row, so the moved-frame check is **inconclusive** and scrolling was not meaningful.
+  Selecting `both()` left the row label `merged without conflict` and an empty result-pane note. Three-pane navigation,
+  the change-type filter and result-edit following were not driven. **Partial.**
+- **Kotlin `Merge.kt`:** the same three pane titles and side groups; `both()` was changed on both sides but without the
+  `merged without conflict` tag, because the conflict hunk covered it. `gone()` was side removed, `MergeTargetK` side
+  changed and `moveMe()` side added. **Partial.**
+- **Scala 2 and Scala 3:** merge windows were not opened in this run. The files are in the conflict state for a later
+  check. **Not run.**
+
+**Section B remaining after the 2026-11-10 record:** result-frame following, three-pane frame navigation and the moved
+declaration/frame alignment; `not tracked`, the filter, the container-tree toggle, the Java/Scala 2/Scala 3 pane titles
+and groups, and the Scala 2/3 merge windows are covered there. No product code was changed.
+
+## 2026-11-10: 0.3.0 M8 and IU #111 (`f912d8c`)
+
+Physical checks on IntelliJ IDEA Ultimate 2026.3 (`IU-263.7307.200`) with the release build, `.manual/fixture-multilang`
+and the isolated paths in `.manual/iu-isolated.properties`.
+
+- **M8, pass on IU 2026.3; the IC 2025.1 restart/settings comparison remains partial.** In the Commit tool window,
+  Structural Summary was turned **off**, Declarations **on**, and Changed hidden
+  in the tree's Hide Change Types submenu. Opening the `Cart.java` diff still showed `method total()  changed` and
+  `method add(String)  changed` in the structural outline (9 rows), and Moved was then hidden in the outline's own Hide
+  Change Types submenu. The tree rebuilt with 22 rows and still hid the changed declarations. Settings | Tools |
+  SMART Diff showed Show structural summary **0**, Show declarations **1**, Hide from the outline Moved **1** and Hide
+  from the Changes tree Changed **1**.
+- **M8 restart.** IU was quit with the isolated paths and restarted with the same `IDEA_PROPERTIES` and project. The tree
+  reopened with 16 rows; `Cart.java` and `class Cart` expanded to 22 rows and the changed declarations were still
+  absent. View Options showed Structural Summary **not checked**, Declarations **checked** and Changed **checked**.
+  Settings still showed the same four values. The `Cart.java` outline reopened with the same 9 rows, the changed rows
+  visible, and Moved still checked. The tree filter did not change the outline filter, and hiding Moved in the outline
+  did not change the tree rows.
+- **#111 declaration rows, pass.** With Changed shown, `method total()  changed` was selected in the tree. Enter opened
+  the `Cart.java` diff and selected `method total()  changed` in the structural outline. With all editor tabs closed, a
+  physical double-click on the same row opened the diff the same way and selected the same row. Both were driven with
+  the real key and mouse paths.
+- **#111 changelist and directory rows, pass.** The `Changes` changelist row collapsed from 24 to 2 rows with Left and
+  expanded from 2 to 12 rows with Right. With Directory grouping on, the `src/main  7 files` directory row expanded
+  from 7 to 10 rows with Right and collapsed back to 7 with Left.
+
+No product code was changed.
+
+## 2026-11-09: 0.3.0 #112 M7, M8, M9 (`f912d8c`)
+
+Physical tree checks on IC 2025.1.3 with `.manual/fixture-multilang`.
+
+- **M7, pass for the all-hidden file.** The tree View Options menu's Hide Change Types submenu was opened and Changed,
+  Added, Removed, Moved and Formatting-only were hidden one by one. `OnlyChanged.java` stayed in the tree, had no
+  declaration rows, and its summary ended **`· all hidden`** (`1 changed · all hidden`). The row was then checked
+  (Space) while still all hidden, and it reported **`checked`**, so it stayed included in the commit list.
+  `Cart.java` cannot become all hidden because its rename-candidate row is never hidden; that is the correct exception.
+- **M8, inconclusive.** The tree filter and both toggles were not set on IU 2026.3 with real input, and the IU restart
+  with the isolated paths was not run in this step. The IC settings were changed, but only the IC session was observed.
+- **M9, pass with the declaration visibly expanded.** `Cart.java` and its `class Cart` row were explicitly expanded;
+  the tree showed 32 rows and `method total()  changed` was visible. With the tree focused, typing `method total` moved
+  the selection from `Cart.java` to `method total()  changed`. After hiding the Changed type, `method total()` was
+  absent and the tree had 30 rows; typing `method total` again left the selection on the nearest shown row
+  (`method label → name()  rename candidate`) and did not select the hidden row. The earlier failures were with the
+  class row collapsed, so the declaration row was not on screen.
+
+No product code was changed.
+
+## 2026-11-09: 0.3.0 #112 M6 and M8 (`f912d8c`)
+
+Physical checks on IC 2025.1.3 with `.manual/fixture-multilang`.
+
+- **M6, partial.** `Cart.java` was extended in the working tree with a moved-and-changed `compute` method and a
+  `total()` return-type change. With the Changed type hidden, `method compute(int,int)  moved, changed` stayed and the
+  changed rows disappeared. The return-type change was labelled `changed`, not `signature changed`, so the
+  signature-change case is **inconclusive** (the fixture did not produce that label). Hiding Moved at the same time did
+  not remove `compute` in this run; the menu toggle did not visibly apply, so the "hide both" case is **inconclusive**.
+  The uncertain/unanalyzed never-hidden case and the hidden-container-with-shown-children case were not produced.
+- **M8, inconclusive.** IU 2026.3 was not driven with non-default tree filter/toggles and restarted with the same
+  isolated paths, and the Settings | Tools | SMART Diff comparison was not done.
+
+No product code was changed.
+
+## 2026-11-09: 0.3.0 release-head manual check (`f912d8c`)
+
+This was the physical check on the exact release head `f912d8c` (`pluginVersion=0.3.0`, including #137 and #142). R7
+passes after correcting the caret placement in the test; the remaining rows are listed below and still block the tag.
+No tag or publication was made.
+
+**Build and setup.** `./gradlew clean buildPlugin check` passed; `./gradlew verifyPlugin` is Compatible on
+`IC-251.26927.53` and `IU-263.7307.200` (4 experimental usages in the local Scala-resolving run, 3 in the CI artifact,
+no deprecated usage). IC 2025.1.3 ran through `./gradlew runIde` with SMART Diff 0.3.0 and Scala 2025.1.32. The physical
+input used the macOS Accessibility `clickhelper`; a temporary external AX reader reported the live tree selection,
+row labels and inclusion states, because Screen Recording is not granted on this machine. IU 2026.3 was not used for the
+R7/R1/R2/R4/R6/R10 part; it was used for the R8 500-file limit and the splitter attempt.
+
+### R7: passes on the release head
+
+Starting from `Cart.java` with `method total()` selected, the caret was put in `total()`, the method was edited and
+saved, then the caret was moved with **Go to Line 27** into `return items.isEmpty();` (offset **540**). An AX watcher
+recorded:
+
+```text
+0.000  method total()  changed
+~0.67  (no selection, tree rebuilding)
+0.886  Cart.java  src/main/java/demo          (plain pending file row)
+1.091  (no selection, tree rebuilding)
+1.293  then the new summary: method isEmpty() added
+```
+
+The instrumented retry showed the summary ranges `method total() new=[365,506)` and `method isEmpty() new=[512,576)`.
+At offset 540 `innermost` returned `class Cart / method isEmpty()`, `findDeclaration` found that row, and the final
+selection was `method isEmpty()  added`. The same check on the 1200-method `Slow.java` at offset 153 selected
+`method m2()  changed`.
+
+The first attempt moved the caret with four Down presses and ended at offset **577**, one character past
+`isEmpty()`'s range `[512,576)`. Selecting `class Cart` there was correct; it was a test-placement error, not an R7
+failure. The retry sequence was: `Stale` kept the old row, the model rebuild selected the plain pending file row, the
+timer restarted after the model property change, and the new summary selected the method under the caret.
+
+### Other physical rows
+
+| Row | Result |
+| --- | --- |
+| R1 | Pass. Caret in `total()`, the class header and added `isEmpty()` selected the innermost changed row and expanded the file. |
+| R2 | Pass. A caret in `package demo;` selected the file row. |
+| R3, two-sided | Pass. Physical clicks on the old and new editors selected `method total()` for their own side. |
+| R3, editor-tab preview | Pass. A caret moved in the `Commit: Cart.java` preview kept `Cart.java` selected and the preview open. |
+| R3, splitter preview | **Inconclusive.** Retried on IC 2025.1 with `show.diff.preview.as.editor.tab.with.single.click=false`, `LOCAL_CHANGES_DETAILS_PREVIEW_SHOWN=true` and a restart. The Commit tool window still showed its commit message; the `Show Local Changes` action did not switch the content, a single click produced no preview, and no splitter appeared inside the tool window. The IU retry with this combination was not run. |
+| R4 | Pass. Follow off left the tree unchanged; follow on followed the next caret move. |
+| R5 | **Partial.** With the editor-tab preview off, a caret move to the file row opened no preview and the editor kept focus. With it on, the platform's `Commit: Cart.java` preview followed the file row and focus moved to that preview tab. Every file row stayed `not checked`, and the header stayed `7 files`. This UI has no commit-count label, so the commit contents/count were not fully measured; preview-off inclusion was not separately re-driven. |
+| R6 | Pass. 30 physical Right keys produced 2 selection updates, the last 1.041 s after the burst, not 30 follows. The click race was repeated 6 times and the clicked `notes.txt` row stayed selected each time. |
+| R7 | Pass with the corrected caret offset (above). |
+| R8 | Pass. Added `Added.java`, unsupported `notes.txt`, too-large `Large.java` and the old side of deleted `Old.java` all selected only their file row. In a 505-file project, `File0053.java` (one of the rows after the 500 summarised files) selected only its file row; `File0505.java` was still inside the first 500 and keeps its summary. |
+| R10 | Pass. Hiding `CHANGED` selected the shown `class Filter`; Declarations off selected the file row. |
+| R11 | **Inconclusive.** The splitter preview could not be produced with the editor-tab-off/Local-Changes-on combination, and no stale-summary window was captured with the editor-tab preview. |
+
+### #111 and #112 residuals
+
+- **#111 double-click/Enter:** on IC 0.3.0 a physical double-click and Enter on `Cart.java` opened `Commit: Cart.java`, and on `notes.txt` opened `Commit: notes.txt`; the summarized and plain rows matched with the editor-tab preview on. On IU 2026.3 the same pairs matched with the editor-tab preview on (`Commit: Cart.java` / `Commit: notes.txt`) and off (plain `Cart.java` / `notes.txt`), and with Declarations off the open behavior still matched for both rows. The "no expand arrow with Declarations off" check was not confirmed: a Right press still changed the row count.
+- **#144 / B3-R19, editor tab:** with `show.diff.preview.as.editor.tab.with.single.click=true` and
+  `LOCAL_CHANGES_DETAILS_PREVIEW_SHOWN=true`, a physical single click opened `Commit: notes.txt` for a plain row and
+  `Commit: Cart.java` for a summarized row. This is the editor-tab surface. The corrected editor-tab-off/Local-Changes-on
+  combination did not produce a splitter, and a SMART Diff-off control was not run; the splitter half remains
+  inconclusive.
+- **Directory rows:** with directory grouping on, a physical Right expanded `fixture-main` and a physical double-click
+  collapsed it on IC 2025.1; the `Changes` changelist row expanded and collapsed the same way. On IU 2026.3 the
+  `Changes` changelist row and the `src/main` directory row both expanded and collapsed with physical Right/Left, and
+  declaration-row Enter and double-click both opened the diff with `method total()  changed` selected; see the
+  2026-11-10 record.
+- **R16:** not driven; no real failing diff was set up.
+- **#108:** not re-run on 0.3.0; the 2026-11-09 0.2.0 record remains the last physical result. The declaration action
+  is unchanged by #137/#142, so the result is accepted for 0.3.0 rather than re-run on `f912d8c`.
+- **#112 residual:** M7 and M9 pass on IC 2025.1 and IU 2026.3. M8 passes on IU 2026.3; the IC 2025.1
+  restart/settings comparison is partial.
+  M3's open behavior passed on IU with Declarations off, but the no-expand-arrow detail is partial; M6 is partial.
+- **Release plan A/B:** partially run on the multi-language fixture. Java two-sided labels/filters/selection pass
+  except the moved-only filter case; Kotlin/Scala 2/Scala 3 labels/filters/selection are partial; Java/Scala 2/Scala 3
+  merge panes/groups pass. The
+  frame-paint, toolbar, width and Kotlin merge-container-toggle rows are recorded as inconclusive in the 2026-11-10
+  section.
+
+**Tag blockers:** R3 splitter preview, R5 commit count/inclusion, R11 and #111 R16, #144 splitter and SMART-off
+control, the remaining section A outline rows (moved-frame alignment, Kotlin/Scala framing, Scala 2's single moved and
+formatting-only filter cases, toolbar placement, Kotlin/Scala 2/Scala 3 formatting-only labels, the `notes.txt` reason
+strip, the Java moved-only filter case, a custom resized width, and the Kotlin/Scala strip-click/Enter restore) and
+the B result-frame/navigation rows, the
+moved-merge fixture and the Kotlin merge container toggle, and #112 M3's no-expand-arrow detail, M6, the IC 2025.1 M8
+comparison remains. Three-sided diffs and merge windows are out of scope for #110's R3 (the mapping returns without
+touching the tree); the separate merge-outline A/B check is a release gate. IU 2026.3 was used for the 500-file limit;
+its Local Changes view could not be populated for the splitter check. No product code was changed.
+
+## 2026-11-09: 0.3.0 backport of the two EDT fixes (#138, #140)
+
+The 0.3.0 branch now carries the read-action fix from #138 (`3c7f961..aa56b03`) and the outline file-index fix from #140
+(`e9060ce`, `a89437c`). The cherry-picks kept this branch's 0.3.0 CHANGELOG and validation record; the two fixes are in
+the 0.3.0 Fixed list.
+
+**Automated evidence.** `./gradlew clean buildPlugin check` and `./gradlew verifyPlugin` pass; `smart-diff-0.3.0` is
+Compatible on IC-251.26927.53 and IU-263.7307.200. The CI verifier artifact records 3 experimental API usages, all
+existing `ChangesViewNodeAction` overrides or reference in `DeclarationNodeAction`; a local run that resolves the Scala
+plugin also lists its existing `PsiNamedElementWithCustomPresentation` reference (4 locally). There is no deprecated or
+internal usage.
+
+**Release-artifact log check: probe-assisted, 2026-11-09.** The built `smart-diff-0.3.0.zip` ran on IC 2025.1.3 and IU
+2026.3 with the same scenario as the two PR records: Java, Kotlin and Scala diffs from the Local Changes splitter preview
+and the Commit tool window, native two-sided and unified viewers, a plain editor, one-sided added/deleted diffs, and a
+file outside the content roots. On IC 2025.1.3 the combined build logged 0 `Read access is allowed from inside
+read-action only` and 0 `Slow operations are prohibited on EDT` entries against SMART Diff; the `origin/main` control
+logged 8 and 4. On IU 2026.3 both were 0, as was the control. Physical input remains untested because macOS Assistive
+access is not granted here, so the click path stays a manual check.
 
 ## 2026-11-08: outline finish reads no project file index on the EDT (#139)
 
@@ -232,6 +573,114 @@ real outline selection frames and highlights the new side) and `InliningDetectio
 manual steps remain: open a Java, Kotlin and Scala diff with an inlined helper on both target IDEs, confirm
 `inlined into …` and `code inlined from …`, the `inlined` summary count, the frame on the new side, and that hiding
 removed changes hides the removed row.
+## 2026-11-08: 0.3.0 release checks
+
+The release checks for 0.3.0 from the release branch head on `chore/release-0.3.0`, with `DeclarationEngine.VERSION` 9,
+`ReferencePass.VERSION` 1 and Scala plugin 2025.1.32. **Publishing is blocked:** the automated checks below pass, but the
+[#110 R1–R10 manual check](#2026-11-08-changes-tree-caret-follow-110-r7-and-r8-failed) was run and **R7 and R8 failed**;
+the fix is in PR #137, and the R7/R8 re-check is outstanding. Do not merge `main`, which carries #132
+(relationships/04 step 2) as 0.4.0 work. The remaining #111 and #108 hand checks also stay open. The [manual runIde
+checklist](releases/0.3.0-manual-check.md) records the failed run and the re-check.
+
+### Corpus and pins
+
+- Two-sided: `two-sided-2026-11-04.txt` from the clone set, with every clone's HEAD at the list's pin. The report is in
+  `build/reports/smartdiff-validation/`.
+- Merge: `merges-2026-11-02.txt`, the recorded 2026-11-01 list with the same pinned HEADs. The report is in
+  `build/reports/smartdiff-validation/merge/`.
+- Pinned HEADs: okhttp `2b6399483639405e9277d33a3a1d355d5fabda1c`, guava
+  `b157643c41f9ee6a38732b4fa1a590ba187912d9`, commons-lang `b9b30efb01e861a16503232bb96b684107e73199`, Exposed
+  `09f814c61c22851b76840ccb65c1ac2c4db97452`, moshi `889013ec2edb8d8034902662a1dc8c4f3b3f8111`,
+  spring-petclinic `500158f732419217507c7656904b8e6aa1bcc0d6`, cats `e28985fe2a0d7123a8fb84cbb70c72b5e3d935ca`,
+  zio `df4c5b29ddaa1df8a7ffe122cd5b5d783b60c706`, scala3 `3e003afbf3854d9b3189a51a47258d0b9e31e792`.
+
+### Two-sided corpus
+
+`./gradlew test --tests '*CorpusValidationTest*' -Psmartdiff.validation.corpus=<two-sided-2026-11-04.txt>`:
+**1970 files from 386 commits**, 1968 `ANALYZED` and 2 `PARTIAL`, no fallback, and no `hidden` or `empty` flag. 125 files
+are flagged: 15 extraction, 8 extraction-near-miss, 23 noisy, 26 rename, 61 rename-candidate, 2 same-name, 2 status
+and 1 uncertain.
+
+Every flagged file was reviewed by comparing the full report with the recorded 2026-11-04 run: `summary.tsv` has the
+same 1970 rows with the same status, hunks, reported and formatting-only counts, flags and dialect, with only the
+milliseconds changed, and `report.md` is identical after removing the timings. So the flagged set and every diagnostic
+are the ones already reviewed in [2026-11-04: relationship matching](#2026-11-04-relationship-matching); no new flag
+or changed file needs a new review. The 3 rows that differ from the earlier [2026-11-04 two-sided
+rerun](#2026-11-04-two-sided-corpus-rerun) are the same 3 reviewed there:
+
+| File | Commit | Change | Review |
+| --- | --- | --- | --- |
+| guava `AbstractBiMapTest.java`, both copies | `67b6ad17db` | the two renamed tests are rename candidates; reported 15 → 13 | right: both tests were renamed and their bodies changed from `IdentityHashMap` to the new `InvalidatingEntryMap` |
+| spring-petclinic `PetControllerTests.java` | `37c7f98bf1` | `testProcessCreationFormWithBlankName` → `processCreationFormWithBlankName` is a rename candidate; reported 11 → 10 | right: the method was renamed by dropping the `test` prefix and its body is unchanged |
+
+The 2 `PARTIAL` files are scala3 `tests/neg/i7746.scala` and `library/src/scala/collection/immutable/LazyListIterable.scala`;
+both are parse-limited Scala sources, as in the recorded run, and the rest of each file is analyzed. Time: overall median
+7 ms, p95 72 ms and slowest 579 ms (zio `ZIO.scala`); Java/Kotlin median 4 ms, p95 25 ms and slowest 147 ms; Scala 2
+median 23 ms, p95 145 ms and slowest 579 ms; Scala 3 median 15.5 ms, p95 175 ms and slowest 371 ms. All 1970 files take
+41.7 s. No file is over the 5 s analysis limit.
+
+### Merge validation result
+
+`./gradlew test --tests '*CorpusValidationTest*' -Psmartdiff.validation.merges=<merges-2026-11-02.txt>`: **275 files from
+121 merge commits**, with 2 files missing from a parent or the base and no skipped merge commit. Flags: 49
+`both-sides-clean`, 12 `conflict-one-side` and 6 `status`; 66 rows are flagged (60 behavior flags and 6 status rows).
+Coverage is Java 50, Kotlin 67, Scala 2 117 and Scala 3 41 files. There is no join mismatch and no thrown comparison;
+the merge median is 27 ms and the one-base-side comparison median 22 ms.
+
+As for the two-sided corpus, `summary.tsv` has the same 275 rows with the same language, dialect, conflicts and flags,
+and `report.md` is identical after removing the timings, to the [2026-11-04 relationship matching
+run](#2026-11-04-relationship-matching) and its merge validation. Every flagged file is therefore the reviewed set from
+that run; the 6 `status` files are the
+known Scala 3 parse-limited sources listed in its fallbacks, and the 49 `both-sides-clean` and 12 `conflict-one-side`
+files are the recorded diagnostics. The report says `ready=false` only because it requires those files to be reviewed;
+no join mismatch exists.
+
+### Relationship benchmark
+
+`./gradlew test --tests '*RelationshipBenchmarkTest*'` with
+`-Psmartdiff.relationships.corpus=src/test/testData/relationships-corpus-full.txt`,
+`-Psmartdiff.relationships.gate=no-new-wrong-pairs` and
+`-Psmartdiff.relationships.baseline=src/test/testData/relationships-baseline/report.json`: **428 cases** (308 checked-in,
+including the four Java usage-grouping fixtures, and 120 real commits), precision **1.000**, recall **0.829**, 203
+reported pairs of 245 labelled. There is no wrong or forced pair, no hidden file and no unlabelled file; the 6 fallbacks
+are the known Scala 3 parse-limited cases. The `no-new-wrong-pairs` gate **passed** against the checked-in baseline, with
+`newGatePairs=[]`, and the report is byte-identical apart from timings to the [2026-11-07 rename grouping step 1
+run](#2026-11-07-rename-grouping-step-1-benchmark). The 93 renames are 73 high, 20 medium and 0 low; reference evidence
+found 19 usages, all matched, with `GROUPED=5`, `NOT_GROUPED=417` and `NONE=6`, and a slowest reference pass of 352 ms of
+the 1000 ms budget.
+
+The report says `Status: smoke run` because usage grouping is still step 1 for Java only; it is not the 440-case usage
+gate and is not a release gate until [relationships/07](specs/relationships/07-relationship-validation.md) is accepted.
+The known classification-mismatch list is unchanged from the 2026-11-07 run, and no pair or classification moved.
+
+### Build and Plugin Verifier
+
+- `./gradlew clean buildPlugin check` passed; `build/distributions/smart-diff-0.3.0.zip` has SHA-256
+  `49fd127437c74b03a88fd9ed78be024da6a5f98c7ff956d0b34773fac571c13d`.
+- `./gradlew verifyPlugin` is **compatible** on `IC-251.26927.53` and `IU-263.7307.200`, with **4 experimental API
+  usages** on each (the 4 in the 0.2.0 report below), **no internal API usage** and **no deprecated API usage**.
+- The 0.2.0 verifier report in the 0.2.0 release worktree records the same 4 experimental usages on `IC-251.26927.53` and
+  `IU-262.11879.100`, with no internal or deprecated usage. No usage is new in 0.3.0.
+
+The four uses, identical in 0.2.0 and 0.3.0:
+
+1. Experimental interface `com.intellij.psi.PsiNamedElementWithCustomPresentation`, referenced in the Scala plugin's
+   `org.jetbrains.plugins.scala.lang.psi.api.toplevel.ScNamedElement` (the Scala provider's PSI use).
+2. Experimental method `ChangesViewNodeAction.createNodeHoverIcon(ChangesBrowserNode)`, overridden in
+   `io.github.agadek.smartdiff.ui.changes.DeclarationNodeAction`.
+3. Experimental method `ChangesViewNodeAction.handleDoubleClick(ChangesBrowserNode)`, overridden in
+   `io.github.agadek.smartdiff.ui.changes.DeclarationNodeAction`.
+4. Experimental interface `ChangesViewNodeAction`, referenced in
+   `io.github.agadek.smartdiff.ui.changes.DeclarationNodeAction`.
+
+### Manual checks and blockers
+
+The automated release record above is complete. Publishing is blocked by the caret-follow manual check: it ran and
+**R7 and R8 failed**; the fix is in PR #137, and the re-check on the release artifact is outstanding. Do not merge `main`,
+which carries #132 (relationships/04 step 2) as 0.4.0 work. The remaining #111 and #108 physical-click and single-click
+hand checks also stay open. The [manual runIde checklist](releases/0.3.0-manual-check.md) records the failed run and the
+re-check. 0.3.0 is prepared, not published.
+
 ## 2026-11-08: Changes tree caret follow read access (issue #136)
 
 Issue #136: on IC 2025.1.3 the follower's diff viewer lookup built the editor's data context on every key from the
@@ -263,8 +712,10 @@ mouse and keyboard gestures were not delivered. On IU 2026.3 the control build a
 reproduces nor contradicts the warning.
 
 **Verifier.** `./gradlew verifyPlugin` is compatible on IC 2025.1.3 (`IC-251.26927.53`) and the latest release
-(`IU-263.7307.200`, 2026.3) with the same 4 experimental API usages as before and no deprecated, internal or
-experimental usage from the new read action.
+(`IU-263.7307.200`, 2026.3). The CI verifier artifact records 3 experimental API usages, all existing
+`ChangesViewNodeAction` overrides or reference in `DeclarationNodeAction`; a local run that resolves the Scala plugin
+also lists its existing `PsiNamedElementWithCustomPresentation` reference (4 locally). There is no deprecated or
+internal usage, and this change adds no experimental usage.
 
 ## 2026-11-08: Changes tree caret follow fixes: R8 one-sided diff and R7 pending follow
 
@@ -282,8 +733,7 @@ Five new regressions name the requirements:
 - R7/R11: `test a preview caret event does not replace a pending summary follow` and `test an unfocused editor's caret
   event does not replace a pending summary follow`.
 
-All pass on this head. The three one-sided and rename regressions fail with `4d3c6fb` reverted; the two R7/R11
-regressions fail with `2debf54` reverted.
+All pass on this head. The three one-sided and rename regressions fail when the caret fix is reverted; the two R7/R11 regressions fail when the earlier pending-follow fix is reverted.
 
 **Running-IDE probe, IC 2025.1.3 (`IC-251.26927.53`, `runIde` sandbox).** A temporary probe, removed before this
 change was committed, opened a Git project with a changed `Cart.java` (a changed class header, two changed methods and
@@ -310,11 +760,11 @@ experimental or deprecated usage from the follower. The existing experimental us
 the latest release, is still required before the feature is claimed as manually verified. The new R11 step is in the
 manual check of [changes-tree/05 details](specs/changes-tree/05-changes-tree-caret-follow-details.md#manual-check-outstanding).
 
-## 2026-11-08: Changes tree caret follow (#110): manual check outstanding
+## 2026-11-08: Changes tree caret follow (#110): R7 and R8 failed
 
 PR #131 adds the caret follow in [changes-tree/05](specs/changes-tree/05-changes-tree-caret-follow.md) R1–R10. The
-automated checks pass, and the preview blocker has a running-IDE check; the full R1–R10 manual check has not been recorded
-yet.
+automated checks pass, and the preview blocker has a running-IDE check. The R1–R10 manual run was executed on
+2026-11-08; **R7 and R8 failed**, and the fix is in PR #137 for `release/0.3.0`; the re-check is outstanding.
 
 **Automated evidence.** `./gradlew clean buildPlugin check` passes, including all 30 `ChangesCaretFollowTest` tests. They
 cover the R7 stale and pending summaries through an installed intermediate pending model, R10's hidden-row fallback with
@@ -350,13 +800,12 @@ modified `Cart.java`, the built plugin, and the single-click preview setting on
 The probe selected the declaration directly only to reproduce the platform symptom. In the fixed build, moving the caret
 in either preview maps to the file row, so the follower never selects the declaration there; normal editors and diff
 sides still map declarations in `ChangesCaretFollowTest`. The R3 preview behavior is therefore checked on both target
-releases in both preview forms; the remaining R1–R10 manual steps are outstanding.
+releases in both preview forms. The separate R1–R10 manual run then failed R7 and R8; those are the release blockers.
 
-**Running-IDE check: outstanding.** The R1–R10 manual steps in
-[changes-tree/05 details](specs/changes-tree/05-changes-tree-caret-follow-details.md#manual-check-outstanding) have not been
-run in a running IDE. They must still be run on IntelliJ IDEA 2025.1 and the latest release, including the R7 intermediate
-pending rebuild (step 5) and the R10 hidden-row fallback (step 6a), in Local Changes and in the Commit tool window. The
-feature is not claimed as manually verified.
+**Running-IDE check: run; R7 and R8 failed.** The R1–R10 manual run was executed on IntelliJ IDEA 2025.1 and the latest
+release, in Local Changes and in the Commit tool window. R7 (the stale summary and the intermediate pending rebuild) and
+R8 (files without a summary) failed; the other steps are not claimed as passed here. The fix is in PR #137 for `release/0.3.0`; do not merge `main`, which carries #132 (relationships/04 step 2) as 0.4.0 work. The
+[manual checklist](releases/0.3.0-manual-check.md) records the failed run and the re-check.
 
 ## 2026-11-07: Changes tree row parity (issues #111 and #108)
 
@@ -684,11 +1133,11 @@ off states, so this run cannot tell whether the speed search works. M9 remains m
 
 ### Remaining manual checks
 
-- M3 open behavior on a leaf row, after #111.
+- M3 the no-expand-arrow detail with Declarations off; the open behavior passes.
 - M6 uncertain/unanalyzed rows and hiding moved and changed together.
-- M7 commit inclusion of an all-hidden file.
+- M7 commit inclusion of an all-hidden file (now passed 2026-11-10).
 - M8 the 2026.3 restart and the outline visual comparison.
-- M9 speed search.
+- M9 speed search (now passed 2026-11-10).
 
 ## 2026-11-05: engine 9 relationship benchmark
 
