@@ -113,6 +113,32 @@ class RefactoringsModelTest {
     }
 
     @Test
+    fun `R8 low-confidence links stay on their side when old and new offsets collide`() {
+        val oldLow = node("load", Presence.REMOVED, TextRange(10, 14), null)
+        val newLow = node("read", Presence.ADDED, null, TextRange(20, 24))
+        val unrelated = node("other", Presence.MATCHED, TextRange(20, 24), TextRange(30, 34), content = Content.CHANGED)
+        val result = ComparisonResult(
+            EngineId("e"), "1", Status.ANALYZED,
+            changes = listOf(unrelated, oldLow, newLow),
+            relationships = listOf(
+                relationship(EnumSet.of(RelationshipKind.RENAME), method("load"), 10, 14, method("read"), 20, 24, Confidence.LOW),
+            ),
+        )
+
+        val other = otherChanges(result)
+        val removed = other.single { it.title == "method load()" }
+        val added = other.single { it.title == "method read()" }
+        val colliding = other.single { it.title == "method other()" }
+
+        assertEquals("the possible link is under the removed declaration", "possible rename load → read  low", removed.children.single().label)
+        assertEquals("the possible link is under the added declaration", "possible rename load → read  low", added.children.single().label)
+        assertTrue(
+            "a row whose old range has the same offsets as the new endpoint must not get the link",
+            colliding.children.isEmpty(),
+        )
+    }
+
+    @Test
     fun `R9 expanding a row shows its evidence and never the numeric score`() {
         val result = ComparisonResult(
             EngineId("e"), "1", Status.ANALYZED,

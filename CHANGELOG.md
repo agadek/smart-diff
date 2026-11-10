@@ -15,6 +15,7 @@
 
 ### Fixed
 
+- The refactorings view attaches a low-confidence `possible …` link only to declarations on its own side, so equal old and new offsets no longer add the link to an unrelated row. The relationship-kind filter is hidden in the container tree, where it has no effect.
 - Following the caret in either platform Changes preview, the editor tab or the Local Changes splitter, keeps the preview open by selecting the file row, instead of a declaration row that used to close or empty it.
 - Following the caret in an added or deleted file's one-sided diff now selects that file's row, including a deleted file opened without a diff viewer in the Commit tool window.
 - A caret event from the platform Changes preview, or from an editor without focus, no longer replaces a follow that is waiting for a rebuilt summary, so the declaration under the caret is still selected when the summary arrives.

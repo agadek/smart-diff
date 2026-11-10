@@ -61,10 +61,10 @@ Confidence and kinds are words, not colours. The palette only marks usages; it i
 
 | Requirement | Check |
 | --- | --- |
-| R1, R2 | `SmartDiffSettingsTest` for the stored default and `OutlineIntegrationTest` for the toolbar action |
+| R1, R2 | `SmartDiffSettingsTest` for the stored default and `OutlineIntegrationTest` for the toolbar action, including the relationship-kind filter hidden in the container tree |
 | R3, R4 | `RefactoringsModelTest` for one row per relationship, names, kinds and usage children |
 | R5, R6 | `RefactoringsCoverageTest` over the golden fixtures and the checked-in relationship corpus: every labelled container-tree row has a relationship row or an `Other changes` row |
-| R7, R8 | `RefactoringsModelTest` for the confidence word, the `candidate` and `possible` rows and the low links under declarations |
+| R7, R8 | `RefactoringsModelTest` for the confidence word, the `candidate` and `possible` rows and the low links under declarations, including old/new ranges with colliding offsets |
 | R9 | `RefactoringsModelTest` for evidence children, including names, content, containers and usage symbols |
 | R10, R11 | `OutlineNavigator` checks in `OutlineIntegrationTest` for several frames and usage highlights, and `RefactoringsModelTest` for an absent side |
 | R12 | `RefactoringsModelTest` for the light and dark palette and the seventh rename; `OutlineIntegrationTest` for one palette colour per rename in both editors, above the navigator's usage detail |
