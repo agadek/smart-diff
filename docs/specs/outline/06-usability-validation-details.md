@@ -1,6 +1,6 @@
 # Usability validation: details
 
-Status: proposed, 2026-11-01
+Status: accepted, 2026-11-10
 
 Feature: [Usability validation](06-usability-validation.md)
 
@@ -29,19 +29,32 @@ The 20% threshold is a choice: it is large enough to matter for a reviewer's tim
 
 If the outline does not pass, the results still go into VALIDATION.md, and the gap becomes a roadmap item. A failed study is not hidden and does not block a release by itself; the release notes must not claim a speed benefit.
 
+## Study kit
+
+The kit is in `docs/usability-study/`:
+
+- `protocol.md` — setup, the two conditions, the order schedule, timing rules and the right-answer rule.
+- `tasks.md` — the five pinned tasks, with the repository, commit, parent, file, question and expected answer.
+- `facilitator-script.md` — the words the facilitator reads.
+- `results-sheet-template.csv` — one anonymous row per participant, task and condition.
+- `analyze.py` — turns a filled sheet into the R6/R7 numbers and the pass/inconclusive result.
+
+The study compares the container tree with the native diff. The refactorings view is not a condition: it changes the question and is an optional view, so adding it would make the sample too small to interpret.
+
+## Decisions
+
+- **Pilot size and variation.** The pilot has 2 participants, each doing the five tasks twice under the native condition. The analysis compares the two native medians. If the median relative difference is below 10 percentage points, 20% is above the observed variation. If it is 10–20 points, the main study may run but its result is reported with that caution. If it is 20 points or more, the 20% threshold is not above variation, so the study is reported as inconclusive and the tasks or timing are revised before the main study.
+- **Fewer than 5 participants.** The study is reported as inconclusive. The bar is not lowered and the feature is not marked implemented; the maintainer waits for more participants or records the study as not run.
+- **Comparison condition.** Only the container tree against the native diff, as the feature says. The refactorings view is out of scope for this study.
+
 ## Tests
 
 | Requirement | Check |
 | --- | --- |
-| R1, R2 | Manual review of the task sheet against `git show` before the study |
-| R3, R4 | Attendance sheet with anonymous participant codes |
-| R5 | The task order table in the study record |
-| R6 | The per-task result table |
-| R7 | The analysis of the result table |
-| R8, R9 | The VALIDATION.md section and its stored task sheet |
-| R10 | Review of the published record for personal data |
-
-## Open questions
-
-- **Is 20% above the run-to-run variation?** Run a pilot with a few participants on the same tasks and compare two runs of the native condition before the first full study. If the variation approaches 20%, raise the threshold or report the difference as inconclusive.
-- **Can at least 5 participants be recruited?** R3 sets a minimum. If fewer are available, decide whether a smaller sample still supports the release check or whether the study waits for more participants.
+| R1, R2 | `tasks.md` pins each task to a real commit, file and parent, and each expected answer is checked against `git show` and the outline before the study |
+| R3, R4 | The attendance sheet with anonymous participant codes; fewer than 5 participants is reported as inconclusive |
+| R5 | The order schedule in `protocol.md` and the order column in the results sheet |
+| R6 | The per-task result table from `results-sheet-template.csv` |
+| R7 | `analyze.py` computes the median times, the relative difference and the wrong-answer counts; the pilot rule above decides whether 20% is above variation |
+| R8, R9 | The dated VALIDATION.md section and the stored task sheet; `analyze.py` can be run again on a later sheet |
+| R10 | Review of the published record for personal data before it is committed |

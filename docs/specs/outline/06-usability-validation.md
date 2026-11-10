@@ -1,6 +1,6 @@
 # Usability validation
 
-Status: proposed, 2026-11-01
+Status: accepted, 2026-11-10
 
 **Description:** A small, repeatable study compares how quickly reviewers find changed [declarations](../../GLOSSARY.md#declaration) with the [structural outline](../../GLOSSARY.md#structural-outline) and with the [native diff](../../GLOSSARY.md#native-diff) alone.
 
