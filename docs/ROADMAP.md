@@ -90,7 +90,7 @@ Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.
 | [Extraction detection](#extraction-detection) | [declarations/05](specs/declarations/05-extraction-detection.md); inlining in [relationships/05](specs/relationships/05-inlining-detection.md) |
 | [Rename grouping across usages](#rename-grouping-across-usages) | [relationships/04](specs/relationships/04-rename-grouping.md) |
 | [Usability validation](#usability-validation) | [outline/06](specs/outline/06-usability-validation.md) |
-| [Summaries for added and deleted files](#summaries-for-added-and-deleted-files) | Not specified yet |
+| [Summaries for added and deleted files](#summaries-for-added-and-deleted-files) | [changes-tree/06](specs/changes-tree/06-added-deleted-file-summaries.md) |
 | Every other item below | Not specified yet |
 
 ### Multi-file summary in the Changes tree
@@ -156,7 +156,7 @@ Decided 2026-11-01 as the check that the outline meets its main goal. A small, r
 
 ### Summaries for added and deleted files
 
-Give added and deleted files in the Changes tree a summary and declaration rows, as every declaration of the file added or removed. Today they get none; 0.2.0 keeps that, and this item revisits it ([changes-tree/03](specs/changes-tree/03-coverage-and-scale.md)).
+Give added and deleted files in the Changes tree a summary and declaration rows, as every declaration of the file added or removed. Today they get none; 0.2.0 keeps that. Specified in [changes-tree/06](specs/changes-tree/06-added-deleted-file-summaries.md) (accepted, 2026-11-10).
 
 ### Hide comment-only changes
 
