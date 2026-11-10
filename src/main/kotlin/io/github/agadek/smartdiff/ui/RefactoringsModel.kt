@@ -224,17 +224,28 @@ object RefactoringsModel {
 
     /**
      * One `possible …` row for each declaration of a low-confidence relationship, keyed by the declaration's range on
-     * its side (R8). A relationship that is hidden by kind adds no link.
+     * its own side (R8). Old and new ranges are kept apart because a `TextRange` is only offsets; the same offsets on
+     * the other side must not match. A relationship that is hidden by kind adds no link.
      */
-    private fun lowLinks(relationships: List<Relationship>): Map<TextRange, List<OutlineItem>> {
-        val links = HashMap<TextRange, MutableList<OutlineItem>>()
+    private fun lowLinks(relationships: List<Relationship>): LowLinks {
+        val old = HashMap<TextRange, MutableList<OutlineItem>>()
+        val new = HashMap<TextRange, MutableList<OutlineItem>>()
         for (relationship in relationships) {
             if (relationship.confidence != Confidence.LOW) continue
             val item = possible(relationship)
-            relationship.old.forEach { links.getOrPut(it.range, ::mutableListOf) += item }
-            relationship.new.forEach { links.getOrPut(it.range, ::mutableListOf) += item }
+            relationship.old.forEach { old.getOrPut(it.range, ::mutableListOf) += item }
+            relationship.new.forEach { new.getOrPut(it.range, ::mutableListOf) += item }
         }
-        return links
+        return LowLinks(old, new)
+    }
+
+    /** Low-confidence links looked up only on the side whose range they belong to. */
+    private class LowLinks(
+        private val old: Map<TextRange, List<OutlineItem>>,
+        private val new: Map<TextRange, List<OutlineItem>>,
+    ) {
+        fun at(item: OutlineItem): List<OutlineItem> =
+            (item.oldRange?.let { old[it] }.orEmpty() + item.newRange?.let { new[it] }.orEmpty()).distinct()
     }
 
     private fun possible(relationship: Relationship): OutlineItem = OutlineItem(
@@ -256,11 +267,10 @@ object RefactoringsModel {
     private fun otherChanges(
         item: OutlineItem,
         coverage: Coverage,
-        lowLinks: Map<TextRange, List<OutlineItem>>,
+        lowLinks: LowLinks,
     ): OutlineItem? {
         val children = item.children.mapNotNull { otherChanges(it, coverage, lowLinks) }
-        val links = (item.oldRange?.let { lowLinks[it] }.orEmpty() + item.newRange?.let { lowLinks[it] }.orEmpty())
-            .distinct()
+        val links = lowLinks.at(item)
         val allChildren = children + links
         val covered = !keepsItsOwnLabels(item) && coverage.covers(item)
         if (covered) {

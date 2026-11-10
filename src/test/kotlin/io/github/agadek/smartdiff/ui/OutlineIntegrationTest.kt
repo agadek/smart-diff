@@ -1068,6 +1068,21 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertFalse(labels(state.items).any { it.contains("usages renamed") })
     }
 
+    fun `test relationships 06 R1 the relationship-kind filter is hidden in the container tree`() {
+        // relationships/06-refactorings-view R1
+        val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+        val outline = shown.awaitResult()
+        val event = TestActionEvent.createTestEvent(outline.panel.kindsAction)
+
+        settings.outlineView = OutlineView.CONTAINER_TREE
+        outline.panel.kindsAction.update(event)
+        assertFalse("the relationship-kind filter has no effect in the container tree", event.presentation.isVisible)
+
+        settings.outlineView = OutlineView.REFACTORINGS
+        outline.panel.kindsAction.update(event)
+        assertTrue("the relationship-kind filter is shown in the refactorings view", event.presentation.isVisible)
+    }
+
     fun `test relationships 06 R1 R2 R16 R18 the toolbar switches views and keeps the summary and native diff`() {
         // relationships/06-refactorings-view R1, R2, R16, R17, R18
         val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))

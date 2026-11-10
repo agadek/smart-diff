@@ -80,6 +80,10 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
     }
 
+    /** The relationship-kind filter; it is only shown in the refactorings view (relationships/06). */
+    internal lateinit var kindsAction: DefaultActionGroup
+        private set
+
     private val body = JPanel(CardLayout())
     private var updatingEngines = false
 
@@ -95,14 +99,21 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
             templatePresentation.icon = AllIcons.General.Filter
             isPopup = true
         }
-        val kinds = DefaultActionGroup("Hide Relationship Kinds", RelationshipKind.entries.map(::HideKindAction)).apply {
+        kindsAction = object : DefaultActionGroup("Hide Relationship Kinds", RelationshipKind.entries.map(::HideKindAction)) {
+            override fun update(e: AnActionEvent) {
+                val refactorings = SmartDiffSettings.getInstance().outlineView == OutlineView.REFACTORINGS
+                e.presentation.isVisible = refactorings
+                e.presentation.isEnabled = refactorings
+                super.update(e)
+            }
+        }.apply {
             templatePresentation.description = "Hide kinds of relationships from the refactorings view"
             templatePresentation.icon = AllIcons.General.Filter
             isPopup = true
         }
         val toolbar = ActionManager.getInstance().createActionToolbar(
             "SmartDiffOutline",
-            DefaultActionGroup(viewAction, filter, kinds, refresh, minimiseAction, hideAction),
+            DefaultActionGroup(viewAction, filter, kindsAction, refresh, minimiseAction, hideAction),
             true,
         )
         toolbar.targetComponent = this
