@@ -21,6 +21,42 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-10: 0.3.0 section B merge rows on IU 2026.3 (`f912d8c`)
+
+Physical merge-window checks on IU 2026.3 with the unresolved `.manual/fixture-multilang` merge (Java `Merge.java`,
+Scala 2 `Merge2.scala`, Scala 3 `Merge3.scala`).
+
+- **Java panes and groups, pass.** The merge window showed `Changes from main`, `Result` and `Changes from side`. The
+  grouped outline had `Changed on both sides` with `method value()` and
+  `method both()  merged without conflict`, and `Changed in side only` with `method gone()  side: removed` and
+  `method moveMe()  side: added`. The container-tree toggle switched to the class tree and back.
+- **Java filter, pass.** With all types shown the outline had 6 rows. Hiding Changed left 3 rows (the side-only group
+  only); after restoring Changed, hiding Removed left 5 rows; hiding Added as well left 4 rows. Restoring all returned
+  6 rows.
+- **Java three-pane navigation, partial.** Selecting `value()` put the result caret at offset 36 and Enter moved it to
+  40; selecting `both()` put it at 137 and Enter moved it to 141. Clicking the left pane focused its editor (caret 128)
+  and clicking the right pane moved focus there (caret 119), so all three panes are reachable. The left and right frames
+  are painted state and are not exposed to the accessibility tree, so "frames on both sides" is not claimed.
+- **Java result-edit following, partial.** Deleting the `value()` block from the editable result kept the 6 outline rows
+  (the outline itself is computed once) and refreshed the note; selecting `value()` then showed exactly `not tracked`.
+  Inserting a blank line before `both()` and selecting that row again moved its mapped result caret from 92 to 97, so the
+  anchor follows the edit. The painted frame itself is not observable.
+- **`not tracked`, pass.** In the Java result, deleting `value()` and selecting its row showed exactly `not tracked`.
+  The same deletion in the Scala 2 `Merge2.scala` result also showed exactly `not tracked`. Deleting `gone()` instead
+  showed `not tracked; Not present in the right pane`, because the side lacks `gone()` as well.
+- **Scala 2 merge window, pass for the panes/groups.** `Merge2.scala` showed the same `Changes from main`/`Result`/
+  `Changes from side` titles. The grouped outline had `Changed on both sides` (`function value()`, `function both()`;
+  no merged tag because both sides changed the same declaration) and `Changed in side only` (`function gone()  side:
+  removed`, `class MergeTarget2  side: changed`, `function moveMe()  side: added`). The container-tree layout showed
+  `class Merge2` and `class MergeTarget2`.
+- **Scala 3 merge window, pass for the panes/groups.** `Merge3.scala` showed the same three titles, with `Changed on
+  both sides` (`value`, `both`; no merged tag) and `Changed in side only` (`gone` removed, `moveMe` added). The
+  container-tree/grouped choice carried over from the Scala 2 window.
+- **Moved declaration, inconclusive.** The fixture has no real base move: the only `moveMe()` row is `side: added`, and
+  the base `moveMe()` stays in place. There is no moved declaration to select for frame alignment.
+
+No product code was changed.
+
 ## 2026-11-10: 0.3.0 Scala 2/3 section A on IU 2026.3 (`f912d8c`)
 
 **Plugin installation.** IU 2026.3's isolated plugin path had no Scala plugin. The Marketplace Scala build
@@ -135,9 +171,9 @@ a conflict, `gone()` removed on the side, and `moveMe()` moved to `MergeTarget` 
 - **Scala 2 and Scala 3:** merge windows were not opened in this run. The files are in the conflict state for a later
   check. **Not run.**
 
-**Section B remaining:** `not tracked` on selection, the moved declaration and frame alignment, three-pane navigation,
-the change-type filter, the container-tree toggle/side names as full pane titles, result-edit following, and the Scala 2
-and Scala 3 merge windows. No product code was changed.
+**Section B remaining after the 2026-11-10 record:** result-frame following, three-pane frame navigation and the moved
+declaration/frame alignment; `not tracked`, the filter, the container-tree toggle, the Java/Scala 2/Scala 3 pane titles
+and groups, and the Scala 2/3 merge windows are covered there. No product code was changed.
 
 ## 2026-11-10: 0.3.0 M8 and IU #111 (`f912d8c`)
 
@@ -277,8 +313,8 @@ timer restarted after the model property change, and the new summary selected th
 
 **Tag blockers:** R3 splitter preview, R5 commit count/inclusion, R11 and #111 R16, #144 splitter and SMART-off
 control, the remaining section A outline rows (moved-frame alignment, Kotlin/Scala framing, Scala 2's single moved and
-formatting-only filter cases, toolbar placement) and the B outline checks, and #112 M3's no-expand-arrow detail plus M6
-remain. Three-sided diffs and merge windows are out of scope for #110's R3 (the mapping returns without
+formatting-only filter cases, toolbar placement) and the B result-frame/navigation rows plus the moved-merge fixture,
+and #112 M3's no-expand-arrow detail plus M6 remain. Three-sided diffs and merge windows are out of scope for #110's R3 (the mapping returns without
 touching the tree); the separate merge-outline A/B check is a release gate. IU 2026.3 was used for the 500-file limit;
 its Local Changes view could not be populated for the splitter check. No product code was changed.
 
