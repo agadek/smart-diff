@@ -327,15 +327,17 @@ timer restarted after the model property change, and the new summary selected th
 - **#112 residual:** M7 and M9 pass on IC 2025.1 and IU 2026.3. M8 passes on IU 2026.3; the IC 2025.1
   restart/settings comparison is partial.
   M3's open behavior passed on IU with Declarations off, but the no-expand-arrow detail is partial; M6 is partial.
-- **Release plan A/B:** partially run on the multi-language fixture. Java two-sided labels/filters/selection pass;
-  Kotlin/Scala 2/Scala 3 labels/filters/selection are partial; Java/Scala 2/Scala 3 merge panes/groups pass. The
+- **Release plan A/B:** partially run on the multi-language fixture. Java two-sided labels/filters/selection pass
+  except the moved-only filter case; Kotlin/Scala 2/Scala 3 labels/filters/selection are partial; Java/Scala 2/Scala 3
+  merge panes/groups pass. The
   frame-paint, toolbar, width and Kotlin merge-container-toggle rows are recorded as inconclusive in the 2026-11-10
   section.
 
 **Tag blockers:** R3 splitter preview, R5 commit count/inclusion, R11 and #111 R16, #144 splitter and SMART-off
 control, the remaining section A outline rows (moved-frame alignment, Kotlin/Scala framing, Scala 2's single moved and
 formatting-only filter cases, toolbar placement, Kotlin/Scala 2/Scala 3 formatting-only labels, the `notes.txt` reason
-strip, the Java moved-only filter case, and a custom resized width) and the B result-frame/navigation rows, the
+strip, the Java moved-only filter case, a custom resized width, and the Kotlin/Scala strip-click/Enter restore) and
+the B result-frame/navigation rows, the
 moved-merge fixture and the Kotlin merge container toggle, and #112 M3's no-expand-arrow detail, M6, the IC 2025.1 M8
 comparison remains. Three-sided diffs and merge windows are out of scope for #110's R3 (the mapping returns without
 touching the tree); the separate merge-outline A/B check is a release gate. IU 2026.3 was used for the 500-file limit;
