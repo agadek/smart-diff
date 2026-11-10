@@ -180,7 +180,8 @@ and groups, and the Scala 2/3 merge windows are covered there. No product code w
 Physical checks on IntelliJ IDEA Ultimate 2026.3 (`IU-263.7307.200`) with the release build, `.manual/fixture-multilang`
 and the isolated paths in `.manual/iu-isolated.properties`.
 
-- **M8, pass.** In the Commit tool window, Structural Summary was turned **off**, Declarations **on**, and Changed hidden
+- **M8, pass on IU 2026.3; the IC 2025.1 restart/settings comparison remains partial.** In the Commit tool window,
+  Structural Summary was turned **off**, Declarations **on**, and Changed hidden
   in the tree's Hide Change Types submenu. Opening the `Cart.java` diff still showed `method total()  changed` and
   `method add(String)  changed` in the structural outline (9 rows), and Moved was then hidden in the outline's own Hide
   Change Types submenu. The tree rebuilt with 22 rows and still hid the changed declarations. Settings | Tools |
@@ -307,14 +308,17 @@ timer restarted after the model property change, and the new summary selected th
 - **R16:** not driven; no real failing diff was set up.
 - **#108:** not re-run on 0.3.0; the 2026-11-09 0.2.0 record remains the last physical result. The declaration action
   is unchanged by #137/#142, so the result is accepted for 0.3.0 rather than re-run on `f912d8c`.
-- **#112 residual:** M7, M8 and M9 pass. M3's open behavior passed on IU with Declarations off, but the
-  no-expand-arrow detail is partial; M6 is partial.
-- **Release plan A/B:** the two-sided and merge outline checks on Java, Kotlin, Scala 2 and Scala 3 were not run; the fixture has Java only.
+- **#112 residual:** M7 and M9 pass. M8 passes on IU 2026.3; the IC 2025.1 restart/settings comparison is partial.
+  M3's open behavior passed on IU with Declarations off, but the no-expand-arrow detail is partial; M6 is partial.
+- **Release plan A/B:** partially run on the multi-language fixture; the Java/Kotlin/Scala two-sided labels, filters,
+  selection and the Java/Scala merge panes/groups pass, with the frame-paint, toolbar, width and Kotlin merge-toggle
+  rows recorded as inconclusive in the 2026-11-10 section.
 
 **Tag blockers:** R3 splitter preview, R5 commit count/inclusion, R11 and #111 R16, #144 splitter and SMART-off
 control, the remaining section A outline rows (moved-frame alignment, Kotlin/Scala framing, Scala 2's single moved and
-formatting-only filter cases, toolbar placement) and the B result-frame/navigation rows plus the moved-merge fixture,
-and #112 M3's no-expand-arrow detail plus M6 remain. Three-sided diffs and merge windows are out of scope for #110's R3 (the mapping returns without
+formatting-only filter cases, toolbar placement, Kotlin/Scala 2/Scala 3 formatting-only labels, the `notes.txt` reason
+strip, the Java moved-only filter case, and a custom resized width) and the B result-frame/navigation rows plus the
+moved-merge fixture, and #112 M3's no-expand-arrow detail, M6 and the IC 2025.1 M8 comparison remain. Three-sided diffs and merge windows are out of scope for #110's R3 (the mapping returns without
 touching the tree); the separate merge-outline A/B check is a release gate. IU 2026.3 was used for the 500-file limit;
 its Local Changes view could not be populated for the splitter check. No product code was changed.
 
