@@ -75,7 +75,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [03 Change type filter](outline/03-change-type-filter.md) | implemented, 2026-10-22 |
 | [04 SMART Diff viewer](outline/04-smart-diff-viewer.md) | implemented, 2026-10-22 |
 | [05 Analysis fallback states](outline/05-analysis-fallback.md) | implemented, 2026-11-04 |
-| [06 Usability validation](outline/06-usability-validation.md) | proposed, 2026-11-01 |
+| [06 Usability validation](outline/06-usability-validation.md) | accepted, 2026-11-10 |
 
 ## Changes tree
 

@@ -170,7 +170,7 @@ Link an added method or function to the code it was extracted from. When most of
 
 ### Usability validation
 
-Decided 2026-11-01 as the check that the outline meets its main goal. A small, repeatable study compares finding changed declarations with the outline and with the native diff, and records time and accuracy. Specified in [outline/06](specs/outline/06-usability-validation.md). The corpus validation in [VALIDATION.md](VALIDATION.md) stays the record of analysis quality; the study is separate.
+Decided 2026-11-01 as the check that the outline meets its main goal. A small, repeatable study compares finding changed declarations with the outline and with the native diff, and records time and accuracy. Specified in [outline/06](specs/outline/06-usability-validation.md) (accepted, 2026-11-10); the study kit is prepared in [docs/usability-study](usability-study/README.md), and the sessions are pending. The corpus validation in [VALIDATION.md](VALIDATION.md) stays the record of analysis quality; the study is separate.
 
 ### Summaries for added and deleted files
 

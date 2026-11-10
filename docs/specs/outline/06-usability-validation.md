@@ -1,6 +1,6 @@
 # Usability validation
 
-Status: proposed, 2026-11-01
+Status: accepted, 2026-11-10
 
 **Description:** A small, repeatable study compares how quickly reviewers find changed [declarations](../../GLOSSARY.md#declaration) with the [structural outline](../../GLOSSARY.md#structural-outline) and with the [native diff](../../GLOSSARY.md#native-diff) alone.
 
@@ -8,7 +8,7 @@ Status: proposed, 2026-11-01
 
 ## Requirements
 
-- **R1** A study uses at least 5 review tasks, each from a real multi-hunk change in a supported language.
+- **R1** A study uses at least 5 review tasks, each from a real multi-hunk change in a [supported language](../../GLOSSARY.md#supported-language).
 - **R2** Each task has one expected answer: the declaration that contains the change and how it changed.
 - **R3** At least 5 participants take part, and each knows the task's language but not the change.
 - **R4** Each participant does every task once with the outline and once with the native diff alone.
@@ -24,6 +24,7 @@ Status: proposed, 2026-11-01
 - A public benchmark or a comparison with other diff products.
 - Measuring long-term use in the IDE.
 - Changing the outline during the study.
+- The refactorings view as a third condition; the study compares the container tree with the native diff.
 
 ## References
 
