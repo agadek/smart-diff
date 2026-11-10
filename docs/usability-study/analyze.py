@@ -7,7 +7,7 @@ Usage:
   python3 analyze.py --self-test
 
 The results sheet has:
-  participant,task,order,condition,time_seconds,correct
+  participant,task,condition,time_seconds,correct
 condition is native or outline; correct is yes or no.
 
 The pilot sheet has:
@@ -77,6 +77,7 @@ def _complete(rows: list[dict[str, str]]) -> tuple[set[str], dict[tuple[str, str
             raise ValueError(f"bad time for {participant} {task} {condition}: {row.get('time_seconds')!r}") from error
         if time_seconds <= 0:
             raise ValueError(f"time must be positive for {participant} {task} {condition}")
+        _correct(row.get("correct", ""))
         key = (participant, task, condition)
         if key in seen:
             raise ValueError(f"duplicate row for {participant} {task} {condition}")
@@ -187,6 +188,9 @@ def analyze_pilot(rows: list[dict[str, str]]) -> int:
             return 2
         by_pair[key] = time_seconds
         participants.add(participant)
+    if len(participants) != 2:
+        print(f"INCONCLUSIVE: the pilot needs exactly 2 participants ({len(participants)}).")
+        return 2
     for participant in participants:
         for task in TASKS:
             for run in ("1", "2"):

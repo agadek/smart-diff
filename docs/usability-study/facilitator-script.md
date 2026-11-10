@@ -15,7 +15,13 @@ Read this script before each session. Do not add explanations that identify the 
 
 Before the session, ask whether the participant knows Java, Kotlin and Scala and did not author the change under test. Record only `qualified=yes` or `qualified=no` in `attendance-sheet-template.csv`. Do not record names, roles or employers.
 
-## Introduction
+## Pilot introduction (pilot participants only)
+
+> Thanks for helping with the pilot. You will do five short review tasks, each twice, with the IDE's native diff alone. There is no structural-outline condition in the pilot. Each time I will read one question. Please tell me the declaration and how it changed. I will time you. You can scroll, but please do not use Search Everywhere, the Project view, or the source editor. I only record a participant code, not your name. You can stop at any time.
+
+Do not read the main-session introduction to pilot participants.
+
+## Main session introduction
 
 > Thanks for helping. This is a short study of how quickly a reviewer finds a changed declaration in a diff. You will see the same change twice: once with the IDE's native diff alone, and once with a structural outline beside it. Each time I will read one question. Please tell me the declaration and how it changed. I will time you. There are five tasks, and each takes two runs. You can scroll and expand rows, but please do not use Search Everywhere, the Project view, or the source editor. I only record a participant code, not your name. You can stop at any time.
 
@@ -30,9 +36,9 @@ Ask whether the participant has questions. Do not answer questions about the spe
 5. If the participant has not answered after 180 seconds, stop, record 180 and `no`.
 6. Switch to the other condition after a short break. Do not reveal the answer between the two conditions.
 
-## Pilot only
+## Pilot note
 
-For the pilot, the participant does the five tasks twice under the native condition only; there is no outline run. Use `pilot-sheet-template.csv` with `participant,task,run,time_seconds`. Do not count pilot runs in the main results.
+For the pilot, use the pilot introduction above and `pilot-sheet-template.csv` with `participant,task,run,time_seconds`; no outline run. Do not count pilot runs in the main results.
 
 ## Between tasks
 
