@@ -76,6 +76,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [04 SMART Diff viewer](outline/04-smart-diff-viewer.md) | implemented, 2026-10-22 |
 | [05 Analysis fallback states](outline/05-analysis-fallback.md) | implemented, 2026-11-04 |
 | [06 Usability validation](outline/06-usability-validation.md) | accepted, 2026-11-10 |
+| [07 Outline caret follow](outline/07-outline-caret-follow.md) | accepted, 2026-11-13 |
 
 ## Changes tree
 

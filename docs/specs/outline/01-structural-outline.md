@@ -34,6 +34,7 @@ Status: implemented, 2026-11-05
 - **R24** Closing the diff stops its comparison.
 - **R25** While the selected row's old and new ranges are both in view, scrolling either side keeps them aligned, scaled when the ranges have different lengths.
 - **R26** When either selected range leaves view, the selection changes or clears, either document changes or the diff closes, synchronized scrolling resumes.
+- **R27** When the outline's rows are rebuilt with the same row still selected, after the reference pass, a filter or view change or a settings change, the row is framed again and neither editor scrolls.
 
 ## Out of scope
 
