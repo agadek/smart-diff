@@ -383,8 +383,8 @@ class OutlineController internal constructor(
         }
         if (!keepSelection) reveal = null
         (viewer as? FilteringDiffViewer)?.hide(HiddenLines.of(result, hidden, request.oldText, request.newText))
-        // Follow once after a new comparison result when a caret move was skipped for staleness/pending (outline/07 R8).
-        if (!keepSelection && !revealApplied && caretFollowPending) followLastCaret(afterResult = true)
+        // Follow once after a result shown when a caret move was skipped while a comparison was pending (R8); ranges stay valid during the reference pass.
+        if (!revealApplied && caretFollowPending) followLastCaret(afterResult = true)
     }
 
     private fun documentChanged() {
@@ -417,7 +417,8 @@ class OutlineController internal constructor(
             if (disposed) return
             lastCaretSide = side
             lastCaretOffset = event.caret?.offset ?: return
-            if (debounce.isRunning || running != null) caretFollowPending = true
+            // A comparison is pending while the document debounce runs; the shown result is stale until the next one (R8).
+            if (debounce.isRunning) caretFollowPending = true
             caretDebounce.restart()
         }
     }
@@ -438,7 +439,8 @@ class OutlineController internal constructor(
     /** Selects the row of the last caret position when conditions allow (outline/07 R1-R8). */
     private fun followLastCaret(afterResult: Boolean = false) {
         if (disposed || !isOutlineVisible || isMinimised || state !is OutlineState.Shown || isOutlineFocused()) return
-        if (!afterResult && (debounce.isRunning || running != null)) {
+        if (!afterResult && debounce.isRunning) {
+            // A comparison is pending while the document debounce runs; the shown result is stale until the next one (R8).
             caretFollowPending = true
             return
         }

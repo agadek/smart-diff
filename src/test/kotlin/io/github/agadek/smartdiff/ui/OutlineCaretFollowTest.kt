@@ -31,8 +31,11 @@ import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory
+import io.github.agadek.smartdiff.references.ReferencePass
 import java.awt.KeyboardFocusManager
 import java.util.EnumSet
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.TreePath
 
@@ -280,6 +283,40 @@ class OutlineCaretFollowTest : BasePlatformTestCase() {
         )
     }
 
+    fun `test the caret is followed while the reference pass runs`() {
+        // outline/07 R8
+        val local = myFixture.addFileToProject("local/Greeter.java", JAVA_NEW).virtualFile
+        val request = SimpleDiffRequest(
+            "local",
+            DiffContents.vcsRevision(project, JAVA_OLD, "/repo/Greeter.java"),
+            DiffContents.localFile(project, local),
+            "HEAD",
+            "Current",
+        )
+        val shown = open(request)
+        val outline = shown.awaitResult()
+        val release = CountDownLatch(1)
+        outline.passRunner = { _, result, _ ->
+            release.await(10, TimeUnit.SECONDS)
+            ReferencePass.Outcome(result, ReferencePass.Status.NOT_GROUPED)
+        }
+        outline.refresh()
+        awaitResult(outline) { it.usageNote == OutlineController.RESOLVING }
+
+        moveCaret(outline, OutlineController.CaretSide.NEW, JAVA_NEW.indexOf("void bye()") + 2)
+        outline.fireCaretFollow()
+
+        assertEquals("method bye()  added", outline.panel.selectedItem()?.label)
+
+        release.countDown()
+        PlatformTestUtil.waitWithEventsDispatching(
+            { "reference pass did not finish; note=${(outline.state as? OutlineState.Shown)?.usageNote}" },
+            { (outline.state as? OutlineState.Shown)?.usageNote == null },
+            10,
+        )
+        assertEquals("method bye()  added", outline.panel.selectedItem()?.label)
+    }
+
     private fun awaitRefactorings(outline: OutlineController) {
         PlatformTestUtil.waitWithEventsDispatching(
             { "refactorings view not ready; state=${outline.state}" },
@@ -304,10 +341,13 @@ class OutlineCaretFollowTest : BasePlatformTestCase() {
         return created.last { it.first === request }.second
     }
 
-    private fun awaitResult(outline: OutlineController): OutlineState.Shown {
+    private fun awaitResult(outline: OutlineController): OutlineState.Shown =
+        awaitResult(outline) { true }
+
+    private fun awaitResult(outline: OutlineController, condition: (OutlineState.Shown) -> Boolean): OutlineState.Shown {
         PlatformTestUtil.waitWithEventsDispatching(
-            { "no result; state is ${outline.state}" },
-            { outline.state is OutlineState.Shown },
+            { "no matching result; state is ${outline.state}" },
+            { (outline.state as? OutlineState.Shown)?.let(condition) == true },
             10,
         )
         return outline.state as OutlineState.Shown

@@ -17,8 +17,9 @@ closing the diff removes them. Only the caret of these two editors is followed; 
 
 1. A caret event restarts a `javax.swing.Timer` of 100 ms on the EDT and remembers the side and offset (R5). The value
    matches the Changes tree follower and the platform's autoscroll-from-source delay.
-2. When the timer fires, following stops if the outline is hidden or minimised, its state is not `Shown`, a comparison
-   is pending or running (R8), or the outline tree has focus (R5).
+2. When the timer fires, following stops if the outline is hidden or minimised, its state is not `Shown` (which
+   covers a running engine comparison), an edit's comparison is pending (the document debounce runs) (R8), or the
+   outline tree has focus (R5). Following works while usages are being resolved, because the documents have not changed.
 3. It walks the rows the tree shows, depth first in tree order, and keeps every row that is not a group and whose range
    on the caret's side contains the offset: `oldRange` for the old side, `newRange` for the new side (R2). A range
    contains the offset when `start <= offset < end`, or `offset == end` for the last character of the document.
@@ -70,7 +71,7 @@ still scrolls.
 | R5 | `OutlineCaretFollowTest` `test following leaves the selection alone while the outline has focus`, `test caret moves are debounced` |
 | R6 | `OutlineCaretFollowTest` `test the refactorings view selects the row under Other changes` |
 | R7 | `OutlineCaretFollowTest` `test a row hidden by the filter is never selected` |
-| R8 | `OutlineCaretFollowTest` `test a stale result is not followed until the new result is shown` |
+| R8 | `OutlineCaretFollowTest` `test a stale result is not followed until the new result is shown`, `test the caret is followed while the reference pass runs` |
 | R9 | Plugin Verifier reports no new internal, experimental or deprecated usage |
 | outline/01 R27 | `OutlineIntegrationTest` `test a rebuild keeps the selected row without scrolling the editors` |
 
