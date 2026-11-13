@@ -9,6 +9,7 @@ import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.DumbAwareToggleAction
 import com.intellij.openapi.ui.ComboBox
+import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.ColoredTreeCellRenderer
 import com.intellij.ui.DoubleClickListener
 import com.intellij.ui.ScrollPaneFactory
@@ -108,7 +109,7 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
             }
         }.apply {
             templatePresentation.description = "Hide kinds of relationships from the refactorings view"
-            templatePresentation.icon = AllIcons.General.Filter
+            templatePresentation.icon = IconLoader.getIcon(RELATIONSHIP_KIND_FILTER_ICON_PATH, OutlinePanel::class.java)
             isPopup = true
         }
         val toolbar = ActionManager.getInstance().createActionToolbar(
@@ -318,9 +319,10 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         }
     }
 
-    private companion object {
+    internal companion object {
         const val TREE = "tree"
         const val MESSAGE = "message"
+        const val RELATIONSHIP_KIND_FILTER_ICON_PATH = "/icons/relationshipKindFilter.svg"
 
         fun escape(text: String) = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     }
