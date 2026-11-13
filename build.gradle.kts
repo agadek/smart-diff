@@ -34,6 +34,7 @@ dependencies {
         // Not bundled with the IDE: Marketplace releases, pinned in gradle.properties.
         plugin("org.intellij.scala", providers.gradleProperty("scalaPluginVersion").get())
         plugin("PythonCore", providers.gradleProperty("pythonPluginVersion").get())
+        pluginModule(implementation(project(":rust")))
         testFramework(TestFrameworkType.Platform)
         testFramework(TestFrameworkType.Plugin.Java)
     }
@@ -100,6 +101,13 @@ intellijPlatform {
                 create(IntelliJPlatformType.PyCharm, "2025.1.3")
                 latest {
                     types = listOf(IntelliJPlatformType.PyCharm)
+                    channels = listOf(ProductRelease.Channel.RELEASE)
+                }
+            }
+            if ("rustrover" in verifierIdes) {
+                create(IntelliJPlatformType.RustRover, "2025.1.3")
+                latest {
+                    types = listOf(IntelliJPlatformType.RustRover)
                     channels = listOf(ProductRelease.Channel.RELEASE)
                 }
             }

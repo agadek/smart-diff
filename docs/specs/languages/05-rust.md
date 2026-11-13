@@ -29,7 +29,7 @@ Status: proposed, 2026-11-13
 ## Out of scope
 
 - Expanding macros, or declarations that only a macro generates.
-- Grouping renames with their usages, until a spike shows the Rust plugin resolves references in a file without a Cargo project.
+- Grouping renames with their usages; the Rust plugin resolves in-file references without Cargo (S8), so a `RustReferenceResolver` is its own change to [relationships/04](../relationships/04-rename-grouping.md).
 - Items gated by `#[cfg]` being told apart by their configuration; they repeat a key.
 
 ## References
