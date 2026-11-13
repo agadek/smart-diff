@@ -252,7 +252,7 @@ enum class WhitespacePolicy {
     INSIGNIFICANT,           // Java: drop whitespace tokens
     LINE_BREAKS_SIGNIFICANT, // Kotlin: keep "has line break" vs "no line break"
     INDENTATION_SIGNIFICANT, // Scala 3: keep line breaks and the indentation after them
-    SIGNIFICANT,             // Python, YAML: never claim formatting-only
+    SIGNIFICANT,             // languages without a tested rule, such as YAML: never claim formatting-only
 }
 ```
 
@@ -338,6 +338,14 @@ Implemented, when the Scala plugin is installed ([languages/03](specs/languages/
 - **Display signatures** keep the same clauses, joined with `;`, but Scala labels have their own spacing, since `<`, `>` and `=` make operators and arrows in Scala rather than brackets: there is no space just inside `(`, `[`, `{`, `)`, `]` and `}` or next to `,` and `.`, and otherwise one space where the source has whitespace. So `(x: => Int)` reads `=> Int`, `ev: Int <:< Int` reads `Int <:< Int`, and `f: (Int, Int) => Int` reads `(Int,Int) => Int`.
 - **Kinds and matching:** a class and its companion object share a name but differ in kind, so they never collide, and rule M4b never pairs an object. Changing a `class` into a `trait`, a `case class` into an `enum` or a `def` into a `val` keeps the name, so M4b reports it as one declaration that changed kind (`trait → class RepresentableMonad`, signature changed) when it is the only such pair in its container; its members stay in place. Rename candidates (M5) still need the same kind.
 - **Whitespace:** Scala 2 trees use `LINE_BREAKS_SIGNIFICANT`, like Kotlin, since Scala also infers semicolons from line breaks. Scala 3 trees use `INDENTATION_SIGNIFICANT` (§8), since optional braces make indentation part of the meaning. Code without Scala 3 syntax takes Scala 2 (§6.2), so re-indenting it stays formatting-only.
+
+### 6.9 Python provider
+
+Proposed ([languages/04](specs/languages/04-python.md)). The PSI mapping, signatures, whitespace policy (`INDENTATION_SIGNIFICANT`, as for Scala 3), packaging and phases are in its [details file](specs/languages/04-python-details.md).
+
+### 6.10 Rust provider
+
+Proposed ([languages/05](specs/languages/05-rust.md)). The PSI mapping, `impl` naming, signatures, the whitespace rule for macro invocations, the build target choice and phases are in its [details file](specs/languages/05-rust-details.md).
 
 ## 7. Declaration engine: matching
 
@@ -513,6 +521,8 @@ Spikes S1 to S3 ran as platform tests and were retired once the tests of §12 co
 | S4 | After the first release, for [Scala](ROADMAP.md#scala): can the provider choose the Scala 2 or Scala 3 dialect for text-built PSI (from the file's module, `scalaVersion`, or syntax), and does the Scala plugin's PSI give correct declarations and offsets for both? | Provider tests pass for both dialects on VCS-revision content, with a documented fallback when the dialect is unknown | Done 2026-10-22: the file's language alone decides the dialect, and both texts choose it together by parse errors and Scala 3 syntax (§6.2); offsets equal the request text in both dialects; covered by `ScalaDeclarationProviderTest` |
 | S5 | After the first release, for the [Changes tree summary](ROADMAP.md#multi-file-summary-in-the-changes-tree): which extension points can add text or child nodes to file entries of the Changes tree? | The hooks of the Local Changes and Commit tree are known, with a choice for level 1 | Done 2026-10-22: `changesViewModifier`, replacing file nodes ([ADR 0006](adr/0006-changes-tree-summary-through-changes-view-modifier.md)); level 2 adds child nodes and `changesViewNodeAction` to open them; now covered by `ChangesSummaryTest` |
 | S6 | After the first release, for the [three-way merge outline](THREE-WAY-MERGE.md): does the merge window run `DiffExtension`s, or must a delegating `MergeTool` wrap the platform's text merge viewer? Which titles name the sides in a merge, rebase, cherry-pick and unstash, and does the result pane start as the base? | A placeholder attaches to a Java merge window and a three-sided diff in a platform test, with the choice in ADR 0007 | Done 2026-10-23: the merge window runs no `DiffExtension`, so a `MergeTool` registered first decorates the platform's viewer in place ([ADR 0007](adr/0007-merge-outline-attaches-through-a-delegating-merge-tool.md)); Git names branches in the content titles of a rebase only; the result starts as the base after the first comparison ([THREE-WAY-MERGE.md §12](THREE-WAY-MERGE.md#12-spike-s6-results)); covered by `S6MergeSpikeTest` |
+| S7 | For [Python](specs/languages/04-python.md): does a text-built Python file in the default project give correct declarations and offsets at the newest language level, which dependency id loads the optional descriptor in IntelliJ IDEA and PyCharm, how does the lexer report indentation, and do in-file references resolve without an interpreter? | A platform test passes on 2025.1 with the pinned `PythonCore`, and the verifier passes on IntelliJ IDEA and PyCharm 2025.1 and latest | Open; [Python details §9](specs/languages/04-python-details.md#9-phases), phase P0 |
+| S8 | For [Rust](specs/languages/05-rust.md): which build target compiles and tests the Rust provider (a RustRover submodule or an Ultimate target), does the current Rust plugin keep the `Rs…` PSI classes, which edition does a text-built file parse, and do in-file references resolve without Cargo? | A Rust provider test and a golden fixture run with the shared harness locally and in CI with no licence, and the choice is in an ADR | Open; [Rust details §2](specs/languages/05-rust-details.md#2-build-target), phase R0 |
 
 ## 14. Open questions
 
