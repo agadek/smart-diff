@@ -173,9 +173,9 @@ class DeclarationEngineTest : BasePlatformTestCase() {
 
     fun `test R24 the engine version names its own version, the IDE build and the Scala plugin`() {
         // relationships/02-relationship-model R24; relationships/03-relationship-matching R18
-        assertEquals("10", DeclarationEngine.VERSION)
-        assertEquals("10 (251.26927.53)", DeclarationEngine.formatVersion("251.26927.53", null))
-        assertEquals("10 (251.26927.53; Scala 2025.1.32)", DeclarationEngine.formatVersion("251.26927.53", "2025.1.32"))
+        assertEquals("11", DeclarationEngine.VERSION)
+        assertEquals("11 (251.26927.53)", DeclarationEngine.formatVersion("251.26927.53", null))
+        assertEquals("11 (251.26927.53; Scala 2025.1.32)", DeclarationEngine.formatVersion("251.26927.53", "2025.1.32"))
 
         // This IDE loads the Scala plugin, so its parser is named: it can change a result without a platform update.
         // The plugin manager is the independent source of truth; reading the descriptor through the shared test
@@ -196,7 +196,7 @@ class DeclarationEngineTest : BasePlatformTestCase() {
         ExtensionTestUtil.maskExtensions(DeclarationProvider.EP_NAME, listOf(JavaDeclarationProvider()), testRootDisposable)
         val version = DeclarationEngine(null).version
 
-        assertTrue(version, version.startsWith("10 ("))
+        assertTrue(version, version.startsWith("11 ("))
         assertFalse("no Scala plugin is named without its provider: $version", version.contains("Scala"))
     }
 
