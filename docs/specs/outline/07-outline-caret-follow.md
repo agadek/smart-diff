@@ -1,6 +1,6 @@
 # Outline caret follow
 
-Status: accepted, 2026-11-13
+Status: implemented, 2026-11-13
 
 **Description:** When the caret moves into a changed [declaration](../../GLOSSARY.md#declaration) on either side of a
 two-sided diff, the [structural outline](../../GLOSSARY.md#structural-outline) selects that declaration's row and frames it, without scrolling

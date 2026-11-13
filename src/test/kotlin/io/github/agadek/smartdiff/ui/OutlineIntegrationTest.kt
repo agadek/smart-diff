@@ -430,6 +430,29 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertHighlightedAt(shown.viewer.editor1, JAVA_OLD.indexOf("String hello()"))
     }
 
+    fun `test a rebuild keeps the selected row without scrolling the editors`() {
+        // outline/01 R27
+        val shown = open(history(MOVED_OLD, MOVED_NEW, "Moved.java"))
+        val outline = shown.awaitResult()
+        show(shown.viewer.editor1)
+        show(shown.viewer.editor2)
+        val selected = selectItem(outline) { it.title == "method moved()" }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+
+        shown.viewer.editor1.scrollingModel.scrollVertically(0)
+        shown.viewer.editor2.scrollingModel.scrollVertically(0)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        val oldArea = shown.viewer.editor1.scrollingModel.visibleArea
+        val newArea = shown.viewer.editor2.scrollingModel.visibleArea
+
+        outline.setHidden(ChangeType.ADDED, true)
+
+        assertEquals("the old editor must not scroll on rebuild", oldArea, shown.viewer.editor1.scrollingModel.visibleArea)
+        assertEquals("the new editor must not scroll on rebuild", newArea, shown.viewer.editor2.scrollingModel.visibleArea)
+        assertEquals(selected.label, outline.panel.selectedItem()?.label)
+        assertTrue("the row is framed again", outline.navigator.shown.isNotEmpty())
+    }
+
     fun `test the toggle hides the outline and shows the native diff`() {
         val action = ActionManager.getInstance().getAction("SmartDiff.ToggleOutline") as ToggleOutlineAction
         val toolbar = ActionManager.getInstance().getAction(IdeActions.DIFF_VIEWER_TOOLBAR) as DefaultActionGroup

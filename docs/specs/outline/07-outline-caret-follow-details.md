@@ -1,6 +1,6 @@
 # Outline caret follow: details
 
-Status: accepted, 2026-11-13
+Status: implemented, 2026-11-13
 
 Feature: [Outline caret follow](07-outline-caret-follow.md)
 
