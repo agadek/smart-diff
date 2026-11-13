@@ -228,6 +228,10 @@ Give added and deleted files in the Changes tree a summary and declaration rows,
 
 *(weak-point review)* The outline now has two views, a change-type filter, a hide-by-kind menu, Hide and Minimise, the viewer switcher and separate Changes tree options, each with its own setting. Review which controls are used, using the [usability study](#usability-validation) where it helps, and merge or remove the ones that overlap, so the UI stays small enough to test and maintain.
 
+### Settings button in the outline
+
+A settings button in the outline panel's toolbar that opens *Settings | Tools | SMART Diff*, so the outline's options, such as opening automatically, how formatting-only changes are shown, the default engine and the analysis limits, can be reached from the diff instead of through the IDE's settings dialog.
+
 ### Third-party engines
 
 Consider making the `comparisonEngine` extension point public once a second production engine has used the result model without breaking changes (technical spec Q5).
