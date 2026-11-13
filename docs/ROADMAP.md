@@ -111,6 +111,7 @@ Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.
 | [Summaries for added and deleted files](#summaries-for-added-and-deleted-files) | [changes-tree/06](specs/changes-tree/06-added-deleted-file-summaries.md) |
 | [Python](#python) | [languages/04](specs/languages/04-python.md) |
 | [Rust](#rust) | [languages/05](specs/languages/05-rust.md) |
+| [More languages](#more-languages) | [Format coverage plan](FORMAT-COVERAGE.md); feature specs with each phase |
 | Every other item below | Not specified yet |
 
 ### Multi-file summary in the Changes tree
@@ -144,9 +145,18 @@ It comes right after the [Changes tree level 2](#multi-file-summary-in-the-chang
 
 ### More languages
 
-Add declaration-engine providers for further languages the host IDE parses, after [Scala](#scala) (for example JavaScript/TypeScript in Ultimate/WebStorm), each with the fixtures the [technical specification](TECHNICAL-SPECIFICATION.md#12-testing) requires. [Python](#python) and [Rust](#rust) come first, because the 2026-11-13 review named the narrow language scope as the plugin's largest weakness.
+Add declaration-engine providers for further languages and file formats the host IDE parses, after [Scala](#scala), each with the fixtures the [technical specification](TECHNICAL-SPECIFICATION.md#12-testing) requires. [Python](#python) and [Rust](#rust) come first, because the 2026-11-13 review named the narrow language scope as the plugin's largest weakness.
 
 *(gap review)* SemanticDiff supports 14+ languages and formats. Structured data files (JSON, XML, YAML) are a cheap addition on top of the IDE's own parsers: keys and elements are the declarations, and reordered keys in formats where order carries no meaning can be reported as moved.
+
+Proposed 2026-11-13: the [format coverage plan](FORMAT-COVERAGE.md) covers every typical format of the JetBrains platform, grouped by what each needs:
+
+- **Free PSI on the current build target:** Groovy and Gradle build scripts, Kotlin build scripts, Markdown, shell scripts and HTML.
+- **Paid or closed plugins, tied to another IDE:** JavaScript and TypeScript, Go, CSS, PHP, Ruby and SQL, built with the pattern spike S8 chooses for Rust.
+- **Structured data:** JSON, YAML, TOML, properties and XML, with keys as declarations ([ADR 0009](adr/0009-structured-data-keys-are-declarations.md), proposed).
+- **Every other language:** a provider built on the IDE's structure view, used when no dedicated provider exists ([ADR 0010](adr/0010-structure-view-provider-for-languages-without-their-own.md), proposed).
+- **Not supported through PSI:** C# and the other Rider languages, C and C++ in CLion Nova, and Swift, whose language support is not in IntelliJ PSI; they wait for [Tree-sitter support](#tree-sitter-support).
+- **Phases:** G0 and G1 (structure view, spike S9), D0 to D4 (data formats, spike S10), B0 to B6 (paid IDEs), M1 to M3 (Markdown, Groovy and build scripts, shell). The structure-view track and the dedicated providers run in parallel (decided 2026-11-13), starting with G0, D0 and JSON and YAML, then TypeScript and Go ([plan §5](FORMAT-COVERAGE.md#5-phases)).
 
 ### Python
 
