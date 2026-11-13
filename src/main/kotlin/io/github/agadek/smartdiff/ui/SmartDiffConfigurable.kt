@@ -46,6 +46,11 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                     .bindSelected(settings::followChangesTreeCaret)
                     .comment("Select the changed declaration under the caret in the editor or a diff; moving the caret never opens a diff or changes the commit.")
             }
+            row {
+                checkBox("Use the IDE's structure view for other languages")
+                    .bindSelected(settings::useStructureViewFallback)
+                    .comment("Analyze languages without a dedicated provider through the IDE's structure view.")
+            }
             buttonsGroup("Formatting-only changes:") {
                 row { radioButton("Collapsed in a group", false) }
                 row { radioButton("Inline", true) }

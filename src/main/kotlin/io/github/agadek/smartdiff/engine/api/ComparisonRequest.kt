@@ -20,6 +20,8 @@ data class ComparisonRequest(
      * analysis limits. A registry key sets it in a running IDE (R15).
      */
     val confidence: ConfidencePolicy = ConfidencePolicy.DEFAULT,
+    /** Whether the declaration engine may use the structure-view fallback for a language with no dedicated provider. */
+    val useStructureViewFallback: Boolean = true,
 )
 
 /** Analysis limits (technical specification §9.3). */

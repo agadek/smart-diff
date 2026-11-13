@@ -11,6 +11,7 @@ import io.github.agadek.smartdiff.engine.api.RangePair
 import io.github.agadek.smartdiff.engine.api.Relationship
 import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.RenameNameMapping
+import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
@@ -181,7 +182,9 @@ object OutlineModel {
         result.changes.forEach(::count)
         counts[Tag.UNANALYZED.text] = counts.getValue(Tag.UNANALYZED.text) + result.unanalyzed.size
         val parts = counts.filterValues { it > 0 }.map { (label, n) -> "$n $label" } +
-            listOfNotNull(hiddenCount(result, hidden).takeIf { it > 0 }?.let { "$it hidden" })
+            listOfNotNull(hiddenCount(result, hidden).takeIf { it > 0 }?.let { "$it hidden" }) +
+            if (result.status == Status.ANALYZED || result.status == Status.PARTIAL)
+                listOfNotNull(result.analysisNote) else emptyList()
         return if (parts.isEmpty()) "No structural changes" else parts.joinToString(" · ")
     }
 
@@ -212,7 +215,12 @@ object OutlineModel {
         is Subject.Declaration -> {
             val kind = kindName(subject.kind)
             val name = name(subject)
-            (if (name.isEmpty()) kind else "$kind $name") + (subject.signature?.let { "($it)" } ?: "")
+            val base = when {
+                name.isEmpty() -> kind
+                kind.isEmpty() -> name
+                else -> "$kind $name"
+            }
+            base + (subject.signature?.let { "($it)" } ?: "")
         }
         is Subject.Region -> subject.description
     }
@@ -229,7 +237,8 @@ object OutlineModel {
         return kindFrom + title(subject.copy(name = "${name(from)} → ${name(subject)}", receiver = null))
     }
 
-    internal fun kindName(kind: DeclarationKind): String = kind.name.lowercase().replace('_', ' ')
+    internal fun kindName(kind: DeclarationKind): String =
+        if (kind == DeclarationKind.ITEM) "" else kind.name.lowercase().replace('_', ' ')
 
     internal fun name(subject: Subject.Declaration): String = (subject.receiver?.let { "$it." } ?: "") + subject.name
 

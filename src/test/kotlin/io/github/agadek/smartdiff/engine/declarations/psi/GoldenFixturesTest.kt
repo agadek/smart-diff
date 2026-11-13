@@ -32,13 +32,28 @@ class GoldenFixturesTest : BasePlatformTestCase() {
     // relationships/02 R9, R10: the expected file is the outline before the relationship model.
     fun `test Scala 3 fixtures`() = checkFixtures("scala3", "Scala", "scala")
 
+    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
+    fun `test structure-view JSON fixtures`() = checkFixtures("structure-view/json", "JSON", "json")
+
+    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
+    fun `test structure-view YAML fixtures`() = checkFixtures("structure-view/yaml", "yaml", "yaml")
+
+    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
+    fun `test structure-view Markdown fixtures`() = checkFixtures("structure-view/md", "Markdown", "md")
+
+    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
+    fun `test structure-view properties fixtures`() = checkFixtures("structure-view/properties", "Properties", "properties")
+
+    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
+    fun `test structure-view Groovy fixtures`() = checkFixtures("structure-view/groovy", "Groovy", "groovy")
+
     private fun checkFixtures(directory: String, languageId: String, extension: String) {
         val cases = File(TEST_DATA, directory)
             .listFiles { file -> file.isDirectory && file.name != "merge" && file.name != "relationships" }
             .orEmpty()
             .sortedBy { it.name }
         assertTrue("no fixtures in ${File(TEST_DATA, directory).absolutePath}", cases.isNotEmpty())
-        val engine = DeclarationEngine(null)
+        val engine = DeclarationEngine(project)
         val failures = mutableListOf<String>()
         for (case in cases) {
             val old = read(File(case, "old.$extension"))

@@ -215,13 +215,15 @@ class OutlineController internal constructor(
             return show(OutlineState.NoEngine(Language.findLanguageByID(languageId)?.displayName ?: languageId))
         }
 
+        val settings = SmartDiffSettings.getInstance()
         val request = ComparisonRequest(
             oldText = oldDocument.immutableCharSequence,
             newText = newDocument.immutableCharSequence,
             languageId = languageId,
             fileName = fileName,
-            limits = SmartDiffSettings.getInstance().limits,
-            confidence = SmartDiffSettings.getInstance().confidence,
+            limits = settings.limits,
+            confidence = settings.confidence,
+            useStructureViewFallback = settings.useStructureViewFallback,
         )
         val job = Job(engine, oldDocument.modificationStamp, newDocument.modificationStamp, request.limits.timeoutMillis)
         running = job

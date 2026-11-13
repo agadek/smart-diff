@@ -152,6 +152,9 @@ data class ComparisonResult(
     val changes: List<ChangeNode>,
     val unanalyzed: List<RangePair>,       // source the engine could not classify
     val fallbackReason: String?,
+    val engineThrew: Boolean,              // set only by threw(); marks a readiness failure
+    val relationships: List<Relationship>, // renames, moves, kind changes, extractions and inlinings (§5)
+    val analysisNote: String?,             // e.g. "structure view" for the fallback (languages/06 R8)
 )
 
 data class ChangeNode(
@@ -203,8 +206,14 @@ The declaration engine turns each side into a `DeclarationTree` through a per-la
 ```kotlin
 interface DeclarationProvider {
     fun supports(languageId: String): Boolean
+    val analysisNote: String? get() = null                                  // e.g. languages/06 R8
     fun dialect(project: Project, texts: List<CharSequence>, fileName: String?): Language? = null   // §6.2
+    // The engine calls the overloads with the request's language id; the defaults delegate to the language's own.
+    fun dialect(project: Project, texts: List<CharSequence>, fileName: String?, languageId: String): Language? =
+        dialect(project, texts, fileName)
     fun parse(project: Project, text: CharSequence, fileName: String?, dialect: Language?): PsiFile   // §6.2
+    fun parse(project: Project, text: CharSequence, fileName: String?, dialect: Language?, languageId: String): PsiFile =
+        parse(project, text, fileName, dialect)
     fun build(file: PsiFile, cancellation: Cancellation): DeclarationTree
 }
 ```
@@ -231,6 +240,7 @@ class Declaration(
     val leadingWhitespace: TextRange?,   // whitespace right before range that belongs to it
     val ownTokenStarts: List<Int>,       // start offset of each own token; empty when the provider has none
     val body: TextRange?,                // a method's, function's or constructor's body; null without one
+    val layout: TextRange? = null,       // coverage-only source after range, such as a structure-view separator
 )
 
 class FileRegion(val ranges: List<TextRange>, val tokens: List<Token>, val hasParseError: Boolean)
@@ -347,6 +357,18 @@ Proposed ([languages/04](specs/languages/04-python.md)). The PSI mapping, signat
 
 Proposed ([languages/05](specs/languages/05-rust.md)). The PSI mapping, `impl` naming, signatures, the whitespace rule for macro invocations, the build target choice and phases are in its [details file](specs/languages/05-rust-details.md).
 
+### 6.11 Structure-view provider
+
+Implemented for G0/G1 ([languages/06](specs/languages/06-structure-view-fallback.md), [ADR 0010](adr/0010-structure-view-provider-for-languages-without-their-own.md)). `StructureViewDeclarationProvider` is a generic `declarationProvider` registered last in the main descriptor, so a dedicated provider always wins. It supports a language when the fallback setting is on, no other provider supports the language, and the language has a `TreeBasedStructureViewBuilder`; a language without one stays unsupported. The provider marks itself with `DeclarationProvider.analysisNote = AnalysisNote.STRUCTURE_VIEW`, and the engine selects and tags results by that property rather than a class-name string.
+
+The persisted setting is `StructureViewFallbackSetting`, an engine API interface whose default is on; a UI application service implements it from `SmartDiffSettings`, so no engine package has a compile-time or reflective dependency on `ui`. `ComparisonRequest.useStructureViewFallback` remains the per-request value and makes `supports` and `compare` agree. The request's language id is passed to the provider through default `dialect`/`parse` overloads; dedicated providers keep their existing implementations and no provider keeps per-request state.
+
+Parsing uses `PsiFileFactory.createFileFromText` with the request file name when present. `build` creates a `StructureViewModel` with a null editor, walks the root's children recursively while ignoring sorters, filters and groupers, and keeps PSI-backed items of the same file (by file identity, `originalFile` or view provider) with a non-empty range; two items with the same range become one declaration. Names come from the item's presentable text (or the element name as fallback). Kinds map from the PSI class simple name (`Interface`/`Class`/`Function`/`Method`/`Field`/`Property`, in that order), otherwise `ITEM`; `ITEM` has no kind word in outline titles, matcher paths or the golden harness. Declarations have no signature.
+
+Tokens come from the language lexer; leading-whitespace assignment and parse-error marking are the shared `PsiTreeParts` logic used by `PsiDeclarationProvider`. The fallback's leading layout run includes whitespace and all-whitespace tokens such as YAML's `Eol`, and only the indentation after its last line break is compared. The separator and line break after an item are attached as `Declaration.layout` and covered by details without being compared. The policy is `SIGNIFICANT`, so the fallback never reports formatting-only; a pure reorder of unchanged keys is moved, not changed, while a real reformat is changed. A `PsiErrorElement` goes to the innermost declaration or the file region (§6.7).
+
+The walk does not swallow exceptions: cancellation propagates, and any other failure (a structure view that throws or needs an editor) becomes a `FAILED` result with the native diff. A file over the declaration limit is `TOO_LARGE`. Results carry `analysisNote`, which the outline summary and tooltip/empty state show. See the [details file](specs/languages/06-structure-view-fallback-details.md) for S9's recorded names and ranges, tests and open questions.
+
 ## 7. Declaration engine: matching
 
 Inputs: the old and new `DeclarationTree`. Matching is global over all declarations in the file, so a declaration can be matched across containers. Each rule runs over the declarations still unmatched after the previous rule. Within a rule, declarations are processed in source order of the old side, which makes the result deterministic.
@@ -398,7 +420,7 @@ The steps are applied in order, and the first that applies decides the content:
 
 In step 4 a run of adjacent `WHITESPACE` tokens counts as one: own tokens skip the children's extents, so the whitespace before and after a child can become adjacent, and adding or removing a child must not change the count of line breaks; under `INDENTATION_SIGNIFICANT` the run's indentation is the text after its last line break. Because each child owns its leading whitespace (§6.1), adding, removing, moving or reordering members leaves their container `UNCHANGED`. Removing the first member is the exception: the next member's leading whitespace changes (the blank line after `{` goes), so that member is `FORMATTING_ONLY`.
 
-A difference only in the leading whitespace run is `FORMATTING_ONLY`, even when the policy counts line breaks, because the run holds the line break that ends the previous sibling's line (§6.1, declarations/02-change-classification R14). Under `INDENTATION_SIGNIFICANT` the indentation after the run's last line break still counts, so re-indenting a declaration keeps it `CHANGED`.
+A difference only in the leading whitespace run is `FORMATTING_ONLY`, even when the policy counts line breaks, because the run holds the line break that ends the previous sibling's line (§6.1, declarations/02-change-classification R14). Under `INDENTATION_SIGNIFICANT` the indentation after the run's last line break still counts, so re-indenting a declaration keeps it `CHANGED`. The structure-view fallback (§6.11) compares only that indentation too, and its `Declaration.layout` span is listed in `details` for every node so a pure reorder still covers the separators it did not compare.
 
 `COMMENT` tokens are compared by exact text, including whitespace inside them. The declaration engine puts only leading whitespace in `details` (§6.1); the native diff shows the detail.
 
@@ -523,7 +545,7 @@ Spikes S1 to S3 ran as platform tests and were retired once the tests of §12 co
 | S6 | After the first release, for the [three-way merge outline](THREE-WAY-MERGE.md): does the merge window run `DiffExtension`s, or must a delegating `MergeTool` wrap the platform's text merge viewer? Which titles name the sides in a merge, rebase, cherry-pick and unstash, and does the result pane start as the base? | A placeholder attaches to a Java merge window and a three-sided diff in a platform test, with the choice in ADR 0007 | Done 2026-10-23: the merge window runs no `DiffExtension`, so a `MergeTool` registered first decorates the platform's viewer in place ([ADR 0007](adr/0007-merge-outline-attaches-through-a-delegating-merge-tool.md)); Git names branches in the content titles of a rebase only; the result starts as the base after the first comparison ([THREE-WAY-MERGE.md §12](THREE-WAY-MERGE.md#12-spike-s6-results)); covered by `S6MergeSpikeTest` |
 | S7 | For [Python](specs/languages/04-python.md): does a text-built Python file in the default project give correct declarations and offsets at the newest language level, which dependency id loads the optional descriptor in IntelliJ IDEA and PyCharm, how does the lexer report indentation, and do in-file references resolve without an interpreter? | A platform test passes on 2025.1 with the pinned `PythonCore`, and the verifier passes on IntelliJ IDEA and PyCharm 2025.1 and latest | Open; [Python details §9](specs/languages/04-python-details.md#9-phases), phase P0 |
 | S8 | For [Rust](specs/languages/05-rust.md): which build target compiles and tests the Rust provider (a RustRover submodule or an Ultimate target), does the current Rust plugin keep the `Rs…` PSI classes, which edition does a text-built file parse, and do in-file references resolve without Cargo? | A Rust provider test and a golden fixture run with the shared harness locally and in CI with no licence, and the choice is in an ADR | Open; [Rust details §2](specs/languages/05-rust-details.md#2-build-target), phase R0 |
-| S9 | For the [structure-view provider](FORMAT-COVERAGE.md#3-generic-fallback-group-d): does a language's structure view, built on a PSI file from text with no editor, give correct names, nesting and ranges, and which bundled structure views need an editor or a project model? | A platform test passes for JSON, YAML, Markdown, properties and Groovy on 2025.1, and a manual run shows outlines for TypeScript, CSS and Go in WebStorm and GoLand with no errors | Open; [format coverage §3](FORMAT-COVERAGE.md#3-generic-fallback-group-d), phase G0 |
+| S9 | For the [structure-view provider](FORMAT-COVERAGE.md#3-generic-fallback-group-d): does a language's structure view, built on a PSI file from text with no editor, give correct names, nesting and ranges, and which bundled structure views need an editor or a project model? | A platform test passes for JSON, YAML, Markdown, properties and Groovy on 2025.1, and a manual run shows outlines for TypeScript, CSS and Go in WebStorm and GoLand with no errors | Done 2026-11-13 (G0/G1): text-built PSI files with no editor give the exact names, nesting and ranges recorded in [languages/06 details](specs/languages/06-structure-view-fallback-details.md) for JSON, YAML, Markdown, properties and Groovy (platform tests and golden fixtures on the current target): JSON keys have no quotes, a Markdown heading's range is the heading line, a YAML document item spans the file, and a Groovy field's name includes its type. Groovy structure-view building triggered `FileBasedIndex` work that rejected the default project; running comparisons with a real test project fixed it, so the provider relies on a project context as the host supplies. A structure view that throws is `FAILED` (R9 test). A manual run on WebStorm and GoLand (TypeScript, CSS, Go) was not performed in this environment; [format coverage §3](FORMAT-COVERAGE.md#3-generic-fallback-group-d) points here. |
 | S10 | For [structured data](FORMAT-COVERAGE.md#4-structured-data-group-c): do text-built JSON, YAML, TOML, properties and XML files give correct key ranges, including JSON with comments, multi-document YAML, anchors and aliases, and TOML arrays of tables? | A platform test passes for each format on 2025.1 | Open; [format coverage §4](FORMAT-COVERAGE.md#4-structured-data-group-c), phase D0 |
 
 ## 14. Open questions

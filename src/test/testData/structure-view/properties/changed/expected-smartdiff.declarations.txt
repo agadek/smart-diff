@@ -1,0 +1,2 @@
+status: ANALYZED
+property a  changed  old 1  new 1

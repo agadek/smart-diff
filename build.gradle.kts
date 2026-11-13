@@ -29,6 +29,12 @@ dependencies {
         bundledPlugin("org.jetbrains.kotlin")
         // Not bundled with the IDE: a Marketplace release, pinned in gradle.properties.
         plugin("org.intellij.scala", providers.gradleProperty("scalaPluginVersion").get())
+        // S9 spike and structure-view fallback tests: bundled with IntelliJ IDEA, test-only (languages/06).
+        testBundledPlugin("com.intellij.modules.json")
+        testBundledPlugin("org.jetbrains.plugins.yaml")
+        testBundledPlugin("org.intellij.plugins.markdown")
+        testBundledPlugin("com.intellij.properties")
+        testBundledPlugin("org.intellij.groovy")
         testFramework(TestFrameworkType.Platform)
         testFramework(TestFrameworkType.Plugin.Java)
     }
