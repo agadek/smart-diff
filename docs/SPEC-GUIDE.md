@@ -22,7 +22,7 @@ Feature specs are in `docs/specs/`, in one folder per context. A context is a pa
 | `docs/specs/outline/` | The structural outline in a two-sided diff: rows, selection, filter, summary line |
 | `docs/specs/engines/` | Comparison engines, their selection and the engine dropdown |
 | `docs/specs/declarations/` | The declaration engine: matching, classification, rename candidates, extraction detection |
-| `docs/specs/languages/` | What each supported language adds: Java, Kotlin, Scala |
+| `docs/specs/languages/` | What each supported language adds: Java, Kotlin, Scala, Python, Rust |
 | `docs/specs/changes-tree/` | The summary and declarations in the Changes tree |
 | `docs/specs/merge/` | The outline in three-way merges and three-sided diffs |
 | `docs/specs/relationships/` | Relationships between declarations: their model, matching, rename grouping, inlining, refactorings view, benchmark and validation |
