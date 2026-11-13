@@ -45,7 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ides: [idea, pycharm]
+        ides: [idea, pycharm, rustrover]
     steps:
       # The verifier downloads one full IDE per version; make room on the runner.
       - name: Free disk space
