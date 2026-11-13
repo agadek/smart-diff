@@ -246,6 +246,72 @@ class ExtractionDetectionTest {
         assertTrue(skipped.isEmpty())
     }
 
+    @Test
+    fun `scattered kept tokens in the replacing call do not hide an extraction from two sources`() {
+        // declarations/05-extraction-detection R17
+        val block = "int doubled = x * 2; log.info(doubled, x); return doubled + 1;"
+        val old = tree {
+            cls("A") {
+                method("a", "int", "{ setup(); $block }")
+                method("b", "int", "{ prepare(); $block }")
+            }
+        }
+        val new = tree {
+            cls("A") {
+                method("a", "int", "{ setup(); return doubled(x) + 1; }")
+                method("b", "int", "{ prepare(); return doubled(x) + 1; }")
+                method("doubled", "int", "{ $block }")
+            }
+        }
+
+        val result = compare(old, new)
+
+        assertEquals("doubled(int) <- a(int), b(int)\n", links(result))
+        assertEquals(listOf(result.node("doubled").subject), result.node("a").extractedTo)
+        assertEquals(listOf(result.node("doubled").subject), result.node("b").extractedTo)
+    }
+
+    @Test
+    fun `a run of at least MIN_TILE kept tokens still blocks an extraction`() {
+        // declarations/05-extraction-detection R17
+        val old = tree { cls("A") { method("summary", body = "{ start(); $LOOP }") } }
+        val new = tree {
+            cls("A") {
+                method("summary", body = "{ begin(); $LOOP }")
+                method("describe", body = "{ $LOOP }")
+            }
+        }
+
+        assertEquals("", links(compare(old, new)))
+    }
+
+    @Test
+    fun `inlining detection is unchanged when scattered kept tokens appear`() {
+        // declarations/05-extraction-detection R17
+        val old = tree {
+            cls("A") {
+                method("render", "Order,StringBuilder", "{ return heading(order, text); }")
+                method("heading", "Order,StringBuilder", "{ $LOOP }")
+            }
+        }
+        val new = tree {
+            cls("A") { method("render", "Order,StringBuilder", "{ $LOOP return text.toString(); }") }
+        }
+
+        val result = compare(old, new)
+        val inlined = buildString {
+            for (node in result.changes.flatMap { it.flatten() }) {
+                if (node.inlinedInto.isEmpty()) continue
+                for (target in node.inlinedInto) {
+                    append(name(target.subject)).append(" <- ").append(name(node.subject)).append('\n')
+                }
+            }
+        }
+
+        assertEquals("render(Order,StringBuilder) <- heading(Order,StringBuilder)\n", inlined)
+        assertEquals("", links(result))
+    }
+
     @Test(expected = CancellationException::class)
     fun `detection checks cancellation`() {
         val old = tree { cls("A") { method("summary", body = "{ start(); $LOOP }") } }

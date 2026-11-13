@@ -174,7 +174,7 @@ object ExtractionDetector {
             val sources = candidates.mapNotNull { match ->
                 val old = keys.significant(match.old) ?: return@mapNotNull null
                 val new = keys.significant(match.new) ?: return@mapNotNull null
-                Source(match, old, removed(old.keys, new.keys, budget))
+                Source(match, old, removedForExtraction(old.keys, new.keys, budget))
             }
             val pairs = targets.flatMap { target -> sources.filter { overlaps(target, it) }.map { target to it } }
             pairs.mapNotNull { (target, source) -> link(target, source, budget, thresholds) }
@@ -395,15 +395,19 @@ object ExtractionDetector {
      * §4.3: which of [old] an alignment with [new] deletes, by Myers' diff in linear space: common prefix and suffix
      * first, then split at a point on an optimal path and align both halves.
      */
-    internal fun removed(old: IntArray, new: IntArray, budget: Budget): BooleanArray {
+    internal fun removed(old: IntArray, new: IntArray, budget: Budget): BooleanArray = alignment(old, new, budget).first
+
+    /** The alignment's deleted tokens and, for each kept old token, the new index it is aligned to (or -1). */
+    private fun alignment(old: IntArray, new: IntArray, budget: Budget): Pair<BooleanArray, IntArray> {
         val deleted = BooleanArray(old.size)
+        val alignedNew = IntArray(old.size) { -1 }
         fun align(oldStart: Int, oldEnd: Int, newStart: Int, newEnd: Int) {
             var a = oldStart
             var b = newStart
             var c = oldEnd
             var d = newEnd
-            while (a < c && b < d && old[a] == new[b]) { a++; b++ }
-            while (a < c && b < d && old[c - 1] == new[d - 1]) { c--; d-- }
+            while (a < c && b < d && old[a] == new[b]) { alignedNew[a] = b; a++; b++ }
+            while (a < c && b < d && old[c - 1] == new[d - 1]) { c--; d--; alignedNew[c] = d }
             if (a == c) return
             if (b == d) {
                 for (i in a until c) deleted[i] = true
@@ -418,6 +422,29 @@ object ExtractionDetector {
             align(split.first, c, split.second, d)
         }
         align(0, old.size, 0, new.size)
+        return deleted to alignedNew
+    }
+
+    /**
+     * R17: for an extraction source, a kept old token stays kept only in a diagonal run of at least [MIN_TILE] tokens;
+     * shorter kept runs count as removed too.
+     */
+    private fun removedForExtraction(old: IntArray, new: IntArray, budget: Budget): BooleanArray {
+        val (deleted, alignedNew) = alignment(old, new, budget)
+        var i = 0
+        while (i < old.size) {
+            if (deleted[i]) { i++; continue }
+            val start = i
+            var j = i + 1
+            if (alignedNew[i] >= 0) {
+                while (j < old.size && !deleted[j] && alignedNew[j] == alignedNew[j - 1] + 1) j++
+            }
+            // A kept token without an alignment, or in a shorter run, counts as removed too.
+            if (j - start < MIN_TILE) {
+                for (k in start until j) deleted[k] = true
+            }
+            i = j
+        }
         return deleted
     }
 
