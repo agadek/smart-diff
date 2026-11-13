@@ -1,0 +1,2 @@
+left: ANALYZED  right: ANALYZED
+key c  CHANGED_ON_BOTH_SIDES  left: moved  right: changed  base 4  left 2  right 4

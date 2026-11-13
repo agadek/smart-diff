@@ -20,7 +20,7 @@ object Rendering {
     fun result(result: ComparisonResult, oldText: CharSequence, newText: CharSequence): String = buildString {
         appendLine("status: ${result.status}")
         result.fallbackReason?.let { appendLine("reason: $it") }
-        result.fileRegion?.let { appendLine(node(it, oldText, newText)) }
+        result.fileRegion?.takeIf { it.isReported }?.let { appendLine(node(it, oldText, newText)) }
         fun visit(node: ChangeNode, depth: Int) {
             if (!node.isReported) return
             appendLine("  ".repeat(depth) + node(node, oldText, newText))

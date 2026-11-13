@@ -229,7 +229,7 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
 
         val languages = SmartDiffConfigurable.languagesWithEngines(engines).map { (language, _) -> language.id }
 
-        assertEquals(listOf("JAVA", "kotlin", "Scala"), languages)
+        assertEquals(listOf("JAVA", "JSON", "JSON5", "kotlin", "Scala"), languages)
     }
 
     fun `test R2 the settings page round-trips the outline view`() {

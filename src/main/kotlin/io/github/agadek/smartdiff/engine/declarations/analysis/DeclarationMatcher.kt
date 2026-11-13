@@ -562,17 +562,27 @@ object DeclarationMatcher {
         private fun content(o: Declaration, n: Declaration): Double {
             val a = bigrams(o)
             val b = bigrams(n)
-            return if (a.size < MIN_CONTENT || b.size < MIN_CONTENT) 0.0 else dice(a.bag, b.bag)
+            // A key's value is its whole content, so even a short one, such as `1`, tells two keys apart; code needs
+            // more than a few tokens before content is meaningful.
+            val tooSmall = o.kind != DeclarationKind.KEY && n.kind != DeclarationKind.KEY &&
+                (a.size < MIN_CONTENT || b.size < MIN_CONTENT)
+            return if (tooSmall || a.bag.isEmpty() || b.bag.isEmpty()) 0.0 else dice(a.bag, b.bag)
         }
 
         private class Bigrams(val bag: Map<String, Int>, val size: Int)
 
-        /** Adjacent pairs of the tokens other than whitespace, children included, with the declaration's name masked. */
+        /** Adjacent pairs of the tokens other than whitespace and separators, children included, with the name masked. */
         private fun bigrams(declaration: Declaration): Bigrams = bigrams.getOrPut(declaration) {
             val texts = mutableListOf<String>()
             fun visit(d: Declaration) {
                 cancellation.checkCanceled()
-                d.ownTokens.filter { it.kind != TokenKind.WHITESPACE }.mapTo(texts) { if (it.text == declaration.name) NAME else it.text }
+                val nameRange = d.nameRange
+                d.ownTokens.forEachIndexed { index, token ->
+                    if (token.kind == TokenKind.WHITESPACE || token.kind == TokenKind.SEPARATOR) return@forEachIndexed
+                    val start = d.ownTokenStarts.getOrNull(index)
+                    val ownName = start != null && nameRange != null && start >= nameRange.start && start < nameRange.end
+                    texts += if (ownName || token.text == declaration.name) NAME else token.text
+                }
                 d.children.forEach(::visit)
             }
             visit(declaration)
@@ -650,7 +660,8 @@ object DeclarationMatcher {
 
     /** The tokens of [declaration] and its children other than whitespace, for telling same-key declarations apart. */
     private fun content(declaration: Declaration): List<Any> =
-        declaration.ownTokens.filter { it.kind != TokenKind.WHITESPACE }.map { it.type to it.text } + declaration.children.map(::content)
+        declaration.ownTokens.filter { it.kind != TokenKind.WHITESPACE && it.kind != TokenKind.SEPARATOR }
+            .map { it.type to it.text } + declaration.children.map(::content)
 
     /**
      * One element of a path: a container's kind and name. A type's kind stands for its whole family (rule M4b), so the

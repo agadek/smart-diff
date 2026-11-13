@@ -47,6 +47,9 @@ class MergeFixturesTest : BasePlatformTestCase() {
     // relationships/02 R9, R10: the expected merge outline is the join before the relationship model.
     fun `test Scala 3 merge fixtures`() = checkFixtures("scala3", "Scala", "scala")
 
+    // languages/07-json R14
+    fun `test JSON merge fixtures`() = checkFixtures("json", "JSON", "json")
+
     fun `test merge fixture files live in the language merge folders`() {
         // merge/05-scala-merges R9
         for ((directory, extension) in LANGUAGE_EXTENSIONS) {
@@ -68,6 +71,11 @@ class MergeFixturesTest : BasePlatformTestCase() {
                 assertTrue("$directory merge fixtures: $scenario", scenario in present)
             }
         }
+    }
+
+    fun `test JSON merge fixtures cover key changed on both sides`() {
+        // languages/07-json R14
+        assertTrue(File(TEST_DATA, "json/merge/key-changed-on-both-sides").isDirectory)
     }
 
     fun `test Scala 3 covers braces to indentation and a given on both sides`() {
@@ -310,6 +318,7 @@ class MergeFixturesTest : BasePlatformTestCase() {
             "kotlin" to "kt",
             "scala2" to "scala",
             "scala3" to "scala",
+            "json" to "json",
         )
         val REQUIRED_SCENARIOS = listOf(
             "changed-on-both-sides",

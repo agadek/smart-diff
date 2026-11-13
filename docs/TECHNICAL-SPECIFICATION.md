@@ -347,6 +347,10 @@ Proposed ([languages/04](specs/languages/04-python.md)). The PSI mapping, signat
 
 Proposed ([languages/05](specs/languages/05-rust.md)). The PSI mapping, `impl` naming, signatures, the whitespace rule for macro invocations, the build target choice and phases are in its [details file](specs/languages/05-rust-details.md).
 
+### 6.12 JSON provider
+
+Implemented, 2026-11-13 ([languages/07](specs/languages/07-json.md)). The PSI mapping, the array identity rule, naming, whitespace policy, packaging and tests are in its [details file](specs/languages/07-json-details.md).
+
 ## 7. Declaration engine: matching
 
 Inputs: the old and new `DeclarationTree`. Matching is global over all declarations in the file, so a declaration can be matched across containers. Each rule runs over the declarations still unmatched after the previous rule. Within a rule, declarations are processed in source order of the old side, which makes the result deterministic.
@@ -524,7 +528,7 @@ Spikes S1 to S3 ran as platform tests and were retired once the tests of §12 co
 | S7 | For [Python](specs/languages/04-python.md): does a text-built Python file in the default project give correct declarations and offsets at the newest language level, which dependency id loads the optional descriptor in IntelliJ IDEA and PyCharm, how does the lexer report indentation, and do in-file references resolve without an interpreter? | A platform test passes on 2025.1 with the pinned `PythonCore`, and the verifier passes on IntelliJ IDEA and PyCharm 2025.1 and latest | Open; [Python details §9](specs/languages/04-python-details.md#9-phases), phase P0 |
 | S8 | For [Rust](specs/languages/05-rust.md): which build target compiles and tests the Rust provider (a RustRover submodule or an Ultimate target), does the current Rust plugin keep the `Rs…` PSI classes, which edition does a text-built file parse, and do in-file references resolve without Cargo? | A Rust provider test and a golden fixture run with the shared harness locally and in CI with no licence, and the choice is in an ADR | Open; [Rust details §2](specs/languages/05-rust-details.md#2-build-target), phase R0 |
 | S9 | For the [structure-view provider](FORMAT-COVERAGE.md#3-generic-fallback-group-d): does a language's structure view, built on a PSI file from text with no editor, give correct names, nesting and ranges, and which bundled structure views need an editor or a project model? | A platform test passes for JSON, YAML, Markdown, properties and Groovy on 2025.1, and a manual run shows outlines for TypeScript, CSS and Go in WebStorm and GoLand with no errors | Open; [format coverage §3](FORMAT-COVERAGE.md#3-generic-fallback-group-d), phase G0 |
-| S10 | For [structured data](FORMAT-COVERAGE.md#4-structured-data-group-c): do text-built JSON, YAML, TOML, properties and XML files give correct key ranges, including JSON with comments, multi-document YAML, anchors and aliases, and TOML arrays of tables? | A platform test passes for each format on 2025.1 | Open; [format coverage §4](FORMAT-COVERAGE.md#4-structured-data-group-c), phase D0 |
+| S10 | For [structured data](FORMAT-COVERAGE.md#4-structured-data-group-c): do text-built JSON, YAML, TOML, properties and XML files give correct key ranges, including JSON with comments, multi-document YAML, anchors and aliases, and TOML arrays of tables? | A platform test passes for each format on 2025.1 | JSON done 2026-11-13: text-built JSON, JSON with comments and JSON5 files give correct key ranges on 2025.1.3, including with CRLF line ends. On 2025.1.3 the JSON file type's extensions are `har;json;jsonc` with language `JSON`, so `.jsonc` is `JSON` and there is no separate JSON-with-comments language; `JSON5` is its own language, and `JSON Lines` (.jsonl, .ndjson) is out of scope. S10 stays open for YAML, TOML, properties and XML. [Format coverage §4](FORMAT-COVERAGE.md#4-structured-data-group-c), phase D0 |
 
 ## 14. Open questions
 

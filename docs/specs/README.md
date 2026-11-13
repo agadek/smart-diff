@@ -67,6 +67,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [03 Scala](languages/03-scala.md) | implemented, 2026-10-22 |
 | [04 Python](languages/04-python.md) | proposed, 2026-11-13 |
 | [05 Rust](languages/05-rust.md) | proposed, 2026-11-13 |
+| [07 JSON](languages/07-json.md) | implemented, 2026-11-13 |
 
 ## Outline
 

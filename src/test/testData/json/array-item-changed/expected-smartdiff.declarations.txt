@@ -1,0 +1,4 @@
+status: ANALYZED
+key services  old 2-5  new 2-5
+  key [name=web]  old 3  new 3
+    key port  changed  old 3  new 3

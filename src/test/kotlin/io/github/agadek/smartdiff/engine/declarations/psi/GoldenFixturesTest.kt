@@ -32,6 +32,9 @@ class GoldenFixturesTest : BasePlatformTestCase() {
     // relationships/02 R9, R10: the expected file is the outline before the relationship model.
     fun `test Scala 3 fixtures`() = checkFixtures("scala3", "Scala", "scala")
 
+    // languages/07-json R14
+    fun `test JSON fixtures`() = checkFixtures("json", "JSON", "json")
+
     private fun checkFixtures(directory: String, languageId: String, extension: String) {
         val cases = File(TEST_DATA, directory)
             .listFiles { file -> file.isDirectory && file.name != "merge" && file.name != "relationships" }
@@ -41,9 +44,18 @@ class GoldenFixturesTest : BasePlatformTestCase() {
         val engine = DeclarationEngine(null)
         val failures = mutableListOf<String>()
         for (case in cases) {
-            val old = read(File(case, "old.$extension"))
-            val new = read(File(case, "new.$extension"))
-            val result = engine.compare(ComparisonRequest(old, new, languageId, "${case.name}.$extension"), Cancellation.NONE)
+            val ext = when {
+                File(case, "old.jsonc").isFile -> "jsonc"
+                File(case, "old.json5").isFile -> "json5"
+                else -> extension
+            }
+            val requestLanguage = when (ext) {
+                "json5" -> "JSON5"
+                else -> languageId
+            }
+            val old = read(File(case, "old.$ext"))
+            val new = read(File(case, "new.$ext"))
+            val result = engine.compare(ComparisonRequest(old, new, requestLanguage, "${case.name}.$ext"), Cancellation.NONE)
             if (result.status == Status.ANALYZED || result.status == Status.PARTIAL) {
                 NothingHidden.violation(old, new, result)?.let { failures += "${case.name}: $it" }
             }

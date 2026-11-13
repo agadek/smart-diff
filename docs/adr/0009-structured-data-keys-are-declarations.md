@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Structured data: keys are declarations of the declaration engine

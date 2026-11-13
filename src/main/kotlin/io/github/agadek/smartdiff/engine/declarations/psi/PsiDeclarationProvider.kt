@@ -13,6 +13,7 @@ import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.declarations.model.Declaration
 import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
 import io.github.agadek.smartdiff.engine.declarations.model.FileRegion
+import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 
 /** What a provider says about a PSI element that is a declaration (technical specification §6.4, §6.5, §6.8). */
@@ -39,6 +40,8 @@ class DeclarationInfo(
      * is the body, or an expression; null without a body.
      */
     val body: PsiElement? = null,
+    /** The tokens that write the name when they differ from it, such as a quoted JSON key; null otherwise. */
+    val nameRange: TextRange? = null,
 )
 
 /**
@@ -65,6 +68,12 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
 
     /** The lexer for the tokens: the one of the file language's parser definition. */
     private fun createLexer(file: PsiFile): Lexer = parserDefinition(file).createLexer(file.project)
+
+    /**
+     * How one lexer token counts for the declaration tree. A language can mark a token that separates declarations,
+     * such as a JSON comma, as [TokenKind.SEPARATOR], so it covers source without changing content by itself.
+     */
+    protected open fun tokenKind(type: String, text: String, kind: TokenKind): TokenKind = kind
 
     override fun build(file: PsiFile, cancellation: Cancellation): DeclarationTree {
         val text = file.viewProvider.contents
@@ -95,7 +104,7 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
             if (owner == null) fileRegionError = true else owner.parseError = true
         }
 
-        val tokens = LexedTokens.lex(createLexer(file), parserDefinition(file), text, cancellation)
+        val tokens = LexedTokens.lex(createLexer(file), parserDefinition(file), text, cancellation, ::tokenKind)
         // Each declaration takes the whitespace between its previous sibling (or its container's start) and itself.
         fun assignLeading(siblings: List<Node>, containerStart: Int) {
             var previousEnd = containerStart
@@ -126,6 +135,7 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
                 receiver = node.info.receiver,
                 ownTokenStarts = leadingStarts + tokens.ownStarts(node.range, excluded),
                 body = node.info.body?.let(::body),
+                nameRange = node.info.nameRange,
             )
         }
         val whole = TextRange(0, text.length)
