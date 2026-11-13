@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.4.0-beta.1] - 2026-11-13
+
 ### Added
 
 - The refactorings view: a second structural outline, one toolbar toggle away, lists each rename, move, kind change, extraction and inlining before `Other changes`. Rows show both names, their kinds and a confidence word; a rename lists its grouped usages and a low-confidence row also appears under both declarations. Expanding a row shows its evidence, selecting it frames every endpoint and usage, and each rename's usages get their own theme-safe colour in both editors. The change type filter, a separate hide-by-kind menu and the same summary line work in both views.
@@ -25,6 +27,7 @@
 - Renamed or reordered methods and functions whose body also changed are more often shown as one `rename candidate` row, for example two tests renamed in the same commit, instead of one removed and one added row. When several renames or reordered declarations compete, the outline chooses over the whole file and leaves a genuine tie as two changes.
 
 ### Fixed
+
 - Following the caret in a diff no longer logs `Read access is allowed from inside read-action only`: the diff viewer lookup builds one data context inside an application read action.
 - Opening a Java, Kotlin or Scala diff no longer logs `Slow operations are prohibited on EDT`: the outline checks the project file index on its pooled thread, and a file outside the project keeps the engine result.
 - A selected moved declaration's frames stay aligned on both sides while scrolling, in a two-sided diff and in the three-sided merge outline, instead of drifting apart when the unchanged code around them differs.
@@ -80,7 +83,8 @@
 - Scala 2 and Scala 3 support, when the Scala plugin is installed: classes, traits, objects, enums, methods, values, type aliases, givens and extension methods, with Scala 3 indentation changes never shown as formatting-only.
 - Unsupported, malformed or oversized files fall back to the native diff with the reason shown.
 
-[Unreleased]: https://github.com/agadek/smart-diff/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/agadek/smart-diff/compare/v0.4.0-beta.1...HEAD
+[0.4.0-beta.1]: https://github.com/agadek/smart-diff/compare/v0.3.0...v0.4.0-beta.1
 [0.3.0]: https://github.com/agadek/smart-diff/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/agadek/smart-diff/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/agadek/smart-diff/compare/v0.1.0...v0.1.1
