@@ -1,6 +1,6 @@
 # SMART Diff Roadmap
 
-Status: 2026-11-10. Items after the shipped baseline are candidates, not commitments; their order is a proposal. Scope details live in the [product scope](specs/README.md#product-scope), the [feature specifications](specs/README.md) and the [technical specification](TECHNICAL-SPECIFICATION.md).
+Status: 2026-11-13. Items after the shipped baseline are candidates, not commitments; their order is a proposal. Scope details live in the [product scope](specs/README.md#product-scope), the [feature specifications](specs/README.md) and the [technical specification](TECHNICAL-SPECIFICATION.md).
 
 0.3.0 was released on 2026-11-10; the [0.3.0 plan](releases/0.3.0-plan.md) records the merged work and the remaining manual rows documented as partial or inconclusive. The next release is planned in [releases/0.4.0-plan.md](releases/0.4.0-plan.md) (structural relationships), with agent prompts in [agent-prompts/0.4.0/](agent-prompts/0.4.0/README.md).
 
@@ -98,7 +98,7 @@ It also covers the later [rename grouping across usages](#rename-grouping-across
 
 ## Later
 
-Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.md#semanticdiff) on 2026-10-22: features it has that SMART Diff lacks. Their order among the other items is still open.
+Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.md#semanticdiff) on 2026-10-22: features it has that SMART Diff lacks. Items marked *(weak-point review)* came from a review of the plugin's strengths and weaknesses on 2026-11-13, for weak points no other item covered. Their order among the other items is still open.
 
 | Item | Spec |
 | --- | --- |
@@ -186,7 +186,7 @@ Give added and deleted files in the Changes tree a summary and declaration rows,
 
 ### Summary in pull request reviews and the Git log
 
-*(gap review)* SemanticDiff has a full pull request review UI. The IDE equivalent is showing the changed-declarations summary in the GitHub and GitLab pull request changes trees and in the Git log's commit details. `changesViewModifier` does not reach these ([ADR 0006](adr/0006-changes-tree-summary-through-changes-view-modifier.md)), so this starts with a spike for another hook.
+*(gap review)* SemanticDiff has a full pull request review UI. The IDE equivalent is showing the changed-declarations summary in the GitHub and GitLab pull request changes trees, in the Git log's commit details and in the modal commit dialog. `changesViewModifier` does not reach these ([ADR 0006](adr/0006-changes-tree-summary-through-changes-view-modifier.md)), so this starts with a spike for another hook.
 
 ### Reviewed marks in the outline
 
@@ -203,6 +203,30 @@ Give added and deleted files in the Changes tree a summary and declaration rows,
 ### Moved lines in unsupported files
 
 *(gap review)* For files no engine can analyze, a fallback that treats each line as one token and still reports moved lines, as SemanticDiff's fallback diff does. These files currently get only the plain native diff.
+
+### Relationship recall
+
+*(weak-point review)* The benchmark reports precision 1.000 but overall recall around 0.83 (0.821 on the held-out split), so about one refactoring in six is still shown as a removed and an added declaration. Work through the missed relationships listed in [VALIDATION.md](VALIDATION.md) by kind and language, for example extraction to several sources, and raise recall without lowering precision or forcing an ambiguous pair, under the benchmark's `no-new-wrong-pairs` gate.
+
+### Formatting-only recall in Kotlin and Scala
+
+*(weak-point review)* The 0.3.0 manual check labelled an intended formatting-only change to `price()` as `changed` in Kotlin and Scala 2, and the benchmark's formatting-only recall is below 1. Find which whitespace and line-break cases the Kotlin and Scala policies treat as content, add fixtures for them, and classify them as formatting-only where the language allows it, keeping Scala 3 indentation significant.
+
+### Close the open manual checks
+
+*(weak-point review)* Several 0.3.0 manual IDE rows are recorded as partial or inconclusive, among them the outline filter toggle, the Structural Outline shortcut and its toolbar position, caret follow through the Local Changes splitter, result-edit following in the merge window, and the merge window's `not tracked` note, and the [refactorings view manual check](VALIDATION.md#2026-11-09-refactorings-view-manual-check) is outstanding. Re-run them, fix any real failure, and move the rows that can be driven through the real action path into UI tests, so fewer release rows depend on a manual run.
+
+### Platform API stability
+
+*(weak-point review)* The plugin uses experimental platform API (`ChangesViewNodeAction`), the Scala plugin's internal PSI and the Kotlin Analysis API, and sets no `untilBuild`, so an IDE or Scala plugin update can break it without warning. Run Plugin Verifier against EAP builds on a schedule, keep each experimental or internal use behind one adapter with a fallback that degrades to the native diff, and replace a use when a public API becomes available.
+
+### Marketplace distribution
+
+*(weak-point review)* The plugin is installed from disk from the GitHub release, so it gets no automatic updates and cannot be found from the IDE. The release workflow can already publish to the JetBrains Marketplace when the `PUBLISH_TO_MARKETPLACE` variable is set ([RELEASING.md](RELEASING.md)); turn that on and complete the Marketplace listing. Whether the PolyForm Noncommercial license, which rules out most use at work, stays as it is or gains a commercial option is the maintainer's decision and is recorded here as an open question.
+
+### Fewer controls
+
+*(weak-point review)* The outline now has two views, a change-type filter, a hide-by-kind menu, Hide and Minimise, the viewer switcher and separate Changes tree options, each with its own setting. Review which controls are used, using the [usability study](#usability-validation) where it helps, and merge or remove the ones that overlap, so the UI stays small enough to test and maintain.
 
 ### Third-party engines
 
