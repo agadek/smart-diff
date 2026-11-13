@@ -40,8 +40,12 @@ jobs:
           path: build/distributions/*.zip
 
   verify:
-    name: Plugin Verifier (2025.1 and latest release)
+    name: Plugin Verifier (${{ matrix.ides }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ides: [idea, pycharm]
     steps:
       # The verifier downloads one full IDE per version; make room on the runner.
       - name: Free disk space
@@ -55,12 +59,12 @@ jobs:
       - uses: gradle/actions/setup-gradle@v6
 
       - name: Verify plugin
-        run: ./gradlew verifyPlugin
+        run: ./gradlew verifyPlugin -Psmartdiff.verifier.ides=${{ matrix.ides }}
 
       - name: Upload verifier reports
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
-          name: plugin-verifier-reports
+          name: plugin-verifier-reports-${{ matrix.ides }}
           path: build/reports/pluginVerifier
           if-no-files-found: ignore
