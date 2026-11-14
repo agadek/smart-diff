@@ -1,0 +1,6 @@
+<!-- Loaded when the YAML plugin is present. The YAML declaration provider registers here. -->
+<idea-plugin>
+    <extensions defaultExtensionNs="io.github.agadek.smartdiff">
+        <declarationProvider implementation="io.github.agadek.smartdiff.engine.declarations.psi.yaml.YamlDeclarationProvider"/>
+    </extensions>
+</idea-plugin>

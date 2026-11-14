@@ -7,6 +7,7 @@ import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.contract.NothingHidden
 import io.github.agadek.smartdiff.engine.declarations.psi.json.JsonDeclarationProvider
+import io.github.agadek.smartdiff.engine.declarations.psi.yaml.YamlDeclarationProvider
 import java.io.File
 
 /**
@@ -40,13 +41,18 @@ class GoldenFixturesTest : BasePlatformTestCase() {
     // languages/07-json R14
     fun `test JSON fixtures`() = checkFixtures("json", "JSON", "json")
 
+    // languages/10-yaml R16
+    fun `test YAML fixtures`() = checkFixtures("yaml", "yaml", "yaml")
+
     // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11; languages/06 R2 / languages/07
     // JSON now has a dedicated provider, so these fallback fixtures mask it and run through the real engine path.
     fun `test structure-view JSON fixtures`() =
         checkFixtures("structure-view/json", "JSON", "json", maskDedicatedJsonProvider = true)
 
-    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
-    fun `test structure-view YAML fixtures`() = checkFixtures("structure-view/yaml", "yaml", "yaml")
+    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11; languages/06 R2 / languages/10
+    // YAML now has a dedicated provider, so these fallback fixtures mask it and run through the real engine path.
+    fun `test structure-view YAML fixtures`() =
+        checkFixtures("structure-view/yaml", "yaml", "yaml", maskDedicatedYamlProvider = true)
 
     // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
     fun `test structure-view Markdown fixtures`() = checkFixtures("structure-view/md", "Markdown", "md")
@@ -62,11 +68,15 @@ class GoldenFixturesTest : BasePlatformTestCase() {
         languageId: String,
         extension: String,
         maskDedicatedJsonProvider: Boolean = false,
+        maskDedicatedYamlProvider: Boolean = false,
     ) {
-        if (maskDedicatedJsonProvider) {
+        if (maskDedicatedJsonProvider || maskDedicatedYamlProvider) {
             ExtensionTestUtil.maskExtensions(
                 DeclarationProvider.EP_NAME,
-                DeclarationProvider.EP_NAME.extensionList.filterNot { it is JsonDeclarationProvider },
+                DeclarationProvider.EP_NAME.extensionList.filterNot {
+                    (maskDedicatedJsonProvider && it is JsonDeclarationProvider) ||
+                        (maskDedicatedYamlProvider && it is YamlDeclarationProvider)
+                },
                 testRootDisposable,
             )
         }

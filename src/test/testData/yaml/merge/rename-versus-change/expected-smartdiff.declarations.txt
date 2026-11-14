@@ -1,0 +1,2 @@
+left: ANALYZED  right: ANALYZED
+key timeout  CHANGED_ON_BOTH_SIDES  left: rename candidate → key timeoutMs  right: changed  base 1  left 1  right 1

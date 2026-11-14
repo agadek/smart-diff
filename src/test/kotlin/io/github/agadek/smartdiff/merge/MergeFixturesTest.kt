@@ -50,6 +50,9 @@ class MergeFixturesTest : BasePlatformTestCase() {
     // languages/07-json R14
     fun `test JSON merge fixtures`() = checkFixtures("json", "JSON", "json")
 
+    // languages/10-yaml R16
+    fun `test YAML merge fixtures`() = checkFixtures("yaml", "yaml", "yaml")
+
     fun `test merge fixture files live in the language merge folders`() {
         // merge/05-scala-merges R9
         for ((directory, extension) in LANGUAGE_EXTENSIONS) {
@@ -76,6 +79,11 @@ class MergeFixturesTest : BasePlatformTestCase() {
     fun `test JSON merge fixtures cover key changed on both sides`() {
         // languages/07-json R14
         assertTrue(File(TEST_DATA, "json/merge/key-changed-on-both-sides").isDirectory)
+    }
+
+    fun `test YAML merge fixtures cover key changed on both sides`() {
+        // languages/10-yaml R16
+        assertTrue(File(TEST_DATA, "yaml/merge/key-changed-on-both-sides").isDirectory)
     }
 
     fun `test Scala 3 covers braces to indentation and a given on both sides`() {
@@ -319,6 +327,7 @@ class MergeFixturesTest : BasePlatformTestCase() {
             "scala2" to "scala",
             "scala3" to "scala",
             "json" to "json",
+            "yaml" to "yaml",
         )
         val REQUIRED_SCENARIOS = listOf(
             "changed-on-both-sides",
