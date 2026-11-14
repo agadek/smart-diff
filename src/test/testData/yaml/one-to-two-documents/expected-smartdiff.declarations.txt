@@ -1,0 +1,5 @@
+status: ANALYZED
+section document 1  added  new 1-2
+  key a  moved  changed  old 1  new 2
+section document 2  added  new 3-4
+  key b  added  new 4

@@ -1,6 +1,6 @@
 # Format Coverage Plan
 
-Status: proposal, 2026-11-13, with open question F1 decided the same day (§6); G0/G1 and D0/D1 implemented 2026-11-13. It expands the roadmap's [more languages](ROADMAP.md#more-languages) entry into a programme: which languages and file formats of the JetBrains platform SMART Diff covers, what each one needs, and in which order. Section numbers (§) refer to the [technical specification](TECHNICAL-SPECIFICATION.md), and terms follow the [glossary](GLOSSARY.md). [Python](specs/languages/04-python.md) and [Rust](specs/languages/05-rust.md) are specified separately and are not repeated here; this plan builds on their pattern and their build-target decision (spike S8). Each phase below gets its own feature spec and details file, written as the [specification guide](SPEC-GUIDE.md) asks, in the first pull request of that phase.
+Status: proposal, 2026-11-13, with open question F1 decided the same day (§6); G0/G1 and D0/D1 implemented 2026-11-13; D2 (YAML) implemented 2026-11-14. It expands the roadmap's [more languages](ROADMAP.md#more-languages) entry into a programme: which languages and file formats of the JetBrains platform SMART Diff covers, what each one needs, and in which order. Section numbers (§) refer to the [technical specification](TECHNICAL-SPECIFICATION.md), and terms follow the [glossary](GLOSSARY.md). [Python](specs/languages/04-python.md) and [Rust](specs/languages/05-rust.md) are specified separately and are not repeated here; this plan builds on their pattern and their build-target decision (spike S8). Each phase below gets its own feature spec and details file, written as the [specification guide](SPEC-GUIDE.md) asks, in the first pull request of that phase.
 
 ## 1. Problem
 
@@ -116,7 +116,7 @@ Each phase is one pull request, or a spec pull request and a code pull request, 
 | G1 | Structure-view provider: `languages/06`, the `ITEM` kind, the setting, the summary-line note | G0 | Implemented 2026-11-13 |
 | D0 | Spike S10, ADR 0009 accepted, the `KEY`, `TAG` and `SECTION` kinds | Nothing; can run beside G0 | Not started |
 | D1 | JSON provider | D0 | Not started |
-| D2 | YAML provider, with the indentation rule as its own requirement | D1 | Not started |
+| D2 | YAML provider, with the indentation rule as its own requirement | D1 | Implemented 2026-11-14 |
 | D3 | Properties and TOML providers | D1 | Not started |
 | D4 | XML provider, with POM and Spring naming; HTML on the same provider | D1 | Not started |
 | B0 | Build pattern for paid IDEs, as an amendment to the S8 ADR; verifier jobs for WebStorm and GoLand | R0 | Not started |

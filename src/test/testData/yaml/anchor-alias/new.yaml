@@ -1,0 +1,4 @@
+base: &base
+  x: 2
+other:
+  <<: *base
