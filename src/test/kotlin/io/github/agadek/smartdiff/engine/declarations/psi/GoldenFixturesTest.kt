@@ -1,10 +1,12 @@
 package io.github.agadek.smartdiff.engine.declarations.psi
 
+import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.contract.NothingHidden
+import io.github.agadek.smartdiff.engine.declarations.psi.json.JsonDeclarationProvider
 import java.io.File
 
 /**
@@ -35,8 +37,10 @@ class GoldenFixturesTest : BasePlatformTestCase() {
     // languages/07-json R14
     fun `test JSON fixtures`() = checkFixtures("json", "JSON", "json")
 
-    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
-    fun `test structure-view JSON fixtures`() = checkFixtures("structure-view/json", "JSON", "json")
+    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11; languages/06 R2 / languages/07
+    // JSON now has a dedicated provider, so these fallback fixtures mask it and run through the real engine path.
+    fun `test structure-view JSON fixtures`() =
+        checkFixtures("structure-view/json", "JSON", "json", maskDedicatedJsonProvider = true)
 
     // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
     fun `test structure-view YAML fixtures`() = checkFixtures("structure-view/yaml", "yaml", "yaml")
@@ -50,7 +54,19 @@ class GoldenFixturesTest : BasePlatformTestCase() {
     // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
     fun `test structure-view Groovy fixtures`() = checkFixtures("structure-view/groovy", "Groovy", "groovy")
 
-    private fun checkFixtures(directory: String, languageId: String, extension: String) {
+    private fun checkFixtures(
+        directory: String,
+        languageId: String,
+        extension: String,
+        maskDedicatedJsonProvider: Boolean = false,
+    ) {
+        if (maskDedicatedJsonProvider) {
+            ExtensionTestUtil.maskExtensions(
+                DeclarationProvider.EP_NAME,
+                DeclarationProvider.EP_NAME.extensionList.filterNot { it is JsonDeclarationProvider },
+                testRootDisposable,
+            )
+        }
         val cases = File(TEST_DATA, directory)
             .listFiles { file -> file.isDirectory && file.name != "merge" && file.name != "relationships" }
             .orEmpty()
@@ -70,7 +86,8 @@ class GoldenFixturesTest : BasePlatformTestCase() {
             }
             val old = read(File(case, "old.$ext"))
             val new = read(File(case, "new.$ext"))
-            val result = engine.compare(ComparisonRequest(old, new, requestLanguage, "${case.name}.$ext"), Cancellation.NONE)
+            val fileName = "${case.name}.$ext"
+            val result = engine.compare(ComparisonRequest(old, new, requestLanguage, fileName), Cancellation.NONE)
             if (result.status == Status.ANALYZED || result.status == Status.PARTIAL) {
                 NothingHidden.violation(old, new, result)?.let { failures += "${case.name}: $it" }
             }
