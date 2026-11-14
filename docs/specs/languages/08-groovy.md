@@ -27,5 +27,5 @@ Status: implemented, 2026-11-14
 ## References
 
 - [Details: design and tests](08-groovy-details.md)
-- [Technical specification §6.13](../../TECHNICAL-SPECIFICATION.md#613-groovy-provider)
+- [Technical specification §6.14](../../TECHNICAL-SPECIFICATION.md#614-groovy-provider)
 - [Format coverage plan §2.1, §5](../../FORMAT-COVERAGE.md#21-group-a-free-psi-on-the-current-build-target)

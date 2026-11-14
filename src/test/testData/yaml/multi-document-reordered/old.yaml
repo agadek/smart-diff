@@ -1,0 +1,12 @@
+---
+kind: Service
+metadata:
+  name: web
+spec:
+  port: 80
+---
+kind: Deployment
+metadata:
+  name: web
+spec:
+  replicas: 1

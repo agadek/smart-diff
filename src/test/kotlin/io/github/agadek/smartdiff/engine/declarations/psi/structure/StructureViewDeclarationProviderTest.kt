@@ -176,6 +176,12 @@ class StructureViewDeclarationProviderTest : BasePlatformTestCase() {
         )
         assertEquals("JSON stays supported by its dedicated provider: $json", Status.ANALYZED, json.status)
         assertNull("JSON stays supported by its dedicated provider", json.analysisNote)
+        val yaml = DeclarationEngine(project).compare(
+            ComparisonRequest("a: 1\n", "a: 2\n", "yaml", "a.yaml"),
+            Cancellation.NONE,
+        )
+        assertEquals("YAML stays supported by its dedicated provider: $yaml", Status.ANALYZED, yaml.status)
+        assertNull("YAML stays supported by its dedicated provider", yaml.analysisNote)
     }
 
     // languages/06-structure-view-fallback R12
@@ -226,6 +232,21 @@ class StructureViewDeclarationProviderTest : BasePlatformTestCase() {
         assertTrue("a JSON key is reported", leaves.isNotEmpty())
         assertTrue(
             "JSON declarations use key kinds: ${leaves.map { it.subject }}",
+            leaves.all { (it.subject as Subject.Declaration).kind == DeclarationKind.KEY },
+        )
+    }
+
+    // languages/06-structure-view-fallback R2, languages/10-yaml R3
+    fun `test R2 a YAML file compared through the engine uses the YAML provider`() {
+        val engine = DeclarationEngine(project)
+        val result = engine.compare(ComparisonRequest("a: 1\n", "a: 2\n", "yaml", "a.yaml"), Cancellation.NONE)
+
+        assertEquals(Status.ANALYZED, result.status)
+        assertNull("YAML uses its dedicated provider, not the structure-view fallback", result.analysisNote)
+        val leaves = flatten(result).filter { it.children.isEmpty() && it.subject is Subject.Declaration }
+        assertTrue("a YAML key is reported", leaves.isNotEmpty())
+        assertTrue(
+            "YAML declarations use key kinds: ${leaves.map { it.subject }}",
             leaves.all { (it.subject as Subject.Declaration).kind == DeclarationKind.KEY },
         )
     }

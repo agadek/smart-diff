@@ -1,0 +1,4 @@
+total: 2
+nested:
+  a: 1
+  b: 2
