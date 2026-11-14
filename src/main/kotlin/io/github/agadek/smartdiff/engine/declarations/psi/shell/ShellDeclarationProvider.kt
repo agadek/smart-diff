@@ -22,7 +22,7 @@ import io.github.agadek.smartdiff.engine.declarations.psi.PsiDeclarationProvider
  * functions nested inside another function are nested declarations, and functions inside compound commands at top level
  * are top-level declarations.
  */
-class ShellDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_BREAKS_SIGNIFICANT) {
+class ShellDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.SEPARATION_SIGNIFICANT) {
 
     override fun supports(languageId: String): Boolean = languageId == ShLanguage.INSTANCE.id
 

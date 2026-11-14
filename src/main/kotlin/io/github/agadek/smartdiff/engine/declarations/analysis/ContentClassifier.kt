@@ -18,8 +18,11 @@ import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
  */
 object ContentClassifier {
 
-    /** Stands for a whitespace run with a line break under [WhitespacePolicy.LINE_BREAKS_SIGNIFICANT]. */
+    /** Stands for a whitespace run with a line break under [WhitespacePolicy.LINE_BREAKS_SIGNIFICANT] and [WhitespacePolicy.SEPARATION_SIGNIFICANT]. */
     private val LINE_BREAK = Token("WHITESPACE", "⏎", TokenKind.WHITESPACE)
+
+    /** Stands for a whitespace run without a line break under [WhitespacePolicy.SEPARATION_SIGNIFICANT]. */
+    private val SPACE = Token("WHITESPACE", " ", TokenKind.WHITESPACE)
 
     /** Stands for a whitespace run with a line break under [WhitespacePolicy.INDENTATION_SIGNIFICANT]. */
     private fun lineBreak(indentation: String) = Token("WHITESPACE", "⏎$indentation", TokenKind.WHITESPACE)
@@ -47,17 +50,32 @@ object ContentClassifier {
         if (policy == WhitespacePolicy.SIGNIFICANT) return tokens
         val normalized = mutableListOf<Token>()
         val run = StringBuilder() // the text of the current whitespace run
+        fun endsWithLineBreak(token: Token): Boolean =
+            token.text.lastOrNull() == '\n' || token.text.lastOrNull() == '\r'
         fun endRun() {
-            val lastBreak = maxOf(run.lastIndexOf("\n"), run.lastIndexOf("\r"))
-            if (lastBreak >= 0) {
-                when (policy) {
-                    WhitespacePolicy.LINE_BREAKS_SIGNIFICANT -> normalized += LINE_BREAK
-                    // The indentation of the next line: the run's text after its last line break.
-                    WhitespacePolicy.INDENTATION_SIGNIFICANT -> normalized += lineBreak(run.substring(lastBreak + 1))
-                    else -> {}
-                }
-            }
+            if (run.isEmpty()) return
+            val text = run.toString()
             run.setLength(0)
+            val lastBreak = maxOf(text.lastIndexOf('\n'), text.lastIndexOf('\r'))
+            when (policy) {
+                WhitespacePolicy.LINE_BREAKS_SIGNIFICANT ->
+                    if (lastBreak >= 0) normalized += LINE_BREAK
+                WhitespacePolicy.SEPARATION_SIGNIFICANT -> {
+                    if (lastBreak >= 0) {
+                        normalized += LINE_BREAK
+                    } else {
+                        // Indentation after a line break is not a token separator: drop it so the amount of indentation
+                        // does not matter. A line break may be a WHITESPACE token (emitted as LINE_BREAK) or a
+                        // non-whitespace token whose text ends with a line break.
+                        val afterLineBreak = normalized.lastOrNull()?.let { it == LINE_BREAK || endsWithLineBreak(it) } == true
+                        if (!afterLineBreak) normalized += SPACE
+                    }
+                }
+                // The indentation of the next line: the run's text after its last line break.
+                WhitespacePolicy.INDENTATION_SIGNIFICANT ->
+                    if (lastBreak >= 0) normalized += lineBreak(text.substring(lastBreak + 1))
+                else -> {}
+            }
         }
         for (token in tokens) {
             if (token.kind == TokenKind.WHITESPACE) {

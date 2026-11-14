@@ -455,7 +455,8 @@ class OutlineController internal constructor(
         /** The fallback whitespace policy before the pass reports the parsed dialect; Scala keeps its stricter policy. */
         internal fun whitespacePolicy(languageId: String): WhitespacePolicy = when (languageId) {
             "JAVA" -> WhitespacePolicy.INSIGNIFICANT
-            "kotlin", "Shell Script" -> WhitespacePolicy.LINE_BREAKS_SIGNIFICANT
+            "kotlin" -> WhitespacePolicy.LINE_BREAKS_SIGNIFICANT
+            "Shell Script" -> WhitespacePolicy.SEPARATION_SIGNIFICANT
             "Scala" -> WhitespacePolicy.INDENTATION_SIGNIFICANT
             else -> WhitespacePolicy.SIGNIFICANT
         }

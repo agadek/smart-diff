@@ -32,9 +32,8 @@ Status: implemented, 2026-11-14
 ## 4. Tokens and whitespace
 
 - Tokens come from the Shell lexer through `LanguageParserDefinitions` for `ShLanguage`, as for every PSI provider (§6.3).
-- **Policy (R8, R9):** `LINE_BREAKS_SIGNIFICANT`. A line break ends a command in shell, so a run of whitespace that contains a line break is kept as a line break and a run without one is dropped (technical specification §8). Re-indenting lines or changing spaces between arguments inside a line is therefore formatting-only when the token texts are unchanged, while adding or removing a line break or joining commands with `;` changes the token sequence.
+- **Policy (R8, R9):** `SEPARATION_SIGNIFICANT`. A line break ends a command and whitespace separates tokens in shell, so a run of whitespace that contains a line break is kept as a line break and a run without one is kept as a single separator (technical specification §8). Re-indenting lines or changing the amount of space between separated tokens is therefore formatting-only when the token texts and their separation are unchanged, while adding or removing a line break, joining commands with `;`, or removing or adding separation between two tokens changes the result.
 - **Strings and here-documents (R7):** their text is token content compared exactly, so whitespace inside them is never formatting-only.
-- **Limitation:** unquoted space can change meaning without changing non-whitespace token texts, for example `a=1` (assignment) versus `a = 1` (command). With `LINE_BREAKS_SIGNIFICANT` both normalize to the same token sequence, so such a change may be reported as formatting-only. The provider does not special-case shell word splitting or assignment parsing; this is left as an open question.
 
 ## 5. Parse errors
 
@@ -56,5 +55,4 @@ Status: implemented, 2026-11-14
 ## 8. Open questions
 
 - **Reference resolution:** resolving function calls by name and `source`d files to group renamed functions with their usages, as the Java, Kotlin and Scala resolvers do.
-- **Assignment spacing:** whether `a=1` versus `a = 1` can be detected as a change without a shell-specific comparison rule, given that line-break-only whitespace normalization drops the separating spaces.
 - **Dialect and compatibility:** whether the bundled Shell Script plugin is present and behaves the same in every verifier target IDE; the 2025.1.3 targets bundle it, but later targets should be confirmed by the verifier.

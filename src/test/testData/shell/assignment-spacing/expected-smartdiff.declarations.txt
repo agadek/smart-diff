@@ -1,2 +1,2 @@
 status: ANALYZED
-function foo()  formatting-only  old 1-3  new 1-3
+function foo()  changed  old 1-3  new 1-3

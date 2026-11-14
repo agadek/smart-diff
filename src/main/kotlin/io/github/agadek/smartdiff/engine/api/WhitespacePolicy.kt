@@ -19,6 +19,12 @@ enum class WhitespacePolicy {
      */
     INDENTATION_SIGNIFICANT,
 
+    /**
+     * Shell: whether there is a line break between two tokens matters, and so does whether there is any whitespace
+     * between them at all; the amount of space and the indentation do not.
+     */
+    SEPARATION_SIGNIFICANT,
+
     /** Python, YAML: whitespace always matters, so nothing is formatting-only. */
     SIGNIFICANT,
 }

@@ -132,7 +132,24 @@ class ShellDeclarationProviderTest : BasePlatformTestCase() {
             "Shell Script", "a.sh",
         ), Cancellation.NONE)
         assertEquals(Content.FORMATTING_ONLY, spacing.changes.single().content)
-        assertEquals(WhitespacePolicy.LINE_BREAKS_SIGNIFICANT, provider().build(file("foo() { echo hi; }\n"), Cancellation.NONE).whitespacePolicy)
+        assertEquals(WhitespacePolicy.SEPARATION_SIGNIFICANT, provider().build(file("foo() { echo hi; }\n"), Cancellation.NONE).whitespacePolicy)
+    }
+
+    // languages/09-shell R8
+    fun `test R8 removing or adding token separation is a change`() {
+        val assignment = engine.compare(ComparisonRequest(
+            "foo() {\n  a=1\n}\n",
+            "foo() {\n  a = 1\n}\n",
+            "Shell Script", "a.sh",
+        ), Cancellation.NONE)
+        assertEquals(Content.CHANGED, assignment.changes.single().content)
+
+        val bracket = engine.compare(ComparisonRequest(
+            "foo() {\n  [ -n \"\$x\" ]\n}\n",
+            "foo() {\n  [-n \"\$x\"]\n}\n",
+            "Shell Script", "a.sh",
+        ), Cancellation.NONE)
+        assertEquals(Content.CHANGED, bracket.changes.single().content)
     }
 
     // languages/09-shell R9

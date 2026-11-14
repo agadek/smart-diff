@@ -15,7 +15,7 @@ Status: implemented, 2026-11-14
 - **R5** A function defined inside `if`, `case`, loops or other compound commands at the top level is a top-level declaration.
 - **R6** Top-level commands, variable assignments, `export`, `alias`, `source`, and the shebang line are not declarations and stay in the [file region](../../GLOSSARY.md#file-region).
 - **R7** Here-documents and strings are content; whitespace inside them is [significant](../../GLOSSARY.md#significant-whitespace).
-- **R8** A line break ends a command, so adding or removing a line break between tokens inside a declaration is a change; whitespace inside a line, outside quoted strings and here-documents, is formatting-only when nothing else changed.
+- **R8** A line break ends a command and the presence of whitespace between two tokens is significant, so adding or removing a line break or removing the separation between two tokens inside a declaration is a change; the amount of space and indentation, outside quoted strings and here-documents, are formatting-only when nothing else changed.
 - **R9** Joining two commands onto one line with `;` is a change.
 - **R10** Comments, including the shebang, are not declarations; a comment directly above a function belongs to the function as its documentation.
 - **R11** A [parse error](../../GLOSSARY.md#parse-error) in the script is reported as the Shell PSI reports it; a file with a parse error on one side falls back as for other languages.
@@ -24,7 +24,6 @@ Status: implemented, 2026-11-14
 ## Out of scope
 
 - Resolving function calls or `source`d files to link declarations across files.
-- Treating a removed space that changes an unquoted token boundary, such as an assignment written as a command, as a change when the token kinds and texts stay the same.
 
 ## References
 
