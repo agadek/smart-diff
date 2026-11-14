@@ -1,0 +1,4 @@
+status: PARTIAL
+reason: some source could not be parsed and was not analyzed
+File region  formatting-only  old 1-4  new 1-4
+key b  unanalyzed  old 3  new 3

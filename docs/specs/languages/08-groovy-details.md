@@ -50,5 +50,5 @@ Status: implemented, 2026-11-14
 
 ## Open questions
 
-- **M2b:** model Gradle build-script top-level blocks (`plugins { }`, `dependencies { }`, tasks and similar calls) as `SECTION` declarations in `.gradle` and `.gradle.kts` files once the `SECTION` kind is available.
+- **M2b:** model Gradle build-script top-level blocks (`plugins { }`, `dependencies { }`, tasks and similar calls) as section declarations in `.gradle` and `.gradle.kts` files. This is the next step.
 - **Relationships:** reference resolution and relationship grouping for Groovy declarations.

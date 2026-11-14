@@ -21,11 +21,11 @@ Status: implemented, 2026-11-14
 
 ## Out of scope
 
-- Build-script sections (`plugins { }`, `dependencies { }` and other top-level blocks in `.gradle` and `.gradle.kts`), which need the `SECTION` kind and are part M2b.
+- Build-script sections (`plugins { }`, `dependencies { }` and other top-level blocks in `.gradle` and `.gradle.kts`); modeling them as sections is part M2b, the next step.
 - Relationship resolution between Groovy declarations.
 
 ## References
 
 - [Details: design and tests](08-groovy-details.md)
-- [Technical specification §6.12](../../TECHNICAL-SPECIFICATION.md#612-groovy-provider)
+- [Technical specification §6.13](../../TECHNICAL-SPECIFICATION.md#613-groovy-provider)
 - [Format coverage plan §2.1, §5](../../FORMAT-COVERAGE.md#21-group-a-free-psi-on-the-current-build-target)

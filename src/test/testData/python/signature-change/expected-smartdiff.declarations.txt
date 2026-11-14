@@ -1,0 +1,2 @@
+status: ANALYZED
+function f(a, b, c)  changed  signature changed  old 1-2  new 1-2

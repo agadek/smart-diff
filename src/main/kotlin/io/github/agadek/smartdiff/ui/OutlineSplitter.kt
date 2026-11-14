@@ -3,6 +3,7 @@ package io.github.agadek.smartdiff.ui
 import com.intellij.diff.tools.util.base.DiffPanelBase
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.ui.OnePixelSplitter
+import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import javax.swing.JComponent
 
@@ -30,6 +31,16 @@ internal fun insertOutlineSplitter(component: JComponent, proportionKey: String)
 
 /** The share of the diff width the editors get when no width was remembered; the outline gets the rest. */
 internal const val DEFAULT_PROPORTION = 0.75f
+
+/** In unscaled pixels; [outlineMinimumWidth] applies the IDE's scale and font size. */
+private const val MINIMUM_WIDTH = 200
+
+/**
+ * The narrowest an outline panel may get, in scaled pixels: wide enough for the header actions and the first words of a
+ * row, narrow enough to leave the editors usable. The panel reports it as its minimum, so the splitter stops dragging
+ * there (outline/09 R1, R4).
+ */
+internal fun outlineMinimumWidth(): Int = JBUI.scale(MINIMUM_WIDTH)
 
 /** Puts the editors back when the outline cannot attach after [insertOutlineSplitter] changed the viewer. */
 internal fun removeOutlineSplitter(splitter: OnePixelSplitter) {

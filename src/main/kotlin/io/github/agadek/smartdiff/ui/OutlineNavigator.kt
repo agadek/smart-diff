@@ -36,20 +36,23 @@ internal class OutlineNavigator(private val viewer: TwosideTextDiffViewer) {
     private var frameSync: FrameScrollSync? = null
 
     /**
-     * Highlights [item] on both sides and scrolls each side to it. When both ranges are present while Synchronize
-     * scrolling is on, the platform's sync stays paused and [frameSync] keeps the frames aligned until one leaves view
-     * or the selection is released; otherwise the row is only framed.
+     * Highlights [item] on both sides and, when [scroll], scrolls each side to it. When both ranges are present while
+     * Synchronize scrolling is on and [scroll] is true, the platform's sync stays paused and [frameSync] keeps the
+     * frames aligned until one leaves view or the selection is released; otherwise the row is only framed.
      */
-    fun select(item: OutlineItem?) {
+    fun select(item: OutlineItem?, scroll: Boolean = true) {
         clear()
         if (item == null || item.isGroup) return
         val oldRanges = listOfNotNull(item.oldRange) + item.frames.mapNotNull { it.old }
         val newRanges = listOfNotNull(item.newRange) + item.frames.mapNotNull { it.new }
-        val follows = oldRanges.size == 1 && newRanges.size == 1 && followsSynchronizedScrolling()
-        withSyncDisabled {
-            show(viewer.editor1, oldRanges, item.details.mapNotNull { it.old })
-            show(viewer.editor2, newRanges, item.details.mapNotNull { it.new })
+        val follows = scroll && oldRanges.size == 1 && newRanges.size == 1 && followsSynchronizedScrolling()
+        val showEditors = {
+            withSyncDisabled {
+                show(viewer.editor1, oldRanges, item.details.mapNotNull { it.old }, scroll)
+                show(viewer.editor2, newRanges, item.details.mapNotNull { it.new }, scroll)
+            }
         }
+        if (scroll) OutlineController.of(viewer)?.withSuppressedCaretFollow(showEditors) ?: showEditors() else showEditors()
         if (follows && frames.size == 2) {
             frameSync = FrameScrollSync(
                 listOf(viewer.editor1, viewer.editor2),
@@ -104,10 +107,10 @@ internal class OutlineNavigator(private val viewer: TwosideTextDiffViewer) {
         return sync.scrollable.isSyncScrollEnabled
     }
 
-    private fun show(editor: Editor, ranges: List<TextRange>, details: List<TextRange>) {
+    private fun show(editor: Editor, ranges: List<TextRange>, details: List<TextRange>, scroll: Boolean) {
         ranges.forEachIndexed { index, range ->
             frame(editor, range)
-            if (index == 0) {
+            if (scroll && index == 0) {
                 // Without animation, so the scroll is done before synchronized scrolling resumes.
                 DiffUtil.scrollEditor(editor, editor.document.getLineNumber(clamp(editor, range.start)), false)
             }

@@ -430,6 +430,29 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertHighlightedAt(shown.viewer.editor1, JAVA_OLD.indexOf("String hello()"))
     }
 
+    fun `test a rebuild keeps the selected row without scrolling the editors`() {
+        // outline/01 R27
+        val shown = open(history(MOVED_OLD, MOVED_NEW, "Moved.java"))
+        val outline = shown.awaitResult()
+        show(shown.viewer.editor1)
+        show(shown.viewer.editor2)
+        val selected = selectItem(outline) { it.title == "method moved()" }
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+
+        shown.viewer.editor1.scrollingModel.scrollVertically(0)
+        shown.viewer.editor2.scrollingModel.scrollVertically(0)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        val oldArea = shown.viewer.editor1.scrollingModel.visibleArea
+        val newArea = shown.viewer.editor2.scrollingModel.visibleArea
+
+        outline.setHidden(ChangeType.ADDED, true)
+
+        assertEquals("the old editor must not scroll on rebuild", oldArea, shown.viewer.editor1.scrollingModel.visibleArea)
+        assertEquals("the new editor must not scroll on rebuild", newArea, shown.viewer.editor2.scrollingModel.visibleArea)
+        assertEquals(selected.label, outline.panel.selectedItem()?.label)
+        assertTrue("the row is framed again", outline.navigator.shown.isNotEmpty())
+    }
+
     fun `test the toggle hides the outline and shows the native diff`() {
         val action = ActionManager.getInstance().getAction("SmartDiff.ToggleOutline") as ToggleOutlineAction
         val toolbar = ActionManager.getInstance().getAction(IdeActions.DIFF_VIEWER_TOOLBAR) as DefaultActionGroup
@@ -641,6 +664,56 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
             assertEquals("a new diff window keeps the width", 0.6f, another.outline.splitter.proportion, 0.01f)
         } finally {
             settings.outlineMinimised = false
+            if (saved == null) properties.unsetValue(key) else properties.setValue(key, saved)
+        }
+    }
+
+    fun `test outline 09 R1 the outline panel stops at its minimum width`() {
+        // outline/09-outline-minimum-width R1
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+        val splitter = outline.splitter
+        splitter.setSize(1200, 700)
+        splitter.doLayout()
+
+        assertEquals(outlineMinimumWidth(), outline.panel.minimumSize.width)
+
+        splitter.proportion = 0.99f
+        splitter.doLayout()
+
+        assertEquals("the splitter keeps the panel at its minimum", outlineMinimumWidth(), outline.panel.width)
+        assertTrue("the editors keep the rest of the width", (splitter.firstComponent?.width ?: 0) > 0)
+    }
+
+    fun `test outline 09 R2 the minimum holds for a fallback and while comparing`() {
+        // outline/09-outline-minimum-width R2
+        val engine = DelayedFallbackEngine()
+        ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(engine)), testRootDisposable)
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).outline
+
+        assertEquals(OutlineState.Loading, outline.state)
+        assertEquals(outlineMinimumWidth(), outline.panel.minimumSize.width)
+
+        engine.finish()
+        awaitResult(outline) { it.result.status == Status.FAILED }
+
+        assertEquals("the fallback keeps the same minimum", outlineMinimumWidth(), outline.panel.minimumSize.width)
+    }
+
+    fun `test outline 09 R3 a remembered width below the minimum opens at the minimum`() {
+        // outline/09-outline-minimum-width R3
+        val key = "smartdiff.outline.proportion"
+        val properties = PropertiesComponent.getInstance()
+        val saved = properties.getValue(key)
+        try {
+            properties.setValue(key, "0.95")
+            val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+            val splitter = outline.splitter
+            splitter.setSize(1200, 700)
+            splitter.doLayout()
+
+            assertEquals(outlineMinimumWidth(), outline.panel.width)
+            assertTrue("the editors keep the rest of the width", (splitter.firstComponent?.width ?: 0) > 0)
+        } finally {
             if (saved == null) properties.unsetValue(key) else properties.setValue(key, saved)
         }
     }

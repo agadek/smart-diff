@@ -17,7 +17,7 @@ Don't unpack it first.
 
 ## Use
 
-Open any two-sided diff of a Java, Kotlin, Scala or Groovy file (local changes, VCS history or "Compare with…"). The structural
+Open any two-sided diff of a Java, Kotlin, Scala, JSON or Groovy file (local changes, VCS history or "Compare with…"). The structural
 outline appears beside the editors: a summary line, then the changed declarations. Select one to see it on both sides,
 or press Enter to jump to it. The **Structural Outline** toolbar button switches the diff back to the plain native view,
 and *Settings | Tools | SMART Diff* sets whether the outline opens automatically, how formatting-only changes are shown,
@@ -26,7 +26,8 @@ the default engine per language and the analysis limits.
 In Local Changes and the Commit tool window, each changed file shows its summary, such as `2 changed · 1 added`. Expand
 the file to see its changed declarations, and double-click one to open the file's diff with that declaration selected.
 A helper extracted into a new declaration is labelled `extracted from <source>`, and a removed helper whose code moved
-into a caller is labelled `inlined into <target>`; selecting either frames the moved code on the other side.
+into a caller is labelled `inlined into <target>`; selecting either frames the moved code on the other side. For JSON
+files, keys are shown as declarations, including keys inside identified array items.
 
 ## Requirements
 

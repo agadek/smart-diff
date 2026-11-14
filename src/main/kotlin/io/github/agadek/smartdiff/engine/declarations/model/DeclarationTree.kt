@@ -65,6 +65,12 @@ class Declaration(
      */
     val body: TextRange? = null,
     /**
+     * For a declaration whose name is written as one or more tokens, such as a quoted JSON key, the range of those
+     * tokens, so matching can mask the name even when the token text differs from [name]. Null when the name is not a
+     * token of the declaration, or the provider does not say.
+     */
+    val nameRange: TextRange? = null,
+    /**
      * Source after [range] that belongs to the declaration for coverage but is not compared: the separator and line
      * break after a structure-view item (languages/06). Null for a dedicated provider, whose source ends at [range].
      */
@@ -83,4 +89,14 @@ class FileRegion(
 /** A lexer token; [type] is the lexer's token type name, compared together with [text]. */
 data class Token(val type: String, val text: String, val kind: TokenKind)
 
-enum class TokenKind { WHITESPACE, COMMENT, OTHER }
+enum class TokenKind {
+    WHITESPACE,
+    COMMENT,
+    OTHER,
+
+    /**
+     * A separator between declarations, such as a comma between JSON keys or array items. It is source, so it covers
+     * text for the nothing-hidden check, but it never makes a declaration or its container changed by itself.
+     */
+    SEPARATOR,
+}

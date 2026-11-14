@@ -1,0 +1,4 @@
+status: ANALYZED
+key nested  formatting-only  old 4  new 4-7
+  key a  formatting-only  old 4  new 5
+  key b  formatting-only  old 4  new 6

@@ -55,7 +55,7 @@ _Avoid_: generic engine, fallback engine
 
 ### Declaration
 
-A named construct a reviewer would look for by name, such as a class, method, function, field or property. Local variables, lambdas and anonymous classes are part of their containing declaration, not declarations themselves.
+A named construct a reviewer would look for by name, such as a class, method, function, field or property. Local variables, lambdas and anonymous classes are part of their containing declaration, not declarations themselves. Keys, tags and sections of data files are declarations too.
 _Avoid_: entity, node, element, member, symbol
 
 ### Kind
@@ -77,6 +77,16 @@ _Avoid_: descriptor, type signature
 
 Source that belongs to no declaration, such as the package line, imports and top-level statements.
 _Avoid_: header, preamble, top-level code
+
+### Key
+
+A named entry of a structured data file, such as a JSON object member.
+_Avoid_: property, field, attribute
+
+### Section
+
+A named container of a structured data file, such as a TOML table, a YAML document or a Markdown heading.
+_Avoid_: block, group, header
 
 ### Parse error
 

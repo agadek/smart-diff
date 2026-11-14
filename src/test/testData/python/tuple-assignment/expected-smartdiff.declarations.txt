@@ -1,0 +1,2 @@
+status: ANALYZED
+variable (a, b)  changed  old 1  new 1

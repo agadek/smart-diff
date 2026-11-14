@@ -153,7 +153,7 @@ Proposed 2026-11-13: the [format coverage plan](FORMAT-COVERAGE.md) covers every
 
 - **Free PSI on the current build target:** Groovy and Gradle build scripts, Kotlin build scripts, Markdown, shell scripts and HTML. Groovy declarations are implemented (M2 part 1, 2026-11-14); build-script sections remain (M2b).
 - **Paid or closed plugins, tied to another IDE:** JavaScript and TypeScript, Go, CSS, PHP, Ruby and SQL, built with the pattern spike S8 chooses for Rust.
-- **Structured data:** JSON, YAML, TOML, properties and XML, with keys as declarations ([ADR 0009](adr/0009-structured-data-keys-are-declarations.md), proposed).
+- **Structured data:** JSON, YAML, TOML, properties and XML, with keys as declarations ([ADR 0009](adr/0009-structured-data-keys-are-declarations.md), accepted). JSON (including JSON with comments and JSON5) is implemented (D0, D1, 2026-11-13).
 - **Every other language:** a provider built on the IDE's structure view, used when no dedicated provider exists ([ADR 0010](adr/0010-structure-view-provider-for-languages-without-their-own.md), accepted).
 - **Not supported through PSI:** C# and the other Rider languages, C and C++ in CLion Nova, and Swift, whose language support is not in IntelliJ PSI; they wait for [Tree-sitter support](#tree-sitter-support).
 - **Phases:** G0 and G1 (structure view, spike S9), D0 to D4 (data formats, spike S10), B0 to B6 (paid IDEs), M1 to M3 (Markdown, Groovy and build scripts, shell). The structure-view track and the dedicated providers run in parallel (decided 2026-11-13), starting with G0, D0 and JSON and YAML, then TypeScript and Go ([plan §5](FORMAT-COVERAGE.md#5-phases)).
@@ -163,7 +163,7 @@ Proposed 2026-11-13: the [format coverage plan](FORMAT-COVERAGE.md) covers every
 
 Proposed 2026-11-13 ([languages/04](specs/languages/04-python.md), [details](specs/languages/04-python-details.md)). A Python provider for the declaration engine, using the Python plugin's PSI (`PythonCore`), bundled in PyCharm and installed from the Marketplace in IntelliJ IDEA. Like Scala, it needs no change to the engine interface, the matcher or the UI.
 
-- **Packaging:** an optional descriptor, `META-INF/smartdiff-python.xml`, on `com.intellij.modules.python`; the build pins a Marketplace `PythonCore` for IntelliJ IDEA Community 2025.1.3, as it does the Scala plugin.
+- **Packaging:** an optional descriptor, `META-INF/smartdiff-python.xml`, on `PythonCore`; the build pins a Marketplace `PythonCore` for IntelliJ IDEA Community 2025.1.3, as it does the Scala plugin.
 - **Declaration kinds:** classes, functions and methods with their decorators, and names assigned at module level or in a class body (a new `VARIABLE` kind), including definitions under `if` or `try` at those levels; nothing inside a function body.
 - **Signatures:** parameter names with `*`, `**` and `/`, since Python calls by keyword and most parameters have no type.
 - **Whitespace:** the Scala 3 indentation-significant policy, the dedicated rule [ADR 0003](adr/0003-conservative-classification.md) asked for, so re-indenting is never formatting-only.
