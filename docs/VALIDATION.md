@@ -21,6 +21,59 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-13: extraction sources with scattered kept tokens
+
+[Extraction detection](specs/declarations/05-extraction-detection.md) R17 is implemented: an old token that the source
+alignment keeps counts as kept only in a run of at least `MIN_TILE` tokens aligned to consecutive new tokens, so the call
+that replaces extracted code no longer keeps a source from linking ([EXTRACTION-DETECTION.md §4.3](EXTRACTION-DETECTION.md#43-removed-code-of-a-source)).
+Inlining detection is unchanged. The engine is `smartdiff.declarations` 11.
+
+**Benchmark.** `RelationshipBenchmarkTest` ran the full 448-case corpus (328 checked-in cases and 120 real commits) with
+the `no-new-wrong-pairs` gate against the checked-in baseline, on IDE `251.26927.53` with Scala plugin `2025.1.32`,
+corpus revision `31c1fadeafa2`. Engine 10 was run first on the same corpus for comparison.
+
+| Run | Precision | Recall | Tuning recall | Held-out recall | Found of 269 |
+| --- | --- | --- | --- | --- | --- |
+| Engine 10 | 1.000 | 0.888 | 0.945 | 0.821 | 239 |
+| Engine 11 | 1.000 | 0.952 | 1.000 | 0.894 | 256 |
+
+The gate **passed**, with no wrong, forced or unlabelled pair, and no case is newly missed. The 17 new pairs are all
+labelled extractions: `first → doubled` in `extraction-many-sources-1` to `-3` in all four corpora (12), commons-lang
+`4161d60` `CharSetUtils.isEmpty` from `containsAny`, `count`, `delete` and `squeeze` (4), and commons-lang `e8bafeb`
+`FastDateParser.checkLength` from `parse` (1). Extraction recall is now 0.824 in Java, 0.938 in Kotlin and 1.000 in
+Scala 2 and Scala 3. Usage precision and recall are unchanged (66 matched, 1 missed).
+
+The 13 relationships still missed, all held-out real commits:
+
+- **Extractions of small predicates (7):** commons-lang `e66ad3d` `CharRange.isStartMin` and `isEndMax` (6 links) and
+  Exposed `deb65b9` `H2.isH2Oracle`.
+- **Renames (3):** moshi `5a46cd6` `skipTo → skipToEndOfBlockComment`, okhttp `7ef4fb4`
+  `httpWithExcessiveHeaders → httpWithExcessiveStatusLine` (the old name is matched with itself), Exposed `865749f`
+  `LOW_RAITING_THRESHOLD → LOW_RATING_THRESHOLD` (also the one missed usage).
+- **Moves (3):** cats `9bd7dce` `parReplicateA`, cats `e74b301` `ApplyOps` and `IfApplyOps`; they are matched, but the
+  move is not reported.
+
+**Two-sided corpus.** `CorpusValidationTest` ran the [2026-11-04 two-sided list](#2026-11-04-two-sided-corpus-rerun),
+rebuilt with every clone at its recorded pin, on engine 10 and engine 11. Both have 1970 files from 386 commits, 1968
+`ANALYZED` and 2 `PARTIAL`, no fallback, and no `hidden` or `empty` flag. Engine 11 flags 127 files against 126; every
+other flag count is the same. Two files gain a link, both right:
+
+- **okhttp `bab5c3b2e2` `ConnectPlan.kt`: right.** `nextCompatibleConnectionSpec(List<ConnectionSpec>,SSLSocket)` is
+  linked to `nextConnectionSpec`: the old body's loop over the connection specs is the new private helper, and
+  `nextConnectionSpec` was rewritten to recover from an `SSLException`.
+- **zio `da2aab5c5c` `Annotations.scala`: right.** The former near miss `make ← live` (covered 0.85, removed 0.64) is
+  now linked: `live` built `Test(Ref.unsafe.make(TestAnnotationMap.empty))` inline, and the new `unsafe.make()` holds
+  that code while `live` calls it.
+
+The near misses keep their links unchanged; the removed share of five near misses rises to 1.00 (Exposed
+`EntityCache.kt`, guava `Maps.java` in both copies, moshi `-MoshiKotlinTypesExtensions.kt`, zio `test/package.scala`),
+and moshi `bf16751535` `AdapterGenerator.kt` gains the near miss `generateToJson ← generateToJsonFun` (covered 0.57),
+below `MIN_SHARE`.
+
+**Checks.** `./gradlew clean buildPlugin check` passes (784 tests). `./gradlew verifyPlugin` is compatible on
+`IC-251.26927.53` and `IU-263.7307.200`, with the same four experimental API usages as before and no internal or
+deprecated usage.
+
 ## 2026-11-09: Changes tree manual checks on IC 2025.1.3 and IU 2026.3 (#108, #110, #111)
 
 This run checked #108, #110 and #111 in running IDEs on `origin/main` at `fa9016e`, plugin version 0.2.0. It

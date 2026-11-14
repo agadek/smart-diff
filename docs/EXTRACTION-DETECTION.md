@@ -70,6 +70,8 @@ Code is compared as sequences of significant tokens: `(type, text)` pairs of the
 
 For each source, align its old and new significant tokens (Myers' diff on the token keys) and mark the old tokens the alignment deletes. These are the source's **removed tokens**. Code that the new version still has is therefore never a candidate, so copying code into a helper while keeping it in place is not an extraction, and nor is code taken from an unchanged declaration.
 
+An alignment also keeps old tokens that happen to match a few scattered new tokens. The call that replaces extracted code often repeats some of its tokens, for example `return doubled(x) + 1;` in place of a block that declared `doubled` and returned `doubled + 1`, so the alignment keeps `doubled`, `x`, `+`, `1` and `;` and the removed share falls under `MIN_REMOVED`. Only kept code is meant to block a link, and kept code survives as runs. So after the alignment, a kept old token stays kept only when it lies in a run of at least `MIN_TILE` consecutive old tokens aligned to consecutive new tokens; the tokens of shorter kept runs count as removed too ([declarations/05](specs/declarations/05-extraction-detection.md) R17). `MIN_TILE` is the shortest tile, so code the new version still has as a tile-sized run is never counted as removed. The rule applies to extraction sources only; inlining keeps its added tokens as the alignment gives them.
+
 ### 4.4 Matching a target to a source
 
 For each target and each source:

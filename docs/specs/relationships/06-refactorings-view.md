@@ -26,6 +26,7 @@ Status: implemented, 2026-11-09
 - **R16** A file with no relationships shows `No refactorings found` under `Refactorings` and then `Other changes`.
 - **R17** The [summary line](../../GLOSSARY.md#summary-line) is the same in both views.
 - **R18** The [outline toggle](../../GLOSSARY.md#outline-toggle) and the native diff work as before in both views.
+- **R19** The [relationship kind filter](../../GLOSSARY.md#relationship-kind-filter)'s toolbar button has its own icon, so it is never mistaken for the [change type filter](../../GLOSSARY.md#change-type-filter)'s button.
 
 ## Out of scope
 

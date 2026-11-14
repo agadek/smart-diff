@@ -1,0 +1,3 @@
+<!-- Loaded when the Rust plugin is present. The Rust declaration provider will register here. -->
+<idea-plugin>
+</idea-plugin>
