@@ -262,6 +262,7 @@ enum class WhitespacePolicy {
     INSIGNIFICANT,           // Java: drop whitespace tokens
     LINE_BREAKS_SIGNIFICANT, // Kotlin: keep "has line break" vs "no line break"
     INDENTATION_SIGNIFICANT, // Scala 3: keep line breaks and the indentation after them
+    SEPARATION_SIGNIFICANT,  // Shell: keep "has line break" vs "has whitespace" vs "no whitespace"
     SIGNIFICANT,             // languages without a tested rule, such as YAML: never claim formatting-only
 }
 ```
@@ -377,6 +378,10 @@ Implemented, 2026-11-13 ([languages/07](specs/languages/07-json.md)). The PSI ma
 
 Implemented, 2026-11-14 ([languages/10](specs/languages/10-yaml.md)). The PSI mapping, document naming, the sequence identity rule, anchors and aliases, whitespace policy, packaging and tests are in its [details file](specs/languages/10-yaml-details.md).
 
+### 6.14 Shell provider
+
+Implemented ([languages/09](specs/languages/09-shell.md)). The provider uses the bundled Shell Script plugin's PSI (`com.jetbrains.sh`): `ShFile` and `ShFunctionDefinition` function definitions are `FUNCTION` declarations with empty signatures, nested functions become children of their enclosing function, and top-level functions inside compound commands stay top level. The tree uses `SEPARATION_SIGNIFICANT`, so the presence of whitespace between tokens and line breaks are significant while the amount of space and indentation are formatting-only; a line-break change, joining commands with `;`, removing or adding separation between tokens, and content inside strings or here-documents remain changes. No shell reference resolver is registered. See the [details file](specs/languages/09-shell-details.md).
+
 ## 7. Declaration engine: matching
 
 Inputs: the old and new `DeclarationTree`. Matching is global over all declarations in the file, so a declaration can be matched across containers. Each rule runs over the declarations still unmatched after the previous rule. Within a rule, declarations are processed in source order of the old side, which makes the result deterministic.
@@ -422,6 +427,7 @@ The steps are applied in order, and the first that applies decides the content:
 4. Normalize both sequences with the tree's whitespace policy, then compare `(type, text)` pairs:
    - `INSIGNIFICANT`: drop `WHITESPACE` tokens.
    - `LINE_BREAKS_SIGNIFICANT`: replace each `WHITESPACE` token with `⏎` if it contains a line break, otherwise drop it.
+   - `SEPARATION_SIGNIFICANT`: replace each `WHITESPACE` token with `⏎` if it contains a line break, otherwise with a single space, so the presence of a separator is compared but not its amount or the indentation.
    - `INDENTATION_SIGNIFICANT`: replace each `WHITESPACE` token that contains a line break with `⏎` followed by the indentation after its last line break, as written; drop the others. Indentation is compared as written, not relative to the container, so re-indenting a whole block, or a tab for spaces, is `CHANGED`; that is strict but never hides a change of structure. Blank lines and spaces within a line still count as formatting.
    - `SIGNIFICANT`: no normalization (step 4 can never produce formatting-only).
    Equal → `FORMATTING_ONLY`; otherwise → `CHANGED`.

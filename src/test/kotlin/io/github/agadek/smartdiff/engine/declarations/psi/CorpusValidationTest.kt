@@ -69,13 +69,13 @@ class CorpusValidationTest : BasePlatformTestCase() {
         for (line in File(list).readLines().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("#") }) {
             val words = line.split(Regex("\\s+"))
             val repository = File(words.first())
-            val commits = git(repository, listOf("rev-list") + words.drop(1) + listOf("--", "*.java", "*.kt", "*.scala", "*.json")).lines().filter { it.isNotBlank() }
+            val commits = git(repository, listOf("rev-list") + words.drop(1) + listOf("--", "*.java", "*.kt", "*.scala", "*.json", "*.sh")).lines().filter { it.isNotBlank() }
             for ((index, commit) in commits.withIndex()) {
                 println("VALIDATION ${repository.name} commit ${index + 1} of ${commits.size}: ${commit.take(10)}")
                 val parent = git(repository, listOf("rev-parse", "--verify", "--quiet", "$commit^"), allowFailure = true).trim()
                 if (parent.isEmpty()) continue
                 // --no-renames: a rename is a delete plus an add, so it is skipped here instead of vanishing from the run.
-                val paths = git(repository, listOf("diff", "--no-renames", "--name-only", "--diff-filter=M", parent, commit, "--", "*.java", "*.kt", "*.scala", "*.json", "*.yaml", "*.yml"))
+                val paths = git(repository, listOf("diff", "--no-renames", "--name-only", "--diff-filter=M", parent, commit, "--", "*.java", "*.kt", "*.scala", "*.json", "*.sh", "*.yaml", "*.yml"))
                     .lines().filter { it.isNotBlank() }
                 for (path in paths) {
                     val old = git(repository, listOf("show", "$parent:$path")).replace("\r\n", "\n")
@@ -85,6 +85,7 @@ class CorpusValidationTest : BasePlatformTestCase() {
                         path.endsWith(".kt") -> "kotlin"
                         path.endsWith(".scala") -> "Scala"
                         path.endsWith(".json") -> "JSON"
+                        path.endsWith(".sh") -> "Shell Script"
                         path.endsWith(".yaml") || path.endsWith(".yml") -> "yaml"
                         else -> "JAVA"
                     }

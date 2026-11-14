@@ -69,6 +69,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [05 Rust](languages/05-rust.md) | proposed, 2026-11-13 |
 | [06 Structure-view fallback](languages/06-structure-view-fallback.md) | implemented, 2026-11-13 |
 | [07 JSON](languages/07-json.md) | implemented, 2026-11-13 |
+| [09 Shell](languages/09-shell.md) | implemented, 2026-11-14 |
 | [10 YAML](languages/10-yaml.md) | implemented, 2026-11-14 |
 
 ## Outline

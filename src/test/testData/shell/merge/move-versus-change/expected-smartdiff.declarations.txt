@@ -1,0 +1,5 @@
+left: ANALYZED  right: ANALYZED
+File region  LEFT_ONLY  left: changed  base 3-11  left 6-10  right -
+function container()  LEFT_ONLY  left: changed  base 1-3  left 1-6  right 1-3
+function worker()  LEFT_ONLY  left: moved, formatting-only  base 5-7  left 3-5  right 5-7
+function other()  RIGHT_ONLY  right: changed  base 9-11  left 8-10  right 9-11

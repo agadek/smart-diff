@@ -124,7 +124,7 @@ Each phase is one pull request, or a spec pull request and a code pull request, 
 | B2 | Go provider | B0 | Not started |
 | M1 | Markdown provider | D0 (the `SECTION` kind) | Not started |
 | M2 | Groovy provider and build-script sections, Groovy and Kotlin | Nothing | Not started |
-| M3 | Shell provider | Nothing | Not started |
+| M3 | Shell provider | Nothing | Implemented 2026-11-14 |
 | B3 | CSS, SCSS and Less provider | B1 | Not started |
 | B4 | PHP provider | B0 | Not started |
 | B5 | Ruby provider | B0 | Not started |

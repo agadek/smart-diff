@@ -84,6 +84,22 @@ class StructureViewDeclarationProviderTest : BasePlatformTestCase() {
         assertNull("a Java result is not marked as structure view", result.analysisNote)
     }
 
+    // languages/06-structure-view-fallback R2; languages/09-shell R1
+    fun `test R2 a shell file goes to the shell provider not the fallback`() {
+        val fallback = fallbackProvider()
+        assertFalse("the fallback never claims Shell Script", fallback.supports("Shell Script"))
+        val provider = DeclarationProvider.EP_NAME.extensionList.first { it.supports("Shell Script") }
+        assertTrue("dedicated shell provider is chosen: ${provider.javaClass.name}", provider is io.github.agadek.smartdiff.engine.declarations.psi.shell.ShellDeclarationProvider)
+        assertEquals("a dedicated provider has no analysis note", null, provider.analysisNote)
+
+        val result = DeclarationEngine(project).compare(
+            ComparisonRequest("foo() { echo hi; }\n", "foo() { echo bye; }\n", "Shell Script", "a.sh"),
+            Cancellation.NONE,
+        )
+        assertEquals(Status.ANALYZED, result.status)
+        assertNull("a shell result is not marked as structure view", result.analysisNote)
+    }
+
     // languages/06-structure-view-fallback R1, R10
     fun `test R1 R10 the setting is on by default and turning it off makes fallback languages unsupported`() {
         assertTrue("fallback is on by default", settings.useStructureViewFallback)
