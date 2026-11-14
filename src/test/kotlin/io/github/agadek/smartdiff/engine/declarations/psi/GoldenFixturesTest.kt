@@ -34,6 +34,9 @@ class GoldenFixturesTest : BasePlatformTestCase() {
     // relationships/02 R9, R10: the expected file is the outline before the relationship model.
     fun `test Scala 3 fixtures`() = checkFixtures("scala3", "Scala", "scala")
 
+    // languages/04-python R1-R17, R21 (P1): provider and golden fixtures.
+    fun `test Python fixtures`() = checkFixtures("python", "Python", "py")
+
     // languages/07-json R14
     fun `test JSON fixtures`() = checkFixtures("json", "JSON", "json")
 

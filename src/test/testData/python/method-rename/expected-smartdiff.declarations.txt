@@ -1,0 +1,3 @@
+status: ANALYZED
+class C  old 1-3  new 1-3
+  function new(self)  rename candidate from function old(self)  old 2-3  new 2-3

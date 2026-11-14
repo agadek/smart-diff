@@ -1,0 +1,2 @@
+status: ANALYZED
+type alias A  changed  old 1  new 1

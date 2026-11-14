@@ -1,0 +1,2 @@
+status: ANALYZED
+function b()  removed  old 5-6
