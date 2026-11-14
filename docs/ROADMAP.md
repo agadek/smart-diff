@@ -163,7 +163,7 @@ Proposed 2026-11-13: the [format coverage plan](FORMAT-COVERAGE.md) covers every
 
 Proposed 2026-11-13 ([languages/04](specs/languages/04-python.md), [details](specs/languages/04-python-details.md)). A Python provider for the declaration engine, using the Python plugin's PSI (`PythonCore`), bundled in PyCharm and installed from the Marketplace in IntelliJ IDEA. Like Scala, it needs no change to the engine interface, the matcher or the UI.
 
-- **Packaging:** an optional descriptor, `META-INF/smartdiff-python.xml`, on `com.intellij.modules.python`; the build pins a Marketplace `PythonCore` for IntelliJ IDEA Community 2025.1.3, as it does the Scala plugin.
+- **Packaging:** an optional descriptor, `META-INF/smartdiff-python.xml`, on `PythonCore`; the build pins a Marketplace `PythonCore` for IntelliJ IDEA Community 2025.1.3, as it does the Scala plugin.
 - **Declaration kinds:** classes, functions and methods with their decorators, and names assigned at module level or in a class body (a new `VARIABLE` kind), including definitions under `if` or `try` at those levels; nothing inside a function body.
 - **Signatures:** parameter names with `*`, `**` and `/`, since Python calls by keyword and most parameters have no type.
 - **Whitespace:** the Scala 3 indentation-significant policy, the dedicated rule [ADR 0003](adr/0003-conservative-classification.md) asked for, so re-indenting is never formatting-only.
