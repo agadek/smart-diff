@@ -16,6 +16,7 @@
 
 - The structural outline follows the caret: moving it into another changed declaration on either side selects and frames that row without scrolling the editors, and a selected row no longer snaps the editors back to it when the outline's rows are rebuilt.
 - Extraction detection links a helper to every method it was taken from. When the call that replaced the code repeated a few of its tokens, such as `return doubled(x) + 1;`, that method was not linked; now only runs of at least 5 tokens the method still has keep it from being a source.
+- The outline panel keeps a minimum width of 200 px, scaled with the IDE font size, so dragging the splitter no longer squeezes the summary line and rows into a narrow column. A remembered width below the minimum opens the panel at the minimum, and the merge outline keeps the same floor.
 - The refactorings view attaches a low-confidence `possible …` link only to declarations on its own side, so equal old and new offsets no longer add the link to an unrelated row. The relationship-kind filter is hidden in the container tree, where it has no effect.
 - Scala 2 rename-only declarations are compared with the line-break whitespace policy the Scala 2 parser used, not the stricter Scala 3 indentation policy, and the shared rename tokenizer recognizes Kotlin and Scala backtick identifiers, Scala symbols and chars, and nested comments.
 

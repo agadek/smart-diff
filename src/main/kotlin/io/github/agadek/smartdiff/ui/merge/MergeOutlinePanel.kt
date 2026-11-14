@@ -24,8 +24,10 @@ import io.github.agadek.smartdiff.engine.registry.EngineSelection
 import io.github.agadek.smartdiff.ui.ChangeType
 import io.github.agadek.smartdiff.ui.SmartDiffSettings
 import io.github.agadek.smartdiff.ui.Tag
+import io.github.agadek.smartdiff.ui.outlineMinimumWidth
 import java.awt.BorderLayout
 import java.awt.CardLayout
+import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
@@ -248,6 +250,12 @@ class MergeOutlinePanel internal constructor(private val controller: MergeOutlin
         override fun setSelected(e: AnActionEvent, state: Boolean) = controller.setHideBothSides(state)
 
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
+    }
+
+    /** The merge outline keeps the two-sided outline's minimum width, so its rows stay readable (outline/09 R4). */
+    override fun getMinimumSize(): Dimension {
+        val computed = super.getMinimumSize()
+        return Dimension(maxOf(computed.width, outlineMinimumWidth()), computed.height)
     }
 
     private class Renderer : ColoredTreeCellRenderer() {
