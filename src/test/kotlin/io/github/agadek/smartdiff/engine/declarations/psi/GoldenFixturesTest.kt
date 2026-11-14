@@ -7,6 +7,7 @@ import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.contract.NothingHidden
 import io.github.agadek.smartdiff.engine.declarations.psi.json.JsonDeclarationProvider
+import io.github.agadek.smartdiff.engine.declarations.psi.yaml.YamlDeclarationProvider
 import java.io.File
 
 /**
@@ -71,7 +72,7 @@ class GoldenFixturesTest : BasePlatformTestCase() {
                 DeclarationProvider.EP_NAME,
                 DeclarationProvider.EP_NAME.extensionList.filterNot {
                     (maskDedicatedJsonProvider && it is JsonDeclarationProvider) ||
-                        (maskDedicatedYamlProvider && it.javaClass.name.endsWith("YamlDeclarationProvider"))
+                        (maskDedicatedYamlProvider && it is YamlDeclarationProvider)
                 },
                 testRootDisposable,
             )

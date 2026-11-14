@@ -82,12 +82,23 @@ class YamlDeclarationProviderTest : ProviderTestCase() {
     }
 
     // languages/10-yaml R7
-    fun `test unnamed single document is named document 1`() {
-        val text = "a: 1\n"
-        val one = build("yaml", text, "config.yaml")
-        assertEquals(listOf("a"), one.topLevel.map { it.name })
+    fun `test unnamed documents in a multi-document file are named positionally`() {
         val multi = build("yaml", "---\na: 1\n---\nb: 2\n", "config.yaml")
         assertEquals(listOf("document 1", "document 2"), multi.topLevel.map { it.name })
+    }
+
+    // languages/10-yaml R6, R7
+    fun `test first key range and own tokens exclude document marker in a multi-document file`() {
+        val text = "---\na: 1\n---\nb: 2\n"
+        val tree = build("yaml", text, "config.yaml")
+        val doc1 = tree.topLevel[0]
+        assertEquals("document 1", doc1.name)
+        val keyA = doc1.children.single()
+        assertEquals("a", keyA.name)
+        assertEquals("a: 1", text.substring(keyA.range.start, keyA.range.end))
+        assertFalse("first key range must not include ---", text.substring(keyA.range.start, keyA.range.end).contains("---"))
+        val own = keyA.ownTokens.joinToString("") { it.text }
+        assertFalse("first key own tokens must not include ---", own.contains("---"))
     }
 
     // languages/10-yaml R8

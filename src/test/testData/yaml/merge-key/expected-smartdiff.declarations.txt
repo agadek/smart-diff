@@ -1,3 +1,4 @@
 status: ANALYZED
-key item  old 3-5  new 3-5
-  key b  changed  old 5  new 5
+key item  old 5-7  new 5-7
+  key <<  changed  old 6  new 6
+  key b  changed  old 7  new 7

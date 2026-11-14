@@ -65,53 +65,57 @@ class YamlDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.SIGNIFIC
 
     override fun build(file: PsiFile, cancellation: Cancellation): DeclarationTree {
         val text = file.viewProvider.contents
+        activeIdentifyingKeys.get().clear()
+        try {
+            fun node(element: PsiElement): Node? {
+                cancellation.checkCanceled()
+                val info = describe(element) ?: return null
+                val range = info.range ?: element.textRange.let { TextRange(it.startOffset, it.endOffset) }
+                if (range.length == 0) return null
+                return Node(info, range, info.members.mapNotNull(::node))
+            }
+            val topLevel = topLevel(file).mapNotNull(::node)
 
-        fun node(element: PsiElement): Node? {
-            cancellation.checkCanceled()
-            val info = describe(element) ?: return null
-            val range = info.range ?: element.textRange.let { TextRange(it.startOffset, it.endOffset) }
-            if (range.length == 0) return null
-            return Node(info, range, info.members.mapNotNull(::node))
-        }
-        val topLevel = topLevel(file).mapNotNull(::node)
+            val fileRegionError = PsiTreeParts.markParseErrors(file, topLevel, cancellation, ::isParseError)
 
-        val fileRegionError = PsiTreeParts.markParseErrors(file, topLevel, cancellation, ::isParseError)
+            val definition = LanguageParserDefinitions.INSTANCE.forLanguage(file.language)
+                ?: error("no parser definition for ${file.language.id}")
+            val tokens = LexedTokens.lex(definition.createLexer(file.project), definition, text, cancellation, ::tokenKind)
+            assignLeading(topLevel, tokens, text, 0)
+            assignLayout(topLevel, tokens, text.length)
 
-        val definition = LanguageParserDefinitions.INSTANCE.forLanguage(file.language)
-            ?: error("no parser definition for ${file.language.id}")
-        val tokens = LexedTokens.lex(definition.createLexer(file.project), definition, text, cancellation, ::tokenKind)
-        PsiTreeParts.assignLeading(topLevel, tokens, isLayout = ::isLayout)
-        assignLayout(topLevel, tokens, text.length)
-
-        fun declaration(node: Node): Declaration {
-            cancellation.checkCanceled()
-            val leading = node.leading?.let { tokens.own(it, emptyList()) }.orEmpty()
-            val leadingStarts = node.leading?.let { tokens.ownStarts(it, emptyList()) }.orEmpty()
-            val excluded = node.children.map { it.extent }
-            return Declaration(
-                kind = node.info.kind,
-                name = node.info.name,
-                signature = node.info.signature,
-                range = node.range,
-                children = node.children.map(::declaration),
-                ownTokens = leading + tokens.own(node.range, excluded),
-                hasParseError = node.parseError,
-                leadingWhitespace = node.leading,
-                displaySignature = node.info.displaySignature,
-                receiver = node.info.receiver,
-                ownTokenStarts = leadingStarts + tokens.ownStarts(node.range, excluded),
-                body = node.info.body?.let(::body),
-                nameRange = node.info.nameRange,
-                layout = node.layout,
+            fun declaration(node: Node): Declaration {
+                cancellation.checkCanceled()
+                val leading = node.leading?.let { tokens.own(it, emptyList()) }.orEmpty()
+                val leadingStarts = node.leading?.let { tokens.ownStarts(it, emptyList()) }.orEmpty()
+                val excluded = node.children.map { it.extent }
+                return Declaration(
+                    kind = node.info.kind,
+                    name = node.info.name,
+                    signature = node.info.signature,
+                    range = node.range,
+                    children = node.children.map(::declaration),
+                    ownTokens = leading + tokens.own(node.range, excluded),
+                    hasParseError = node.parseError,
+                    leadingWhitespace = node.leading,
+                    displaySignature = node.info.displaySignature,
+                    receiver = node.info.receiver,
+                    ownTokenStarts = leadingStarts + tokens.ownStarts(node.range, excluded),
+                    body = null,
+                    nameRange = node.info.nameRange,
+                    layout = node.layout,
+                )
+            }
+            val whole = TextRange(0, text.length)
+            val fileRegion = FileRegion(
+                ranges = PsiTreeParts.gaps(whole, topLevel.map { it.extent }),
+                tokens = tokens.own(whole, topLevel.map { it.extent }),
+                hasParseError = fileRegionError,
             )
+            return DeclarationTree(topLevel.map(::declaration), fileRegion, whitespacePolicy(file))
+        } finally {
+            activeIdentifyingKeys.get().clear()
         }
-        val whole = TextRange(0, text.length)
-        val fileRegion = FileRegion(
-            ranges = PsiTreeParts.gaps(whole, topLevel.map { it.extent }),
-            tokens = tokens.own(whole, topLevel.map { it.extent }),
-            hasParseError = fileRegionError,
-        )
-        return DeclarationTree(topLevel.map(::declaration), fileRegion, whitespacePolicy(file))
     }
 
     private fun describeDocument(document: YAMLDocument): DeclarationInfo {
@@ -143,7 +147,7 @@ class YamlDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.SIGNIFIC
     private fun describeIdentifiedItem(sequenceItem: YAMLSequenceItem): DeclarationInfo? {
         val item = sequenceItem.value as? YAMLMapping ?: return null
         val sequence = sequenceItem.parent as? YAMLSequence ?: return null
-        val (key, _) = identifyingKey(sequence) ?: return null
+        val key = activeIdentifyingKeys.get()[sequence] ?: identifyingKey(sequence)?.first ?: return null
         val name = itemName(item, key) ?: return null
         val identifyingValue = item.getKeyValueByKey(key)?.value
         return DeclarationInfo(
@@ -163,7 +167,8 @@ class YamlDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.SIGNIFIC
 
     /** The identified sequence items of [sequence], or null when the sequence is content. */
     private fun identifiedItems(sequence: YAMLSequence): List<PsiElement>? {
-        identifyingKey(sequence) ?: return null
+        val (key, _) = identifyingKey(sequence) ?: return null
+        activeIdentifyingKeys.get()[sequence] = key
         return sequence.items.filter { it.value is YAMLMapping }
     }
 
@@ -231,6 +236,36 @@ class YamlDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.SIGNIFIC
         return "document ${index + 1}"
     }
 
+    private fun assignLeading(
+        roots: List<Node>,
+        tokens: LexedTokens,
+        text: CharSequence,
+        containerStart: Int,
+    ) {
+        var previousEnd = containerStart
+        for (node in roots) {
+            val start = tokens.layoutStart(node.range.start, notBefore = previousEnd, ::isLayout)
+            if (start < node.range.start) node.leading = TextRange(start, node.range.start)
+            val childContainerStart = if (node.info.kind == DeclarationKind.SECTION) {
+                documentContentStart(text, node.range.start)
+            } else {
+                node.range.start
+            }
+            assignLeading(node.children, tokens, text, childContainerStart)
+            previousEnd = node.range.end
+        }
+    }
+
+    /** Start of a document's content, after a leading `---` marker line when present. */
+    private fun documentContentStart(text: CharSequence, documentStart: Int): Int {
+        if (!text.startsWith("---", documentStart)) return documentStart
+        var i = documentStart + 3
+        while (i < text.length && text[i] != '\n' && text[i] != '\r') i++
+        if (i < text.length && text[i] == '\r') i++
+        if (i < text.length && text[i] == '\n') i++
+        return i
+    }
+
     private fun assignLayout(siblings: List<Node>, tokens: LexedTokens, containerEnd: Int) {
         for ((index, node) in siblings.withIndex()) {
             val limit = siblings.getOrNull(index + 1)?.range?.start ?: containerEnd
@@ -242,18 +277,6 @@ class YamlDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.SIGNIFIC
 
     private fun isLayout(token: Token): Boolean =
         token.kind == TokenKind.WHITESPACE || (token.text.isNotEmpty() && token.text.all(Char::isWhitespace))
-
-    /** The inside of a block's braces, or the whole of any other body. */
-    private fun body(element: PsiElement): TextRange {
-        val range = element.textRange
-        val first = element.firstChild
-        val last = element.lastChild
-        return if (first != null && last != null && first !== last && first.text == "{" && last.text == "}") {
-            TextRange(first.textRange.endOffset, last.textRange.startOffset)
-        } else {
-            TextRange(range.startOffset, range.endOffset)
-        }
-    }
 
     private class Node(
         val info: DeclarationInfo,
@@ -268,5 +291,6 @@ class YamlDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.SIGNIFIC
     private companion object {
         const val DEFAULT_NAME = "SmartDiff.yaml"
         val IDENTIFIERS = listOf("name", "id", "key")
+        private val activeIdentifyingKeys = ThreadLocal.withInitial { mutableMapOf<YAMLSequence, String>() }
     }
 }
