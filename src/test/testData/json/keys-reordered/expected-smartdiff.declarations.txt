@@ -1,0 +1,2 @@
+status: ANALYZED
+key c  moved  old 4  new 2

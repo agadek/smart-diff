@@ -1,0 +1,2 @@
+status: ANALYZED
+key ports  changed  old 2  new 2

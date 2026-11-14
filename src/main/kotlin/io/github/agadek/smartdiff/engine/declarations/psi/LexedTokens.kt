@@ -79,7 +79,13 @@ internal class LexedTokens private constructor(private val starts: IntArray, pri
     companion object {
         private const val CHECK_EVERY = 1024
 
-        fun lex(lexer: Lexer, definition: ParserDefinition, text: CharSequence, cancellation: Cancellation): LexedTokens {
+        fun lex(
+            lexer: Lexer,
+            definition: ParserDefinition,
+            text: CharSequence,
+            cancellation: Cancellation,
+            classify: (String, String, TokenKind) -> TokenKind = { _, _, kind -> kind },
+        ): LexedTokens {
             val whitespace = definition.whitespaceTokens
             val comments = definition.commentTokens
             val starts = mutableListOf<Int>()
@@ -93,8 +99,10 @@ internal class LexedTokens private constructor(private val starts: IntArray, pri
                     comments.contains(type) -> TokenKind.COMMENT
                     else -> TokenKind.OTHER
                 }
+                val typeName = type.toString()
+                val tokenText = text.subSequence(lexer.tokenStart, lexer.tokenEnd).toString()
                 starts += lexer.tokenStart
-                tokens += Token(type.toString(), text.subSequence(lexer.tokenStart, lexer.tokenEnd).toString(), kind)
+                tokens += Token(typeName, tokenText, classify(typeName, tokenText, kind))
                 lexer.advance()
             }
             return LexedTokens(starts.toIntArray(), tokens)

@@ -30,12 +30,16 @@ object ContentClassifier {
         policy: WhitespacePolicy,
         parseError: Boolean,
         signatureChanged: Boolean = false,
-    ): Content = when {
-        !signatureChanged && old.map { it.text } == new.map { it.text } -> Content.UNCHANGED
-        parseError -> Content.UNANALYZED
-        signatureChanged -> Content.CHANGED
-        normalize(old, policy) == normalize(new, policy) -> Content.FORMATTING_ONLY
-        else -> Content.CHANGED
+    ): Content {
+        val oldContent = old.filterNot { it.kind == TokenKind.SEPARATOR }
+        val newContent = new.filterNot { it.kind == TokenKind.SEPARATOR }
+        return when {
+            !signatureChanged && oldContent.map { it.text } == newContent.map { it.text } -> Content.UNCHANGED
+            parseError -> Content.UNANALYZED
+            signatureChanged -> Content.CHANGED
+            normalize(oldContent, policy) == normalize(newContent, policy) -> Content.FORMATTING_ONLY
+            else -> Content.CHANGED
+        }
     }
 
     /**
@@ -60,11 +64,13 @@ object ContentClassifier {
             run.setLength(0)
         }
         for (token in tokens) {
-            if (token.kind == TokenKind.WHITESPACE) {
-                run.append(token.text)
-            } else {
-                endRun()
-                normalized += token
+            when (token.kind) {
+                TokenKind.WHITESPACE -> run.append(token.text)
+                TokenKind.SEPARATOR -> Unit
+                else -> {
+                    endRun()
+                    normalized += token
+                }
             }
         }
         endRun()

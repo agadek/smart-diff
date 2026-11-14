@@ -87,7 +87,9 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
 
     /**
      * The file region as one node spanning all its ranges on each side; [ChangeNode.details] holds the separate ranges.
-     * Null when its tokens are identical. A side without file region gets an empty range at offset 0.
+     * Null when its tokens are identical. A region whose only difference is a separator, such as a JSON comma, stays as
+     * an unchanged node: it is not reported, and the nothing-hidden check covers the separator through its ranges. A
+     * side without file region gets an empty range at offset 0.
      */
     private fun fileRegion(old: DeclarationTree, new: DeclarationTree): ChangeNode? {
         val content = ContentClassifier.classify(
@@ -96,11 +98,17 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
             new.whitespacePolicy,
             parseError = old.fileRegion.hasParseError || new.fileRegion.hasParseError,
         )
-        if (content == Content.UNCHANGED) return null
+        val separatorOnly = content == Content.UNCHANGED
+        val separators = old.fileRegion.tokens.any { it.kind == TokenKind.SEPARATOR } ||
+            new.fileRegion.tokens.any { it.kind == TokenKind.SEPARATOR }
+        if (separatorOnly && !separators && old.fileRegion.tokens == new.fileRegion.tokens &&
+            old.fileRegion.ranges == new.fileRegion.ranges) return null
+        // An unchanged region exists only to cover its exact ranges for the nothing-hidden check, so its span is the
+        // first range, not the whole region; a reported region keeps its span for the outline.
         return ChangeNode(
             subject = Subject.Region(FILE_REGION),
-            oldRange = span(old.fileRegion),
-            newRange = span(new.fileRegion),
+            oldRange = if (separatorOnly) old.fileRegion.ranges.firstOrNull() ?: TextRange(0, 0) else span(old.fileRegion),
+            newRange = if (separatorOnly) new.fileRegion.ranges.firstOrNull() ?: TextRange(0, 0) else span(new.fileRegion),
             presence = Presence.MATCHED,
             content = content,
             details = old.fileRegion.ranges.map { RangePair(it, null) } + new.fileRegion.ranges.map { RangePair(null, it) },
@@ -337,7 +345,7 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
         private fun Evidence.Content.share(): Double = if (total == 0) 0.0 else shared.toDouble() / total
 
         private fun content(match: Match): Content = contents.getOrPut(match) {
-            val oldTokens = renamed(match.old.ownTokens, match.old.name, match.new.name)
+            val oldTokens = renamed(match)
             val newTokens = match.new.ownTokens
             val policy = new.whitespacePolicy
             val parseError = match.old.hasParseError || match.new.hasParseError
@@ -376,12 +384,42 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
             match.old.signature != match.new.signature || match.old.kind != match.new.kind
 
         /**
-         * The old side's [tokens] with the old [from] name written as the new [to] name, so a rename (or a constructor
-         * that follows its class's rename) is not a content change by itself; the rename has its own label.
+         * The old side with its name written as the new name, so a rename (or a constructor that follows its class's
+         * rename) is not a content change by itself; the rename has its own label. A key's name tokens differ from its
+         * name, such as a quoted JSON key, so its [Declaration.nameRange] finds them.
          */
+        private fun renamed(match: Match): List<Token> {
+            val oldName = match.old.nameRange
+            val newName = match.new.nameRange
+            if (oldName != null && newName != null) {
+                val replacement = match.new.ownTokens.zip(match.new.ownTokenStarts)
+                    .filter { (_, start) -> start >= newName.start && start < newName.end }
+                    .joinToString("") { (token, _) -> token.text }
+                if (replacement.isNotEmpty()) {
+                    return match.old.ownTokens.mapIndexed { index, token ->
+                        val start = match.old.ownTokenStarts.getOrNull(index)
+                        if (start != null && start >= oldName.start && start < oldName.end) token.copy(text = replacement) else token
+                    }
+                }
+            }
+            return renamed(match.old.ownTokens, match.old.name, match.new.name)
+        }
+
+        /** The old side's [tokens] with the old [from] name written as the new [to] name. */
         private fun renamed(tokens: List<Token>, from: String, to: String): List<Token> =
             if (from == to || from.isEmpty()) tokens
             else tokens.map { if (it.kind == TokenKind.OTHER && it.text == from) it.copy(text = to) else it }
+
+        /** The ranges of [declaration]'s separator tokens, on its own side, or an empty list. */
+        private fun separatorDetails(declaration: Declaration?, onOldSide: Boolean): List<RangePair> {
+            if (declaration == null) return emptyList()
+            return declaration.ownTokens.zip(declaration.ownTokenStarts)
+                .filter { (token, _) -> token.kind == TokenKind.SEPARATOR }
+                .map { (token, start) ->
+                    val range = TextRange(start, start + token.text.length)
+                    if (onOldSide) RangePair(range, null) else RangePair(null, range)
+                }
+        }
 
         private fun uncertain(uncertain: Uncertain, onOldSide: Boolean, children: List<ChangeNode>): ChangeNode {
             val range = uncertain.declaration.range
@@ -430,18 +468,16 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
             val oldLeading = oldDeclaration?.leadingWhitespace
             val newLeading = newDeclaration?.leadingWhitespace
             val keepLeading = node.isChangedItself || new.whitespacePolicy == WhitespacePolicy.SIGNIFICANT
-            val leading = if (keepLeading && (oldLeading != null || newLeading != null)) {
-                listOf(RangePair(oldLeading, newLeading))
-            } else {
-                emptyList()
-            }
+            val details = mutableListOf<RangePair>()
+            if (keepLeading && (oldLeading != null || newLeading != null)) details += RangePair(oldLeading, newLeading)
+            // Separators between children, such as JSON commas, stay in the container's own tokens and cover source for
+            // the nothing-hidden check without making the container changed (§3.1 rule 6).
+            details += separatorDetails(oldDeclaration, onOldSide = true)
+            details += separatorDetails(newDeclaration, onOldSide = false)
             // The fallback provider's separator/line break after an item is covered like leading whitespace but was
             // never compared, so it can be listed for every node, changed or not (languages/06 R7).
-            val layout = listOfNotNull(
-                oldDeclaration?.layout?.let { RangePair(it, null) },
-                newDeclaration?.layout?.let { RangePair(null, it) },
-            )
-            val details = leading + layout
+            oldDeclaration?.layout?.let { details += RangePair(it, null) }
+            newDeclaration?.layout?.let { details += RangePair(null, it) }
             return if (details.isEmpty()) node else node.copy(details = details)
         }
 
