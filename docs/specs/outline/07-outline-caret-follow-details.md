@@ -15,14 +15,14 @@ closing the diff removes them. Only the caret of these two editors is followed; 
 
 ### From caret to row
 
-1. A caret event in the editor the user is in (the caret's editor has focus) restarts a `javax.swing.Timer` of 100 ms on
-   the EDT and remembers the side and offset (R5, R10). A caret event caused by the outline's own scrolling selection is
-   ignored and does not restart the timer (R10). The delay matches the Changes tree follower and the platform's
-   autoscroll-from-source delay.
+1. A caret event restarts a `javax.swing.Timer` of 100 ms on the EDT and remembers the side and offset (R5, R10). A
+   caret event caused by the outline's own scrolling selection is ignored and does not restart the timer (R10). The delay
+   matches the Changes tree follower and the platform's autoscroll-from-source delay.
 2. When the timer fires, following stops if the outline is hidden or minimised, its state is not `Shown` (which covers a
    running engine comparison), an edit's comparison is pending (the document debounce runs) (R8), the outline tree has
-   focus (R5), or the caret's editor does not have focus (R10). Following works while usages are being resolved, because
-   the documents have not changed.
+   focus (R5), or the caret's editor does not have focus (R10). Focus is checked when the timer fires, not when the caret
+   event arrives, so a click that moves the caret before focus settles is followed. Following works while usages are being
+   resolved, because the documents have not changed.
 3. It walks the rows the tree shows, depth first in tree order, and keeps every row that is not a group and whose range
    on the caret's side contains the offset: `oldRange` for the old side, `newRange` for the new side (R2). A range
    contains the offset when `start <= offset < end`, or `offset == end` for the last character of the document.
@@ -47,8 +47,10 @@ and may start `FrameScrollSync`. A selection made by following, and a selection 
 - it never requests focus, and the outline's selection change does not move focus to the tree (R4).
 
 While `OutlineNavigator.select` scrolls the editors, the controller suppresses caret follow, so the caret move to the
-start of the framed row does not trigger following (R10). A test can override whether the caret's editor has focus, the
-same way as it can override whether the outline has focus.
+start of the framed row does not trigger following (R10). A scrolling selection by the outline supersedes a pending
+follow: it stops the caret-follow timer and forgets the recorded caret, so an older caret position is not followed after
+the selection. A test can override whether the caret's editor has focus, the same way as it can override whether the
+outline has focus.
 
 The panel carries the mode through a flag set around its own `tree.selectionPath` assignment, so a click or a keyboard
 selection in the tree still scrolls as [outline/01](01-structural-outline.md) R17 says.
@@ -81,7 +83,7 @@ still scrolls.
 | R7 | `OutlineCaretFollowTest` `test a row hidden by the filter is never selected` |
 | R8 | `OutlineCaretFollowTest` `test a stale result is not followed until the new result is shown`, `test the caret is followed while the reference pass runs`, `test a caret moved during Loading is followed once the result is shown` |
 | R9 | Plugin Verifier reports no new internal, experimental or deprecated usage |
-| R10 | `OutlineCaretFollowTest` `test a scrolling selection in the outline does not trigger following`, `test a caret move in an editor without focus does not change the selection` |
+| R10 | `OutlineCaretFollowTest` `test a scrolling selection in the outline does not trigger following`, `test a scrolling selection in the outline supersedes a recorded caret move`, `test a caret move in an editor without focus does not change the selection`, `test a caret move is followed after focus moves to the editor` |
 | outline/01 R27 | `OutlineIntegrationTest` `test a rebuild keeps the selected row without scrolling the editors` |
 
 Tests use `BasePlatformTestCase` with a real two-sided diff viewer, as `OutlineIntegrationTest` does, and drive the

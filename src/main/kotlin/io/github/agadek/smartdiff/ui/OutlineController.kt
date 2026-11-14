@@ -135,6 +135,9 @@ class OutlineController internal constructor(
     internal fun withSuppressedCaretFollow(action: () -> Unit) {
         suppressCaretFollow++
         try {
+            caretDebounce.stop()
+            caretFollowPending = false
+            lastCaretSide = null
             action()
         } finally {
             suppressCaretFollow--
@@ -431,10 +434,10 @@ class OutlineController internal constructor(
     private fun caretListener(side: CaretSide): CaretListener = object : CaretListener {
         override fun caretPositionChanged(event: CaretEvent) {
             if (disposed || suppressCaretFollow > 0) return
-            if (!isEditorFocused(side)) return
             lastCaretSide = side
             lastCaretOffset = event.caret?.offset ?: return
             // A comparison is pending or running; the shown result is stale or missing until the new one (R8).
+            // Focus is checked when the timer fires, so a click that moves the caret before focus settles is followed.
             if (debounce.isRunning || state !is OutlineState.Shown) caretFollowPending = true
             caretDebounce.restart()
         }

@@ -323,7 +323,18 @@ class OutlineCaretFollowTest : BasePlatformTestCase() {
         val outline = shown.awaitResult()
         outline.outlineFocusedOverride = false
 
-        // A click/keyboard selection in the tree scrolls the editors (outline/01 R17) and must not be followed.
+        select(outline, "method hello()  changed")
+        outline.fireCaretFollow()
+
+        assertEquals("method hello()  changed", outline.panel.selectedItem()?.label)
+    }
+
+    fun `test a scrolling selection in the outline supersedes a recorded caret move`() {
+        // outline/07 R10
+        val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+        val outline = shown.awaitResult()
+
+        moveCaret(outline, OutlineController.CaretSide.NEW, JAVA_NEW.indexOf("void bye()") + 2)
         select(outline, "method hello()  changed")
         outline.fireCaretFollow()
 
@@ -341,6 +352,20 @@ class OutlineCaretFollowTest : BasePlatformTestCase() {
         outline.fireCaretFollow()
 
         assertEquals("method hello()  changed", outline.panel.selectedItem()?.label)
+    }
+
+    fun `test a caret move is followed after focus moves to the editor`() {
+        // outline/07 R10
+        val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+        val outline = shown.awaitResult()
+        select(outline, "method hello()  changed")
+        outline.editorFocusedOverride = false
+
+        moveCaret(outline, OutlineController.CaretSide.NEW, JAVA_NEW.indexOf("void bye()") + 2)
+        outline.editorFocusedOverride = true
+        outline.fireCaretFollow()
+
+        assertEquals("method bye()  added", outline.panel.selectedItem()?.label)
     }
 
     fun `test a caret moved during Loading is followed once the result is shown`() {
