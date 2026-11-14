@@ -109,6 +109,9 @@ Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.
 | [Rename grouping across usages](#rename-grouping-across-usages) | [relationships/04](specs/relationships/04-rename-grouping.md) |
 | [Usability validation](#usability-validation) | [outline/06](specs/outline/06-usability-validation.md) |
 | [Summaries for added and deleted files](#summaries-for-added-and-deleted-files) | [changes-tree/06](specs/changes-tree/06-added-deleted-file-summaries.md) |
+| [Python](#python) | [languages/04](specs/languages/04-python.md) |
+| [Rust](#rust) | [languages/05](specs/languages/05-rust.md) |
+| [More languages](#more-languages) | [Format coverage plan](FORMAT-COVERAGE.md); feature specs with each phase |
 | Every other item below | Not specified yet |
 
 ### Multi-file summary in the Changes tree
@@ -142,9 +145,40 @@ It comes right after the [Changes tree level 2](#multi-file-summary-in-the-chang
 
 ### More languages
 
-Add declaration-engine providers for further languages the host IDE parses, after [Scala](#scala) (for example JavaScript/TypeScript in Ultimate/WebStorm, Python in PyCharm), each with the fixtures the [technical specification](TECHNICAL-SPECIFICATION.md#12-testing) requires.
+Add declaration-engine providers for further languages and file formats the host IDE parses, after [Scala](#scala), each with the fixtures the [technical specification](TECHNICAL-SPECIFICATION.md#12-testing) requires. [Python](#python) and [Rust](#rust) come first, because the 2026-11-13 review named the narrow language scope as the plugin's largest weakness.
 
 *(gap review)* SemanticDiff supports 14+ languages and formats. Structured data files (JSON, XML, YAML) are a cheap addition on top of the IDE's own parsers: keys and elements are the declarations, and reordered keys in formats where order carries no meaning can be reported as moved.
+
+Proposed 2026-11-13: the [format coverage plan](FORMAT-COVERAGE.md) covers every typical format of the JetBrains platform, grouped by what each needs:
+
+- **Free PSI on the current build target:** Groovy and Gradle build scripts, Kotlin build scripts, Markdown, shell scripts and HTML.
+- **Paid or closed plugins, tied to another IDE:** JavaScript and TypeScript, Go, CSS, PHP, Ruby and SQL, built with the pattern spike S8 chooses for Rust.
+- **Structured data:** JSON, YAML, TOML, properties and XML, with keys as declarations ([ADR 0009](adr/0009-structured-data-keys-are-declarations.md), proposed).
+- **Every other language:** a provider built on the IDE's structure view, used when no dedicated provider exists ([ADR 0010](adr/0010-structure-view-provider-for-languages-without-their-own.md), accepted).
+- **Not supported through PSI:** C# and the other Rider languages, C and C++ in CLion Nova, and Swift, whose language support is not in IntelliJ PSI; they wait for [Tree-sitter support](#tree-sitter-support).
+- **Phases:** G0 and G1 (structure view, spike S9), D0 to D4 (data formats, spike S10), B0 to B6 (paid IDEs), M1 to M3 (Markdown, Groovy and build scripts, shell). The structure-view track and the dedicated providers run in parallel (decided 2026-11-13), starting with G0, D0 and JSON and YAML, then TypeScript and Go ([plan §5](FORMAT-COVERAGE.md#5-phases)).
+- **G0/G1 implemented 2026-11-13:** the structure-view fallback provider covers languages with a structure view and no dedicated provider (on by default, with the `· structure view` summary note and an `ITEM` kind), as specified in [languages/06](specs/languages/06-structure-view-fallback.md). S9 passed on text-built JSON, YAML, Markdown, properties and Groovy in platform tests and golden fixtures; see [languages/06 details](specs/languages/06-structure-view-fallback-details.md) and [technical specification §13](TECHNICAL-SPECIFICATION.md#13-prototype-spikes).
+
+### Python
+
+Proposed 2026-11-13 ([languages/04](specs/languages/04-python.md), [details](specs/languages/04-python-details.md)). A Python provider for the declaration engine, using the Python plugin's PSI (`PythonCore`), bundled in PyCharm and installed from the Marketplace in IntelliJ IDEA. Like Scala, it needs no change to the engine interface, the matcher or the UI.
+
+- **Packaging:** an optional descriptor, `META-INF/smartdiff-python.xml`, on `com.intellij.modules.python`; the build pins a Marketplace `PythonCore` for IntelliJ IDEA Community 2025.1.3, as it does the Scala plugin.
+- **Declaration kinds:** classes, functions and methods with their decorators, and names assigned at module level or in a class body (a new `VARIABLE` kind), including definitions under `if` or `try` at those levels; nothing inside a function body.
+- **Signatures:** parameter names with `*`, `**` and `/`, since Python calls by keyword and most parameters have no type.
+- **Whitespace:** the Scala 3 indentation-significant policy, the dedicated rule [ADR 0003](adr/0003-conservative-classification.md) asked for, so re-indenting is never formatting-only.
+- **Verifier:** adds PyCharm 2025.1 and the latest PyCharm, in a verifier matrix with one job per IDE family.
+- **Phases:** P0 build, optional dependency and spike S7; P1 the provider and golden fixtures; P2 rename grouping, merge and benchmark fixtures and a corpus validation. They run in parallel with Rust (decided 2026-11-13).
+
+### Rust
+
+Proposed 2026-11-13 ([languages/05](specs/languages/05-rust.md), [details](specs/languages/05-rust-details.md)). A Rust provider for the declaration engine, using the JetBrains Rust plugin's PSI (`com.jetbrains.rust`), bundled in RustRover and a paid Marketplace plugin in IntelliJ IDEA Ultimate, CLion and PyCharm Professional.
+
+- **Packaging:** an optional descriptor, `META-INF/smartdiff-rust.xml`, on `com.jetbrains.rust`. The plugin cannot be installed in IntelliJ IDEA Community, the build target, so spike S8 chooses between a RustRover submodule and an Ultimate build target, recorded in an ADR.
+- **Declaration kinds:** functions, structs, unions, enums and variants, named fields, traits, `impl` blocks named `Trait for Type`, modules, type aliases, constants, statics and `macro_rules!` macros, with new kinds for the Rust ones.
+- **Whitespace:** insignificant, as in Java, except inside macro invocations, where spacing can reach the macro.
+- **Verifier:** adds RustRover 2025.1 and the latest RustRover; the Rust PSI is closed source and reviewed in the internal-API report, behind one adapter class.
+- **Phases:** R0 spike S8, build target and optional dependency; R1 the provider and golden fixtures; R2 merge and benchmark fixtures and a corpus validation. Rename grouping waits until S8 shows in-file references resolve without Cargo.
 
 ### Tree-sitter support
 

@@ -27,8 +27,20 @@ dependencies {
         intellijIdeaCommunity(providers.gradleProperty("platformVersion"))
         bundledPlugin("com.intellij.java")
         bundledPlugin("org.jetbrains.kotlin")
-        // Not bundled with the IDE: a Marketplace release, pinned in gradle.properties.
+        // PythonCore's descriptor requires these bundled language plugins; a test application loads only the plugins
+        // and modules it declares, so without them PythonCore is rejected as an unmet dependency in tests.
+        bundledPlugin("com.intellij.modules.json")
+        bundledPlugin("org.toml.lang")
+        // Not bundled with the IDE: Marketplace releases, pinned in gradle.properties.
         plugin("org.intellij.scala", providers.gradleProperty("scalaPluginVersion").get())
+        plugin("PythonCore", providers.gradleProperty("pythonPluginVersion").get())
+        pluginModule(implementation(project(":rust")))
+        // S9 spike and structure-view fallback tests: bundled with IntelliJ IDEA, test-only (languages/06); JSON is already
+        // on the classpath above.
+        testBundledPlugin("org.jetbrains.plugins.yaml")
+        testBundledPlugin("org.intellij.plugins.markdown")
+        testBundledPlugin("com.intellij.properties")
+        testBundledPlugin("org.intellij.groovy")
         testFramework(TestFrameworkType.Platform)
         testFramework(TestFrameworkType.Plugin.Java)
     }
@@ -72,11 +84,38 @@ intellijPlatform {
 
     pluginVerification {
         ides {
-            create(IntelliJPlatformType.IntellijIdeaCommunity, providers.gradleProperty("platformVersion"))
-            // IntelliJ IDEA is a single product from 2025.3, so the latest release is of the unified type.
-            latest {
-                types = listOf(IntelliJPlatformType.IntellijIdea)
-                channels = listOf(ProductRelease.Channel.RELEASE)
+            val verifierIdes = providers.gradleProperty("smartdiff.verifier.ides")
+                .map { v ->
+                    v.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet().also { families ->
+                        val known = setOf("idea", "pycharm", "rustrover")
+                        val unknown = families - known
+                        if (unknown.isNotEmpty()) {
+                            error("Unknown smartdiff.verifier.ides families: ${unknown.sorted().joinToString(", ")}. Known families: ${known.sorted().joinToString(", ")}")
+                        }
+                    }
+                }
+                .getOrElse(setOf("idea", "pycharm", "rustrover"))
+            if ("idea" in verifierIdes) {
+                create(IntelliJPlatformType.IntellijIdeaCommunity, providers.gradleProperty("platformVersion"))
+                // IntelliJ IDEA is a single product from 2025.3, so the latest release is of the unified type.
+                latest {
+                    types = listOf(IntelliJPlatformType.IntellijIdea)
+                    channels = listOf(ProductRelease.Channel.RELEASE)
+                }
+            }
+            if ("pycharm" in verifierIdes) {
+                create(IntelliJPlatformType.PyCharm, "2025.1.3")
+                latest {
+                    types = listOf(IntelliJPlatformType.PyCharm)
+                    channels = listOf(ProductRelease.Channel.RELEASE)
+                }
+            }
+            if ("rustrover" in verifierIdes) {
+                create(IntelliJPlatformType.RustRover, "2025.1.3")
+                latest {
+                    types = listOf(IntelliJPlatformType.RustRover)
+                    channels = listOf(ProductRelease.Channel.RELEASE)
+                }
             }
         }
     }

@@ -1,6 +1,6 @@
 # Extraction detection
 
-Status: implemented, 2026-10-23
+Status: implemented, 2026-10-23; R17 added 2026-11-13
 
 **Description:** Links an [added](../../GLOSSARY.md#added) method or function to the code it was extracted from, when that code was removed from a [changed](../../GLOSSARY.md#changed) declaration in the same file.
 
@@ -24,6 +24,7 @@ Status: implemented, 2026-10-23
 - **R14** Detection never changes how a declaration is matched or classified.
 - **R15** Detection works the same way for Java, Kotlin and Scala.
 - **R16** A file that would take too much work is not checked for extractions.
+- **R17** Code still counts as removed when the source's new version keeps only scattered tokens of it, such as the call that replaced it; a run of at least 5 tokens the new version still has stays kept.
 
 ## Out of scope
 

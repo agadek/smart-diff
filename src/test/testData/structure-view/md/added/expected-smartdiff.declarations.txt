@@ -1,0 +1,4 @@
+status: ANALYZED
+File region  changed  old 1-3  new 1-7
+Title  old 1  new 1
+  New  added  new 5

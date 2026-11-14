@@ -65,6 +65,9 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [01 Java](languages/01-java.md) | implemented, 2026-10-21 |
 | [02 Kotlin](languages/02-kotlin.md) | implemented, 2026-10-21 |
 | [03 Scala](languages/03-scala.md) | implemented, 2026-10-22 |
+| [04 Python](languages/04-python.md) | proposed, 2026-11-13 |
+| [05 Rust](languages/05-rust.md) | proposed, 2026-11-13 |
+| [06 Structure-view fallback](languages/06-structure-view-fallback.md) | implemented, 2026-11-13 |
 
 ## Outline
 
@@ -77,6 +80,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [05 Analysis fallback states](outline/05-analysis-fallback.md) | implemented, 2026-11-04 |
 | [06 Usability validation](outline/06-usability-validation.md) | accepted, 2026-11-10 |
 | [07 Outline caret follow](outline/07-outline-caret-follow.md) | implemented, 2026-11-13 |
+| [08 Wheel steps through rows](outline/08-wheel-steps-through-rows.md) | implemented, 2026-11-14 |
 
 ## Changes tree
 

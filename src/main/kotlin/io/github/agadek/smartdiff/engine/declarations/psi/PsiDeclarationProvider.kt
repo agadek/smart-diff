@@ -6,7 +6,6 @@ import com.intellij.lexer.Lexer
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiErrorElement
 import com.intellij.psi.PsiFile
-import com.intellij.psi.util.PsiTreeUtil
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.TextRange
@@ -68,45 +67,20 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
 
     override fun build(file: PsiFile, cancellation: Cancellation): DeclarationTree {
         val text = file.viewProvider.contents
-        val nodes = HashMap<PsiElement, Node>()
-        val groups = HashMap<PsiElement, MutableList<Node>>()
 
         fun node(element: PsiElement): Node? {
             cancellation.checkCanceled()
             val info = describe(element) ?: return null
             val range = info.range ?: element.textRange.let { TextRange(it.startOffset, it.endOffset) }
             if (range.length == 0) return null
-            return Node(info, range, info.members.mapNotNull(::node)).also { node ->
-                nodes[element] = node
-                info.group?.let { groups.getOrPut(it, ::mutableListOf) += node }
-            }
+            return Node(info, range, info.members.mapNotNull(::node))
         }
         val topLevel = topLevel(file).mapNotNull(::node)
 
-        var fileRegionError = false
-        for (error in PsiTreeUtil.collectElementsOfType(file, PsiErrorElement::class.java)) {
-            cancellation.checkCanceled()
-            if (!isParseError(error)) continue
-            // In an element shared by several declarations, the one whose part holds the error; between parts, the container.
-            val offset = error.textRange.startOffset
-            val owner = generateSequence(error.parent) { it.parent }.takeWhile { it !is PsiFile }.firstNotNullOfOrNull { element ->
-                nodes[element] ?: groups[element]?.firstOrNull { offset >= it.range.start && offset <= it.range.end }
-            }
-            if (owner == null) fileRegionError = true else owner.parseError = true
-        }
+        val fileRegionError = PsiTreeParts.markParseErrors(file, topLevel, cancellation, ::isParseError)
 
         val tokens = LexedTokens.lex(createLexer(file), parserDefinition(file), text, cancellation)
-        // Each declaration takes the whitespace between its previous sibling (or its container's start) and itself.
-        fun assignLeading(siblings: List<Node>, containerStart: Int) {
-            var previousEnd = containerStart
-            for (node in siblings) {
-                val start = tokens.whitespaceStart(node.range.start, notBefore = previousEnd)
-                if (start < node.range.start) node.leading = TextRange(start, node.range.start)
-                assignLeading(node.children, node.range.start)
-                previousEnd = node.range.end
-            }
-        }
-        assignLeading(topLevel, 0)
+        PsiTreeParts.assignLeading(topLevel, tokens)
 
         fun declaration(node: Node): Declaration {
             cancellation.checkCanceled()
@@ -130,19 +104,20 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
         }
         val whole = TextRange(0, text.length)
         val fileRegion = FileRegion(
-            ranges = gaps(whole, topLevel.map { it.extent }),
+            ranges = PsiTreeParts.gaps(whole, topLevel.map { it.extent }),
             tokens = tokens.own(whole, topLevel.map { it.extent }),
             hasParseError = fileRegionError,
         )
         return DeclarationTree(topLevel.map(::declaration), fileRegion, whitespacePolicy(file))
     }
 
-    private class Node(val info: DeclarationInfo, val range: TextRange, val children: List<Node>) {
-        var parseError = false
-        var leading: TextRange? = null
-
-        /** The range with the leading whitespace: the source its container does not own. */
-        val extent: TextRange get() = leading?.let { TextRange(it.start, range.end) } ?: range
+    private class Node(
+        val info: DeclarationInfo,
+        override val range: TextRange,
+        override val children: List<Node>,
+    ) : PsiDeclarationNode {
+        override var parseError = false
+        override var leading: TextRange? = null
     }
 
     /** The inside of a block's braces, or the whole of any other body. */
@@ -155,18 +130,6 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
         } else {
             TextRange(range.startOffset, range.endOffset)
         }
-    }
-
-    /** The non-empty parts of [range] outside [excluded], which are sorted and inside [range]. */
-    private fun gaps(range: TextRange, excluded: List<TextRange>): List<TextRange> {
-        val gaps = mutableListOf<TextRange>()
-        var start = range.start
-        for (part in excluded) {
-            if (part.start > start) gaps += TextRange(start, part.start)
-            start = maxOf(start, part.end)
-        }
-        if (range.end > start) gaps += TextRange(start, range.end)
-        return gaps
     }
 
     protected fun parserDefinition(file: PsiFile): ParserDefinition =

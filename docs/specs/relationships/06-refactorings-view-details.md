@@ -45,6 +45,7 @@ Each rename gets a colour from a fixed palette of 6, in row order among the show
 
 - The change type filter hides the same changes in both views. Relationship rows have no change type and are not hidden by it.
 - A second menu, the [relationship kind filter](../../GLOSSARY.md#relationship-kind-filter), hides relationship kinds: rename, move, kind change, extraction and inlining. A relationship row is hidden when every one of its kinds is hidden.
+- The change type filter keeps the platform filter icon and the relationship kind filter uses the plugin's own funnel with a link badge, with a light and a dark variant.
 - A declaration of a hidden relationship still appears in `Other changes`, because it is then in no shown relationship.
 - A low-confidence relationship never covers its declarations: both stay in `Other changes` beside the `possible …` row.
 - A change type filter never hides a relationship row. A relationship kind filter never hides an uncertain, unanalyzed or changed declaration: such a declaration keeps its labels and notes in `Other changes` beside the relationship row, so the two views still show every change.
@@ -73,3 +74,4 @@ Confidence and kinds are words, not colours. The palette only marks usages; it i
 | R16 | `RefactoringsModelTest` for a result with no relationships and for all kinds hidden |
 | R17 | `OutlineIntegrationTest` drives the container tree and refactorings view through the controller and panel and asserts the same summary text and hidden count, before and after hiding a change type |
 | R18 | `OutlineIntegrationTest` with the outline toggle and native diff in both views |
+| R19 | `FilteringDiffToolTest` `test outline 06 R19 the relationship kind filter has its own icon` |

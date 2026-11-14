@@ -4,13 +4,17 @@
 
 ### Added
 
+- Structure-view fallback: files whose language has a structure view but no dedicated provider show a structural outline built from the IDE's structure view (on by default, Settings | Tools | SMART Diff, *Use the IDE's structure view for other languages*). Such outlines are marked `· structure view`, use the generic `ITEM` kind where needed, treat whitespace as significant, and fall back to the native diff if the structure view cannot be read. Dedicated providers still take precedence.
+- With a row selected in the structural outline, the mouse wheel over the outline steps to the next or previous change and shows it in the editors.
 - The refactorings view: a second structural outline, one toolbar toggle away, lists each rename, move, kind change, extraction and inlining before `Other changes`. Rows show both names, their kinds and a confidence word; a rename lists its grouped usages and a low-confidence row also appears under both declarations. Expanding a row shows its evidence, selecting it frames every endpoint and usage, and each rename's usages get their own theme-safe colour in both editors. The change type filter, a separate hide-by-kind menu and the same summary line work in both views.
+- The relationship kind filter in the refactorings view has its own icon, so it is not mistaken for the change type filter.
 - Inlining detection: a removed method or function whose body was moved into a changed declaration is labelled `inlined into <target>`, and the target is labelled `code inlined from <declaration>`. Selecting the removed declaration frames the code on the new side, selecting the target highlights it, the summary counts it as `inlined` instead of `removed`, and hiding removed changes hides it. Java, Kotlin and Scala 2/3 are covered.
 - Rename grouping: a high-confidence rename is shown once with its changed same-file usages, such as `method total → sum()  rename candidate, 12 usages`, and a declaration whose only change is those usages is labelled `usages renamed`. Selecting the rename frames every grouped usage on both sides. Java, Kotlin K2 and Scala 2/3 are covered, with one resolver per language; unrelated, unresolved or also-changed usages stay ordinary changes.
 
 ### Fixed
 
 - The structural outline follows the caret: moving it into another changed declaration on either side selects and frames that row without scrolling the editors, and a selected row no longer snaps the editors back to it when the outline's rows are rebuilt.
+- Extraction detection links a helper to every method it was taken from. When the call that replaced the code repeated a few of its tokens, such as `return doubled(x) + 1;`, that method was not linked; now only runs of at least 5 tokens the method still has keep it from being a source.
 - The refactorings view attaches a low-confidence `possible …` link only to declarations on its own side, so equal old and new offsets no longer add the link to an unrelated row. The relationship-kind filter is hidden in the container tree, where it has no effect.
 - Scala 2 rename-only declarations are compared with the line-break whitespace policy the Scala 2 parser used, not the stricter Scala 3 indentation policy, and the shared rename tokenizer recognizes Kotlin and Scala backtick identifiers, Scala symbols and chars, and nested comments.
 

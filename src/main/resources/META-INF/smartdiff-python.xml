@@ -1,0 +1,3 @@
+<!-- Loaded when the Python plugin is present. The Python declaration provider will register here. -->
+<idea-plugin>
+</idea-plugin>
