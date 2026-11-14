@@ -13,6 +13,7 @@ import com.jetbrains.python.PythonLanguage
 import com.jetbrains.python.psi.PyAssignmentStatement
 import com.jetbrains.python.psi.PyAugAssignmentStatement
 import com.jetbrains.python.psi.PyClass
+import com.jetbrains.python.psi.PyDecoratable
 import com.jetbrains.python.psi.PyExpression
 import com.jetbrains.python.psi.PyFile
 import com.jetbrains.python.psi.PyForStatement
@@ -64,12 +65,12 @@ class PythonDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.INDENT
             DeclarationInfo(
                 DeclarationKind.CLASS, it, signature = null,
                 members = members(element.statementList),
-                range = decoratedRange(element),
+                range = declarationRange(element),
             )
         }
         is PyFunction -> function(element)
         is PyTypeAliasStatement -> element.name?.takeIf { it.isNotEmpty() }?.let {
-            DeclarationInfo(DeclarationKind.TYPE_ALIAS, it, signature = null)
+            DeclarationInfo(DeclarationKind.TYPE_ALIAS, it, signature = null, range = declarationRange(element))
         }
         is PyTypeDeclarationStatement -> annotatedVariable(element)
         is PyTargetExpression -> variableTarget(element)
@@ -119,32 +120,50 @@ class PythonDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.INDENT
             signature,
             displaySignature = displaySignature,
             body = function.statementList,
-            range = decoratedRange(function),
+            range = declarationRange(function),
         )
     }
 
-    /** A decorated definition's range starts at its first decorator and directly preceding comments (R9, R10). */
-    private fun decoratedRange(element: PsiElement): TextRange {
-        val end = element.textRange.endOffset
-        val decoratorStart = (element as? com.jetbrains.python.psi.PyDecoratable)?.decoratorList?.textRange?.startOffset
-        var start = decoratorStart ?: element.textRange.startOffset
-        // Include comments directly above (no blank line between) the declaration or its decorators.
+    /**
+     * The range of a declaration: from its first decorator or own-line leading comments (R9) to its end.
+     * Only comments that start their own line directly above the declaration, with no blank line between, are included.
+     */
+    private fun declarationRange(element: PsiElement, baseStart: Int = elementRangeStart(element), baseEnd: Int = element.textRange.endOffset): TextRange =
+        TextRange(leadingCommentStart(element, baseStart), baseEnd)
+
+    private fun elementRangeStart(element: PsiElement): Int =
+        (element as? PyDecoratable)?.decoratorList?.textRange?.startOffset ?: element.textRange.startOffset
+
+    /** Start of own-line comments directly above [element], extending [baseStart] upward when present (R9). */
+    private fun leadingCommentStart(element: PsiElement, baseStart: Int): Int {
+        val fileText = element.containingFile.text
+        var start = baseStart
         var prev = element.prevSibling
         var commentStart: Int? = null
         while (prev is PsiWhiteSpace || prev is PsiComment) {
             if (prev is PsiComment) {
+                if (!startsOwnLine(fileText, prev.textRange.startOffset)) break
                 commentStart = prev.textRange.startOffset
                 prev = prev.prevSibling
                 continue
             }
-            val ws = prev.text
-            val breaks = ws.count { it == '\n' }
+            val breaks = prev.text.count { it == '\n' }
             // A blank line (more than one line break) separates comments from the declaration.
             if (breaks > 1) break
             prev = prev.prevSibling
         }
         if (commentStart != null && commentStart < start) start = commentStart
-        return TextRange(start, end)
+        return start
+    }
+
+    private fun startsOwnLine(fileText: CharSequence, offset: Int): Boolean {
+        if (offset <= 0) return true
+        val lineStart = fileText.lastIndexOf('\n', offset - 1).let { if (it < 0) 0 else it + 1 }
+        for (i in lineStart until offset) {
+            val c = fileText[i]
+            if (c != ' ' && c != '\t' && c != '\r') return false
+        }
+        return true
     }
 
     /** Parameter names with markers (R11), in order; without annotations and defaults. */
@@ -210,7 +229,10 @@ class PythonDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.INDENT
             is PyTargetExpression -> if (target.qualifier == null) target.name else null
             else -> null
         }?.takeIf { it.isNotEmpty() } ?: return null
-        return DeclarationInfo(DeclarationKind.VARIABLE, name, signature = null, group = statement)
+        return DeclarationInfo(
+            DeclarationKind.VARIABLE, name, signature = null, group = statement,
+            range = declarationRange(statement),
+        )
     }
 
     private fun variableTarget(element: PyTargetExpression): DeclarationInfo? {
@@ -220,22 +242,26 @@ class PythonDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.INDENT
         val targets = assignment.targets.toList()
         // A single name target (possibly annotated): the declaration owns the whole assignment statement.
         if (targets.size == 1 && isNameTarget(targets.single())) {
-            return DeclarationInfo(DeclarationKind.VARIABLE, name, signature = null, group = assignment, range = statementRange(assignment))
+            return DeclarationInfo(
+                DeclarationKind.VARIABLE, name, signature = null, group = assignment,
+                range = declarationRange(assignment),
+            )
         }
-        // Part of `a = b = 0`.
+        // Part of `a = b = 0`; only the first target takes leading comments (R9).
         if (targets.size > 1) {
             val index = targets.indexOf(element)
             if (index >= 0) {
-                val start = if (index == 0) assignment.textRange.startOffset else element.textRange.startOffset
                 val end = if (index == targets.lastIndex) assignment.textRange.endOffset else element.textRange.endOffset
+                val start = if (index == 0) {
+                    leadingCommentStart(assignment, assignment.textRange.startOffset)
+                } else {
+                    element.textRange.startOffset
+                }
                 return DeclarationInfo(DeclarationKind.VARIABLE, name, signature = null, group = assignment, range = TextRange(start, end))
             }
         }
         return null
     }
-
-    private fun statementRange(statement: PsiElement): TextRange =
-        TextRange(statement.textRange.startOffset, statement.textRange.endOffset)
 
     private fun tupleVariable(element: PsiElement): DeclarationInfo? {
         val expression = element as? PyExpression ?: return null
@@ -247,7 +273,10 @@ class PythonDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.INDENT
             else -> null
         } ?: return null
         val name = tupleName(tuple) ?: return null
-        return DeclarationInfo(DeclarationKind.VARIABLE, name, signature = null, group = assignment, range = statementRange(assignment))
+        return DeclarationInfo(
+            DeclarationKind.VARIABLE, name, signature = null, group = assignment,
+            range = declarationRange(assignment),
+        )
     }
 
     private fun tupleName(tuple: PyTupleExpression): String? {

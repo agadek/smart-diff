@@ -207,7 +207,7 @@ class PythonDeclarationProviderTest : ProviderTestCase() {
     }
 
     // languages/04-python R9
-    fun `test R9 range includes decorators and directly preceding comments`() {
+    fun `test R9 range includes decorators and directly preceding own-line comments`() {
         val text = """
             # helper
             @decorator
@@ -227,13 +227,56 @@ class PythonDeclarationProviderTest : ProviderTestCase() {
 
         val tree = build("Python", text)
         val f = tree.topLevel.first { it.name == "f" }
-        val fStart = f.leadingWhitespace?.start ?: f.range.start
-        assertTrue("range includes decorator and preceding comment", text.substring(fStart, f.range.end).contains("# helper"))
-        assertTrue(text.substring(fStart, f.range.end).contains("@decorator"))
+        assertEquals("f starts at its own-line leading comment", text.indexOf("# helper"), f.range.start)
+        assertTrue(text.substring(f.range.start, f.range.end).contains("@decorator"))
+
         val c = tree.topLevel.first { it.name == "C" }
-        val cStart = c.leadingWhitespace?.start ?: c.range.start
-        assertTrue("directly preceding comment included", text.substring(cStart, c.range.end).contains("# class comment"))
-        assertFalse("comment separated by blank line excluded", text.substring(cStart, c.range.end).contains("# detached"))
+        assertEquals("C starts at its directly preceding own-line comment", text.indexOf("# class comment"), c.range.start)
+        assertFalse("comment separated by blank line excluded from C", text.substring(c.range.start, c.range.end).contains("# detached"))
+
+        val m = c.children.single()
+        assertEquals("method starts at its own-line leading comment", text.indexOf("# method comment"), m.range.start)
+    }
+
+    // languages/04-python R9
+    fun `test R9 trailing comment of previous line stays out of next declaration`() {
+        val text = "x = 1  # note\ndef f():\n    pass\n"
+        val tree = build("Python", text)
+        val f = tree.topLevel.first { it.name == "f" }
+        assertEquals("function does not take trailing comment of previous line", text.indexOf("def f"), f.range.start)
+        assertFalse(text.substring(f.range.start, f.range.end).contains("# note"))
+    }
+
+    // languages/04-python R9
+    fun `test R9 leading own-line comment applies to variables`() {
+        val text = """
+            # max retries
+            MAX = 3
+
+            # pair
+            a, b = 1, 2
+
+            # count
+            count: int
+
+            # chained
+            x = y = 0
+        """.trimIndent() + "\n"
+
+        val tree = build("Python", text)
+        val max = tree.topLevel.first { it.name == "MAX" }
+        assertEquals("variable takes own-line leading comment", text.indexOf("# max retries"), max.range.start)
+
+        val pair = tree.topLevel.first { it.name == "(a, b)" }
+        assertEquals("tuple variable takes own-line leading comment", text.indexOf("# pair"), pair.range.start)
+
+        val count = tree.topLevel.first { it.name == "count" }
+        assertEquals("annotated variable takes own-line leading comment", text.indexOf("# count"), count.range.start)
+
+        val x = tree.topLevel.first { it.name == "x" }
+        val y = tree.topLevel.first { it.name == "y" }
+        assertEquals("first target of chained assignment takes own-line leading comment", text.indexOf("# chained"), x.range.start)
+        assertEquals("later target of chained assignment does not take leading comment", text.indexOf("y = 0"), y.range.start)
     }
 
     // languages/04-python R10
