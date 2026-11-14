@@ -1,0 +1,4 @@
+status: ANALYZED
+function f(x, y)  changed  signature changed  old 3-4  new 3-4
+function f(x, y)  changed  signature changed  old 5-6  new 5-6
+function f(x, y)  changed  signature changed  old 7-8  new 7-8

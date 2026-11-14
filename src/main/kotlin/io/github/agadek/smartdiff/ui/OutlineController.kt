@@ -606,6 +606,8 @@ class OutlineController internal constructor(
             "Shell Script" -> WhitespacePolicy.SEPARATION_SIGNIFICANT
             "Scala" -> WhitespacePolicy.INDENTATION_SIGNIFICANT
             "JSON", "JSON5" -> WhitespacePolicy.INSIGNIFICANT
+            "yaml" -> WhitespacePolicy.SIGNIFICANT
+            "Python" -> WhitespacePolicy.INDENTATION_SIGNIFICANT
             else -> WhitespacePolicy.SIGNIFICANT
         }
 

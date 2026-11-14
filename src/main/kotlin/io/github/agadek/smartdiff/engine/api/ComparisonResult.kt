@@ -174,6 +174,7 @@ enum class DeclarationKind {
     TAG,
     SECTION,
     ITEM,
+    VARIABLE,
 }
 
 /** A possible counterpart of an uncertain node; [range] is on the side where the node is absent. */

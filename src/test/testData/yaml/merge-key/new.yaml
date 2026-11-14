@@ -1,0 +1,7 @@
+defaults: &d
+  a: 1
+other: &o
+  a: 1
+item:
+  <<: *o
+  b: 3

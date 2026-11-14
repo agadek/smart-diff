@@ -75,7 +75,7 @@ class CorpusValidationTest : BasePlatformTestCase() {
                 val parent = git(repository, listOf("rev-parse", "--verify", "--quiet", "$commit^"), allowFailure = true).trim()
                 if (parent.isEmpty()) continue
                 // --no-renames: a rename is a delete plus an add, so it is skipped here instead of vanishing from the run.
-                val paths = git(repository, listOf("diff", "--no-renames", "--name-only", "--diff-filter=M", parent, commit, "--", "*.java", "*.kt", "*.scala", "*.json", "*.sh"))
+                val paths = git(repository, listOf("diff", "--no-renames", "--name-only", "--diff-filter=M", parent, commit, "--", "*.java", "*.kt", "*.scala", "*.json", "*.sh", "*.yaml", "*.yml"))
                     .lines().filter { it.isNotBlank() }
                 for (path in paths) {
                     val old = git(repository, listOf("show", "$parent:$path")).replace("\r\n", "\n")
@@ -86,6 +86,7 @@ class CorpusValidationTest : BasePlatformTestCase() {
                         path.endsWith(".scala") -> "Scala"
                         path.endsWith(".json") -> "JSON"
                         path.endsWith(".sh") -> "Shell Script"
+                        path.endsWith(".yaml") || path.endsWith(".yml") -> "yaml"
                         else -> "JAVA"
                     }
                     val request = ComparisonRequest(old, new, languageId, File(path).name)

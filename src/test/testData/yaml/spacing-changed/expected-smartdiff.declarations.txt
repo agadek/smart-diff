@@ -1,0 +1,4 @@
+status: ANALYZED
+key a  changed  old 1  new 1
+key b  old 2  new 2
+  key x  changed  old 2  new 2

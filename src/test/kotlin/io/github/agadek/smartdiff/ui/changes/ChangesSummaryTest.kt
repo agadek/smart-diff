@@ -312,7 +312,7 @@ class ChangesSummaryTest : BasePlatformTestCase() {
 
     fun `test R11 a fallback file gets a summary with its structure-view note`() {
         // languages/06-structure-view-fallback R11
-        val change = modified("service.yaml", "service:\n  port: 8080\n", "service:\n  port: 9090\n")
+        val change = modified("service.properties", "port=8080\n", "port=9090\n")
 
         summaryNode(change)
         ChangesSummaryService.getInstance(project).waitForSummaries()

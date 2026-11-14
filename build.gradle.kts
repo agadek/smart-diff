@@ -36,9 +36,9 @@ dependencies {
         plugin("org.intellij.scala", providers.gradleProperty("scalaPluginVersion").get())
         plugin("PythonCore", providers.gradleProperty("pythonPluginVersion").get())
         pluginModule(implementation(project(":rust")))
+        bundledPlugin("org.jetbrains.plugins.yaml")
         // S9 spike and structure-view fallback tests: bundled with IntelliJ IDEA, test-only (languages/06); JSON is already
         // on the classpath above.
-        testBundledPlugin("org.jetbrains.plugins.yaml")
         testBundledPlugin("org.intellij.plugins.markdown")
         testBundledPlugin("com.intellij.properties")
         testBundledPlugin("org.intellij.groovy")

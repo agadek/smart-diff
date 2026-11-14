@@ -1,0 +1,4 @@
+left: ANALYZED  right: ANALYZED
+key total  RIGHT_ONLY  right: changed  base 1  left 1  right 1
+key nested  UNCHANGED  base 2-4  left 2-4  right 2-4
+  key a  LEFT_ONLY  left: changed  base 3  left 3  right 3

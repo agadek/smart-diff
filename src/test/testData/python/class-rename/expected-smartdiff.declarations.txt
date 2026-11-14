@@ -1,0 +1,2 @@
+status: ANALYZED
+class New  rename candidate from class Old  old 1-3  new 1-3
