@@ -92,6 +92,8 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
 
     private val body = JPanel(CardLayout())
     private var updatingEngines = false
+    /** Whether a selection made by this panel's own tree change scrolls the editors (outline/07). */
+    private var scrollEditorsOnSelection = true
     private val scrollPane: JScrollPane = ScrollPaneFactory.createScrollPane(tree, true)
     private var wheelAccumulator = 0.0
     private var wheelSelectionChange = false
@@ -276,7 +278,7 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
     }
 
     /** Selects the row of [path], or the nearest row above it that is shown, and scrolls it into view. */
-    internal fun reveal(path: OutlinePath) {
+    internal fun reveal(path: OutlinePath, scrollEditors: Boolean = true) {
         val root = tree.model.root as DefaultMutableTreeNode
         val items = root.children().toList().map { (it as DefaultMutableTreeNode).userObject as OutlineItem }
         var node = root
@@ -285,7 +287,13 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         }
         if (node === root) return
         val treePath = TreePath(node.path)
-        tree.selectionPath = treePath
+        val previous = this.scrollEditorsOnSelection
+        this.scrollEditorsOnSelection = scrollEditors
+        try {
+            tree.selectionPath = treePath
+        } finally {
+            this.scrollEditorsOnSelection = previous
+        }
         tree.scrollPathToVisible(treePath)
     }
 
@@ -300,7 +308,7 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
     }
 
     private fun select(item: OutlineItem?) {
-        controller.navigator.select(item)
+        controller.navigator.select(item, scrollEditorsOnSelection)
         absence.text = when {
             item == null || item.isGroup -> ""
             item.oldRange == null && item.newRange == null -> ""
