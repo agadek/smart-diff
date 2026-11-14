@@ -44,8 +44,8 @@ class GoldenFixturesTest : BasePlatformTestCase() {
     // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
     fun `test structure-view properties fixtures`() = checkFixtures("structure-view/properties", "Properties", "properties")
 
-    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
-    fun `test structure-view Groovy fixtures`() = checkFixtures("structure-view/groovy", "Groovy", "groovy")
+    // languages/08-groovy R1-R10
+    fun `test Groovy fixtures`() = checkFixtures("groovy", "Groovy", "groovy")
 
     private fun checkFixtures(directory: String, languageId: String, extension: String) {
         val cases = File(TEST_DATA, directory)
@@ -56,9 +56,10 @@ class GoldenFixturesTest : BasePlatformTestCase() {
         val engine = DeclarationEngine(project)
         val failures = mutableListOf<String>()
         for (case in cases) {
-            val old = read(File(case, "old.$extension"))
-            val new = read(File(case, "new.$extension"))
-            val result = engine.compare(ComparisonRequest(old, new, languageId, "${case.name}.$extension"), Cancellation.NONE)
+            val ext = extensionOf(case, extension)
+            val old = read(File(case, "old.$ext"))
+            val new = read(File(case, "new.$ext"))
+            val result = engine.compare(ComparisonRequest(old, new, languageId, "${case.name}.$ext"), Cancellation.NONE)
             if (result.status == Status.ANALYZED || result.status == Status.PARTIAL) {
                 NothingHidden.violation(old, new, result)?.let { failures += "${case.name}: $it" }
             }
@@ -74,6 +75,11 @@ class GoldenFixturesTest : BasePlatformTestCase() {
             }
         }
         if (failures.isNotEmpty()) fail("${failures.size} of ${cases.size} $directory fixtures failed:\n\n" + failures.joinToString("\n"))
+    }
+
+    private fun extensionOf(case: File, default: String): String {
+        val old = case.listFiles()?.firstOrNull { it.name.startsWith("old.") } ?: return default
+        return old.name.removePrefix("old.")
     }
 
     /** Fixture texts are LF-separated like document snapshots, whatever the checkout's line ends. */

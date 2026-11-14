@@ -47,6 +47,9 @@ class MergeFixturesTest : BasePlatformTestCase() {
     // relationships/02 R9, R10: the expected merge outline is the join before the relationship model.
     fun `test Scala 3 merge fixtures`() = checkFixtures("scala3", "Scala", "scala")
 
+    // languages/08-groovy R1-R10
+    fun `test Groovy merge fixtures`() = checkFixtures("groovy", "Groovy", "groovy")
+
     fun `test merge fixture files live in the language merge folders`() {
         // merge/05-scala-merges R9
         for ((directory, extension) in LANGUAGE_EXTENSIONS) {
@@ -310,6 +313,7 @@ class MergeFixturesTest : BasePlatformTestCase() {
             "kotlin" to "kt",
             "scala2" to "scala",
             "scala3" to "scala",
+            "groovy" to "groovy",
         )
         val REQUIRED_SCENARIOS = listOf(
             "changed-on-both-sides",

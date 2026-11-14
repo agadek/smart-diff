@@ -369,6 +369,10 @@ Tokens come from the language lexer; leading-whitespace assignment and parse-err
 
 The walk does not swallow exceptions: cancellation propagates, and any other failure (a structure view that throws or needs an editor) becomes a `FAILED` result with the native diff. A file over the declaration limit is `TOO_LARGE`. Results carry `analysisNote`, which the outline summary and tooltip/empty state show. See the [details file](specs/languages/06-structure-view-fallback-details.md) for S9's recorded names and ranges, tests and open questions.
 
+### 6.12 Groovy provider
+
+Implemented for M2 part 1 ([languages/08](specs/languages/08-groovy.md)), when the Groovy plugin is installed. The provider uses Groovy PSI only: classes, interfaces, traits, enums, annotation types and records (when present) are declarations, with `TRAIT` for traits; methods, constructors, fields, properties (a `GrField` without an access modifier), enum constants and class initializers are declarations. In script files, top-level methods and type definitions are top-level declarations, while top-level statements and script variable declarations stay in the file region. Untyped parameters are named `def` in signatures. Groovy uses `LINE_BREAKS_SIGNIFICANT` whitespace: reformatting inside a line is formatting-only, while adding or removing a line break between tokens inside a declaration is a change. Errors in Groovydoc are not parse errors. `.gradle` files get the Groovy outline for their methods and classes; build-script top-level blocks remain in the file region until M2b adds sections. See the [details file](specs/languages/08-groovy-details.md).
+
 ## 7. Declaration engine: matching
 
 Inputs: the old and new `DeclarationTree`. Matching is global over all declarations in the file, so a declaration can be matched across containers. Each rule runs over the declarations still unmatched after the previous rule. Within a rule, declarations are processed in source order of the old side, which makes the result deterministic.

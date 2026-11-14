@@ -151,7 +151,7 @@ Add declaration-engine providers for further languages and file formats the host
 
 Proposed 2026-11-13: the [format coverage plan](FORMAT-COVERAGE.md) covers every typical format of the JetBrains platform, grouped by what each needs:
 
-- **Free PSI on the current build target:** Groovy and Gradle build scripts, Kotlin build scripts, Markdown, shell scripts and HTML.
+- **Free PSI on the current build target:** Groovy and Gradle build scripts, Kotlin build scripts, Markdown, shell scripts and HTML. Groovy declarations are implemented (M2 part 1, 2026-11-14); build-script sections remain (M2b).
 - **Paid or closed plugins, tied to another IDE:** JavaScript and TypeScript, Go, CSS, PHP, Ruby and SQL, built with the pattern spike S8 chooses for Rust.
 - **Structured data:** JSON, YAML, TOML, properties and XML, with keys as declarations ([ADR 0009](adr/0009-structured-data-keys-are-declarations.md), proposed).
 - **Every other language:** a provider built on the IDE's structure view, used when no dedicated provider exists ([ADR 0010](adr/0010-structure-view-provider-for-languages-without-their-own.md), accepted).

@@ -68,6 +68,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [04 Python](languages/04-python.md) | proposed, 2026-11-13 |
 | [05 Rust](languages/05-rust.md) | proposed, 2026-11-13 |
 | [06 Structure-view fallback](languages/06-structure-view-fallback.md) | implemented, 2026-11-13 |
+| [08 Groovy](languages/08-groovy.md) | implemented, 2026-11-14 |
 
 ## Outline
 
