@@ -1,0 +1,3 @@
+@cache
+def f():
+    pass

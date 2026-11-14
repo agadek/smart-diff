@@ -65,7 +65,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [01 Java](languages/01-java.md) | implemented, 2026-10-21 |
 | [02 Kotlin](languages/02-kotlin.md) | implemented, 2026-10-21 |
 | [03 Scala](languages/03-scala.md) | implemented, 2026-10-22 |
-| [04 Python](languages/04-python.md) | proposed, 2026-11-13 |
+| [04 Python](languages/04-python.md) | in progress, P1 implemented 2026-11-13 |
 | [05 Rust](languages/05-rust.md) | proposed, 2026-11-13 |
 | [06 Structure-view fallback](languages/06-structure-view-fallback.md) | implemented, 2026-11-13 |
 | [07 JSON](languages/07-json.md) | implemented, 2026-11-13 |

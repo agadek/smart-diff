@@ -1,6 +1,6 @@
 # Python: details
 
-Status: proposed, 2026-11-13
+Status: in progress, P1 implemented 2026-11-13
 
 **Feature:** [Python](04-python.md)
 

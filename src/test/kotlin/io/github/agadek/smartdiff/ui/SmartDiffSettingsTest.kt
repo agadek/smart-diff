@@ -230,7 +230,7 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
 
         val languages = SmartDiffConfigurable.languagesWithEngines(engines).map { (language, _) -> language.id }
 
-        assertEquals(listOf("JAVA", "JSON", "JSON5", "kotlin", "Scala"), languages)
+        assertEquals(listOf("JAVA", "JSON", "JSON5", "kotlin", "Python", "Scala"), languages)
     }
 
     fun `test the settings page also lists fallback languages while the fallback is on`() {
@@ -241,7 +241,7 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
 
         assertTrue("JSON is listed through the structure-view fallback: $languages", "JSON" in languages)
         assertTrue("YAML is listed through the structure-view fallback: $languages", "yaml" in languages)
-        assertTrue("the dedicated languages are still listed: $languages", listOf("JAVA", "kotlin", "Scala").all { it in languages })
+        assertTrue("the dedicated languages are still listed: $languages", listOf("JAVA", "kotlin", "Python", "Scala").all { it in languages })
     }
 
     fun `test R10 R18 the structure-view fallback setting is on by default and round-trips`() {

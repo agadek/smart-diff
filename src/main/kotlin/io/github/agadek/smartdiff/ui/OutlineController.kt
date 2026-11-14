@@ -605,6 +605,7 @@ class OutlineController internal constructor(
             "kotlin" -> WhitespacePolicy.LINE_BREAKS_SIGNIFICANT
             "Scala" -> WhitespacePolicy.INDENTATION_SIGNIFICANT
             "JSON", "JSON5" -> WhitespacePolicy.INSIGNIFICANT
+            "Python" -> WhitespacePolicy.INDENTATION_SIGNIFICANT
             else -> WhitespacePolicy.SIGNIFICANT
         }
 

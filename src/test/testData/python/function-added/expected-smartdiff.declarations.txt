@@ -1,0 +1,2 @@
+status: ANALYZED
+function b()  added  new 5-6
