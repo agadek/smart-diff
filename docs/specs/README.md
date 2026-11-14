@@ -84,6 +84,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [07 Outline caret follow](outline/07-outline-caret-follow.md) | implemented, 2026-11-13 |
 | [08 Wheel steps through rows](outline/08-wheel-steps-through-rows.md) | implemented, 2026-11-14 |
 | [09 Outline minimum width](outline/09-outline-minimum-width.md) | implemented, 2026-11-14 |
+| [10 Outline settings button](outline/10-outline-settings-button.md) | proposed, 2026-11-14 |
 
 ## Changes tree
 

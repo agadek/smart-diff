@@ -264,7 +264,7 @@ Give added and deleted files in the Changes tree a summary and declaration rows,
 
 ### Settings button in the outline
 
-A settings button in the outline panel's toolbar that opens *Settings | Tools | SMART Diff*, so the outline's options, such as opening automatically, how formatting-only changes are shown, the default engine and the analysis limits, can be reached from the diff instead of through the IDE's settings dialog.
+A settings button in the outline panel's toolbar that opens *Settings | Tools | SMART Diff*, so the outline's options, such as opening automatically, how formatting-only changes are shown, the default engine and the analysis limits, can be reached from the diff instead of through the IDE's settings dialog. Specified in [outline/10](specs/outline/10-outline-settings-button.md) (proposed, 2026-11-14), which also makes open outlines pick up applied settings without being reopened.
 
 ### Third-party engines
 
