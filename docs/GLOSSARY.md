@@ -46,6 +46,11 @@ _Avoid_: enabled language
 The largest file size, the most declarations per side and the longest time a comparison may take. A comparison over a limit is not analyzed.
 _Avoid_: thresholds, caps
 
+### Structure-view fallback
+
+The generic declaration provider that builds a declaration tree from the IDE's structure view for a language without a dedicated provider.
+_Avoid_: generic engine, fallback engine
+
 ## Structure
 
 ### Declaration

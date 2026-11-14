@@ -70,6 +70,11 @@ class Declaration(
      * token of the declaration, or the provider does not say.
      */
     val nameRange: TextRange? = null,
+    /**
+     * Source after [range] that belongs to the declaration for coverage but is not compared: the separator and line
+     * break after a structure-view item (languages/06). Null for a dedicated provider, whose source ends at [range].
+     */
+    val layout: TextRange? = null,
 ) {
     override fun toString(): String = "$kind $name" + (signature?.let { "($it)" } ?: "") + " $range"
 }

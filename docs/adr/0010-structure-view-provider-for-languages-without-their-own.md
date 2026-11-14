@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # A structure-view provider for languages without their own

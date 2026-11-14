@@ -159,14 +159,16 @@ class MergeOutlineController private constructor(
         if (engine == null) {
             return show(MergeOutlineState.NoEngine(Language.findLanguageByID(languageId)?.displayName ?: languageId))
         }
+        val settings = SmartDiffSettings.getInstance()
         val texts = MergeTexts(
             base = baseDocument.immutableCharSequence,
             left = leftDocument.immutableCharSequence,
             right = rightDocument.immutableCharSequence,
             languageId = languageId,
             fileName = fileName,
-            limits = SmartDiffSettings.getInstance().limits,
-            confidence = SmartDiffSettings.getInstance().confidence,
+            limits = settings.limits,
+            confidence = settings.confidence,
+            useStructureViewFallback = settings.useStructureViewFallback,
         )
         val job = Job(
             engine,

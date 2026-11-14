@@ -35,13 +35,28 @@ class GoldenFixturesTest : BasePlatformTestCase() {
     // languages/07-json R14
     fun `test JSON fixtures`() = checkFixtures("json", "JSON", "json")
 
+    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
+    fun `test structure-view JSON fixtures`() = checkFixtures("structure-view/json", "JSON", "json")
+
+    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
+    fun `test structure-view YAML fixtures`() = checkFixtures("structure-view/yaml", "yaml", "yaml")
+
+    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
+    fun `test structure-view Markdown fixtures`() = checkFixtures("structure-view/md", "Markdown", "md")
+
+    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
+    fun `test structure-view properties fixtures`() = checkFixtures("structure-view/properties", "Properties", "properties")
+
+    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
+    fun `test structure-view Groovy fixtures`() = checkFixtures("structure-view/groovy", "Groovy", "groovy")
+
     private fun checkFixtures(directory: String, languageId: String, extension: String) {
         val cases = File(TEST_DATA, directory)
             .listFiles { file -> file.isDirectory && file.name != "merge" && file.name != "relationships" }
             .orEmpty()
             .sortedBy { it.name }
         assertTrue("no fixtures in ${File(TEST_DATA, directory).absolutePath}", cases.isNotEmpty())
-        val engine = DeclarationEngine(null)
+        val engine = DeclarationEngine(project)
         val failures = mutableListOf<String>()
         for (case in cases) {
             val ext = when {

@@ -70,6 +70,9 @@
                                  id="io.github.agadek.smartdiff.settings"
                                  displayName="SMART Diff"
                                  instance="io.github.agadek.smartdiff.ui.SmartDiffConfigurable"/>
+        <!-- The UI owns the fallback setting; the engine reads it through this interface (languages/06 R1, R10). -->
+        <applicationService serviceInterface="io.github.agadek.smartdiff.engine.api.StructureViewFallbackSetting"
+                            serviceImplementation="io.github.agadek.smartdiff.ui.SmartDiffStructureViewFallbackSetting"/>
         <!-- The confidence thresholds the declaration engine classifies its relationships with, as high,medium
              (relationships/02 R15). A malformed value keeps the default (R30). -->
         <registryKey key="smartdiff.relationships.confidence"
@@ -94,5 +97,7 @@
     <extensions defaultExtensionNs="io.github.agadek.smartdiff">
         <comparisonEngine order="first"
                           implementation="io.github.agadek.smartdiff.engine.declarations.psi.DeclarationEngineFactory"/>
+        <declarationProvider order="last"
+                             implementation="io.github.agadek.smartdiff.engine.declarations.psi.structure.StructureViewDeclarationProvider"/>
     </extensions>
 </idea-plugin>

@@ -46,7 +46,7 @@ object Rendering {
             }
         }
         val sides = listOfNotNull(node.oldRange?.let { "old ${lines(it, oldText)}" }, node.newRange?.let { "new ${lines(it, newText)}" })
-        val kindFrom = node.kindChangedFrom?.let { it.name.lowercase().replace('_', ' ') + " → " }.orEmpty()
+        val kindFrom = node.kindChangedFrom?.let { kindWord(it) + " → " }.orEmpty()
         return (listOf(kindFrom + subject(node.subject)) + labels + sides).joinToString("  ")
     }
 
@@ -61,8 +61,13 @@ object Rendering {
         is Subject.Region -> subject.description
     }
 
-    private fun label(kind: DeclarationKind, name: String, signature: String?): String =
-        kind.name.lowercase().replace('_', ' ') + (if (name.isEmpty()) "" else " $name") + (signature?.let { "($it)" } ?: "")
+    private fun label(kind: DeclarationKind, name: String, signature: String?): String {
+        val text = listOfNotNull(kindWord(kind).takeIf { it.isNotEmpty() }, name.takeIf { it.isNotEmpty() }).joinToString(" ")
+        return text + (signature?.let { "($it)" } ?: "")
+    }
+
+    private fun kindWord(kind: DeclarationKind): String =
+        if (kind == DeclarationKind.ITEM) "" else kind.name.lowercase().replace('_', ' ')
 
     /** 1-based lines `first-last` of [range]; a range within one line is that line. */
     private fun lines(range: TextRange, text: CharSequence): String {

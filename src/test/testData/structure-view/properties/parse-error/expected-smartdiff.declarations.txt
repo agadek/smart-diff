@@ -1,0 +1,3 @@
+status: ANALYZED
+property a  removed  old 1
+property \u00ZZ  added  new 1

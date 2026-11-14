@@ -20,7 +20,9 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import io.github.agadek.smartdiff.engine.api.AnalysisNote
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
+import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.registry.EngineSelection
@@ -30,10 +32,13 @@ import java.awt.FlowLayout
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
+import java.awt.event.MouseWheelEvent
 import javax.swing.JList
 import javax.swing.JPanel
+import javax.swing.JScrollPane
 import javax.swing.JTree
 import javax.swing.SwingConstants
+import javax.swing.SwingUtilities
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreePath
@@ -87,6 +92,9 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
 
     private val body = JPanel(CardLayout())
     private var updatingEngines = false
+    private val scrollPane: JScrollPane = ScrollPaneFactory.createScrollPane(tree, true)
+    private var wheelAccumulator = 0.0
+    private var wheelSelectionChange = false
 
     init {
         name = "smartdiff.outline"
@@ -156,7 +164,10 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         tree.selectionModel.selectionMode = TreeSelectionModel.SINGLE_TREE_SELECTION
         tree.cellRenderer = Renderer()
         tree.accessibleContext.accessibleName = "Structural outline"
-        tree.addTreeSelectionListener { select(selectedItem()) }
+        tree.addTreeSelectionListener {
+            if (!wheelSelectionChange) wheelAccumulator = 0.0
+            select(selectedItem())
+        }
         tree.addKeyListener(object : KeyAdapter() {
             override fun keyPressed(e: KeyEvent) {
                 if (e.keyCode == KeyEvent.VK_ENTER) selectedItem()?.let { controller.navigator.navigate(it); e.consume() }
@@ -169,13 +180,14 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
                 return true
             }
         }.installOn(tree)
+        tree.addMouseWheelListener(::onTreeWheel)
 
         message.foreground = UIUtil.getContextHelpForeground()
         message.border = JBUI.Borders.empty(8)
         absence.foreground = UIUtil.getContextHelpForeground()
         absence.border = JBUI.Borders.empty(2, 6)
 
-        body.add(ScrollPaneFactory.createScrollPane(tree, true), TREE)
+        body.add(scrollPane, TREE)
         body.add(message, MESSAGE)
         add(header, BorderLayout.NORTH)
         add(body, BorderLayout.CENTER)
@@ -217,7 +229,8 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
                     usageNote.text = state.usageNote.orEmpty()
                     usageNote.isVisible = state.usageNote != null
                     setTree(state.items)
-                    tree.emptyText.text = if (state.hiddenCount > 0) "All changes are hidden by the filter" else "No structural changes"
+                    tree.emptyText.text = structureViewEmptyText(state.result, state.hiddenCount)
+                    tree.toolTipText = structureViewTooltip(state.result)
                     (body.layout as CardLayout).show(body, TREE)
                 }
             }
@@ -297,6 +310,57 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         }
     }
 
+    private fun onTreeWheel(event: MouseWheelEvent) {
+        if (event.isShiftDown || tree.selectionPath == null) {
+            forwardWheel(event)
+            return
+        }
+        event.consume()
+        val rotation = event.preciseWheelRotation
+        if (rotation == 0.0) return
+        if (wheelAccumulator != 0.0 && rotation * wheelAccumulator < 0.0) wheelAccumulator = 0.0
+        wheelAccumulator += rotation
+        while (wheelAccumulator >= 1.0) {
+            if (stepSelection(1)) wheelAccumulator -= 1.0 else {
+                wheelAccumulator = 1.0
+                break
+            }
+        }
+        while (wheelAccumulator <= -1.0) {
+            if (stepSelection(-1)) wheelAccumulator += 1.0 else {
+                wheelAccumulator = -1.0
+                break
+            }
+        }
+    }
+
+    private fun stepSelection(direction: Int): Boolean {
+        val current = tree.selectionPath ?: return false
+        val row = tree.getRowForPath(current)
+        if (row < 0) return false
+        var i = row + direction
+        while (i in 0 until tree.rowCount) {
+            val path = tree.getPathForRow(i) ?: break
+            val item = (path.lastPathComponent as? DefaultMutableTreeNode)?.userObject as? OutlineItem
+            if (item != null && !item.isGroup) {
+                wheelSelectionChange = true
+                try {
+                    tree.selectionPath = path
+                    tree.scrollPathToVisible(path)
+                } finally {
+                    wheelSelectionChange = false
+                }
+                return true
+            }
+            i += direction
+        }
+        return false
+    }
+
+    private fun forwardWheel(event: MouseWheelEvent) {
+        scrollPane.dispatchEvent(SwingUtilities.convertMouseEvent(tree, event, scrollPane))
+    }
+
     /** One entry of the filter menu: checked while changes of [type] are hidden. */
     private inner class HideAction(private val type: ChangeType) : DumbAwareToggleAction(type.text) {
         override fun isSelected(e: AnActionEvent): Boolean = type in SmartDiffSettings.getInstance().hiddenChangeTypes
@@ -327,6 +391,19 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         fun escape(text: String) = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     }
 }
+
+/** The empty-text line of the outline tree (languages/06 R8); the tooltip says where the outline came from. */
+internal fun structureViewEmptyText(result: ComparisonResult, hiddenCount: Int): String {
+    val empty = if (hiddenCount > 0) "All changes are hidden by the filter" else "No structural changes"
+    return if (result.analysisNote == AnalysisNote.STRUCTURE_VIEW) {
+        "$empty. The outline comes from the IDE's structure view."
+    } else {
+        empty
+    }
+}
+
+internal fun structureViewTooltip(result: ComparisonResult): String? =
+    if (result.analysisNote == AnalysisNote.STRUCTURE_VIEW) "The outline comes from the IDE's structure view." else null
 
 /**
  * Draws an outline item's title, then its change labels in the IDE's diff colors and its note in grey; the text alone

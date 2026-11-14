@@ -173,7 +173,7 @@ class DeclarationEngineTest : BasePlatformTestCase() {
 
     fun `test R24 the engine version names its own version, the IDE build and the Scala plugin`() {
         // relationships/02-relationship-model R24; relationships/03-relationship-matching R18
-        assertEquals("12", DeclarationEngine.VERSION)
+        assertEquals("13", DeclarationEngine.VERSION)
         assertEquals("12 (251.26927.53)", DeclarationEngine.formatVersion("251.26927.53", null))
         assertEquals("12 (251.26927.53; Scala 2025.1.32)", DeclarationEngine.formatVersion("251.26927.53", "2025.1.32"))
 
@@ -200,12 +200,13 @@ class DeclarationEngineTest : BasePlatformTestCase() {
         assertFalse("no Scala plugin is named without its provider: $version", version.contains("Scala"))
     }
 
-    fun `test the engine is registered first and supports Java and Kotlin only`() {
+    fun `test the engine is registered first and supports Java and Kotlin`() {
         val engines = EngineRegistry.getInstance(project).engines()
         assertEquals(DeclarationEngine.ID, engines.first().id)
         val engine = engines.first()
         assertTrue(engine.supports("JAVA"))
         assertTrue(engine.supports("kotlin"))
+        // A language without a structure view stays unsupported (languages/06 R12).
         assertFalse(engine.supports("TEXT"))
     }
 

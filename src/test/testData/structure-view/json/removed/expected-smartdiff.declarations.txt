@@ -1,0 +1,2 @@
+status: ANALYZED
+property b  removed  old 3

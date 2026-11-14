@@ -38,11 +38,12 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
     override fun supports(languageId: String): Boolean = provider(languageId) != null
 
     override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult {
-        val provider = provider(request.languageId)
+        val provider = provider(request.languageId, request.useStructureViewFallback)
             ?: return ComparisonResult.unsupported(this, "no declaration provider for language ${request.languageId}")
         return try {
             val (old, new) = trees(provider, request, cancellation)
-            DeclarationAnalysis(id, version).compare(old, new, request.limits.maxDeclarations, cancellation, request.confidence)
+            val result = DeclarationAnalysis(id, version).compare(old, new, request.limits.maxDeclarations, cancellation, request.confidence)
+            provider.analysisNote?.let { result.copy(analysisNote = it) } ?: result
         } catch (e: CancellationException) {
             throw e
         } catch (e: ProcessCanceledException) {
@@ -54,14 +55,19 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
 
     /** The declaration trees of both sides of [request], for the corpus validation's diagnostics. */
     internal fun trees(request: ComparisonRequest, cancellation: Cancellation): Pair<DeclarationTree, DeclarationTree>? =
-        provider(request.languageId)?.let { trees(it, request, cancellation) }
+        provider(request.languageId, request.useStructureViewFallback)?.let { trees(it, request, cancellation) }
 
     private fun trees(provider: DeclarationProvider, request: ComparisonRequest, cancellation: Cancellation): Pair<DeclarationTree, DeclarationTree> {
         val dialect = cancellableReadAction(cancellation) {
-            provider.dialect(project(), listOf(request.oldText, request.newText) + request.relatedTexts, request.fileName)
+            provider.dialect(
+                project(),
+                listOf(request.oldText, request.newText) + request.relatedTexts,
+                request.fileName,
+                request.languageId,
+            )
         }
-        return build(provider, request.oldText, request.fileName, dialect, cancellation) to
-            build(provider, request.newText, request.fileName, dialect, cancellation)
+        return build(provider, request.oldText, request.fileName, dialect, request.languageId, cancellation) to
+            build(provider, request.newText, request.fileName, dialect, request.languageId, cancellation)
     }
 
     private fun build(
@@ -69,22 +75,25 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
         text: CharSequence,
         fileName: String?,
         dialect: Language?,
+        languageId: String,
         cancellation: Cancellation,
     ): DeclarationTree =
         cancellableReadAction(cancellation) {
-            provider.build(provider.parse(project(), text, fileName, dialect), cancellation)
+            provider.build(provider.parse(project(), text, fileName, dialect, languageId), cancellation)
         }
 
     private fun project(): Project = project ?: ProjectManager.getInstance().defaultProject
 
-    private fun provider(languageId: String): DeclarationProvider? =
-        DeclarationProvider.EP_NAME.extensionList.firstOrNull { it.supports(languageId) }
+    private fun provider(languageId: String, useStructureViewFallback: Boolean = true): DeclarationProvider? =
+        DeclarationProvider.EP_NAME.extensionList.firstOrNull { provider ->
+            provider.supports(languageId) && (useStructureViewFallback || provider.analysisNote == null)
+        }
 
     companion object {
         val ID = EngineId("smartdiff.declarations")
 
         /** Raise when a change to a provider, matching or classification can change results. */
-        const val VERSION = "12"
+        const val VERSION = "13"
 
         /** The result's engine version: `9 (251.26927.53)`, or with the Scala plugin, `9 (251.26927.53; Scala 2025.1.32)`. */
         internal fun formatVersion(platformBuild: String, scalaPluginVersion: String?): String =

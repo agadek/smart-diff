@@ -1,6 +1,6 @@
 # Format Coverage Plan
 
-Status: proposal, 2026-11-13, with open question F1 decided the same day (§6); D0 and D1 implemented, 2026-11-13. It expands the roadmap's [more languages](ROADMAP.md#more-languages) entry into a programme: which languages and file formats of the JetBrains platform SMART Diff covers, what each one needs, and in which order. Section numbers (§) refer to the [technical specification](TECHNICAL-SPECIFICATION.md), and terms follow the [glossary](GLOSSARY.md). [Python](specs/languages/04-python.md) and [Rust](specs/languages/05-rust.md) are specified separately and are not repeated here; this plan builds on their pattern and their build-target decision (spike S8). Each phase below gets its own feature spec and details file, written as the [specification guide](SPEC-GUIDE.md) asks, in the first pull request of that phase.
+Status: proposal, 2026-11-13, with open question F1 decided the same day (§6); G0/G1 and D0/D1 implemented 2026-11-13. It expands the roadmap's [more languages](ROADMAP.md#more-languages) entry into a programme: which languages and file formats of the JetBrains platform SMART Diff covers, what each one needs, and in which order. Section numbers (§) refer to the [technical specification](TECHNICAL-SPECIFICATION.md), and terms follow the [glossary](GLOSSARY.md). [Python](specs/languages/04-python.md) and [Rust](specs/languages/05-rust.md) are specified separately and are not repeated here; this plan builds on their pattern and their build-target decision (spike S8). Each phase below gets its own feature spec and details file, written as the [specification guide](SPEC-GUIDE.md) asks, in the first pull request of that phase.
 
 ## 1. Problem
 
@@ -59,7 +59,7 @@ Plugin ids and licensing are as known on 2026-11-13. The first phase of each gro
 
 ### 2.4 Group (d): every other language, through the structure view
 
-Most languages the IDE parses, including those of group (b) and third-party plugins such as Dart, Lua, Elixir, Haskell, Terraform (HCL), Protocol Buffers, Dockerfile and GraphQL, have a structure view: the tree the IDE's Structure tool window shows. [ADR 0010](adr/0010-structure-view-provider-for-languages-without-their-own.md) proposes a generic provider that builds a declaration tree from it.
+Most languages the IDE parses, including those of group (b) and third-party plugins such as Dart, Lua, Elixir, Haskell, Terraform (HCL), Protocol Buffers, Dockerfile and GraphQL, have a structure view: the tree the IDE's Structure tool window shows. [ADR 0010](adr/0010-structure-view-provider-for-languages-without-their-own.md) specifies the generic provider that builds a declaration tree from it; G0/G1 implement it ([languages/06](specs/languages/06-structure-view-fallback.md)).
 
 - **Dependency:** none at compile time. The structure view is platform API (`LanguageStructureViewBuilder`), so the provider works for any language plugin installed in the user's IDE, paid ones included, without a build target for that IDE.
 - **What it gives:** the names, nesting and ranges of the items the structure view lists, so the outline shows which of them were added, removed, changed or moved.
@@ -110,25 +110,25 @@ S10 is done when text-built JSON, YAML, TOML, properties and XML files give corr
 
 Each phase is one pull request, or a spec pull request and a code pull request, and is done when its requirements pass in tests named after them, the verifier passes on every target, and, for a language, golden fixtures, merge fixtures and a corpus validation exist as for the others (§12). Python (P0 to P2) and Rust (R0 to R2) run before or beside them.
 
-| Phase | Content | Depends on |
-| --- | --- | --- |
-| G0 | Spike S9, ADR 0010 accepted | Nothing |
-| G1 | Structure-view provider: `languages/06`, the `ITEM` kind, the setting, the summary-line note | G0 |
-| D0 | Spike S10, ADR 0009 accepted, the `KEY`, `TAG` and `SECTION` kinds | Nothing; can run beside G0 |
-| D1 | JSON provider | D0 |
-| D2 | YAML provider, with the indentation rule as its own requirement | D1 |
-| D3 | Properties and TOML providers | D1 |
-| D4 | XML provider, with POM and Spring naming; HTML on the same provider | D1 |
-| B0 | Build pattern for paid IDEs, as an amendment to the S8 ADR; verifier jobs for WebStorm and GoLand | R0 |
-| B1 | JavaScript and TypeScript provider | B0 |
-| B2 | Go provider | B0 |
-| M1 | Markdown provider | D0 (the `SECTION` kind) |
-| M2 | Groovy provider and build-script sections, Groovy and Kotlin | Nothing |
-| M3 | Shell provider | Nothing |
-| B3 | CSS, SCSS and Less provider | B1 |
-| B4 | PHP provider | B0 |
-| B5 | Ruby provider | B0 |
-| B6 | SQL provider | B0, or a raised build target (§6) |
+| Phase | Content | Depends on | Status |
+| --- | --- | --- | --- |
+| G0 | Spike S9, ADR 0010 accepted | Nothing | Implemented 2026-11-13 |
+| G1 | Structure-view provider: `languages/06`, the `ITEM` kind, the setting, the summary-line note | G0 | Implemented 2026-11-13 |
+| D0 | Spike S10, ADR 0009 accepted, the `KEY`, `TAG` and `SECTION` kinds | Nothing; can run beside G0 | Not started |
+| D1 | JSON provider | D0 | Not started |
+| D2 | YAML provider, with the indentation rule as its own requirement | D1 | Not started |
+| D3 | Properties and TOML providers | D1 | Not started |
+| D4 | XML provider, with POM and Spring naming; HTML on the same provider | D1 | Not started |
+| B0 | Build pattern for paid IDEs, as an amendment to the S8 ADR; verifier jobs for WebStorm and GoLand | R0 | Not started |
+| B1 | JavaScript and TypeScript provider | B0 | Not started |
+| B2 | Go provider | B0 | Not started |
+| M1 | Markdown provider | D0 (the `SECTION` kind) | Not started |
+| M2 | Groovy provider and build-script sections, Groovy and Kotlin | Nothing | Not started |
+| M3 | Shell provider | Nothing | Not started |
+| B3 | CSS, SCSS and Less provider | B1 | Not started |
+| B4 | PHP provider | B0 | Not started |
+| B5 | Ruby provider | B0 | Not started |
+| B6 | SQL provider | B0, or a raised build target (§6) | Not started |
 
 **Order** (decided 2026-11-13: the fallback and the dedicated providers run in parallel). After Python and Rust, two tracks start together:
 

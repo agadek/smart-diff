@@ -1,5 +1,6 @@
 package io.github.agadek.smartdiff.ui
 
+import io.github.agadek.smartdiff.engine.api.AnalysisNote
 import io.github.agadek.smartdiff.engine.api.Candidate
 import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
@@ -953,6 +954,35 @@ class OutlineModelTest {
     }
 
     private fun method(name: String) = Subject.Declaration(DeclarationKind.METHOD, name, "")
+
+    @Test
+    fun `languages-06 R6 an ITEM declaration is shown without a kind word`() {
+        // languages/06-structure-view-fallback R6
+        assertEquals("root", OutlineModel.title(Subject.Declaration(DeclarationKind.ITEM, "root", null)))
+        val item = ChangeNode(
+            Subject.Declaration(DeclarationKind.ITEM, "root", null),
+            TextRange(0, 4), TextRange(0, 4), Presence.MATCHED, content = Content.CHANGED,
+        )
+
+        assertEquals("root  changed", render(OutlineModel.build(result(item), "", "", formattingInline = false)))
+    }
+
+    @Test
+    fun `languages-06 R8 the summary and empty state name the structure view only for fallback results`() {
+        // languages/06-structure-view-fallback R8
+        val fallback = result(node("a", content = Content.CHANGED)).copy(analysisNote = AnalysisNote.STRUCTURE_VIEW)
+        val dedicated = result(node("a", content = Content.CHANGED))
+
+        assertTrue(OutlineModel.summary(fallback), OutlineModel.summary(fallback).endsWith(" · structure view"))
+        assertFalse("a dedicated result has no note", OutlineModel.summary(dedicated).contains("structure view"))
+        assertEquals(
+            "No structural changes. The outline comes from the IDE's structure view.",
+            structureViewEmptyText(fallback, hiddenCount = 0),
+        )
+        assertEquals("The outline comes from the IDE's structure view.", structureViewTooltip(fallback))
+        assertEquals("No structural changes", structureViewEmptyText(dedicated, hiddenCount = 0))
+        assertNull(structureViewTooltip(dedicated))
+    }
 
     private fun result(vararg changes: ChangeNode) = ComparisonResult(EngineId("e"), "1", Status.ANALYZED, changes = changes.toList())
 

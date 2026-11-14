@@ -56,6 +56,8 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
 
         /** The [ChangeType] names hidden from the Changes tree, comma-separated and separate from the outline's. */
         var hiddenChangesTreeChangeTypes: String = ""
+        /** Analyze languages without a dedicated provider through the IDE's structure view (languages/06 R10). */
+        var useStructureViewFallback: Boolean = true
         var maxChars: Int = Limits.DEFAULT.maxChars
         var maxDeclarations: Int = Limits.DEFAULT.maxDeclarations
         var timeoutMillis: Long = Limits.DEFAULT.timeoutMillis
@@ -144,6 +146,11 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         }
         set(value) = update { hiddenRelationshipKinds = RelationshipKind.entries.filter { it in value }.joinToString(",") { it.name } }
 
+    /** Analyze languages without a dedicated provider through the IDE's structure view (languages/06 R10). */
+    var useStructureViewFallback: Boolean
+        get() = current.useStructureViewFallback
+        set(value) = update { useStructureViewFallback = value }
+
     /** The limits passed to engines; a stored value that is out of range falls back to its default. */
     var limits: Limits
         get() = Limits(
@@ -195,6 +202,7 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
             it.hiddenChangesTreeChangeTypes = old.hiddenChangesTreeChangeTypes
             it.outlineView = old.outlineView
             it.hiddenRelationshipKinds = old.hiddenRelationshipKinds
+            it.useStructureViewFallback = old.useStructureViewFallback
             it.maxChars = old.maxChars
             it.maxDeclarations = old.maxDeclarations
             it.timeoutMillis = old.timeoutMillis
@@ -207,7 +215,7 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
 
     /** The settings that change what a summary contains; display toggles, filters and merge options do not. */
     private fun SettingsState.analysisSignature(): List<Any> =
-        listOf(maxChars, maxDeclarations, timeoutMillis, formattingOnlyInline)
+        listOf(maxChars, maxDeclarations, timeoutMillis, formattingOnlyInline, useStructureViewFallback)
 
     /**
      * The settings the Changes tree shows or analyzes. Outline, merge and follow settings are display-only for this
@@ -216,7 +224,7 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
     private fun SettingsState.treeSignature(): List<Any> =
         listOf(
             showChangesSummary, showChangesDeclarations, hiddenChangesTreeChangeTypes,
-            formattingOnlyInline, maxChars, maxDeclarations, timeoutMillis,
+            formattingOnlyInline, maxChars, maxDeclarations, timeoutMillis, useStructureViewFallback,
         )
 
     /** Told after the settings page is applied, so views that show results outside a diff can update. */

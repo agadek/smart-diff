@@ -348,8 +348,13 @@ object DeclarationMatcher {
     /** A declaration's container path on its side, as `class Order / method total(int)`. */
     private fun path(side: Side, declaration: Declaration): String =
         side.path(declaration).joinToString(" / ") { container ->
-            container.kind.name.lowercase().replace('_', ' ') + (if (container.name.isEmpty()) "" else " " + container.name)
+            listOfNotNull(kindName(container.kind).takeIf { it.isNotEmpty() }, container.name.takeIf { it.isNotEmpty() })
+                .joinToString(" ")
         }
+
+    /** A kind's word in a note; `ITEM` has none, so a generic structure-view container reads as its name (languages/06 R6). */
+    private fun kindName(kind: DeclarationKind): String =
+        if (kind == DeclarationKind.ITEM) "" else kind.name.lowercase().replace('_', ' ')
 
     /**
      * For each matched container pair and the top level, the matched children outside the longest common subsequence
