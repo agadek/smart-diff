@@ -19,6 +19,7 @@ import org.jetbrains.plugins.groovy.lang.groovydoc.psi.api.GrDocComment
 import org.jetbrains.plugins.groovy.lang.psi.GroovyFile
 import org.jetbrains.plugins.groovy.lang.psi.api.statements.GrField
 import org.jetbrains.plugins.groovy.lang.psi.api.statements.params.GrParameter
+import org.jetbrains.plugins.groovy.lang.psi.api.statements.typedef.GrAnonymousClassDefinition
 import org.jetbrains.plugins.groovy.lang.psi.api.statements.typedef.GrTypeDefinition
 import org.jetbrains.plugins.groovy.lang.psi.api.statements.typedef.members.GrAccessorMethod
 import org.jetbrains.plugins.groovy.lang.psi.api.statements.GrClassInitializer
@@ -71,16 +72,15 @@ class GroovyDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_B
     }
 
     private fun kind(type: GrTypeDefinition): DeclarationKind = when {
-        runCatching { type.isTrait }.getOrDefault(false) -> DeclarationKind.TRAIT
-        runCatching { type.isEnum }.getOrDefault(false) -> DeclarationKind.ENUM
-        runCatching { type.isAnnotationType }.getOrDefault(false) -> DeclarationKind.ANNOTATION_TYPE
-        runCatching { type.isInterface }.getOrDefault(false) -> DeclarationKind.INTERFACE
-        runCatching { type.isRecord }.getOrDefault(false) -> DeclarationKind.RECORD
+        type.isTrait -> DeclarationKind.TRAIT
+        type.isEnum -> DeclarationKind.ENUM
+        type.isAnnotationType -> DeclarationKind.ANNOTATION_TYPE
+        type.isInterface -> DeclarationKind.INTERFACE
         else -> DeclarationKind.CLASS
     }
 
     private fun members(type: GrTypeDefinition): List<PsiElement> {
-        val body = runCatching { type.body }.getOrNull() ?: return emptyList()
+        val body = type.body ?: return emptyList()
         val result = mutableListOf<PsiElement>()
         for (child in body.children) {
             when (child) {
@@ -88,6 +88,8 @@ class GroovyDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_B
                 is GrMethod -> result += child
                 is GrClassInitializer -> result += child
                 is GrField -> result += child
+                is GrAnonymousClassDefinition -> Unit
+                is GrTypeDefinition -> result += child
                 else -> {
                     // Field declarations can be wrapped (e.g. GrVariableDeclaration).
                     child.children.filterIsInstance<GrField>().forEach { result += it }
@@ -100,14 +102,14 @@ class GroovyDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_B
 
     private fun describeMethod(method: GrMethod): DeclarationInfo? {
         val name = method.name.takeIf { it.isNotEmpty() } ?: return null
-        val kind = if (runCatching { method.isConstructor }.getOrDefault(false)) DeclarationKind.CONSTRUCTOR else DeclarationKind.METHOD
-        val parameters = runCatching { method.parameters.toList() }.getOrDefault(emptyList())
+        val kind = if (method.isConstructor) DeclarationKind.CONSTRUCTOR else DeclarationKind.METHOD
+        val parameters = method.parameters.toList()
         return DeclarationInfo(
             kind,
             name,
             Signatures.of(parameters.map(::parameterType)),
             displaySignature = Signatures.of(parameters.map(::parameterTypeLabel)),
-            body = runCatching { method.block }.getOrNull(),
+            body = method.block,
         )
     }
 
@@ -119,8 +121,8 @@ class GroovyDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_B
 
     // A field without an explicit access modifier is a Groovy property (languages/08-groovy R4).
     private fun isProperty(field: GrField): Boolean {
-        if (runCatching { field.isProperty }.getOrDefault(false)) return true
-        val modifierList = runCatching { field.modifierList }.getOrNull() ?: return true
+        if (field.isProperty) return true
+        val modifierList = field.modifierList ?: return true
         return !hasVisibility(modifierList)
     }
 
@@ -136,8 +138,7 @@ class GroovyDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_B
     private fun parameterTypeLabel(parameter: GrParameter): String =
         typeElement(parameter)?.let { Signatures.label(it) { false } } ?: "def"
 
-    private fun typeElement(parameter: GrParameter): GrTypeElement? =
-        runCatching { parameter.typeElementGroovy }.getOrNull()
+    private fun typeElement(parameter: GrParameter): GrTypeElement? = parameter.typeElementGroovy
 
     private fun groovyFileName(name: String): Boolean {
         val lower = name.lowercase()

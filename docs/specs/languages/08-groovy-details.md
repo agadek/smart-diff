@@ -18,7 +18,6 @@ Status: implemented, 2026-11-14
   | `GrTypeDefinition` (trait) | `TRAIT` | name | — |
   | `GrTypeDefinition` (enum) | `ENUM` | name | — |
   | `GrTypeDefinition` (annotation type) | `ANNOTATION_TYPE` | name | — |
-  | `GrTypeDefinition` (record, if present) | `RECORD` | name | — |
   | `GrMethod` (constructor) | `CONSTRUCTOR` | name | parameter types |
   | `GrMethod` (not constructor) | `METHOD` | name | parameter types |
   | `GrField` (Groovy property) | `PROPERTY` | name | — |
@@ -27,7 +26,8 @@ Status: implemented, 2026-11-14
   | `GrClassInitializer` | `INITIALIZER` | `""`, or `"static"` for a static initializer | — |
 
   A `GrField` declared without an access modifier is a Groovy property and has kind `PROPERTY` (R4). A named `GrField` with an explicit access modifier is a `FIELD`.
-- **Members.** A type definition's members are the declarations written directly in its body, in source order: methods, constructors, fields, enum constants and class initializers. Closures, anonymous classes, local variables and local classes inside a member are not declarations and belong to the member's own tokens (R6).
+- **Members.** A type definition's members are the declarations written directly in its body, in source order: named nested and inner type definitions, methods, constructors, fields, enum constants and class initializers. Anonymous classes inside the body are not declarations and stay content (R2, R6), as do closures, local variables and local classes inside a member (R6).
+- **Records.** On the bundled Groovy PSI of IntelliJ IDEA Community 2025.1.3, `record Point(int x, int y) {}` parses as a `GrTypeDefinition` (`GrRecordDefinitionImpl`) but `isRecord` returns `false` and the provider classifies it as `CLASS`; records are therefore not treated as `RECORD` declarations in this target. If a later bundled Groovy PSI reports records correctly, they can be added as `RECORD` declarations.
 - **Signatures.** A signature is the parameter types as written, joined with `,`, with whitespace and comments removed (R7), using the same normalization as Java and Kotlin for labels. An untyped parameter has no declared type element in the Groovy PSI; it appears as `def` in the signature, so `foo(x)` and `foo(x, y)` differ as `def` and `def,def`. A typed parameter keeps its declared type as written. The display signature follows the same types with readable spacing.
 - **Whitespace.** Groovy statements end at a line break, like Kotlin, so the provider uses `LINE_BREAKS_SIGNIFICANT` (R8). Whitespace inside a line is dropped, so reformatting inside a line is formatting-only. A line break added or removed between tokens inside a declaration is a change, so joining or splitting lines inside a declaration is a change. The line break before a declaration is leading layout owned by the declaration ([declarations/02-change-classification](../declarations/02-change-classification.md) R14).
 - **Parse errors and Groovydoc.** Parse errors in code mark the innermost declaration or the file region as unanalyzed, as for other PSI providers. Parse-error elements inside Groovydoc are not parse errors (R9); the comment's tokens are still compared.

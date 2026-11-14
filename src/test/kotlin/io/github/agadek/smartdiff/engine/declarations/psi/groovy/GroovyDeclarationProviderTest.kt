@@ -45,6 +45,33 @@ class GroovyDeclarationProviderTest : BasePlatformTestCase() {
         assertEquals(DeclarationKind.ANNOTATION_TYPE, tree.topLevel.first { it.name == "Ann" }.kind)
     }
 
+    // languages/08-groovy R2, R6
+    fun `test R2 named nested and inner type declarations are members and anonymous classes stay content`() {
+        val file = groovy(
+            """
+            class Outer {
+              static class Nested {}
+              class Inner {}
+              enum Kind { A }
+              interface Box {}
+              def m() {
+                def a = new Runnable() { void run() {} }
+              }
+            }
+            """.trimIndent(),
+        )
+        val tree = GroovyDeclarationProvider().build(file, Cancellation.NONE)
+        val outer = tree.topLevel.single()
+        assertEquals(DeclarationKind.CLASS, outer.kind)
+        assertEquals(
+            listOf(DeclarationKind.CLASS, DeclarationKind.CLASS, DeclarationKind.ENUM, DeclarationKind.INTERFACE, DeclarationKind.METHOD),
+            outer.children.map { it.kind },
+        )
+        assertEquals(listOf("Nested", "Inner", "Kind", "Box", "m"), outer.children.map { it.name })
+        val method = outer.children.last()
+        assertTrue("anonymous class inside method is not a declaration", method.children.isEmpty())
+    }
+
     // languages/08-groovy R5
     fun `test R5 script top-level methods and classes are declarations but statements and script variables are not`() {
         val file = groovy(

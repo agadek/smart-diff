@@ -9,7 +9,7 @@ Status: implemented, 2026-11-14
 ## Requirements
 
 - **R1** Groovy support works when the IDE has the Groovy plugin, and the plugin loads without it.
-- **R2** Classes, interfaces, traits, enums, annotation types and records are [declarations](../../GLOSSARY.md#declaration), with [kind](../../GLOSSARY.md#kind) `TRAIT` for traits and the same kinds as Java for the others.
+- **R2** Classes, interfaces, traits, enums and annotation types are [declarations](../../GLOSSARY.md#declaration), including named nested and inner types, with [kind](../../GLOSSARY.md#kind) `TRAIT` for traits and the same kinds as Java for the others.
 - **R3** Methods, constructors, fields, properties, enum constants and class initializers are declarations.
 - **R4** A field declared without an access modifier is a Groovy property and has kind `PROPERTY`.
 - **R5** In a script file, top-level methods and the script's classes are top-level declarations; top-level statements are not declarations and stay in the [file region](../../GLOSSARY.md#file-region); a script's top-level variable declarations are not declarations.
