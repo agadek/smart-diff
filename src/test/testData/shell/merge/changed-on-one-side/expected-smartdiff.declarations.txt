@@ -1,0 +1,2 @@
+left: ANALYZED  right: ANALYZED
+function bar()  RIGHT_ONLY  right: changed  base 5-7  left 5-7  right 5-7

@@ -1,0 +1,2 @@
+status: ANALYZED
+function helper()  changed  old 2-4  new 2-4

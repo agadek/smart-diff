@@ -47,6 +47,9 @@ class GoldenFixturesTest : BasePlatformTestCase() {
     // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
     fun `test structure-view Groovy fixtures`() = checkFixtures("structure-view/groovy", "Groovy", "groovy")
 
+    // languages/09-shell R2-R12
+    fun `test Shell fixtures`() = checkFixtures("shell", "Shell Script", "sh")
+
     private fun checkFixtures(directory: String, languageId: String, extension: String) {
         val cases = File(TEST_DATA, directory)
             .listFiles { file -> file.isDirectory && file.name != "merge" && file.name != "relationships" }

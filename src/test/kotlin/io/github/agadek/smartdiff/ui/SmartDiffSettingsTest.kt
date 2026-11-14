@@ -230,7 +230,7 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
 
         val languages = SmartDiffConfigurable.languagesWithEngines(engines).map { (language, _) -> language.id }
 
-        assertEquals(listOf("JAVA", "kotlin", "Scala"), languages)
+        assertEquals(listOf("JAVA", "kotlin", "Scala", "Shell Script"), languages)
     }
 
     fun `test the settings page also lists fallback languages while the fallback is on`() {

@@ -1,0 +1,6 @@
+<!-- Loaded when the Shell Script plugin is present. -->
+<idea-plugin>
+    <extensions defaultExtensionNs="io.github.agadek.smartdiff">
+        <declarationProvider implementation="io.github.agadek.smartdiff.engine.declarations.psi.shell.ShellDeclarationProvider"/>
+    </extensions>
+</idea-plugin>

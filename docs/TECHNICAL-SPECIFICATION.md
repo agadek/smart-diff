@@ -369,6 +369,10 @@ Tokens come from the language lexer; leading-whitespace assignment and parse-err
 
 The walk does not swallow exceptions: cancellation propagates, and any other failure (a structure view that throws or needs an editor) becomes a `FAILED` result with the native diff. A file over the declaration limit is `TOO_LARGE`. Results carry `analysisNote`, which the outline summary and tooltip/empty state show. See the [details file](specs/languages/06-structure-view-fallback-details.md) for S9's recorded names and ranges, tests and open questions.
 
+### 6.12 Shell provider
+
+Implemented ([languages/09](specs/languages/09-shell.md)). The provider uses the bundled Shell Script plugin's PSI (`com.jetbrains.sh`): `ShFile` and `ShFunctionDefinition` function definitions are `FUNCTION` declarations with empty signatures, nested functions become children of their enclosing function, and top-level functions inside compound commands stay top level. The tree uses `LINE_BREAKS_SIGNIFICANT`, so re-indenting or changing spaces between arguments inside a line is formatting-only while a line-break change, joining commands with `;`, and content inside strings or here-documents remain changes. No shell reference resolver is registered. See the [details file](specs/languages/09-shell-details.md).
+
 ## 7. Declaration engine: matching
 
 Inputs: the old and new `DeclarationTree`. Matching is global over all declarations in the file, so a declaration can be matched across containers. Each rule runs over the declarations still unmatched after the previous rule. Within a rule, declarations are processed in source order of the old side, which makes the result deterministic.

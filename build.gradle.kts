@@ -31,6 +31,7 @@ dependencies {
         // and modules it declares, so without them PythonCore is rejected as an unmet dependency in tests.
         bundledPlugin("com.intellij.modules.json")
         bundledPlugin("org.toml.lang")
+        bundledPlugin("com.jetbrains.sh")
         // Not bundled with the IDE: Marketplace releases, pinned in gradle.properties.
         plugin("org.intellij.scala", providers.gradleProperty("scalaPluginVersion").get())
         plugin("PythonCore", providers.gradleProperty("pythonPluginVersion").get())
