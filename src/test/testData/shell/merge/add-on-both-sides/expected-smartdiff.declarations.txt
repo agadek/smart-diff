@@ -1,0 +1,4 @@
+left: ANALYZED  right: ANALYZED
+File region  CHANGED_ON_BOTH_SIDES  left: changed  right: changed  note: same change on both sides  base 3  left 3-7  right 3-7
+function bar()  LEFT_ONLY  left: added  base -  left 5-7  right -
+function baz()  RIGHT_ONLY  right: added  base -  left -  right 5-7

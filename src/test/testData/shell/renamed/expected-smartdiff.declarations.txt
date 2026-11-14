@@ -1,0 +1,2 @@
+status: ANALYZED
+function say_hello()  rename candidate from function greet()  old 1-3  new 1-3

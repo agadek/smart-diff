@@ -53,6 +53,9 @@ class MergeFixturesTest : BasePlatformTestCase() {
     // languages/08-groovy R1-R10
     fun `test Groovy merge fixtures`() = checkFixtures("groovy", "Groovy", "groovy")
 
+    // languages/09-shell R11
+    fun `test Shell merge fixtures`() = checkFixtures("shell", "Shell Script", "sh")
+
     // languages/10-yaml R16
     fun `test YAML merge fixtures`() = checkFixtures("yaml", "yaml", "yaml")
 
@@ -331,6 +334,7 @@ class MergeFixturesTest : BasePlatformTestCase() {
             "scala3" to "scala",
             "json" to "json",
             "groovy" to "groovy",
+            "shell" to "sh",
             "yaml" to "yaml",
         )
         val REQUIRED_SCENARIOS = listOf(

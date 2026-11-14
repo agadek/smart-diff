@@ -92,12 +92,11 @@ object RenameNameMapping {
             val run = whitespace.toString()
             whitespace.setLength(0)
             val lastBreak = maxOf(run.lastIndexOf('\n'), run.lastIndexOf('\r'))
-            if (lastBreak >= 0) {
-                tokens += when (policy) {
-                    WhitespacePolicy.LINE_BREAKS_SIGNIFICANT -> "\n"
-                    WhitespacePolicy.INDENTATION_SIGNIFICANT -> "\n" + run.substring(lastBreak + 1)
-                    else -> ""
-                }
+            tokens += when (policy) {
+                WhitespacePolicy.LINE_BREAKS_SIGNIFICANT -> if (lastBreak >= 0) "\n" else return
+                WhitespacePolicy.SEPARATION_SIGNIFICANT -> if (lastBreak >= 0) "\n" else " "
+                WhitespacePolicy.INDENTATION_SIGNIFICANT -> if (lastBreak >= 0) "\n" + run.substring(lastBreak + 1) else return
+                else -> return
             }
         }
 

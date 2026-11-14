@@ -603,6 +603,7 @@ class OutlineController internal constructor(
         internal fun whitespacePolicy(languageId: String): WhitespacePolicy = when (languageId) {
             "JAVA" -> WhitespacePolicy.INSIGNIFICANT
             "kotlin" -> WhitespacePolicy.LINE_BREAKS_SIGNIFICANT
+            "Shell Script" -> WhitespacePolicy.SEPARATION_SIGNIFICANT
             "Scala" -> WhitespacePolicy.INDENTATION_SIGNIFICANT
             "JSON", "JSON5" -> WhitespacePolicy.INSIGNIFICANT
             "yaml" -> WhitespacePolicy.SIGNIFICANT

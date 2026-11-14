@@ -1,0 +1,2 @@
+status: ANALYZED
+function greet()  changed  old 1-3  new 1-3
