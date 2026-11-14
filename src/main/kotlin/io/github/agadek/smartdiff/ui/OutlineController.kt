@@ -608,6 +608,7 @@ class OutlineController internal constructor(
             "JSON", "JSON5" -> WhitespacePolicy.INSIGNIFICANT
             "yaml" -> WhitespacePolicy.SIGNIFICANT
             "Python" -> WhitespacePolicy.INDENTATION_SIGNIFICANT
+            "Rust" -> WhitespacePolicy.INSIGNIFICANT
             else -> WhitespacePolicy.SIGNIFICANT
         }
 

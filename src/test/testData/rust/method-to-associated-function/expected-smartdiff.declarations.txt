@@ -1,0 +1,3 @@
+status: ANALYZED
+impl S  old 1-3  new 1-3
+  function f()  changed  signature changed  old 2  new 2

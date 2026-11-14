@@ -1,0 +1,2 @@
+status: ANALYZED
+function f(i64)  changed  signature changed  old 1  new 1

@@ -14,7 +14,23 @@ import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
 internal class LexedTokens private constructor(private val starts: IntArray, private val tokens: List<Token>) {
 
     /** The tokens that start in [range] but in none of [excluded], which are sorted, disjoint and inside [range]. */
-    fun own(range: TextRange, excluded: List<TextRange>): List<Token> = ownIndices(range, excluded).map { tokens[it] }
+    fun own(range: TextRange, excluded: List<TextRange>): List<Token> = own(range, excluded, emptyList())
+
+    /**
+     * [own], but whitespace tokens whose start is inside any range of [significant] are compared exactly (Rust R14): they
+     * are returned as [TokenKind.OTHER] so whitespace normalization never drops them.
+     */
+    fun own(range: TextRange, excluded: List<TextRange>, significant: List<TextRange>): List<Token> =
+        ownIndices(range, excluded).map { i ->
+            val token = tokens[i]
+            if (significant.isNotEmpty() && token.kind == TokenKind.WHITESPACE && inAny(starts[i], significant)) {
+                Token(token.type, token.text, TokenKind.OTHER)
+            } else {
+                token
+            }
+        }
+
+    private fun inAny(offset: Int, ranges: List<TextRange>): Boolean = ranges.any { offset >= it.start && offset < it.end }
 
     /** The start offsets of the tokens [own] returns, in the same order. */
     fun ownStarts(range: TextRange, excluded: List<TextRange>): List<Int> = ownIndices(range, excluded).map { starts[it] }

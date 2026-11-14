@@ -1,0 +1,3 @@
+status: ANALYZED
+struct B  moved  old 5  new 2
+impl B  rename candidate from impl A  old 2-4  new 3-5

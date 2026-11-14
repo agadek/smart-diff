@@ -175,6 +175,13 @@ enum class DeclarationKind {
     SECTION,
     ITEM,
     VARIABLE,
+    STRUCT, UNION, VARIANT, IMPL, MODULE, CONSTANT, STATIC, MACRO;
+
+    /** The label shown in the outline and in declaration paths (languages/05-rust-details §4). */
+    fun label(): String = when (this) {
+        CONSTANT -> "const"
+        else -> name.lowercase().replace('_', ' ')
+    }
 }
 
 /** A possible counterpart of an uncertain node; [range] is on the side where the node is absent. */

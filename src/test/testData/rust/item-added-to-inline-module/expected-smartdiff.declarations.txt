@@ -1,0 +1,3 @@
+status: ANALYZED
+module m  old 1-3  new 1-4
+  function b()  added  new 3

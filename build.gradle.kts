@@ -10,6 +10,7 @@ plugins {
     // while indexing the IDE, JetBrains/intellij-platform-gradle-plugin#2192). Move up once a release has the fix.
     id("org.jetbrains.intellij.platform") version "2.15.0"
     id("org.jetbrains.changelog") version "2.4.0"
+    `java-test-fixtures`
 }
 
 group = "io.github.agadek.smartdiff"
@@ -35,8 +36,10 @@ dependencies {
         // Not bundled with the IDE: Marketplace releases, pinned in gradle.properties.
         plugin("org.intellij.scala", providers.gradleProperty("scalaPluginVersion").get())
         plugin("PythonCore", providers.gradleProperty("pythonPluginVersion").get())
-        pluginModule(implementation(project(":rust")))
         bundledPlugin("org.jetbrains.plugins.yaml")
+        // The Rust provider compiles in :rust against the root's main classes and is packaged here; runtimeOnly keeps
+        // it off the root compile classpath so :rust can compileOnly-depend on :root without a task cycle (05-rust-details §2).
+        pluginModule(runtimeOnly(project(":rust")))
         // S9 spike and structure-view fallback tests: bundled with IntelliJ IDEA, test-only (languages/06); JSON is already
         // on the classpath above.
         testBundledPlugin("org.intellij.plugins.markdown")
@@ -46,6 +49,10 @@ dependencies {
         testFramework(TestFrameworkType.Plugin.Java)
     }
 
+    testFixturesImplementation("junit:junit:4.13.2")
+    testFixturesImplementation("org.opentest4j:opentest4j:1.3.0")
+
+    testImplementation(testFixtures(project(":")))
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.opentest4j:opentest4j:1.3.0")
     testImplementation("com.tngtech.archunit:archunit:1.5.1")

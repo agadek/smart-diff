@@ -1,0 +1,3 @@
+status: ANALYZED
+impl S  old 2-4  new 2-5
+  function b(&self)  added  new 4
