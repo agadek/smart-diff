@@ -1,0 +1,3 @@
+status: ANALYZED
+class A  changed  old 1-3  new 1-4
+  method bar()  added  new 3

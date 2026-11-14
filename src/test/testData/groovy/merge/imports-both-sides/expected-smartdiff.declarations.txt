@@ -1,0 +1,2 @@
+left: ANALYZED  right: ANALYZED
+File region  CHANGED_ON_BOTH_SIDES  left: changed  right: changed  base 1-5  left 1-6  right 1-6

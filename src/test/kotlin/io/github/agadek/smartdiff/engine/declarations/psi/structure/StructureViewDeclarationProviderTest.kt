@@ -6,7 +6,9 @@ import com.intellij.ide.structureView.TreeBasedStructureViewBuilder
 import com.intellij.lang.Language
 import com.intellij.lang.LanguageStructureViewBuilder
 import com.intellij.lang.PsiStructureViewFactory
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.util.ThrowableComputable
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
 import com.intellij.testFramework.ExtensionTestUtil
@@ -15,16 +17,21 @@ import io.github.agadek.smartdiff.engine.api.AnalysisNote
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
+import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.Limits
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
+import io.github.agadek.smartdiff.engine.api.contract.NothingHidden
+import io.github.agadek.smartdiff.engine.declarations.analysis.DeclarationAnalysis
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationEngine
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationProvider
+import io.github.agadek.smartdiff.engine.declarations.psi.Rendering
 import io.github.agadek.smartdiff.engine.declarations.psi.java.JavaDeclarationProvider
 import io.github.agadek.smartdiff.engine.declarations.psi.json.JsonDeclarationProvider
 import io.github.agadek.smartdiff.ui.SmartDiffSettings
+import java.io.File
 
 /** The structure-view fallback provider (languages/06-structure-view-fallback). */
 class StructureViewDeclarationProviderTest : BasePlatformTestCase() {
@@ -82,6 +89,72 @@ class StructureViewDeclarationProviderTest : BasePlatformTestCase() {
         )
         assertEquals(Status.ANALYZED, result.status)
         assertNull("a Java result is not marked as structure view", result.analysisNote)
+    }
+
+
+    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
+    fun `test R1 R3 R4 R6 R7 R11 structure-view Groovy fixtures run through the fallback provider directly`() {
+        val cases = File(TEST_DATA, "structure-view/groovy")
+            .listFiles { file -> file.isDirectory }
+            .orEmpty()
+            .sortedBy { it.name }
+        assertTrue("no Groovy fallback fixtures in ${File(TEST_DATA, "structure-view/groovy").absolutePath}", cases.isNotEmpty())
+        val failures = mutableListOf<String>()
+        for (case in cases) {
+            val old = read(File(case, "old.groovy"))
+            val new = read(File(case, "new.groovy"))
+            val result = compareWithFallback(old, new, "Groovy", "${case.name}.groovy")
+            if (result.status == Status.ANALYZED || result.status == Status.PARTIAL) {
+                NothingHidden.violation(old, new, result)?.let { failures += "${case.name}: $it" }
+            }
+            val actual = Rendering.result(result, old, new)
+            val expectedFile = File(case, "expected-${DeclarationEngine.ID}.txt")
+            val expected = if (expectedFile.isFile) read(expectedFile) else null
+            if (actual == expected) continue
+            if (UPDATE_GOLDEN) {
+                expectedFile.writeText(actual)
+                println("GOLDEN updated ${expectedFile.path}")
+            } else {
+                failures += "${case.name}: expected\n${expected ?: "(no ${expectedFile.name})\n"}but was\n$actual"
+            }
+        }
+        if (failures.isNotEmpty()) fail("${failures.size} of ${cases.size} structure-view/groovy fixtures failed:\n\n" + failures.joinToString("\n"))
+    }
+
+    /** Compares through the structure-view provider directly (no registry/supports check), as the fallback does (languages/06). */
+    private fun compareWithFallback(old: String, new: String, languageId: String, fileName: String): ComparisonResult {
+        val provider = fallbackProvider()
+        val (oldTree, newTree) = ApplicationManager.getApplication().runReadAction(ThrowableComputable {
+            val dialect = provider.dialect(project, listOf(old, new), fileName, languageId)
+            val oldFile = provider.parse(project, old, fileName, dialect, languageId)
+            val newFile = provider.parse(project, new, fileName, dialect, languageId)
+            provider.build(oldFile, Cancellation.NONE) to provider.build(newFile, Cancellation.NONE)
+        })
+        val result = DeclarationAnalysis(DeclarationEngine.ID, "test").compare(oldTree, newTree, Limits.DEFAULT.maxDeclarations, Cancellation.NONE)
+        return result.copy(analysisNote = AnalysisNote.STRUCTURE_VIEW)
+    }
+
+    /** Fixture texts are LF-separated like document snapshots, whatever the checkout's line ends. */
+    private fun read(file: File): String = file.readText().replace("\r\n", "\n")
+
+    private companion object {
+        val TEST_DATA = File("src/test/testData")
+        val UPDATE_GOLDEN = System.getProperty("smartdiff.updateGolden").toBoolean()
+    }
+
+    // languages/08-groovy R1; languages/06-structure-view-fallback R2
+    fun `test a Groovy file goes to the Groovy provider not the fallback`() {
+        val fallback = fallbackProvider()
+        assertFalse("the fallback never claims Groovy", fallback.supports("Groovy"))
+        val provider = DeclarationProvider.EP_NAME.extensionList.first { it.supports("Groovy") }
+        assertFalse("a dedicated Groovy provider is chosen: ${provider.javaClass.name}", provider === fallback)
+
+        val result = DeclarationEngine(project).compare(
+            ComparisonRequest("class A {}", "class B {}", "Groovy", "A.groovy"),
+            Cancellation.NONE,
+        )
+        assertEquals(Status.ANALYZED, result.status)
+        assertNull("a Groovy result is not marked as structure view", result.analysisNote)
     }
 
     // languages/06-structure-view-fallback R1, R10

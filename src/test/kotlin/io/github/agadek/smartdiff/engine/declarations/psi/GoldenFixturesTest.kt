@@ -41,6 +41,9 @@ class GoldenFixturesTest : BasePlatformTestCase() {
     // languages/07-json R14
     fun `test JSON fixtures`() = checkFixtures("json", "JSON", "json")
 
+    // languages/08-groovy R1-R10
+    fun `test Groovy fixtures`() = checkFixtures("groovy", "Groovy", "groovy")
+
     // languages/10-yaml R16
     fun `test YAML fixtures`() = checkFixtures("yaml", "yaml", "yaml")
 
@@ -59,9 +62,6 @@ class GoldenFixturesTest : BasePlatformTestCase() {
 
     // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
     fun `test structure-view properties fixtures`() = checkFixtures("structure-view/properties", "Properties", "properties")
-
-    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
-    fun `test structure-view Groovy fixtures`() = checkFixtures("structure-view/groovy", "Groovy", "groovy")
 
     private fun checkFixtures(
         directory: String,
@@ -91,7 +91,7 @@ class GoldenFixturesTest : BasePlatformTestCase() {
             val ext = when {
                 File(case, "old.jsonc").isFile -> "jsonc"
                 File(case, "old.json5").isFile -> "json5"
-                else -> extension
+                else -> extensionOf(case, extension)
             }
             val requestLanguage = when (ext) {
                 "json5" -> "JSON5"
@@ -116,6 +116,11 @@ class GoldenFixturesTest : BasePlatformTestCase() {
             }
         }
         if (failures.isNotEmpty()) fail("${failures.size} of ${cases.size} $directory fixtures failed:\n\n" + failures.joinToString("\n"))
+    }
+
+    private fun extensionOf(case: File, default: String): String {
+        val old = case.listFiles()?.firstOrNull { it.name.startsWith("old.") } ?: return default
+        return old.name.removePrefix("old.")
     }
 
     /** Fixture texts are LF-separated like document snapshots, whatever the checkout's line ends. */

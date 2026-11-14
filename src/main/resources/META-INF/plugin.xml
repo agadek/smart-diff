@@ -6,7 +6,7 @@
     <description><![CDATA[
         Review code changes by structure in IntelliJ-based IDEs, with the native text diff always available.
         <br/><br/>
-        SMART Diff adds a structural outline beside the side-by-side diff of Java, Kotlin, Scala, JSON, Python and YAML files. It lists
+        SMART Diff adds a structural outline beside the side-by-side diff of Java, Kotlin, Scala, JSON, Python, YAML and Groovy files. It lists
         the declarations that changed, marked added, removed, changed, moved, signature changed or formatting-only, so
         a reviewer sees which methods, classes and keys a change touches before reading the lines.
         <ul>
@@ -31,6 +31,7 @@
     <depends optional="true" config-file="smartdiff-java.xml">com.intellij.java</depends>
     <depends optional="true" config-file="smartdiff-kotlin.xml">org.jetbrains.kotlin</depends>
     <depends optional="true" config-file="smartdiff-scala.xml">org.intellij.scala</depends>
+    <depends optional="true" config-file="smartdiff-groovy.xml">org.intellij.groovy</depends>
     <depends optional="true" config-file="smartdiff-json.xml">com.intellij.modules.json</depends>
     <depends optional="true" config-file="smartdiff-yaml.xml">org.jetbrains.plugins.yaml</depends>
     <depends optional="true" config-file="smartdiff-python.xml">PythonCore</depends>

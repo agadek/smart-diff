@@ -377,6 +377,10 @@ Implemented, 2026-11-13 ([languages/07](specs/languages/07-json.md)). The PSI ma
 
 Implemented, 2026-11-14 ([languages/10](specs/languages/10-yaml.md)). The PSI mapping, document naming, the sequence identity rule, anchors and aliases, whitespace policy, packaging and tests are in its [details file](specs/languages/10-yaml-details.md).
 
+### 6.14 Groovy provider
+
+Implemented for M2 part 1 ([languages/08](specs/languages/08-groovy.md)), when the Groovy plugin is installed. The provider uses Groovy PSI only: classes, interfaces, traits, enums and annotation types are declarations, including named nested and inner types, with `TRAIT` for traits and the same kinds as Java for the others; methods, constructors, fields, properties (a `GrField` without an access modifier), enum constants and class initializers are declarations. On the bundled Groovy PSI of IntelliJ IDEA Community 2025.1.3, `record Point(int x, int y) {}` parses as a `GrTypeDefinition` (`GrRecordDefinitionImpl`) but `isRecord` returns `false`, so it is classified as `CLASS`, not as a `RECORD`, in this target. In script files, top-level methods and type definitions are top-level declarations, while top-level statements and script variable declarations stay in the file region. Untyped parameters are named `def` in signatures. Groovy uses `LINE_BREAKS_SIGNIFICANT` whitespace: reformatting inside a line is formatting-only, while adding or removing a line break between tokens inside a declaration is a change. Errors in Groovydoc are not parse errors. `.gradle` files get the Groovy outline for their methods and classes; build-script top-level blocks remain in the file region until M2b adds sections. See the [details file](specs/languages/08-groovy-details.md).
+
 ## 7. Declaration engine: matching
 
 Inputs: the old and new `DeclarationTree`. Matching is global over all declarations in the file, so a declaration can be matched across containers. Each rule runs over the declarations still unmatched after the previous rule. Within a rule, declarations are processed in source order of the old side, which makes the result deterministic.

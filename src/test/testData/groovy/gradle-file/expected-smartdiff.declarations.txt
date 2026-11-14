@@ -1,0 +1,2 @@
+status: ANALYZED
+method helper()  changed  old 3  new 3

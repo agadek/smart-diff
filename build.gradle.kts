@@ -27,6 +27,7 @@ dependencies {
         intellijIdeaCommunity(providers.gradleProperty("platformVersion"))
         bundledPlugin("com.intellij.java")
         bundledPlugin("org.jetbrains.kotlin")
+        bundledPlugin("org.intellij.groovy")
         // PythonCore's descriptor requires these bundled language plugins; a test application loads only the plugins
         // and modules it declares, so without them PythonCore is rejected as an unmet dependency in tests.
         bundledPlugin("com.intellij.modules.json")
@@ -40,7 +41,6 @@ dependencies {
         // on the classpath above.
         testBundledPlugin("org.intellij.plugins.markdown")
         testBundledPlugin("com.intellij.properties")
-        testBundledPlugin("org.intellij.groovy")
         testFramework(TestFrameworkType.Platform)
         testFramework(TestFrameworkType.Plugin.Java)
     }
