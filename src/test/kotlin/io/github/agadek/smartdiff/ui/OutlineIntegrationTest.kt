@@ -645,6 +645,56 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test outline 09 R1 the outline panel stops at its minimum width`() {
+        // outline/09-outline-minimum-width R1
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+        val splitter = outline.splitter
+        splitter.setSize(1200, 700)
+        splitter.doLayout()
+
+        assertEquals(outlineMinimumWidth(), outline.panel.minimumSize.width)
+
+        splitter.proportion = 0.99f
+        splitter.doLayout()
+
+        assertEquals("the splitter keeps the panel at its minimum", outlineMinimumWidth(), outline.panel.width)
+        assertTrue("the editors keep the rest of the width", (splitter.firstComponent?.width ?: 0) > 0)
+    }
+
+    fun `test outline 09 R2 the minimum holds for a fallback and while comparing`() {
+        // outline/09-outline-minimum-width R2
+        val engine = DelayedFallbackEngine()
+        ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(engine)), testRootDisposable)
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).outline
+
+        assertEquals(OutlineState.Loading, outline.state)
+        assertEquals(outlineMinimumWidth(), outline.panel.minimumSize.width)
+
+        engine.finish()
+        awaitResult(outline) { it.result.status == Status.FAILED }
+
+        assertEquals("the fallback keeps the same minimum", outlineMinimumWidth(), outline.panel.minimumSize.width)
+    }
+
+    fun `test outline 09 R3 a remembered width below the minimum opens at the minimum`() {
+        // outline/09-outline-minimum-width R3
+        val key = "smartdiff.outline.proportion"
+        val properties = PropertiesComponent.getInstance()
+        val saved = properties.getValue(key)
+        try {
+            properties.setValue(key, "0.95")
+            val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+            val splitter = outline.splitter
+            splitter.setSize(1200, 700)
+            splitter.doLayout()
+
+            assertEquals(outlineMinimumWidth(), outline.panel.width)
+            assertTrue("the editors keep the rest of the width", (splitter.firstComponent?.width ?: 0) > 0)
+        } finally {
+            if (saved == null) properties.unsetValue(key) else properties.setValue(key, saved)
+        }
+    }
+
     fun `test the outline starts hidden when the setting is off`() {
         settings.showOutline = false
 

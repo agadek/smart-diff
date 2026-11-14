@@ -28,6 +28,7 @@ import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.registry.EngineSelection
 import java.awt.BorderLayout
 import java.awt.CardLayout
+import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
@@ -182,6 +183,15 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         add(header, BorderLayout.NORTH)
         add(body, BorderLayout.CENTER)
         add(absence, BorderLayout.SOUTH)
+    }
+
+    /**
+     * The panel, not the tree, is the splitter's component, and a scroll pane does not pass the tree's minimum on. The
+     * splitter honors this minimum, so the header and rows stay readable (outline/09 R1 to R3).
+     */
+    override fun getMinimumSize(): Dimension {
+        val computed = super.getMinimumSize()
+        return Dimension(maxOf(computed.width, outlineMinimumWidth()), computed.height)
     }
 
     /** Lists the candidate engines in the dropdown, which is shown only when there is a choice (§4). */
