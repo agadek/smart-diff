@@ -1,0 +1,6 @@
+{
+  "services": [
+    { "name": "web", "port": 443 },
+    { "name": "api", "port": 8080 }
+  ]
+}

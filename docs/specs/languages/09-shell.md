@@ -28,5 +28,5 @@ Status: implemented, 2026-11-14
 ## References
 
 - [Details](09-shell-details.md)
-- [Technical specification §6.12](../../TECHNICAL-SPECIFICATION.md#612-shell-provider)
+- [Technical specification §6.13](../../TECHNICAL-SPECIFICATION.md#613-shell-provider)
 - [ADR 0003](../../adr/0003-conservative-classification.md)

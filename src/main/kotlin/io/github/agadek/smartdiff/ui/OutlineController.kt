@@ -8,6 +8,8 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.editor.Document
+import com.intellij.openapi.editor.event.CaretEvent
+import com.intellij.openapi.editor.event.CaretListener
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.progress.ProcessCanceledException
@@ -26,9 +28,12 @@ import io.github.agadek.smartdiff.engine.api.compareSafely
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
 import io.github.agadek.smartdiff.engine.registry.EngineSelection
 import io.github.agadek.smartdiff.references.ReferencePass
+import org.jetbrains.annotations.TestOnly
 import java.awt.BorderLayout
+import java.awt.KeyboardFocusManager
 import java.util.concurrent.CancellationException
 import javax.swing.JPanel
+import javax.swing.SwingUtilities
 import javax.swing.Timer
 
 /** What the outline of one diff shows. */
@@ -111,6 +116,34 @@ class OutlineController internal constructor(
     private var disposed = false
     private val debounce = Timer(DEBOUNCE_MILLIS) { refresh() }.apply { isRepeats = false }
 
+    /** The caret side followed by [caretDebounce] (outline/07). */
+    internal enum class CaretSide { OLD, NEW }
+
+    private var lastCaretSide: CaretSide? = null
+    private var lastCaretOffset: Int = 0
+    /** A caret move was skipped because the result was stale, pending or running (outline/07 R8). */
+    private var caretFollowPending = false
+    @TestOnly
+    internal var outlineFocusedOverride: Boolean? = null
+    @TestOnly
+    internal var editorFocusedOverride: Boolean? = null
+    /** Nested while the outline scrolls the editors itself, so the resulting caret move is not followed (R10). */
+    private var suppressCaretFollow = 0
+    private val caretDebounce = Timer(CARET_DEBOUNCE_MILLIS) { followLastCaret() }.apply { isRepeats = false }
+
+    /** Runs [action] without following the caret moves it causes (outline/07 R10). */
+    internal fun withSuppressedCaretFollow(action: () -> Unit) {
+        suppressCaretFollow++
+        try {
+            caretDebounce.stop()
+            caretFollowPending = false
+            lastCaretSide = null
+            action()
+        } finally {
+            suppressCaretFollow--
+        }
+    }
+
     internal fun start() {
         viewer.component.putClientProperty(CONTROLLER, this)
         if (!settingsSubscribed) {
@@ -124,6 +157,8 @@ class OutlineController internal constructor(
         }
         oldDocument.addDocumentListener(listener, this)
         if (newDocument !== oldDocument) newDocument.addDocumentListener(listener, this)
+        viewer.editor1.caretModel.addCaretListener(caretListener(CaretSide.OLD), this)
+        viewer.editor2.caretModel.addCaretListener(caretListener(CaretSide.NEW), this)
         applyVisibility()
         if (isOutlineVisible) refresh()
     }
@@ -344,6 +379,7 @@ class OutlineController internal constructor(
         } else {
             OutlineModel.build(result, request.oldText, request.newText, settings.formattingOnlyInline, hidden, whitespacePolicy)
         }
+        val revealApplied = !keepSelection && reveal != null
         shownRequest = request
         show(
             OutlineState.Shown(
@@ -361,11 +397,13 @@ class OutlineController internal constructor(
             usageHighlights.clear()
         }
         when {
-            keepSelection && selection != null -> panel.reveal(selection)
+            keepSelection && selection != null -> panel.reveal(selection, scrollEditors = false)
             !keepSelection -> reveal?.let(panel::reveal)
         }
         if (!keepSelection) reveal = null
         (viewer as? FilteringDiffViewer)?.hide(HiddenLines.of(result, hidden, request.oldText, request.newText))
+        // Follow once after a result shown when a caret move was skipped while a comparison was pending (R8); ranges stay valid during the reference pass.
+        if (!revealApplied && caretFollowPending) followLastCaret(afterResult = true)
     }
 
     private fun documentChanged() {
@@ -393,6 +431,111 @@ class OutlineController internal constructor(
         strip.show(stripDetail(state))
     }
 
+    private fun caretListener(side: CaretSide): CaretListener = object : CaretListener {
+        override fun caretPositionChanged(event: CaretEvent) {
+            if (disposed || suppressCaretFollow > 0) return
+            lastCaretSide = side
+            lastCaretOffset = event.caret?.offset ?: return
+            // A comparison is pending or running; the shown result is stale or missing until the new one (R8).
+            // Focus is checked when the timer fires, so a click that moves the caret before focus settles is followed.
+            if (debounce.isRunning || state !is OutlineState.Shown) caretFollowPending = true
+            caretDebounce.restart()
+        }
+    }
+
+    /** Fires the caret-follow debounce at once (outline/07, tests). */
+    @TestOnly
+    internal fun fireCaretFollow() {
+        caretDebounce.stop()
+        followLastCaret()
+    }
+
+    private fun isOutlineFocused(): Boolean =
+        outlineFocusedOverride ?: run {
+            val focus = KeyboardFocusManager.getCurrentKeyboardFocusManager().focusOwner ?: return false
+            SwingUtilities.isDescendingFrom(focus, panel)
+        }
+
+    private fun isEditorFocused(side: CaretSide): Boolean =
+        editorFocusedOverride ?: run {
+            val focus = KeyboardFocusManager.getCurrentKeyboardFocusManager().focusOwner ?: return false
+            val editor = if (side == CaretSide.OLD) viewer.editor1 else viewer.editor2
+            SwingUtilities.isDescendingFrom(focus, editor.contentComponent)
+        }
+
+    /** Selects the row of the last caret position when conditions allow (outline/07 R1-R8, R10). */
+    private fun followLastCaret(afterResult: Boolean = false) {
+        if (disposed || !isOutlineVisible || isMinimised || state !is OutlineState.Shown || isOutlineFocused()) return
+        if (!afterResult && debounce.isRunning) {
+            // A comparison is pending while the document debounce runs; the shown result is stale until the next one (R8).
+            caretFollowPending = true
+            return
+        }
+        val side = lastCaretSide ?: return
+        if (!isEditorFocused(side)) return
+        val offset = lastCaretOffset
+        val shown = state as? OutlineState.Shown ?: return
+        val match = matchingItem(shown.items, side, offset)
+        if (match == null) {
+            caretFollowPending = false
+            return
+        }
+        val selected = panel.selectedItem()
+        if (selected != null && selected === match) {
+            caretFollowPending = false
+            return
+        }
+        panel.reveal(OutlinePath.of(pathTo(shown.items, match)), scrollEditors = false)
+        caretFollowPending = false
+    }
+
+    /** The path from the top level to [target], or a single-element path when not found in the tree. */
+    private fun pathTo(items: List<OutlineItem>, target: OutlineItem): List<OutlineItem> {
+        fun find(level: List<OutlineItem>, prefix: List<OutlineItem>): List<OutlineItem>? {
+            for (item in level) {
+                val next = prefix + item
+                if (item === target) return next
+                val child = find(item.children, next)
+                if (child != null) return child
+            }
+            return null
+        }
+        return find(items, emptyList()) ?: listOf(target)
+    }
+
+    /** The innermost shown row for [offset] on [side], or null (outline/07 R1-R3, R6, R7). */
+    private fun matchingItem(items: List<OutlineItem>, side: CaretSide, offset: Int): OutlineItem? {
+        val matches = mutableListOf<Match>()
+        fun visit(level: List<OutlineItem>, index: IntArray) {
+            for (item in level) {
+                val i = index[0]++
+                if (item.isGroup) {
+                    visit(item.children, index)
+                    continue
+                }
+                val range = if (side == CaretSide.OLD) item.oldRange else item.newRange
+                if (range != null && contains(range, offset, side)) {
+                    matches += Match(item, range.end - range.start, item.kind != ItemKind.RELATIONSHIP, i)
+                }
+                visit(item.children, index)
+            }
+        }
+        visit(items, intArrayOf(0))
+        if (matches.isEmpty()) return null
+        return matches.minWith(compareBy<Match> { it.length }.thenByDescending { it.prefer }.thenBy { it.order }).item
+    }
+
+    private data class Match(val item: OutlineItem, val length: Int, val prefer: Boolean, val order: Int)
+
+    /** Whether [range] contains [offset] (outline/07 details: `start <= offset < end`, or `offset == end` at document end). */
+    private fun contains(range: io.github.agadek.smartdiff.engine.api.TextRange, offset: Int, side: CaretSide): Boolean {
+        if (offset < range.start || offset > range.end) return false
+        if (offset < range.end) return true
+        // offset == range.end: only the last character of the document.
+        val length = if (side == CaretSide.OLD) oldDocument.textLength else newDocument.textLength
+        return offset == length
+    }
+
     /**
      * What the strip says for [state]. A fallback keeps its reason and never uses the empty summary line, which would
      * claim there are no structural changes when the analysis did not run (outline/02 R9).
@@ -414,6 +557,7 @@ class OutlineController internal constructor(
 
     override fun dispose() {
         disposed = true
+        caretDebounce.stop()
         cancel()
         navigator.clear()
         usageHighlights.clear()
@@ -448,6 +592,9 @@ class OutlineController internal constructor(
     companion object {
         const val DEBOUNCE_MILLIS = 300
 
+        /** Debounce for caret-follow selection (outline/07 R5). */
+        const val CARET_DEBOUNCE_MILLIS = 100
+
         /** The grey note while the reference pass runs, and after it could not run (relationships/04 R2, R17). */
         const val RESOLVING = "Resolving usages…"
         const val USAGES_NOT_GROUPED = "usages not grouped"
@@ -458,6 +605,7 @@ class OutlineController internal constructor(
             "kotlin" -> WhitespacePolicy.LINE_BREAKS_SIGNIFICANT
             "Shell Script" -> WhitespacePolicy.SEPARATION_SIGNIFICANT
             "Scala" -> WhitespacePolicy.INDENTATION_SIGNIFICANT
+            "JSON", "JSON5" -> WhitespacePolicy.INSIGNIFICANT
             else -> WhitespacePolicy.SIGNIFICANT
         }
 

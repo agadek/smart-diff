@@ -1,0 +1,6 @@
+<!-- Loaded when the JSON plugin is present. The JSON declaration provider registers here. -->
+<idea-plugin>
+    <extensions defaultExtensionNs="io.github.agadek.smartdiff">
+        <declarationProvider implementation="io.github.agadek.smartdiff.engine.declarations.psi.json.JsonDeclarationProvider"/>
+    </extensions>
+</idea-plugin>

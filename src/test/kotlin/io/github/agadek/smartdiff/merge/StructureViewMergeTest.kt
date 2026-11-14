@@ -13,13 +13,13 @@ class StructureViewMergeTest : BasePlatformTestCase() {
     // languages/06-structure-view-fallback R11
     fun `test R11 both sides of a merge are compared through the fallback`() {
         val engine = DeclarationEngine(project)
-        val base = "{\n  \"a\": 1,\n  \"b\": 2\n}\n"
-        val left = "{\n  \"a\": 1,\n  \"b\": 3\n}\n"
-        val right = "{\n  \"a\": 2,\n  \"b\": 2\n}\n"
+        val base = "a=1\nb=2\n"
+        val left = "a=1\nb=3\n"
+        val right = "a=2\nb=2\n"
 
         val joined = MergeComparison.compare(
             engine,
-            MergeTexts(base, left, right, "JSON", "a.json"),
+            MergeTexts(base, left, right, "Properties", "a.properties"),
             Cancellation.NONE,
             Executor { it.run() },
         )

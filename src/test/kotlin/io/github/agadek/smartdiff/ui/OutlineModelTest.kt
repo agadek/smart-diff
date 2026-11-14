@@ -19,6 +19,7 @@ import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
+import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 import io.github.agadek.smartdiff.ui.changes.ChangesTreeFilter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -28,6 +29,20 @@ import org.junit.Test
 
 /** The outline rows and summary built from engine-neutral results (technical specification §10), without the IDE. */
 class OutlineModelTest {
+
+    @Test
+    fun `languages 07-json R3 data kinds render as key, tag and section`() {
+        assertEquals("key", OutlineModel.kindName(DeclarationKind.KEY))
+        assertEquals("tag", OutlineModel.kindName(DeclarationKind.TAG))
+        assertEquals("section", OutlineModel.kindName(DeclarationKind.SECTION))
+    }
+
+    @Test
+    fun `languages 07-json R9 JSON whitespace is insignificant`() {
+        assertEquals(WhitespacePolicy.INSIGNIFICANT, OutlineController.whitespacePolicy("JSON"))
+        assertEquals(WhitespacePolicy.INSIGNIFICANT, OutlineController.whitespacePolicy("JSON5"))
+        assertEquals(WhitespacePolicy.SIGNIFICANT, OutlineController.whitespacePolicy("JSON Lines"))
+    }
 
     @Test
     fun `titles name kind, name and signature, or a region's description`() {

@@ -40,6 +40,7 @@ import io.github.agadek.smartdiff.ui.ChangeType
 import io.github.agadek.smartdiff.ui.DiffContents
 import io.github.agadek.smartdiff.ui.SmartDiffSettings
 import io.github.agadek.smartdiff.ui.ToggleOutlineAction
+import io.github.agadek.smartdiff.ui.outlineMinimumWidth
 import io.github.agadek.smartdiff.ui.scrollFrame
 import java.awt.Component
 import java.awt.Container
@@ -136,6 +137,16 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
         action.setSelected(event, true)
         assertTrue(UIUtil.isAncestor(viewer.component, outline.panel))
         outline.awaitShown()
+    }
+
+    fun `test outline 09 R4 the merge outline keeps the same minimum width`() {
+        // outline/09-outline-minimum-width R4
+        val outline = open().awaitShown()
+
+        assertTrue(
+            "the merge outline keeps at least the two-sided minimum: ${outline.panel.minimumSize}",
+            outline.panel.minimumSize.width >= outlineMinimumWidth(),
+        )
     }
 
     fun `test the container layout and the merge filter rebuild the rows`() {

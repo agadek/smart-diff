@@ -1,0 +1,5 @@
+left: ANALYZED  right: ANALYZED
+key total  RIGHT_ONLY  right: changed  base 2  left 2  right 2
+key nested  LEFT_ONLY  left: formatting-only  base 3  left 3-6  right 3
+  key a  LEFT_ONLY  left: formatting-only  base 3  left 4  right 3
+  key b  LEFT_ONLY  left: formatting-only  base 3  left 5  right 3

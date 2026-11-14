@@ -1,0 +1,3 @@
+status: ANALYZED
+key services  old 2-5  new 2-5
+  key [name=api]  moved  old 4  new 3

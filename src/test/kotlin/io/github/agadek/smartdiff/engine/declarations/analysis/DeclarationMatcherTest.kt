@@ -181,6 +181,18 @@ class DeclarationMatcherTest {
     }
 
     @Test
+    fun `languages 07-json R3 M4b never pairs a JSON key with a code declaration`() {
+        val old = tree { declaration(DeclarationKind.KEY, "host", body = "\"host\": 1") }
+        val new = tree { declaration(DeclarationKind.FIELD, "host", body = "int host;") }
+
+        val matching = match(old, new)
+
+        assertTrue("no kind change across a data kind", matching.matches.isEmpty())
+        assertEquals(listOf(DeclarationKind.KEY), matching.removed.map { it.kind })
+        assertEquals(listOf(DeclarationKind.FIELD), matching.added.map { it.kind })
+    }
+
+    @Test
     fun `M4b matches a Java class turned into an interface`() {
         val old = tree { declaration(DeclarationKind.CLASS, "Shape") { declaration(DeclarationKind.METHOD, "area", "") } }
         val new = tree { declaration(DeclarationKind.INTERFACE, "Shape") { declaration(DeclarationKind.METHOD, "area", "") } }

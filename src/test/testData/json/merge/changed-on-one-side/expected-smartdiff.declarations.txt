@@ -1,0 +1,2 @@
+left: ANALYZED  right: ANALYZED
+key total  LEFT_ONLY  left: changed  base 2  left 2  right 2

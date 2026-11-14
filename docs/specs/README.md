@@ -68,6 +68,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [04 Python](languages/04-python.md) | proposed, 2026-11-13 |
 | [05 Rust](languages/05-rust.md) | proposed, 2026-11-13 |
 | [06 Structure-view fallback](languages/06-structure-view-fallback.md) | implemented, 2026-11-13 |
+| [07 JSON](languages/07-json.md) | implemented, 2026-11-13 |
 | [09 Shell](languages/09-shell.md) | implemented, 2026-11-14 |
 
 ## Outline
@@ -80,6 +81,9 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [04 SMART Diff viewer](outline/04-smart-diff-viewer.md) | implemented, 2026-10-22 |
 | [05 Analysis fallback states](outline/05-analysis-fallback.md) | implemented, 2026-11-04 |
 | [06 Usability validation](outline/06-usability-validation.md) | accepted, 2026-11-10 |
+| [07 Outline caret follow](outline/07-outline-caret-follow.md) | implemented, 2026-11-13 |
+| [08 Wheel steps through rows](outline/08-wheel-steps-through-rows.md) | implemented, 2026-11-14 |
+| [09 Outline minimum width](outline/09-outline-minimum-width.md) | implemented, 2026-11-14 |
 
 ## Changes tree
 

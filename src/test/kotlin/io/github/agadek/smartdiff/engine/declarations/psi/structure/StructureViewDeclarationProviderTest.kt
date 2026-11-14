@@ -9,17 +9,21 @@ import com.intellij.lang.PsiStructureViewFactory
 import com.intellij.openapi.editor.Editor
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
+import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import io.github.agadek.smartdiff.engine.api.AnalysisNote
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.Content
+import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.Limits
 import io.github.agadek.smartdiff.engine.api.Status
+import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationEngine
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationProvider
 import io.github.agadek.smartdiff.engine.declarations.psi.java.JavaDeclarationProvider
+import io.github.agadek.smartdiff.engine.declarations.psi.json.JsonDeclarationProvider
 import io.github.agadek.smartdiff.ui.SmartDiffSettings
 
 /** The structure-view fallback provider (languages/06-structure-view-fallback). */
@@ -99,16 +103,22 @@ class StructureViewDeclarationProviderTest : BasePlatformTestCase() {
     // languages/06-structure-view-fallback R1, R10
     fun `test R1 R10 the setting is on by default and turning it off makes fallback languages unsupported`() {
         assertTrue("fallback is on by default", settings.useStructureViewFallback)
-        assertTrue(DeclarationEngine(project).supports("JSON"))
+        assertTrue(DeclarationEngine(project).supports("Properties"))
 
         settings.useStructureViewFallback = false
 
-        assertFalse("JSON unsupported when the fallback is off", DeclarationEngine(project).supports("JSON"))
+        assertFalse("Properties unsupported when the fallback is off", DeclarationEngine(project).supports("Properties"))
         val result = DeclarationEngine(project).compare(
-            ComparisonRequest("{\"a\":1}", "{\"a\":2}", "JSON", "a.json"),
+            ComparisonRequest("a=1\n", "a=2\n", "Properties", "a.properties"),
             Cancellation.NONE,
         )
         assertEquals(Status.UNSUPPORTED, result.status)
+        val json = DeclarationEngine(project).compare(
+            ComparisonRequest("{\"a\":1}", "{\"a\":2}", "JSON", "a.json"),
+            Cancellation.NONE,
+        )
+        assertEquals("JSON stays supported by its dedicated provider: $json", Status.ANALYZED, json.status)
+        assertNull("JSON stays supported by its dedicated provider", json.analysisNote)
     }
 
     // languages/06-structure-view-fallback R12
@@ -124,6 +134,12 @@ class StructureViewDeclarationProviderTest : BasePlatformTestCase() {
 
     // languages/06-structure-view-fallback R7
     fun `test R7 a pure reorder is moved not changed and a reformat is changed`() {
+        // The JSON structure view is now behind a dedicated provider; mask it so the fallback's whitespace policy applies.
+        ExtensionTestUtil.maskExtensions(
+            DeclarationProvider.EP_NAME,
+            DeclarationProvider.EP_NAME.extensionList.filterNot { it is JsonDeclarationProvider },
+            testRootDisposable,
+        )
         val engine = DeclarationEngine(project)
         val reordered = engine.compare(
             ComparisonRequest("{\n  \"a\": 1,\n  \"b\": 2\n}\n", "{\n  \"b\": 2,\n  \"a\": 1\n}\n", "JSON", "a.json"),
@@ -142,10 +158,25 @@ class StructureViewDeclarationProviderTest : BasePlatformTestCase() {
         assertTrue("a real reformat is never formatting-only: ${rendered(reformatted)}", flatten(reformatted).none { it.content == Content.FORMATTING_ONLY })
     }
 
+    // languages/06-structure-view-fallback R2, languages/07-json R3
+    fun `test R2 a JSON file compared through the engine uses the JSON provider`() {
+        val engine = DeclarationEngine(project)
+        val result = engine.compare(ComparisonRequest("{\"a\":1}", "{\"a\":2}", "JSON", "a.json"), Cancellation.NONE)
+
+        assertEquals(Status.ANALYZED, result.status)
+        assertNull("JSON uses its dedicated provider, not the structure-view fallback", result.analysisNote)
+        val leaves = flatten(result).filter { it.children.isEmpty() && it.subject is Subject.Declaration }
+        assertTrue("a JSON key is reported", leaves.isNotEmpty())
+        assertTrue(
+            "JSON declarations use key kinds: ${leaves.map { it.subject }}",
+            leaves.all { (it.subject as Subject.Declaration).kind == DeclarationKind.KEY },
+        )
+    }
+
     // languages/06-structure-view-fallback R8
     fun `test R8 fallback results carry the structure-view note`() {
         val engine = DeclarationEngine(project)
-        val fallback = engine.compare(ComparisonRequest("{\"a\":1}", "{\"a\":2}", "JSON", "a.json"), Cancellation.NONE)
+        val fallback = engine.compare(ComparisonRequest("a=1\n", "a=2\n", "Properties", "a.properties"), Cancellation.NONE)
 
         assertEquals(Status.ANALYZED, fallback.status)
         assertEquals(AnalysisNote.STRUCTURE_VIEW, fallback.analysisNote)
