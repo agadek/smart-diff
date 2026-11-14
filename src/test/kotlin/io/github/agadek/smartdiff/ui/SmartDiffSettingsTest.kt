@@ -224,12 +224,45 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test the settings page lists each language with an engine`() {
+    fun `test the settings page lists each dedicated language with an engine`() {
+        settings.useStructureViewFallback = false
         val engines = EngineRegistry.getInstance(ProjectManager.getInstance().defaultProject).engines()
 
         val languages = SmartDiffConfigurable.languagesWithEngines(engines).map { (language, _) -> language.id }
 
         assertEquals(listOf("JAVA", "kotlin", "Scala"), languages)
+    }
+
+    fun `test the settings page also lists fallback languages while the fallback is on`() {
+        settings.useStructureViewFallback = true
+        val engines = EngineRegistry.getInstance(ProjectManager.getInstance().defaultProject).engines()
+
+        val languages = SmartDiffConfigurable.languagesWithEngines(engines).map { (language, _) -> language.id }
+
+        assertTrue("JSON is listed through the structure-view fallback: $languages", "JSON" in languages)
+        assertTrue("YAML is listed through the structure-view fallback: $languages", "yaml" in languages)
+        assertTrue("the dedicated languages are still listed: $languages", listOf("JAVA", "kotlin", "Scala").all { it in languages })
+    }
+
+    fun `test R10 R18 the structure-view fallback setting is on by default and round-trips`() {
+        // languages/06-structure-view-fallback R10; settings/01-settings-page R18
+        settings.loadState(SmartDiffSettings.SettingsState())
+        assertTrue("the fallback is on by default", settings.useStructureViewFallback)
+
+        settings.useStructureViewFallback = false
+        val configurable = SmartDiffConfigurable()
+        try {
+            assertNotNull(configurable.createComponent())
+            configurable.reset()
+            assertFalse("the page shows the stored value", configurable.isModified)
+            configurable.apply()
+        } finally {
+            configurable.disposeUIResources()
+        }
+        assertFalse("applying the page keeps the value", settings.useStructureViewFallback)
+
+        settings.useStructureViewFallback = true
+        assertTrue("a new settings state defaults to on", SmartDiffSettings.SettingsState().useStructureViewFallback)
     }
 
     fun `test R2 the settings page round-trips the outline view`() {

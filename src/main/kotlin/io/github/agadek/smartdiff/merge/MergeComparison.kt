@@ -25,6 +25,8 @@ data class MergeTexts(
     val limits: Limits = Limits.DEFAULT,
     /** The policy both comparisons classify their relationships with, so the three sides agree (relationships/02 R15). */
     val confidence: ConfidencePolicy = ConfidencePolicy.DEFAULT,
+    /** Whether the declaration engine may use the structure-view fallback for a language with no dedicated provider. */
+    val useStructureViewFallback: Boolean = true,
 )
 
 /**
@@ -72,6 +74,7 @@ object MergeComparison {
             request.limits,
             relatedTexts = listOf(other),
             confidence = request.confidence,
+            useStructureViewFallback = request.useStructureViewFallback,
         )
 
     private fun run(engine: ComparisonEngine, request: ComparisonRequest, cancellation: Cancellation, canceled: AtomicBoolean): ComparisonResult =

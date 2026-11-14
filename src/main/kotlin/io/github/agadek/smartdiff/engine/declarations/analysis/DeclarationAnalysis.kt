@@ -423,14 +423,26 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
                 renamedFrom = renamedFrom,
                 kindChangedFrom = kindChangedFrom,
             )
-            // A change covers the declaration's leading whitespace too, which is part of its own tokens (§8).
+            // A change covers the declaration's leading whitespace too, which is part of its own tokens (§8). Under the
+            // SIGNIFICANT policy the fallback provider leaves leading whitespace out of the comparison but still
+            // lists it, so a reorder that reports one member of a swapped pair accounts for both members' line breaks;
+            // the outline only draws details of reported nodes, so no unchanged row is added.
             val oldLeading = oldDeclaration?.leadingWhitespace
             val newLeading = newDeclaration?.leadingWhitespace
-            return if (node.isChangedItself && (oldLeading != null || newLeading != null)) {
-                node.copy(details = listOf(RangePair(oldLeading, newLeading)))
+            val keepLeading = node.isChangedItself || new.whitespacePolicy == WhitespacePolicy.SIGNIFICANT
+            val leading = if (keepLeading && (oldLeading != null || newLeading != null)) {
+                listOf(RangePair(oldLeading, newLeading))
             } else {
-                node
+                emptyList()
             }
+            // The fallback provider's separator/line break after an item is covered like leading whitespace but was
+            // never compared, so it can be listed for every node, changed or not (languages/06 R7).
+            val layout = listOfNotNull(
+                oldDeclaration?.layout?.let { RangePair(it, null) },
+                newDeclaration?.layout?.let { RangePair(null, it) },
+            )
+            val details = leading + layout
+            return if (details.isEmpty()) node else node.copy(details = details)
         }
 
         private fun subject(declaration: Declaration) = declarationSubject(declaration)

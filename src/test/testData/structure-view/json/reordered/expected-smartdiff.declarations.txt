@@ -1,0 +1,2 @@
+status: ANALYZED
+property b  moved  old 3  new 2

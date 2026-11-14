@@ -1,0 +1,3 @@
+status: ANALYZED
+File region  changed  old 1-3  new 1
+property a  changed  old 2  new 1

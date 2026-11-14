@@ -12,9 +12,12 @@ import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
 abstract class ProviderTestCase : BasePlatformTestCase() {
 
     /** The provider registered for [languageId]; finding it checks that its descriptor registers it. */
-    protected fun provider(languageId: String): DeclarationProvider =
-        DeclarationProvider.EP_NAME.extensionList.singleOrNull { it.supports(languageId) }
+    protected fun provider(languageId: String): DeclarationProvider {
+        val providers = DeclarationProvider.EP_NAME.extensionList.filter { it.supports(languageId) }
+        return providers.singleOrNull()
+            ?: providers.singleOrNull { it.analysisNote == null }
             ?: error("expected exactly one provider for $languageId, found ${DeclarationProvider.EP_NAME.extensionList}")
+    }
 
     protected fun build(languageId: String, text: String, fileName: String? = null): DeclarationTree {
         val provider = provider(languageId)
