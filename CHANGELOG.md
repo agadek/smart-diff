@@ -4,7 +4,7 @@
 
 ### Added
 
-- Shell scripts (`.sh`, `.bash`, `.zsh`, when the Shell Script plugin is installed): function definitions appear in the structural outline, with line-break-significant whitespace.
+- Shell scripts (`.sh`, `.bash`, `.zsh`, when the Shell Script plugin is installed): function definitions appear in the structural outline, and line breaks and whether tokens are separated by whitespace count as changes, while the amount of space and indentation are formatting-only.
 - Structure-view fallback: files whose language has a structure view but no dedicated provider show a structural outline built from the IDE's structure view (on by default, Settings | Tools | SMART Diff, *Use the IDE's structure view for other languages*). Such outlines are marked `· structure view`, use the generic `ITEM` kind where needed, treat whitespace as significant, and fall back to the native diff if the structure view cannot be read. Dedicated providers still take precedence.
 - With a row selected in the structural outline, the mouse wheel over the outline steps to the next or previous change and shows it in the editors.
 - JSON, including JSON with comments and JSON5: each object member is shown as a key, with nested keys as members, reordered keys as moved, reformatted files as formatting-only, and a renamed key with the same value as a rename candidate. Arrays of objects with a shared identifying key (`name`, `id` or `key`) show each item as a key named `[name=web]`, so reordered items move instead of changing the array. The structural outline, Changes tree and merge outline work for JSON files when the IDE has JSON support.
