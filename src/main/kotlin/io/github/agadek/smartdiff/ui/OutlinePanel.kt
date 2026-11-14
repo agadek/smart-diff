@@ -20,7 +20,9 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import io.github.agadek.smartdiff.engine.api.AnalysisNote
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
+import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.registry.EngineSelection
@@ -227,7 +229,8 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
                     usageNote.text = state.usageNote.orEmpty()
                     usageNote.isVisible = state.usageNote != null
                     setTree(state.items)
-                    tree.emptyText.text = if (state.hiddenCount > 0) "All changes are hidden by the filter" else "No structural changes"
+                    tree.emptyText.text = structureViewEmptyText(state.result, state.hiddenCount)
+                    tree.toolTipText = structureViewTooltip(state.result)
                     (body.layout as CardLayout).show(body, TREE)
                 }
             }
@@ -388,6 +391,19 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         fun escape(text: String) = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     }
 }
+
+/** The empty-text line of the outline tree (languages/06 R8); the tooltip says where the outline came from. */
+internal fun structureViewEmptyText(result: ComparisonResult, hiddenCount: Int): String {
+    val empty = if (hiddenCount > 0) "All changes are hidden by the filter" else "No structural changes"
+    return if (result.analysisNote == AnalysisNote.STRUCTURE_VIEW) {
+        "$empty. The outline comes from the IDE's structure view."
+    } else {
+        empty
+    }
+}
+
+internal fun structureViewTooltip(result: ComparisonResult): String? =
+    if (result.analysisNote == AnalysisNote.STRUCTURE_VIEW) "The outline comes from the IDE's structure view." else null
 
 /**
  * Draws an outline item's title, then its change labels in the IDE's diff colors and its note in grey; the text alone

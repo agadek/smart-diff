@@ -359,7 +359,10 @@ class ChangesSummaryService(private val project: Project) {
         val newText = content(request.change.afterRevision) ?: return null
         val settings = SmartDiffSettings.getInstance()
         val limits = settings.limits
-        val comparison = ComparisonRequest(oldText, newText, request.languageId, request.fileName, limits, confidence = settings.confidence)
+        val comparison = ComparisonRequest(
+            oldText, newText, request.languageId, request.fileName, limits,
+            confidence = settings.confidence, useStructureViewFallback = settings.useStructureViewFallback,
+        )
         val deadline = Deadline(limits.timeoutMillis)
         val result = try {
             compareSafely(engine, comparison, deadline)

@@ -310,6 +310,19 @@ class ChangesSummaryTest : BasePlatformTestCase() {
         assertEquals("1 changed", summary.substringBefore(" ·").trim())
     }
 
+    fun `test R11 a fallback file gets a summary with its structure-view note`() {
+        // languages/06-structure-view-fallback R11
+        val change = modified("service.yaml", "service:\n  port: 8080\n", "service:\n  port: 9090\n")
+
+        summaryNode(change)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+
+        val node = summaryNode(change)!!
+        assertTrue("summary names the structure view: ${node.summary}", node.summary.endsWith(" · structure view"))
+        assertTrue("the fallback file has declaration rows", node.childCount > 0)
+        assertTrue("rows use the item names without a kind word: ${rows(node)}", rows(node).none { it.startsWith("item ") })
+    }
+
     fun `test a file over the size limit says it was not analyzed`() {
         settings.limits = Limits.DEFAULT.copy(maxChars = 10)
         val change = modified("Cart.java", OLD_CART, NEW_CART)

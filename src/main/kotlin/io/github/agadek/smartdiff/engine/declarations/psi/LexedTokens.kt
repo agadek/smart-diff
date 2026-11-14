@@ -35,12 +35,35 @@ internal class LexedTokens private constructor(private val starts: IntArray, pri
      * The start of the run of whitespace tokens that ends at [offset], a token start, without going before
      * [notBefore]; [offset] itself when no whitespace token ends there.
      */
-    fun whitespaceStart(offset: Int, notBefore: Int): Int {
+    fun whitespaceStart(offset: Int, notBefore: Int): Int =
+        layoutStart(offset, notBefore) { it.kind == TokenKind.WHITESPACE }
+
+    /**
+     * The start of the run of layout tokens that ends at [offset], without going before [notBefore]. A provider whose
+     * lexer emits a line break as its own non-whitespace token can pass a predicate that treats it as layout too.
+     */
+    fun layoutStart(offset: Int, notBefore: Int, isLayout: (Token) -> Boolean): Int {
         val at = firstAtOrAfter(offset)
         if (at < starts.size && starts[at] != offset) return offset
         var i = at - 1
-        while (i >= 0 && starts[i] >= notBefore && tokens[i].kind == TokenKind.WHITESPACE) i--
+        while (i >= 0 && starts[i] >= notBefore && isLayout(tokens[i])) i--
         return if (i + 1 < at) starts[i + 1] else offset
+    }
+
+    /**
+     * The end of the run of layout tokens that starts at [offset], without passing [limit]. A token that crosses
+     * [limit] ends there, so a provider can attach a separator after a declaration without taking the next one.
+     */
+    fun layoutEnd(offset: Int, limit: Int, isLayout: (Token) -> Boolean): Int {
+        var current = offset
+        var i = firstAtOrAfter(offset)
+        while (current < limit && i < starts.size && starts[i] == current) {
+            val token = tokens[i]
+            if (!isLayout(token)) break
+            current = minOf(current + token.text.length, limit)
+            i++
+        }
+        return current
     }
 
     private fun firstAtOrAfter(offset: Int): Int {

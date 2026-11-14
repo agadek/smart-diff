@@ -1,0 +1,4 @@
+status: ANALYZED
+YAML document  old 1-2  new 1-2
+  root  old 1-2  new 1-2
+    a  changed  old 2  new 2

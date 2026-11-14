@@ -29,6 +29,8 @@ data class ComparisonResult(
      * are computed from this list (R7, R8).
      */
     val relationships: List<Relationship> = emptyList(),
+    /** A note the outline appends to the summary line, such as `structure view` for the fallback provider. */
+    val analysisNote: String? = null,
 ) {
     /** Whether any change, the file region or an unanalyzed range would show in the outline. */
     val hasReportedChanges: Boolean
@@ -168,6 +170,7 @@ sealed interface Subject {
 enum class DeclarationKind {
     CLASS, INTERFACE, ENUM, RECORD, ANNOTATION_TYPE, OBJECT, CONSTRUCTOR, METHOD, FUNCTION, FIELD, PROPERTY,
     ENUM_CONSTANT, TYPE_ALIAS, INITIALIZER, TRAIT, GIVEN, EXTENSION,
+    ITEM,
 }
 
 /** A possible counterpart of an uncertain node; [range] is on the side where the node is absent. */
