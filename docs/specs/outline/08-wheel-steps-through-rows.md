@@ -1,6 +1,6 @@
 # Wheel steps through rows
 
-Status: accepted, 2026-11-14
+Status: implemented, 2026-11-14
 
 **Description:** While a row of the [structural outline](../../GLOSSARY.md#structural-outline) is selected, the mouse
 wheel over the outline selects the next or previous change row, so a reviewer can walk through the changes with the

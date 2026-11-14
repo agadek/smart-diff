@@ -1,6 +1,6 @@
 # Wheel steps through rows: details
 
-Status: accepted, 2026-11-14
+Status: implemented, 2026-11-14
 
 Feature: [Wheel steps through rows](08-wheel-steps-through-rows.md)
 
