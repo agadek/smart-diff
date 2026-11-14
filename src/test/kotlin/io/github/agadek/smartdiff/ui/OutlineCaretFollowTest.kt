@@ -317,6 +317,66 @@ class OutlineCaretFollowTest : BasePlatformTestCase() {
         assertEquals("method bye()  added", outline.panel.selectedItem()?.label)
     }
 
+    fun `test a scrolling selection in the outline does not trigger following`() {
+        // outline/07 R10
+        val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+        val outline = shown.awaitResult()
+        outline.outlineFocusedOverride = false
+
+        // A click/keyboard selection in the tree scrolls the editors (outline/01 R17) and must not be followed.
+        select(outline, "method hello()  changed")
+        outline.fireCaretFollow()
+
+        assertEquals("method hello()  changed", outline.panel.selectedItem()?.label)
+    }
+
+    fun `test a caret move in an editor without focus does not change the selection`() {
+        // outline/07 R10
+        val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+        val outline = shown.awaitResult()
+        select(outline, "method hello()  changed")
+        outline.editorFocusedOverride = false
+
+        moveCaret(outline, OutlineController.CaretSide.NEW, JAVA_NEW.indexOf("void bye()") + 2)
+        outline.fireCaretFollow()
+
+        assertEquals("method hello()  changed", outline.panel.selectedItem()?.label)
+    }
+
+    fun `test a caret moved during Loading is followed once the result is shown`() {
+        // outline/07 R8
+        val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+        val outline = shown.awaitResult()
+        val previous = (outline.state as OutlineState.Shown).result
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val engine = object : ComparisonEngine {
+            override val id = EngineId("smartdiff.test.loading")
+            override val displayName = "Loading (test)"
+            override val version = "1"
+            override fun supports(languageId: String) = true
+            override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult {
+                started.countDown()
+                release.await(10, TimeUnit.SECONDS)
+                return previous
+            }
+        }
+        maskEngines(engine)
+        outline.refresh()
+        assertTrue("comparison did not start", started.await(10, TimeUnit.SECONDS))
+
+        moveCaret(outline, OutlineController.CaretSide.NEW, JAVA_NEW.indexOf("String hello()") + 2)
+        assertTrue("state must be Loading while comparison runs", outline.state === OutlineState.Loading)
+        outline.fireCaretFollow()
+
+        release.countDown()
+        PlatformTestUtil.waitWithEventsDispatching(
+            { "caret not followed after Loading; selection=${outline.panel.selectedItem()?.label}, state=${outline.state}" },
+            { outline.panel.selectedItem()?.label == "method hello()  changed" },
+            10,
+        )
+    }
+
     private fun awaitRefactorings(outline: OutlineController) {
         PlatformTestUtil.waitWithEventsDispatching(
             { "refactorings view not ready; state=${outline.state}" },
@@ -327,7 +387,11 @@ class OutlineCaretFollowTest : BasePlatformTestCase() {
 
     private inner class Shown(val viewer: FrameDiffTool.DiffViewer) {
         val outline: OutlineController = OutlineController.of(viewer) ?: error("no outline attached")
-        fun awaitResult(): OutlineController = this@OutlineCaretFollowTest.awaitResult(outline).let { outline }
+        fun awaitResult(): OutlineController {
+            this@OutlineCaretFollowTest.awaitResult(outline)
+            outline.editorFocusedOverride = true
+            return outline
+        }
     }
 
     private fun open(request: SimpleDiffRequest): Shown {

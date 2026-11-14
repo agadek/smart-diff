@@ -1,6 +1,6 @@
 # Outline caret follow: details
 
-Status: implemented, 2026-11-13
+Status: implemented, 2026-11-14
 
 Feature: [Outline caret follow](07-outline-caret-follow.md)
 
@@ -15,11 +15,14 @@ closing the diff removes them. Only the caret of these two editors is followed; 
 
 ### From caret to row
 
-1. A caret event restarts a `javax.swing.Timer` of 100 ms on the EDT and remembers the side and offset (R5). The value
-   matches the Changes tree follower and the platform's autoscroll-from-source delay.
-2. When the timer fires, following stops if the outline is hidden or minimised, its state is not `Shown` (which
-   covers a running engine comparison), an edit's comparison is pending (the document debounce runs) (R8), or the
-   outline tree has focus (R5). Following works while usages are being resolved, because the documents have not changed.
+1. A caret event in the editor the user is in (the caret's editor has focus) restarts a `javax.swing.Timer` of 100 ms on
+   the EDT and remembers the side and offset (R5, R10). A caret event caused by the outline's own scrolling selection is
+   ignored and does not restart the timer (R10). The delay matches the Changes tree follower and the platform's
+   autoscroll-from-source delay.
+2. When the timer fires, following stops if the outline is hidden or minimised, its state is not `Shown` (which covers a
+   running engine comparison), an edit's comparison is pending (the document debounce runs) (R8), the outline tree has
+   focus (R5), or the caret's editor does not have focus (R10). Following works while usages are being resolved, because
+   the documents have not changed.
 3. It walks the rows the tree shows, depth first in tree order, and keeps every row that is not a group and whose range
    on the caret's side contains the offset: `oldRange` for the old side, `newRange` for the new side (R2). A range
    contains the offset when `start <= offset < end`, or `offset == end` for the last character of the document.
@@ -43,6 +46,10 @@ and may start `FrameScrollSync`. A selection made by following, and a selection 
 - it starts no `FrameScrollSync`, so the platform's synchronized scrolling keeps working;
 - it never requests focus, and the outline's selection change does not move focus to the tree (R4).
 
+While `OutlineNavigator.select` scrolls the editors, the controller suppresses caret follow, so the caret move to the
+start of the framed row does not trigger following (R10). A test can override whether the caret's editor has focus, the
+same way as it can override whether the outline has focus.
+
 The panel carries the mode through a flag set around its own `tree.selectionPath` assignment, so a click or a keyboard
 selection in the tree still scrolls as [outline/01](01-structural-outline.md) R17 says.
 
@@ -58,8 +65,9 @@ still scrolls.
 - A row present on one side only has no range on the other side; a caret on that other side never selects it.
 - A caret inside a nested declaration whose own row is filtered away selects the shown container row if the container's
   range contains the caret; otherwise the selection stays.
-- Edits move the caret; the result is stale until the next comparison, so step 2 skips them (R8). After the new result
-  is shown the controller runs the follow once for the last caret position.
+- Edits move the caret; the result is stale until the next comparison, so step 2 skips them (R8). A caret move while
+  the state is not `Shown` (for example `Loading` during the first comparison or a rerun) is remembered, and the
+  controller runs the follow once for the last caret position when the new result is shown.
 
 ## Tests
 
@@ -71,8 +79,9 @@ still scrolls.
 | R5 | `OutlineCaretFollowTest` `test following leaves the selection alone while the outline has focus`, `test caret moves are debounced` |
 | R6 | `OutlineCaretFollowTest` `test the refactorings view selects the row under Other changes` |
 | R7 | `OutlineCaretFollowTest` `test a row hidden by the filter is never selected` |
-| R8 | `OutlineCaretFollowTest` `test a stale result is not followed until the new result is shown`, `test the caret is followed while the reference pass runs` |
+| R8 | `OutlineCaretFollowTest` `test a stale result is not followed until the new result is shown`, `test the caret is followed while the reference pass runs`, `test a caret moved during Loading is followed once the result is shown` |
 | R9 | Plugin Verifier reports no new internal, experimental or deprecated usage |
+| R10 | `OutlineCaretFollowTest` `test a scrolling selection in the outline does not trigger following`, `test a caret move in an editor without focus does not change the selection` |
 | outline/01 R27 | `OutlineIntegrationTest` `test a rebuild keeps the selected row without scrolling the editors` |
 
 Tests use `BasePlatformTestCase` with a real two-sided diff viewer, as `OutlineIntegrationTest` does, and drive the

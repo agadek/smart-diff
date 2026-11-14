@@ -46,10 +46,13 @@ internal class OutlineNavigator(private val viewer: TwosideTextDiffViewer) {
         val oldRanges = listOfNotNull(item.oldRange) + item.frames.mapNotNull { it.old }
         val newRanges = listOfNotNull(item.newRange) + item.frames.mapNotNull { it.new }
         val follows = scroll && oldRanges.size == 1 && newRanges.size == 1 && followsSynchronizedScrolling()
-        withSyncDisabled {
-            show(viewer.editor1, oldRanges, item.details.mapNotNull { it.old }, scroll)
-            show(viewer.editor2, newRanges, item.details.mapNotNull { it.new }, scroll)
+        val showEditors = {
+            withSyncDisabled {
+                show(viewer.editor1, oldRanges, item.details.mapNotNull { it.old }, scroll)
+                show(viewer.editor2, newRanges, item.details.mapNotNull { it.new }, scroll)
+            }
         }
+        if (scroll) OutlineController.of(viewer)?.withSuppressedCaretFollow(showEditors) ?: showEditors() else showEditors()
         if (follows && frames.size == 2) {
             frameSync = FrameScrollSync(
                 listOf(viewer.editor1, viewer.editor2),

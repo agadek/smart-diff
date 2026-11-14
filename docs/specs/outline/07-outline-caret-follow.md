@@ -28,6 +28,8 @@ does not stay on a method they have left.
 - **R8** While the outline's result is stale after an edit, following does not select a row from the old result, and it
   follows the caret when the new result is shown.
 - **R9** Following uses no internal, experimental or deprecated platform API.
+- **R10** Only a caret move in the editor that has focus is followed. A caret move caused by the outline's own scrolling
+  selection does not trigger following.
 
 ## Out of scope
 

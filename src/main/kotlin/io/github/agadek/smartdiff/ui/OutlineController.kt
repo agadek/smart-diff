@@ -125,7 +125,21 @@ class OutlineController internal constructor(
     private var caretFollowPending = false
     @TestOnly
     internal var outlineFocusedOverride: Boolean? = null
+    @TestOnly
+    internal var editorFocusedOverride: Boolean? = null
+    /** Nested while the outline scrolls the editors itself, so the resulting caret move is not followed (R10). */
+    private var suppressCaretFollow = 0
     private val caretDebounce = Timer(CARET_DEBOUNCE_MILLIS) { followLastCaret() }.apply { isRepeats = false }
+
+    /** Runs [action] without following the caret moves it causes (outline/07 R10). */
+    internal fun withSuppressedCaretFollow(action: () -> Unit) {
+        suppressCaretFollow++
+        try {
+            action()
+        } finally {
+            suppressCaretFollow--
+        }
+    }
 
     internal fun start() {
         viewer.component.putClientProperty(CONTROLLER, this)
@@ -414,11 +428,12 @@ class OutlineController internal constructor(
 
     private fun caretListener(side: CaretSide): CaretListener = object : CaretListener {
         override fun caretPositionChanged(event: CaretEvent) {
-            if (disposed) return
+            if (disposed || suppressCaretFollow > 0) return
+            if (!isEditorFocused(side)) return
             lastCaretSide = side
             lastCaretOffset = event.caret?.offset ?: return
-            // A comparison is pending while the document debounce runs; the shown result is stale until the next one (R8).
-            if (debounce.isRunning) caretFollowPending = true
+            // A comparison is pending or running; the shown result is stale or missing until the new one (R8).
+            if (debounce.isRunning || state !is OutlineState.Shown) caretFollowPending = true
             caretDebounce.restart()
         }
     }
@@ -436,7 +451,14 @@ class OutlineController internal constructor(
             SwingUtilities.isDescendingFrom(focus, panel)
         }
 
-    /** Selects the row of the last caret position when conditions allow (outline/07 R1-R8). */
+    private fun isEditorFocused(side: CaretSide): Boolean =
+        editorFocusedOverride ?: run {
+            val focus = KeyboardFocusManager.getCurrentKeyboardFocusManager().focusOwner ?: return false
+            val editor = if (side == CaretSide.OLD) viewer.editor1 else viewer.editor2
+            SwingUtilities.isDescendingFrom(focus, editor.contentComponent)
+        }
+
+    /** Selects the row of the last caret position when conditions allow (outline/07 R1-R8, R10). */
     private fun followLastCaret(afterResult: Boolean = false) {
         if (disposed || !isOutlineVisible || isMinimised || state !is OutlineState.Shown || isOutlineFocused()) return
         if (!afterResult && debounce.isRunning) {
@@ -445,6 +467,7 @@ class OutlineController internal constructor(
             return
         }
         val side = lastCaretSide ?: return
+        if (!isEditorFocused(side)) return
         val offset = lastCaretOffset
         val shown = state as? OutlineState.Shown ?: return
         val match = matchingItem(shown.items, side, offset)
