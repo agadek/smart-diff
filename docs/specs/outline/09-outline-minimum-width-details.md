@@ -26,7 +26,7 @@ No change is needed in `insertOutlineSplitter`: the platform splitter already cl
 
 ### Remembered widths below the minimum
 
-The splitter proportion is still read from `smartdiff.outline.proportion` when the splitter is created. When the layer lays the splitter out, the platform clamps the panel to its minimum, so a remembered proportion that would give the panel less than 200 px shows the panel at 200 px and gives the rest to the editors (R3). The stored proportion is left as it was; the user's next drag overwrites it. Minimising and restoring do not change the proportion either, so the restored panel is at least the minimum.
+The splitter proportion is still read from `smartdiff.outline.proportion` when the splitter is created. When the viewer lays the splitter out, the platform clamps the panel to its minimum, so a remembered proportion that would give the panel less than 200 px shows the panel at 200 px and gives the rest to the editors (R3). The stored proportion is left as it was; the user's next drag overwrites it. Minimising and restoring do not change the proportion either, so the restored panel is at least the minimum.
 
 ### States
 
