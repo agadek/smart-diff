@@ -606,6 +606,7 @@ class OutlineController internal constructor(
             "Scala" -> WhitespacePolicy.INDENTATION_SIGNIFICANT
             "JSON", "JSON5" -> WhitespacePolicy.INSIGNIFICANT
             "yaml" -> WhitespacePolicy.SIGNIFICANT
+            "Python" -> WhitespacePolicy.INDENTATION_SIGNIFICANT
             else -> WhitespacePolicy.SIGNIFICANT
         }
 
