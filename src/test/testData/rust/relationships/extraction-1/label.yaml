@@ -1,0 +1,25 @@
+case: extraction-1
+language: Rust
+corpus: rust
+category: extraction
+split: tuning
+expected:
+  relationships:
+    - kinds: [EXTRACT]
+      old: { path: "impl Order", kind: FUNCTION, name: "render", signature: "&self,&[i32]" }
+      new: { path: "impl Order", kind: FUNCTION, name: "sum_items", signature: "&self,&[i32]" }
+  changes:
+    - subject: { path: "", kind: STRUCT, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: IMPL, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "impl Order", kind: FUNCTION, name: "render", signature: "&self,&[i32]" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "impl Order", kind: FUNCTION, name: "sum_items", signature: "&self,&[i32]" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A helper is extracted from a changed method."

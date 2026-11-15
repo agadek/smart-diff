@@ -281,6 +281,7 @@ internal object RustInterop {
                     prev == "->" -> !noSpaceBefore(token)
                     noSpaceAfter(prev ?: "") -> false
                     noSpaceBefore(token) -> false
+                    prev == "*" && (token == "const" || token == "mut") -> false
                     isWord(prev ?: "") && isWord(token) -> true
                     isWord(prev ?: "") || isWord(token) -> true
                     else -> false
@@ -298,7 +299,7 @@ internal object RustInterop {
         token in setOf("<", ">", "(", ")", "[", "]", ",", ":", ".", "&", "::", ";")
 
     private fun noSpaceAfter(token: String): Boolean =
-        token in setOf("<", "(", "[", ".", "&", "::", "!", "#")
+        token in setOf("<", "(", "[", ".", "&", "::", "!", "#", "*")
 
     private fun isWord(token: String): Boolean =
         token.isNotEmpty() && (token[0].isLetterOrDigit() || token[0] == '_' || token[0] == '\'')

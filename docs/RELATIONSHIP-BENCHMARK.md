@@ -22,7 +22,7 @@ Without a labelled benchmark, matcher changes are judged by anecdote and fixture
 In scope:
 
 - per-file comparisons;
-- Java, Kotlin, Scala 2 and Scala 3;
+- Java, Kotlin, Scala 2, Scala 3 and Rust;
 - declaration renames, moves, kind changes, signature changes, extraction and inlining;
 - duplicate bodies, overloads and ambiguous candidates;
 - formatting-only, comment-only and string changes;
@@ -241,7 +241,7 @@ The report must contain:
 
 ## 10. Acceptance criteria
 
-- The labelled corpus covers every case category in §3 for Java and Kotlin, and the Scala categories the provider supports.
+- The labelled corpus covers every case category in §3 for Java and Kotlin, the Scala categories the provider supports, and the Rust cases the provider supports.
 - Every expected relationship is identified by endpoints, not just names.
 - The baseline report exists before the matcher changes start.
 - Every matcher change reports precision, recall, incorrect-match, ambiguity and latency against that baseline.

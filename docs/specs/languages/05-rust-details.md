@@ -1,6 +1,6 @@
 # Rust: details
 
-Status: proposed, 2026-11-13
+Status: implemented, 2026-11-15
 
 **Feature:** [Rust](05-rust.md)
 

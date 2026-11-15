@@ -278,6 +278,18 @@ class RustDeclarationProviderTest : BasePlatformTestCase() {
         assertOffsetsEqualRequestText(text, tree)
     }
 
+    fun `test R11 raw pointer types use no space after star in display`() {
+        // languages/05-rust R11
+        val text = """
+            fn f(p: *const T, q: *mut T) {}
+        """.trimIndent() + "\n"
+        val tree = tree(text)
+        val f = tree.topLevel.single { it.name == "f" }
+        assertEquals("*constT,*mutT", f.signature)
+        assertEquals("*const T, *mut T", f.displaySignature)
+        assertOffsetsEqualRequestText(text, tree)
+    }
+
     fun `test R12 repeated keys are represented`() {
         // languages/05-rust R12
         val text = """
@@ -337,5 +349,191 @@ class RustDeclarationProviderTest : BasePlatformTestCase() {
         assertEquals(Status.ANALYZED, result.status)
         val fnChange = result.changes.single()
         assertEquals("spacing inside macro args matters", Content.CHANGED, fnChange.content)
+    }
+
+    fun `test R15 extraction detection works for Rust`() {
+        // languages/05-rust R15
+        val old = """
+            struct S;
+
+            impl S {
+                fn render(&self, items: &[i32]) -> i32 {
+                    let mut sum = 0;
+                    for i in items {
+                        sum += *i;
+                    }
+                    sum
+                }
+            }
+        """.trimIndent() + "\n"
+        val new = """
+            struct S;
+
+            impl S {
+                fn render(&self, items: &[i32]) -> i32 {
+                    self.sum_items(items)
+                }
+
+                fn sum_items(&self, items: &[i32]) -> i32 {
+                    let mut sum = 0;
+                    for i in items {
+                        sum += *i;
+                    }
+                    sum
+                }
+            }
+        """.trimIndent() + "\n"
+        val result = compare(old, new)
+        assertEquals(Status.ANALYZED, result.status)
+        assertTrue(
+            "extraction relationship",
+            result.relationships.any {
+                it.kinds.contains(io.github.agadek.smartdiff.engine.api.RelationshipKind.EXTRACT)
+            },
+        )
+    }
+
+    fun `test R15 inlining detection works for Rust`() {
+        // languages/05-rust R15
+        val old = """
+            struct S;
+
+            impl S {
+                fn render(&self, items: &[i32]) -> i32 {
+                    self.sum_items(items)
+                }
+
+                fn sum_items(&self, items: &[i32]) -> i32 {
+                    let mut sum = 0;
+                    for i in items {
+                        sum += *i;
+                    }
+                    sum
+                }
+            }
+        """.trimIndent() + "\n"
+        val new = """
+            struct S;
+
+            impl S {
+                fn render(&self, items: &[i32]) -> i32 {
+                    let mut sum = 0;
+                    for i in items {
+                        sum += *i;
+                    }
+                    sum
+                }
+            }
+        """.trimIndent() + "\n"
+        val result = compare(old, new)
+        assertEquals(Status.ANALYZED, result.status)
+        assertTrue(
+            "inlining relationship",
+            result.relationships.any {
+                it.kinds.contains(io.github.agadek.smartdiff.engine.api.RelationshipKind.INLINE)
+            },
+        )
+    }
+
+    fun `test R15 rename candidates work for Rust`() {
+        // languages/05-rust R15
+        val old = """
+            fn calculate_total(items: &[i32]) -> i32 {
+                let mut sum = 0;
+                for i in items {
+                    sum += *i;
+                }
+                sum
+            }
+        """.trimIndent() + "\n"
+        val new = """
+            fn compute_sum(items: &[i32]) -> i32 {
+                let mut sum = 0;
+                for i in items {
+                    sum += *i;
+                }
+                sum
+            }
+        """.trimIndent() + "\n"
+        val result = compare(old, new)
+        assertEquals(Status.ANALYZED, result.status)
+        assertTrue(
+            "rename relationship",
+            result.relationships.any {
+                it.kinds.contains(io.github.agadek.smartdiff.engine.api.RelationshipKind.RENAME)
+            },
+        )
+    }
+
+    fun `test R15 kind changes work for Rust`() {
+        // languages/05-rust R15
+        val oldStructEnum = """
+            struct Item {
+                x: i32,
+            }
+        """.trimIndent() + "\n"
+        val newStructEnum = """
+            enum Item {
+                A,
+            }
+        """.trimIndent() + "\n"
+        val resultStructEnum = compare(oldStructEnum, newStructEnum)
+        assertEquals(Status.ANALYZED, resultStructEnum.status)
+        assertTrue(
+            "struct -> enum kind change",
+            resultStructEnum.relationships.any {
+                it.kinds.contains(io.github.agadek.smartdiff.engine.api.RelationshipKind.KIND_CHANGE)
+            },
+        )
+
+        val oldStructUnion = """
+            struct Data {
+                x: u32,
+            }
+        """.trimIndent() + "\n"
+        val newStructUnion = """
+            union Data {
+                x: u32,
+            }
+        """.trimIndent() + "\n"
+        val resultStructUnion = compare(oldStructUnion, newStructUnion)
+        assertEquals(Status.ANALYZED, resultStructUnion.status)
+        assertTrue(
+            "struct -> union kind change",
+            resultStructUnion.relationships.any {
+                it.kinds.contains(io.github.agadek.smartdiff.engine.api.RelationshipKind.KIND_CHANGE)
+            },
+        )
+    }
+
+    fun `test R16 merge outline and changes tree show Rust through engine comparison`() {
+        // languages/05-rust R16
+        val base = """
+            struct S;
+
+            impl S {
+                fn f(&self) -> i32 { 1 }
+            }
+        """.trimIndent() + "\n"
+        val left = """
+            struct S;
+
+            impl S {
+                fn f(&self) -> i32 { 2 }
+            }
+        """.trimIndent() + "\n"
+        val right = """
+            struct S;
+
+            impl S {
+                fn f(&self) -> i32 { 3 }
+            }
+        """.trimIndent() + "\n"
+        val leftResult = compare(base, left)
+        val rightResult = compare(base, right)
+        assertEquals(Status.ANALYZED, leftResult.status)
+        assertEquals(Status.ANALYZED, rightResult.status)
+        assertTrue("left side reports changes", leftResult.changes.isNotEmpty())
+        assertTrue("right side reports changes", rightResult.changes.isNotEmpty())
     }
 }

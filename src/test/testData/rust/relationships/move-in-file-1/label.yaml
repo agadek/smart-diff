@@ -1,0 +1,26 @@
+case: move-in-file-1
+language: Rust
+corpus: rust
+category: move-in-file
+split: tuning
+expected:
+  relationships:
+    - kinds: [MOVE]
+      old: { path: "impl Order", kind: FUNCTION, name: "second", signature: "&self" }
+      new: { path: "impl Order", kind: FUNCTION, name: "second", signature: "&self" }
+  changes:
+    - subject: { path: "", kind: STRUCT, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: IMPL, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "impl Order", kind: FUNCTION, name: "second", signature: "&self" }
+      presence: MATCHED
+      content: UNCHANGED
+      moved: true
+    - subject: { path: "impl Order", kind: FUNCTION, name: "first", signature: "&self" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A method moves within the impl block."

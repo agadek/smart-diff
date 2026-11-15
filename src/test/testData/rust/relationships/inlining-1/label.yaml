@@ -1,0 +1,25 @@
+case: inlining-1
+language: Rust
+corpus: rust
+category: inlining
+split: tuning
+expected:
+  relationships:
+    - kinds: [INLINE]
+      old: { path: "impl Order", kind: FUNCTION, name: "sum_items", signature: "&self,&[i32]" }
+      new: { path: "impl Order", kind: FUNCTION, name: "render", signature: "&self,&[i32]" }
+  changes:
+    - subject: { path: "", kind: STRUCT, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: IMPL, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "impl Order", kind: FUNCTION, name: "render", signature: "&self,&[i32]" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "impl Order", kind: FUNCTION, name: "sum_items", signature: "&self,&[i32]" }
+      presence: REMOVED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A helper is inlined into its caller."

@@ -1,0 +1,3 @@
+left: ANALYZED  right: ANALYZED
+impl Service  UNCHANGED  base 3-11  left 3-11  right 3-11
+  function a(&self)  LEFT_ONLY  left: changed  base 4-6  left 4-6  right 4-6

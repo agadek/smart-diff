@@ -42,9 +42,15 @@ kotlin {
 
 tasks.test {
     systemProperty("smartdiff.updateGolden", providers.gradleProperty("smartdiff.updateGolden").getOrElse("false"))
-    // Spike S8 prints "S8 ..." lines; golden fixtures print "GOLDEN ..." lines; copy them into the build log.
+    systemProperty(
+        "smartdiff.validation.rust.corpus",
+        providers.gradleProperty("smartdiff.validation.rust.corpus").getOrElse(""),
+    )
+    // Spike S8 prints "S8 ..." lines; golden fixtures print "GOLDEN ..." lines; validation prints "RUST VALIDATION ...".
     addTestOutputListener(TestOutputListener { _, event ->
         val message = event.message.trimEnd()
-        if (message.startsWith("S8 ") || message.startsWith("GOLDEN ")) logger.lifecycle(message)
+        if (message.startsWith("S8 ") || message.startsWith("GOLDEN ") || message.startsWith("RUST VALIDATION ")) {
+            logger.lifecycle(message)
+        }
     })
 }

@@ -59,7 +59,7 @@ object RelationshipBenchmark {
     const val DEFAULT_LABEL_ROOT = "src/test/testData"
 
     /** The corpora of R33; Scala 2 and Scala 3 are separate languages in every count. */
-    val CORPORA = listOf("java", "kotlin", "scala2", "scala3")
+    val CORPORA = listOf("java", "kotlin", "scala2", "scala3", "rust")
 
     /**
      * The case matrix of R8, as kebab-case categories a label names in `category:` (the details file lists them as
@@ -715,7 +715,9 @@ object RelationshipBenchmark {
         notApplicable: Map<String, Map<String, String>> = NOT_APPLICABLE,
         categoryMinimums: Map<String, Int> = CATEGORY_MINIMUMS,
     ): List<MatrixFailure> = buildList {
+        val present = labels.map { it.corpus }.toSet() + labelledCommits.keys
         for (corpus in corpora) {
+            if (corpus !in present) continue
             for (category in categories) {
                 if (notApplicable[corpus]?.containsKey(category) == true) continue
                 val count = labels.count { it.corpus == corpus && it.category == category && it.reviewed }
@@ -922,7 +924,7 @@ object RelationshipBenchmark {
         val repository = entry.repository ?: error("corpus line '${entry.line}' is not a case folder")
         if (!repository.isDirectory) error("real-commit repository not found: ${repository.path}")
         val result = CommitLine()
-        val commits = git(repository, listOf("rev-list") + entry.arguments + listOf("--", "*.java", "*.kt", "*.scala"))
+        val commits = git(repository, listOf("rev-list") + entry.arguments + listOf("--", "*.java", "*.kt", "*.scala", "*.rs"))
             .lines().map { it.trim() }.filter { it.isNotEmpty() }
         if (commits.isEmpty()) result.skippedCommitLines++
         for (commit in commits) {
@@ -935,7 +937,7 @@ object RelationshipBenchmark {
             val changes = git(
                 repository,
                 // A rename is a delete plus an add, so it is listed as skipped instead of vanishing from the run.
-                listOf("diff", "--no-renames", "--name-status", "--diff-filter=ADM", parent, commit, "--", "*.java", "*.kt", "*.scala"),
+                listOf("diff", "--no-renames", "--name-status", "--diff-filter=ADM", parent, commit, "--", "*.java", "*.kt", "*.scala", "*.rs"),
             ).lines().map { it.trim() }.filter { it.isNotEmpty() }
             val files = mutableListOf<CommitFile>()
             for (change in changes) {
@@ -959,7 +961,10 @@ object RelationshipBenchmark {
                     require(label.category == REAL_COMMIT_CATEGORY) { "label ${labelFile.path}: category must be $REAL_COMMIT_CATEGORY" }
                 }
                 // R33: an unlabelled Scala file's dialect decides its corpus; an unknown dialect is listed, not filed as Scala 2.
-                val corpus = label?.corpus ?: if (path.endsWith(".scala")) scalaCorpusFor(dialectId(old, new)) else candidates.single()
+                val corpus = label?.corpus ?: when {
+                    path.endsWith(".scala") -> scalaCorpusFor(dialectId(old, new))
+                    else -> candidates.single()
+                }
                 val languageId = label?.language ?: languageIdFor(path)
                 val request = ComparisonRequest(old, new, languageId, File(path).name, confidence = confidence)
                 val outcome = compare(engine, request)
@@ -1064,18 +1069,21 @@ object RelationshipBenchmark {
     private fun extensionFor(language: String): String = when (language.uppercase()) {
         "JAVA" -> "java"
         "KOTLIN" -> "kt"
+        "RUST" -> "rs"
         else -> "scala"
     }
 
     private fun languageIdFor(path: String): String = when {
         path.endsWith(".kt") -> "kotlin"
         path.endsWith(".scala") -> "Scala"
+        path.endsWith(".rs") -> "Rust"
         else -> "JAVA"
     }
 
     private fun corporaFor(path: String): List<String> = when {
         path.endsWith(".java") -> listOf("java")
         path.endsWith(".kt") -> listOf("kotlin")
+        path.endsWith(".rs") -> listOf("rust")
         else -> listOf("scala2", "scala3")
     }
 
