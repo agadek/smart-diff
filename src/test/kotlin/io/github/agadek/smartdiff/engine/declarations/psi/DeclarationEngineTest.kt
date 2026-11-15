@@ -15,6 +15,7 @@ import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.Evidence
 import io.github.agadek.smartdiff.engine.api.Limits
+import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
@@ -127,6 +128,49 @@ class DeclarationEngineTest : BasePlatformTestCase() {
     }
 
 
+
+    // languages/04-python (attrs 3bb6382 pyrefly.py case) — see docs/specs/languages/04-python-details.md Open questions
+    fun `test Python class D unchanged when statements inserted before decorator`() {
+        // Documents current broken behavior: class D is matched but reported CHANGED; see Open questions.
+        val old = """import attrs
+
+C = attrs.make_class("C", [])
+C(a=1)
+
+@attrs.define
+class D:
+    x: list[int] = attrs.field()
+"""
+        val new = """import attrs
+import copy
+import sys
+
+C = attrs.make_class("C", [])
+C(a=1)
+
+if sys.version_info >= (3, 13):
+    cc = copy.replace(cc, x=1)
+
+@attrs.define
+class D:
+    x: list[int] = attrs.field()
+"""
+        val result = DeclarationEngine(null).compare(
+            ComparisonRequest(old, new, "Python", "demo.py"),
+            Cancellation.NONE,
+        )
+        assertEquals(Status.ANALYZED, result.status)
+        val dNodes = flatten(result).filter {
+            it.subject is Subject.Declaration &&
+                (it.subject as Subject.Declaration).name == "D" &&
+                (it.subject as Subject.Declaration).kind == DeclarationKind.CLASS
+        }
+        assertTrue("class D should be present", dNodes.isNotEmpty())
+        dNodes.forEach { node ->
+            assertEquals("class D matched despite inserted statements above decorator", Presence.MATCHED, node.presence)
+            assertEquals("class D currently reported CHANGED (see Open questions)", Content.CHANGED, node.content)
+        }
+    }
 
     fun `test R7 R8 R18 the computed fields are read from the relationships over the golden fixtures`() {
         // relationships/02-relationship-model R7, R8, R18. GoldenFixturesTest proves these fields are the ones the

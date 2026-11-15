@@ -75,16 +75,7 @@ class PythonReferenceResolver : ReferenceResolver {
             val refExpr = element as PyReferenceExpression
             val qualifier = refExpr.qualifier
             val range = refExpr.nameElement?.textRange ?: continue
-            val resolved = try {
-                refExpr.reference?.resolve()
-            } catch (e: com.intellij.openapi.progress.ProcessCanceledException) {
-                throw e
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Throwable) {
-                LOG.debug(e)
-                null
-            } ?: continue
+            val resolved = refExpr.reference?.let { ReferenceResolution.resolve(it, file, cancellation, LOG) } ?: continue
             if (qualifier != null) {
                 // details section 8: only allow self.method() to methods of the enclosing class
                 if (!isSelfMethodCallToClassMethod(refExpr, resolved)) continue

@@ -173,6 +173,19 @@ class ReferenceResolutionTest : BasePlatformTestCase() {
         assertEquals("helper2", new.substring(references.single().newRange.start, references.single().newRange.end))
     }
 
+    fun `test R19 Python does not group self access to renamed class variable`() {
+        // languages/04-python R19
+        val old = "class C:\n    x = 1\n    def f(self):\n        return self.x\n"
+        val new = "class C:\n    y = 1\n    def f(self):\n        return self.y\n"
+        val request = ComparisonRequest(old, new, "Python", "m.py")
+        val result = compareSafely(DeclarationEngine(project), request, Cancellation.NONE)
+        val outcome = ReferencePass.runForBenchmark(project, request, result, Cancellation.NONE)
+        val refs = outcome.result.relationships
+            .filter { RelationshipKind.RENAME in it.kinds }
+            .flatMap { it.evidence.filterIsInstance<Evidence.Reference>() }
+        assertTrue("self.x/self.y should not be grouped as variable usages", refs.isEmpty())
+    }
+
     fun `test R14 a language without a resolver keeps the engine result`() {
         val old = "class Order { int total() { return 2; } }\n"
         val new = "class Order { int sum() { return 2; } }\n"
