@@ -1,0 +1,96 @@
+case: flask-329c32b-test_testing
+language: Python
+corpus: python
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "flask"
+  commit: 329c32b916938d33fec41f40eb7ed854bf0b3e2b
+  path: "tests/test_testing.py"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_environ_defaults_from_config", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_environ_defaults", signature: "app, client, app_ctx, req_ctx" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_environ_base_default", signature: "app, client" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_environ_base_modified", signature: "app, client" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_client_open_environ", signature: "app, client, request" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_specify_url_scheme", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_path_is_url", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_environbuilder_json_dumps", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_blueprint_with_subdomain", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_redirect_session", signature: "app, client, app_ctx" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_session_transactions", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_session_transaction_ipv6", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_session_transactions_no_null_sessions", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_session_transactions_keep_context", signature: "app, client, req_ctx" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_session_transaction_needs_cookies", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_test_client_context_binding", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_reuse_client", signature: "client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_full_url_request", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_json_request_and_response", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_client_json_no_app_context", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_subdomain", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_nosubdomain", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_cli_runner_class", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_cli_invoke", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_cli_custom_obj", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_client_pop_all_preserved", signature: "app, req_ctx, client" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Drafted from engine output; every function/class entry cross-checked against commit diff hunks (scripted heuristic) and reviewed; flagged entries verified against git show."

@@ -1,0 +1,17 @@
+case: kind-change-2
+language: Python
+corpus: python
+category: kind-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [KIND_CHANGE]
+      old: { path: "", kind: FUNCTION, name: "bar" }
+      new: { path: "", kind: VARIABLE, name: "bar" }
+  changes:
+    - subject: { path: "", kind: VARIABLE, name: "bar" }
+      presence: MATCHED
+      content: UNCHANGED
+      kindChangedFrom: FUNCTION
+  ambiguous: []
+notes: "Function becomes variable of same name."

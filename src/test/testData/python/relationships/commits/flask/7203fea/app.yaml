@@ -1,0 +1,165 @@
+case: flask-7203fea-app
+language: Python
+corpus: python
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "flask"
+  commit: 7203feabf723edae0286ae5dc64fec8ac4c91735
+  path: "src/flask/app.py"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: VARIABLE, name: "T_shell_context_processor", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "T_teardown", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "T_template_filter", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "T_template_global", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "T_template_test", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_make_timedelta", signature: "value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "F", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "remove_ctx", signature: "f" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "add_ctx", signature: "f" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "Flask", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: VARIABLE, name: "default_config", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: VARIABLE, name: "request_class", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: VARIABLE, name: "response_class", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: VARIABLE, name: "session_interface", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "__init_subclass__", signature: "cls, **kwargs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "__init__", signature: "self, import_name, static_url_path, static_folder, static_host, host_matching, subdomain_matching, template_folder, instance_path, instance_relative_config, root_path" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "get_send_file_max_age", signature: "self, filename" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "send_static_file", signature: "self, filename" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "open_resource", signature: "self, resource, mode, encoding" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "open_instance_resource", signature: "self, resource, mode, encoding" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "create_jinja_environment", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "create_url_adapter", signature: "self, request" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "raise_routing_exception", signature: "self, request" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "update_template_context", signature: "self, ctx, context" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "make_shell_context", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "run", signature: "self, host, port, debug, load_dotenv, **options" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "test_client", signature: "self, use_cookies, **kwargs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "test_cli_runner", signature: "self, **kwargs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "handle_http_exception", signature: "self, ctx, e" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "handle_user_exception", signature: "self, ctx, e" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "handle_exception", signature: "self, ctx, e" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "log_exception", signature: "self, ctx, exc_info" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "dispatch_request", signature: "self, ctx" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "full_dispatch_request", signature: "self, ctx" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "finalize_request", signature: "self, ctx, rv, from_error_handler" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "make_default_options_response", signature: "self, ctx" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "ensure_sync", signature: "self, func" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "async_to_sync", signature: "self, func" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "url_for", signature: "self, /, endpoint, *, _anchor, _method, _scheme, _external, **values" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "make_response", signature: "self, rv" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "preprocess_request", signature: "self, ctx" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "process_response", signature: "self, ctx, response" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "do_teardown_request", signature: "self, ctx, exc" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "do_teardown_appcontext", signature: "self, ctx, exc" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "app_context", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "request_context", signature: "self, environ" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "test_request_context", signature: "self, *args, **kwargs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "wsgi_app", signature: "self, environ, start_response" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Flask", kind: FUNCTION, name: "__call__", signature: "self, environ, start_response" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Drafted from engine output; every function/class entry cross-checked against commit diff hunks (scripted heuristic) and reviewed; flagged entries verified against git show."

@@ -1,0 +1,20 @@
+case: field-rename-2
+language: Python
+corpus: python
+category: field-rename
+split: held-out
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Invoice", kind: VARIABLE, name: "max_size" }
+      new: { path: "class Invoice", kind: VARIABLE, name: "max_length" }
+      usages: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Invoice" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Invoice", kind: VARIABLE, name: "max_length" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A class variable renamed."

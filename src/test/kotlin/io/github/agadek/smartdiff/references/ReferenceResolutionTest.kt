@@ -3,8 +3,10 @@ package io.github.agadek.smartdiff.references
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
+import io.github.agadek.smartdiff.engine.api.Confidence
 import io.github.agadek.smartdiff.engine.api.Evidence
 import io.github.agadek.smartdiff.engine.api.RelationshipKind
+import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 import io.github.agadek.smartdiff.engine.api.compareSafely
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationEngine
@@ -86,6 +88,130 @@ class ReferenceResolutionTest : BasePlatformTestCase() {
 
         assertEquals("the return type and the constructor call are usages", 2, references.size)
         assertTrue(references.all { old.substring(it.oldRange.start, it.oldRange.end) == "Order" })
+    }
+
+    // languages/04-python R19
+    fun `test R19 Python resolves a renamed function usage`() {
+        val old = "def total(x):\n    return x + 1\n\ndef use(x):\n    return total(x)\n"
+        val new = "def sum(x):\n    return x + 1\n\ndef use(x):\n    return sum(x)\n"
+        val references = usages("Python", "calc.py", old, new)
+        assertEquals("total", old.substring(references.single().oldRange.start, references.single().oldRange.end))
+        assertEquals("sum", new.substring(references.single().newRange.start, references.single().newRange.end))
+    }
+
+    fun `test R19 Python resolves a renamed class usage`() {
+        // languages/04-python R19
+        val old = "class Order:\n    def value(self):\n        return 1\n\no = Order()\n"
+        val new = "class Cart:\n    def value(self):\n        return 1\n\no = Cart()\n"
+        val references = usages("Python", "m.py", old, new)
+        assertEquals("Order", old.substring(references.single().oldRange.start, references.single().oldRange.end))
+        assertEquals("Cart", new.substring(references.single().newRange.start, references.single().newRange.end))
+    }
+
+    fun `test R19 Python resolves a renamed variable usage`() {
+        // languages/04-python R19
+        val old = """
+            CONFIG = {
+                "a": 1,
+                "b": 2,
+                "c": 3,
+                "d": 4,
+            }
+            def first():
+                return CONFIG["a"]
+            def second():
+                return CONFIG["b"]
+        """.trimIndent() + "\n"
+        val new = """
+            SETTINGS = {
+                "a": 1,
+                "b": 2,
+                "c": 3,
+                "d": 4,
+            }
+            def first():
+                return SETTINGS["a"]
+            def second():
+                return SETTINGS["b"]
+        """.trimIndent() + "\n"
+        val references = usages("Python", "m.py", old, new)
+        assertEquals(2, references.size)
+        assertEquals("CONFIG", old.substring(references[0].oldRange.start, references[0].oldRange.end))
+        assertEquals("SETTINGS", new.substring(references[0].newRange.start, references[0].newRange.end))
+        assertEquals("CONFIG", old.substring(references[1].oldRange.start, references[1].oldRange.end))
+        assertEquals("SETTINGS", new.substring(references[1].newRange.start, references[1].newRange.end))
+    }
+
+    fun `test R19 Python resolves a self method call`() {
+        // languages/04-python R19
+        val old = "class C:\n    def helper(self):\n        return 1 + 2\n    def use(self):\n        return self.helper()\n"
+        val new = "class C:\n    def helper2(self):\n        return 1 + 2\n    def use(self):\n        return self.helper2()\n"
+        val references = usages("Python", "m.py", old, new)
+        assertEquals("helper", old.substring(references.single().oldRange.start, references.single().oldRange.end))
+        assertEquals("helper2", new.substring(references.single().newRange.start, references.single().newRange.end))
+    }
+
+    fun `test R19 Python excludes obj helper and unresolved names`() {
+        // languages/04-python R19
+        val old = "class C:\n    def helper(self):\n        return 1 + 2\n\no = C()\nprint(o.helper())\nprint(missing())\n"
+        val new = "class C:\n    def helper2(self):\n        return 1 + 2\n\no = C()\nprint(o.helper2())\nprint(missing())\n"
+        val request = ComparisonRequest(old, new, "Python", "m.py")
+        val result = compareSafely(DeclarationEngine(project), request, Cancellation.NONE)
+        val outcome = ReferencePass.runForBenchmark(project, request, result, Cancellation.NONE)
+        // rename should be detected but obj.helper/missing() not grouped
+        val renameRels = outcome.result.relationships.filter { RelationshipKind.RENAME in it.kinds }
+        assertTrue("rename helper->helper2 should be detected", renameRels.isNotEmpty())
+        val references = renameRels.flatMap { it.evidence.filterIsInstance<Evidence.Reference>() }
+        assertTrue("no references grouped for qualified/unresolved calls", references.isEmpty())
+    }
+
+    fun `test R19 Python groups only the renamed method when same name exists`() {
+        // languages/04-python R19
+        val old = "def helper():\n    return 1 + 2\n\nclass C:\n    def helper(self):\n        return 3\n    def use(self):\n        return self.helper()\n"
+        val new = "def helper():\n    return 1 + 2\n\nclass C:\n    def helper2(self):\n        return 3\n    def use(self):\n        return self.helper2()\n"
+        val references = usages("Python", "m.py", old, new)
+        assertEquals(1, references.size)
+        assertEquals("helper", old.substring(references.single().oldRange.start, references.single().oldRange.end))
+        assertEquals("helper2", new.substring(references.single().newRange.start, references.single().newRange.end))
+    }
+
+    fun `test R19 Python does not group self access to renamed class variable`() {
+        // languages/04-python R19
+        val old = """
+            class C:
+                x = {
+                    "a": 1,
+                    "b": 2,
+                    "c": 3,
+                    "d": 4,
+                }
+                def f(self):
+                    return self.x["a"]
+        """.trimIndent() + "\n"
+        val new = """
+            class C:
+                y = {
+                    "a": 1,
+                    "b": 2,
+                    "c": 3,
+                    "d": 4,
+                }
+                def f(self):
+                    return self.y["a"]
+        """.trimIndent() + "\n"
+        val request = ComparisonRequest(old, new, "Python", "m.py")
+        val result = compareSafely(DeclarationEngine(project), request, Cancellation.NONE)
+        val outcome = ReferencePass.runForBenchmark(project, request, result, Cancellation.NONE)
+        val renameRels = outcome.result.relationships.filter { RelationshipKind.RENAME in it.kinds }
+        val xToY = renameRels.filter { rel ->
+            val oldSub = rel.old.singleOrNull()?.subject as? Subject.Declaration
+            val newSub = rel.new.singleOrNull()?.subject as? Subject.Declaration
+            oldSub?.name == "x" && newSub?.name == "y"
+        }
+        assertTrue("expected a HIGH-confidence RENAME x -> y", xToY.isNotEmpty() && xToY.any { it.confidence == Confidence.HIGH })
+        val refs = outcome.result.relationships
+            .flatMap { it.evidence.filterIsInstance<Evidence.Reference>() }
+        assertTrue("self.x/self.y should not be grouped as variable usages", refs.isEmpty())
     }
 
     fun `test R14 a language without a resolver keeps the engine result`() {

@@ -1,0 +1,10 @@
+case: empty-identical-2
+language: Python
+corpus: python
+category: empty-identical
+split: held-out
+expected:
+  relationships: []
+  changes: []
+  ambiguous: []
+notes: "Identical files report no change."

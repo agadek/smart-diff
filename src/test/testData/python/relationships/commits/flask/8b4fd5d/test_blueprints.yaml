@@ -1,0 +1,159 @@
+case: flask-8b4fd5d-test_blueprints
+language: Python
+corpus: python
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "flask"
+  commit: 8b4fd5d18611e63080b826ecfefe8659dba7d2e4
+  path: "tests/test_blueprints.py"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_blueprint_specific_error_handling", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_blueprint_specific_user_error_handling", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_blueprint_app_error_handling", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_blueprint_prefix_slash", signature: "app, client, prefix, rule, url" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_blueprint_url_defaults", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_blueprint_url_processors", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_templates_and_static", signature: "test_apps" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_default_static_max_age", signature: "app" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_templates_list", signature: "test_apps" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_dotted_name_not_allowed", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_empty_name_not_allowed", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_dotted_names_from_app", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_empty_url_defaults", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_route_decorator_custom_endpoint", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_route_decorator_custom_endpoint_with_dots", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_endpoint_decorator", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_template_filter", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_add_template_filter", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_template_filter_with_name", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_add_template_filter_with_name", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_template_filter_with_template", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_template_filter_after_route_with_template", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_add_template_filter_with_template", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_template_filter_with_name_and_template", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_add_template_filter_with_name_and_template", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_template_test", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_add_template_test", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_template_test_with_name", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_add_template_test_with_name", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_template_test_with_template", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_template_test_after_route_with_template", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_add_template_test_with_template", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_template_test_with_name_and_template", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_add_template_test_with_name_and_template", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_context_processing", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_template_global", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_request_processing", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_app_request_processing", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_app_url_processors", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_nested_blueprint", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_nested_callback_order", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_nesting_url_prefixes", signature: "parent_init, child_init, parent_registration, child_registration, app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_nesting_subdomains", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_child_and_parent_subdomain", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_unique_blueprint_names", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_self_registration", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_blueprint_renaming", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Drafted from engine output; every function/class entry cross-checked against commit diff hunks (scripted heuristic) and reviewed; flagged entries verified against git show."

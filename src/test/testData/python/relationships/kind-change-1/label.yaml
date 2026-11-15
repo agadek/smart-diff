@@ -1,0 +1,17 @@
+case: kind-change-1
+language: Python
+corpus: python
+category: kind-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [KIND_CHANGE]
+      old: { path: "", kind: CLASS, name: "Foo" }
+      new: { path: "", kind: FUNCTION, name: "Foo" }
+  changes:
+    - subject: { path: "", kind: FUNCTION, name: "Foo" }
+      presence: MATCHED
+      content: UNCHANGED
+      kindChangedFrom: CLASS
+  ambiguous: []
+notes: "Class becomes function of same name."

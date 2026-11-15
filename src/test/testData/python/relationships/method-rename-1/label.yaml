@@ -1,0 +1,20 @@
+case: method-rename-1
+language: Python
+corpus: python
+category: method-rename
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Order", kind: FUNCTION, name: "total", signature: null }
+      new: { path: "class Order", kind: FUNCTION, name: "sum", signature: null }
+      usages: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "sum", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "One method renamed, body unchanged."

@@ -1,0 +1,25 @@
+case: usage-grouping-2
+language: Python
+corpus: python
+category: usage-grouping
+split: held-out
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Order", kind: FUNCTION, name: "total", signature: "self" }
+      new: { path: "class Order", kind: FUNCTION, name: "sum", signature: "self" }
+      usages:
+        - old: "88..93"
+          new: "86..89"
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "sum" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "a" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Usage follows rename."

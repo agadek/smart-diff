@@ -1,0 +1,84 @@
+case: flask-7689f98-helpers
+language: Python
+corpus: python
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "flask"
+  commit: 7689f98403e2c0b0bc8d1031e60f8cff2620e86a
+  path: "src/flask/helpers.py"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: FUNCTION, name: "get_debug_flag", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "get_load_dotenv", signature: "default" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "stream_with_context", signature: "generator_or_function" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "stream_with_context", signature: "generator_or_function" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "stream_with_context", signature: "generator_or_function" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "make_response", signature: "*args" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "url_for", signature: "endpoint, *, _anchor, _method, _scheme, _external, **values" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "redirect", signature: "location, code, Response" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "abort", signature: "code, *args, **kwargs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "get_template_attribute", signature: "template_name, attribute" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "flash", signature: "message, category" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "get_flashed_messages", signature: "with_categories, category_filter" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_prepare_send_file_kwargs", signature: "**kwargs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "send_file", signature: "path_or_file, mimetype, as_attachment, download_name, conditional, etag, last_modified, max_age" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "send_from_directory", signature: "directory, path, **kwargs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "get_root_path", signature: "import_name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_split_blueprint_path", signature: "name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "_CollectErrors", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _CollectErrors", kind: FUNCTION, name: "__init__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _CollectErrors", kind: FUNCTION, name: "__enter__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _CollectErrors", kind: FUNCTION, name: "__exit__", signature: "self, exc_type, exc_val, exc_tb" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _CollectErrors", kind: FUNCTION, name: "raise_any", signature: "self, message" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Drafted from engine output; every function/class entry cross-checked against commit diff hunks (scripted heuristic) and reviewed; flagged entries verified against git show."

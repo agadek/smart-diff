@@ -1,0 +1,10 @@
+case: parse-error-one-side-1
+language: Python
+corpus: python
+category: parse-error-one-side
+split: tuning
+expected:
+  relationships: []
+  changes: []
+  ambiguous: []
+notes: "One side has parse error."

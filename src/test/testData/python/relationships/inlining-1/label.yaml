@@ -1,0 +1,22 @@
+case: inlining-1
+language: Python
+corpus: python
+category: inlining
+split: tuning
+expected:
+  relationships:
+    - kinds: [INLINE]
+      old: { path: "class Order", kind: FUNCTION, name: "heading" }
+      new: { path: "class Order", kind: FUNCTION, name: "render" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "render" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "heading" }
+      presence: REMOVED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Helper inlined into caller."

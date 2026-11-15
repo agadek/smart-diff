@@ -1,0 +1,28 @@
+case: extraction-many-sources-1
+language: Python
+corpus: python
+category: extraction-many-sources
+split: tuning
+expected:
+  relationships:
+    - kinds: [EXTRACT]
+      old: { path: "class Order", kind: FUNCTION, name: "first", signature: "self, x" }
+      new: { path: "class Order", kind: FUNCTION, name: "doubled", signature: "self, x" }
+    - kinds: [EXTRACT]
+      old: { path: "class Order", kind: FUNCTION, name: "second", signature: "self, x" }
+      new: { path: "class Order", kind: FUNCTION, name: "doubled", signature: "self, x" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "first", signature: "self, x" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "second", signature: "self, x" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "doubled", signature: "self, x" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "One helper is extracted from the shared block of two methods."

@@ -1,0 +1,17 @@
+case: signature-change-3
+language: Python
+corpus: python
+category: signature-change
+split: tuning
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Basket" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Basket", kind: FUNCTION, name: "price", signature: "self, x" }
+      presence: MATCHED
+      content: CHANGED
+      signatureChanged: true
+  ambiguous: []
+notes: "A method gains a parameter."

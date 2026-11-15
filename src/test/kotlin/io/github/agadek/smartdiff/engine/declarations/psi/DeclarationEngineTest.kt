@@ -12,8 +12,10 @@ import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.Confidence
 import io.github.agadek.smartdiff.engine.api.Content
+import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.Evidence
 import io.github.agadek.smartdiff.engine.api.Limits
+import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
@@ -58,6 +60,136 @@ class DeclarationEngineTest : BasePlatformTestCase() {
 
     fun `test cancellation propagates promptly`() = contract.`cancellation propagates promptly`()
 
+    // languages/04-python R18
+    fun `test Python kind change class to function is detected`() {
+        val engine = DeclarationEngine(null)
+        val old = "class Foo:\n    pass\n"
+        val new = "def Foo():\n    pass\n"
+        val result = engine.compare(ComparisonRequest(old, new, "Python", "t.py"), Cancellation.NONE)
+        val rel = result.relationships.single { RelationshipKind.KIND_CHANGE in it.kinds }
+        val oldSub = rel.old.single().subject as Subject.Declaration
+        val newSub = rel.new.single().subject as Subject.Declaration
+        assertEquals("Foo", oldSub.name)
+        assertEquals(DeclarationKind.CLASS, oldSub.kind)
+        assertEquals("Foo", newSub.name)
+        assertEquals(DeclarationKind.FUNCTION, newSub.kind)
+    }
+
+    // languages/04-python R18
+    fun `test Python class unchanged and new same-named function added`() {
+        val engine = DeclarationEngine(null)
+        val old = "class Foo:\n    def bar(self):\n        return 1\n"
+        val new = "class Foo:\n    def bar(self):\n        return 1\n\ndef Foo():\n    pass\n"
+        val result = engine.compare(ComparisonRequest(old, new, "Python", "t.py"), Cancellation.NONE)
+        val fooClassNodes = flatten(result).filter {
+            it.subject is Subject.Declaration && (it.subject as Subject.Declaration).name == "Foo" && (it.subject as Subject.Declaration).kind == DeclarationKind.CLASS
+        }
+        assertTrue(fooClassNodes.isNotEmpty())
+        fooClassNodes.forEach { node -> assertEquals(Presence.MATCHED, node.presence) }
+        assertTrue(result.relationships.none { RelationshipKind.KIND_CHANGE in it.kinds && it.old.any { ep -> (ep.subject as? Subject.Declaration)?.name == "Foo" } })
+        val fooFuncAdded = flatten(result).filter {
+            it.subject is Subject.Declaration && (it.subject as Subject.Declaration).name == "Foo" && (it.subject as Subject.Declaration).kind == DeclarationKind.FUNCTION && it.presence == Presence.ADDED
+        }
+        assertTrue("expected added function Foo", fooFuncAdded.isNotEmpty())
+    }
+
+    // languages/04-python R18
+    fun `test Python kind change function to variable is detected`() {
+        val engine = DeclarationEngine(null)
+        val old = "def bar():\n    return 1\n"
+        val new = "bar = 1\n"
+        val result = engine.compare(ComparisonRequest(old, new, "Python", "t.py"), Cancellation.NONE)
+        val rel = result.relationships.single { RelationshipKind.KIND_CHANGE in it.kinds }
+        val oldSub = rel.old.single().subject as Subject.Declaration
+        val newSub = rel.new.single().subject as Subject.Declaration
+        assertEquals("bar", oldSub.name)
+        assertEquals(DeclarationKind.FUNCTION, oldSub.kind)
+        assertEquals("bar", newSub.name)
+        assertEquals(DeclarationKind.VARIABLE, newSub.kind)
+    }
+
+    // languages/04-python R18
+    fun `test Python rename candidate is detected`() {
+        val engine = DeclarationEngine(null)
+        val old = "def foo():\n    return 1\n"
+        val new = "def bar():\n    return 1\n"
+        val result = engine.compare(ComparisonRequest(old, new, "Python", "t.py"), Cancellation.NONE)
+        val rel = result.relationships.single { RelationshipKind.RENAME in it.kinds }
+        val oldSub = rel.old.single().subject as Subject.Declaration
+        val newSub = rel.new.single().subject as Subject.Declaration
+        assertEquals("foo", oldSub.name)
+        assertEquals(DeclarationKind.FUNCTION, oldSub.kind)
+        assertEquals("bar", newSub.name)
+        assertEquals(DeclarationKind.FUNCTION, newSub.kind)
+    }
+
+    // languages/04-python R18
+    fun `test Python extraction is detected`() {
+        val engine = DeclarationEngine(null)
+        val old = "def summary():\n    print('a')\n    print('b')\n    print('c')\n    print('d')\n    print('e')\n"
+        val new = "def summary():\n    print('a')\n    extracted()\n    print('e')\n\ndef extracted():\n    print('b')\n    print('c')\n    print('d')\n"
+        val result = engine.compare(ComparisonRequest(old, new, "Python", "t.py"), Cancellation.NONE)
+        val rel = result.relationships.single { RelationshipKind.EXTRACT in it.kinds }
+        assertTrue(rel.new.any { (it.subject as? Subject.Declaration)?.name == "extracted" })
+        assertTrue(rel.old.any { (it.subject as? Subject.Declaration)?.name == "summary" })
+    }
+
+    // languages/04-python R18
+    fun `test Python inlining is detected`() {
+        val engine = DeclarationEngine(null)
+        val old = "def summary():\n    print('a')\n    extracted()\n    print('e')\n\ndef extracted():\n    print('b')\n    print('c')\n    print('d')\n"
+        val new = "def summary():\n    print('a')\n    print('b')\n    print('c')\n    print('d')\n    print('e')\n"
+        val result = engine.compare(ComparisonRequest(old, new, "Python", "t.py"), Cancellation.NONE)
+        val rel = result.relationships.single { RelationshipKind.INLINE in it.kinds }
+        assertTrue(rel.old.any { (it.subject as? Subject.Declaration)?.name == "extracted" })
+        assertTrue(rel.new.any { (it.subject as? Subject.Declaration)?.name == "summary" })
+    }
+
+
+
+    // languages/04-python (attrs 3bb6382 pyrefly.py case) — see docs/specs/languages/04-python-details.md Open questions
+    fun `test known issue Python class reported changed after inserted block before decorator`() {
+        // Documents current broken behavior: class D is matched but reported CHANGED; see Open questions.
+        val old = """import attrs
+
+C = attrs.make_class("C", [])
+C(a=1)
+
+@attrs.define
+class D:
+    x: list[int] = attrs.field()
+"""
+        val new = """import attrs
+import copy
+import sys
+
+C = attrs.make_class("C", [])
+C(a=1)
+
+if sys.version_info >= (3, 13):
+    cc = copy.replace(cc, x=1)
+
+@attrs.define
+class D:
+    x: list[int] = attrs.field()
+"""
+        val result = DeclarationEngine(null).compare(
+            ComparisonRequest(old, new, "Python", "demo.py"),
+            Cancellation.NONE,
+        )
+        assertEquals(Status.ANALYZED, result.status)
+        val dNodes = flatten(result).filter {
+            it.subject is Subject.Declaration &&
+                (it.subject as Subject.Declaration).name == "D" &&
+                (it.subject as Subject.Declaration).kind == DeclarationKind.CLASS
+        }
+        assertTrue("class D should be present", dNodes.isNotEmpty())
+        dNodes.forEach { node ->
+            assertEquals("class D matched despite inserted statements above decorator", Presence.MATCHED, node.presence)
+            assertEquals("class D currently reported CHANGED (see Open questions)", Content.CHANGED, node.content)
+        }
+    }
+
     fun `test R7 R8 R18 the computed fields are read from the relationships over the golden fixtures`() {
         // relationships/02-relationship-model R7, R8, R18. GoldenFixturesTest proves these fields are the ones the
         // engine set before the move, since it compares the rendered outline with the checked-in expected files.
@@ -68,6 +200,7 @@ class DeclarationEngineTest : BasePlatformTestCase() {
             Triple("kotlin", "kotlin", "kt"),
             Triple("scala2", "Scala", "scala"),
             Triple("scala3", "Scala", "scala"),
+            Triple("python", "Python", "py"),
         )) {
             val cases = File("src/test/testData", directory)
                 .listFiles { file -> file.isDirectory && file.name != "merge" && file.name != "relationships" }
@@ -174,9 +307,9 @@ class DeclarationEngineTest : BasePlatformTestCase() {
 
     fun `test R24 the engine version names its own version, the IDE build and the Scala plugin`() {
         // relationships/02-relationship-model R24; relationships/03-relationship-matching R18; languages/08-groovy R11-R20
-        assertEquals("17", DeclarationEngine.VERSION)
-        assertEquals("17 (251.26927.53)", DeclarationEngine.formatVersion("251.26927.53", null))
-        assertEquals("17 (251.26927.53; Scala 2025.1.32)", DeclarationEngine.formatVersion("251.26927.53", "2025.1.32"))
+        assertEquals("18", DeclarationEngine.VERSION)
+        assertEquals("18 (251.26927.53)", DeclarationEngine.formatVersion("251.26927.53", null))
+        assertEquals("18 (251.26927.53; Scala 2025.1.32)", DeclarationEngine.formatVersion("251.26927.53", "2025.1.32"))
 
         // This IDE loads the Scala plugin, so its parser is named: it can change a result without a platform update.
         // The plugin manager is the independent source of truth; reading the descriptor through the shared test
@@ -197,7 +330,7 @@ class DeclarationEngineTest : BasePlatformTestCase() {
         ExtensionTestUtil.maskExtensions(DeclarationProvider.EP_NAME, listOf(JavaDeclarationProvider()), testRootDisposable)
         val version = DeclarationEngine(null).version
 
-        assertTrue(version, version.startsWith("17 ("))
+        assertTrue(version, version.startsWith("18 ("))
         assertFalse("no Scala plugin is named without its provider: $version", version.contains("Scala"))
     }
 

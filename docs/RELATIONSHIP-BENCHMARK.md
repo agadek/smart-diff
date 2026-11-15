@@ -22,7 +22,7 @@ Without a labelled benchmark, matcher changes are judged by anecdote and fixture
 In scope:
 
 - per-file comparisons;
-- Java, Kotlin, Scala 2 and Scala 3;
+- Java, Kotlin, Scala 2, Scala 3 and Python;
 - declaration renames, moves, kind changes, signature changes, extraction and inlining;
 - duplicate bodies, overloads and ambiguous candidates;
 - formatting-only, comment-only and string changes;

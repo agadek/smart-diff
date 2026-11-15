@@ -1,0 +1,312 @@
+case: attrs-3bb6382-pyrefly
+language: Python
+corpus: python
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "attrs"
+  commit: 3bb6382a7ca4ebe681386e3c6b8106993a4d194f
+  path: "typing_tests/pyrefly.py"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: CLASS, name: "C", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class C", kind: VARIABLE, name: "a", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "cc", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "cc", signature: null }
+      presence: ADDED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "D", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class D", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "li", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "E", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class E", kind: VARIABLE, name: "y", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "li", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "F", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class F", kind: VARIABLE, name: "z", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "GG", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class GG", kind: VARIABLE, name: "y", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "HH", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class HH", kind: VARIABLE, name: "z", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "Error", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Error", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "Error2", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Error2", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "AliasExample", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class AliasExample", kind: VARIABLE, name: "without_alias", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class AliasExample", kind: VARIABLE, name: "_with_alias", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "ConvCOptional", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ConvCOptional", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "ConvCPipe", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ConvCPipe", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "ConvCDefaultIfNone", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ConvCDefaultIfNone", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "ConvCToBool", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ConvCToBool", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "DecoratorConverter", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class DecoratorConverter", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class DecoratorConverter", kind: FUNCTION, name: "_to_int", signature: "self, field, val" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "Validated", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "a", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "a2", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "a3", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "b", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "c", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "d", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "d2", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "d3", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "d4", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "e", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "f", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "g", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "h", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "j", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "k", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "kk", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "l", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "m", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "n", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "o", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "p", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "q", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "r", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated", kind: VARIABLE, name: "s", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "Validated2", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Validated2", kind: VARIABLE, name: "num", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "WithCustomRepr", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class WithCustomRepr", kind: VARIABLE, name: "a", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class WithCustomRepr", kind: VARIABLE, name: "b", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class WithCustomRepr", kind: VARIABLE, name: "c", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class WithCustomRepr", kind: VARIABLE, name: "d", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "OrderFlags", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class OrderFlags", kind: VARIABLE, name: "a", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class OrderFlags", kind: VARIABLE, name: "b", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "ValidatedSetter", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ValidatedSetter", kind: VARIABLE, name: "a", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ValidatedSetter", kind: VARIABLE, name: "b", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ValidatedSetter", kind: VARIABLE, name: "c", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ValidatedSetter", kind: VARIABLE, name: "d", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ValidatedSetter", kind: VARIABLE, name: "e", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "vs", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "ft_hook", signature: "cls, attribs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "TransformedAttrs", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TransformedAttrs", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "AutoDetect", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class AutoDetect", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class AutoDetect", kind: FUNCTION, name: "__init__", signature: "self, x" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "NGClass", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class NGClass", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "ngc", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "NGFrozen", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class NGFrozen", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "a", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "FactoryTest", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class FactoryTest", kind: VARIABLE, name: "a", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class FactoryTest", kind: VARIABLE, name: "b", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class FactoryTest", kind: VARIABLE, name: "c", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "MatchArgs", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class MatchArgs", kind: VARIABLE, name: "a", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class MatchArgs", kind: VARIABLE, name: "b", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "foo", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "Hashable", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test", signature: "cls" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Drafted from engine output; every function/class entry cross-checked against commit diff hunks (scripted heuristic) and reviewed; flagged entries verified against git show. Corrected: set class D/NGClass2 from CHANGED to UNCHANGED (diff does not touch them)."

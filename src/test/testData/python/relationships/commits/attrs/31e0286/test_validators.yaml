@@ -1,0 +1,390 @@
+case: attrs-31e0286-test_validators
+language: Python
+corpus: python
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "attrs"
+  commit: 31e02869da10824b492c378c1dc87ccc720ee5ad
+  path: "tests/test_validators.py"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: CLASS, name: "TestDisableValidators", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDisableValidators", kind: FUNCTION, name: "_reset_default", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDisableValidators", kind: FUNCTION, name: "test_default", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDisableValidators", kind: FUNCTION, name: "test_set_validators_disabled", signature: "self, value, expected" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDisableValidators", kind: FUNCTION, name: "test_disabled", signature: "self, value, expected" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDisableValidators", kind: FUNCTION, name: "test_disabled_ctx", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDisableValidators", kind: FUNCTION, name: "test_disabled_ctx_with_errors", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDisableValidators", kind: FUNCTION, name: "test_disabled_ctx_nested", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "TestInstanceOf", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestInstanceOf", kind: FUNCTION, name: "test_in_all", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestInstanceOf", kind: FUNCTION, name: "test_success", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestInstanceOf", kind: FUNCTION, name: "test_subclass", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestInstanceOf", kind: FUNCTION, name: "test_fail", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestInstanceOf", kind: FUNCTION, name: "test_repr", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "TestMatchesRe", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestMatchesRe", kind: FUNCTION, name: "test_in_all", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestMatchesRe", kind: FUNCTION, name: "test_match", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestMatchesRe", kind: FUNCTION, name: "test_flags", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestMatchesRe", kind: FUNCTION, name: "test_precompiled_pattern", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestMatchesRe", kind: FUNCTION, name: "test_precompiled_pattern_no_flags", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestMatchesRe", kind: FUNCTION, name: "test_different_func", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestMatchesRe", kind: FUNCTION, name: "test_catches_invalid_func", signature: "self" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class TestMatchesRe", kind: FUNCTION, name: "test_accepts_all_valid_func", signature: "self, func" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestMatchesRe", kind: FUNCTION, name: "test_repr", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "always_pass", signature: "_, __, ___" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "always_fail", signature: "_, __, ___" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "TestAnd", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestAnd", kind: FUNCTION, name: "test_in_all", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestAnd", kind: FUNCTION, name: "test_success", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestAnd", kind: FUNCTION, name: "test_fail", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestAnd", kind: FUNCTION, name: "test_sugar", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "TestOptional", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestOptional", kind: FUNCTION, name: "test_in_all", signature: "self, validator" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestOptional", kind: FUNCTION, name: "test_success", signature: "self, validator" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestOptional", kind: FUNCTION, name: "test_success_with_none", signature: "self, validator" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestOptional", kind: FUNCTION, name: "test_fail", signature: "self, validator" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestOptional", kind: FUNCTION, name: "test_repr", signature: "self, validator" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "TestIn_", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestIn_", kind: FUNCTION, name: "test_in_all", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestIn_", kind: FUNCTION, name: "test_success_with_value", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestIn_", kind: FUNCTION, name: "test_fail", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestIn_", kind: FUNCTION, name: "test_fail_with_string", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestIn_", kind: FUNCTION, name: "test_repr", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestIn_", kind: FUNCTION, name: "test_is_hashable", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_member_validator", signature: "request" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "TestDeepIterable", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepIterable", kind: FUNCTION, name: "test_in_all", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepIterable", kind: FUNCTION, name: "test_success_member_only", signature: "self, member_validator" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepIterable", kind: FUNCTION, name: "test_success_member_and_iterable", signature: "self, member_validator" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepIterable", kind: FUNCTION, name: "test_noncallable_validators", signature: "self, member_validator, iterable_validator" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepIterable", kind: FUNCTION, name: "test_fail_invalid_member", signature: "self, member_validator" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepIterable", kind: FUNCTION, name: "test_fail_invalid_iterable", signature: "self, member_validator" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepIterable", kind: FUNCTION, name: "test_fail_invalid_member_and_iterable", signature: "self, member_validator" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepIterable", kind: FUNCTION, name: "test_repr_member_only", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepIterable", kind: FUNCTION, name: "test_repr_member_only_sequence", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepIterable", kind: FUNCTION, name: "test_repr_member_and_iterable", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepIterable", kind: FUNCTION, name: "test_repr_sequence_member_and_iterable", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepIterable", kind: FUNCTION, name: "test_validators_iterables", signature: "self, conv" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "TestDeepMapping", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepMapping", kind: FUNCTION, name: "test_in_all", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepMapping", kind: FUNCTION, name: "test_success", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepMapping", kind: FUNCTION, name: "test_noncallable_validators", signature: "self, key_validator, value_validator, mapping_validator" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepMapping", kind: FUNCTION, name: "test_fail_invalid_mapping", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepMapping", kind: FUNCTION, name: "test_fail_invalid_key", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepMapping", kind: FUNCTION, name: "test_fail_invalid_member", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepMapping", kind: FUNCTION, name: "test_repr", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepMapping", kind: FUNCTION, name: "test_error_neither_validator_provided", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepMapping", kind: FUNCTION, name: "test_key_validator_can_be_none", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepMapping", kind: FUNCTION, name: "test_value_validator_can_be_none", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestDeepMapping", kind: FUNCTION, name: "test_validators_iterables", signature: "self, conv" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "TestIsCallable", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestIsCallable", kind: FUNCTION, name: "test_in_all", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestIsCallable", kind: FUNCTION, name: "test_success", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestIsCallable", kind: FUNCTION, name: "test_fail", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestIsCallable", kind: FUNCTION, name: "test_repr", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestIsCallable", kind: FUNCTION, name: "test_exception_repr", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_hashability", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "TestLtLeGeGt", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestLtLeGeGt", kind: VARIABLE, name: "BOUND", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestLtLeGeGt", kind: FUNCTION, name: "test_in_all", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestLtLeGeGt", kind: FUNCTION, name: "test_retrieve_bound", signature: "self, v" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestLtLeGeGt", kind: FUNCTION, name: "test_check_valid", signature: "self, v, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestLtLeGeGt", kind: FUNCTION, name: "test_check_invalid", signature: "self, v, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestLtLeGeGt", kind: FUNCTION, name: "test_repr", signature: "self, v" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "TestMaxLen", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestMaxLen", kind: VARIABLE, name: "MAX_LENGTH", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestMaxLen", kind: FUNCTION, name: "test_in_all", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestMaxLen", kind: FUNCTION, name: "test_retrieve_max_len", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestMaxLen", kind: FUNCTION, name: "test_check_valid", signature: "self, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestMaxLen", kind: FUNCTION, name: "test_check_invalid", signature: "self, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestMaxLen", kind: FUNCTION, name: "test_repr", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "TestMinLen", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestMinLen", kind: VARIABLE, name: "MIN_LENGTH", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestMinLen", kind: FUNCTION, name: "test_in_all", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestMinLen", kind: FUNCTION, name: "test_retrieve_min_len", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestMinLen", kind: FUNCTION, name: "test_check_valid", signature: "self, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestMinLen", kind: FUNCTION, name: "test_check_invalid", signature: "self, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestMinLen", kind: FUNCTION, name: "test_repr", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "TestSubclassOf", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestSubclassOf", kind: FUNCTION, name: "test_success", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestSubclassOf", kind: FUNCTION, name: "test_subclass", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestSubclassOf", kind: FUNCTION, name: "test_fail", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestSubclassOf", kind: FUNCTION, name: "test_repr", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "TestNot_", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestNot_", kind: VARIABLE, name: "DEFAULT_EXC_TYPES", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestNot_", kind: FUNCTION, name: "test_not_all", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestNot_", kind: FUNCTION, name: "test_repr", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestNot_", kind: FUNCTION, name: "test_success_because_fails", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestNot_", kind: FUNCTION, name: "test_fails_because_success", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestNot_", kind: FUNCTION, name: "test_composable_with_in_pass", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestNot_", kind: FUNCTION, name: "test_composable_with_in_fail", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestNot_", kind: FUNCTION, name: "test_composable_with_matches_re_pass", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestNot_", kind: FUNCTION, name: "test_composable_with_matches_re_fail", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestNot_", kind: FUNCTION, name: "test_composable_with_instance_of_pass", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestNot_", kind: FUNCTION, name: "test_composable_with_instance_of_fail", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestNot_", kind: FUNCTION, name: "test_custom_capture_match", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestNot_", kind: FUNCTION, name: "test_custom_capture_miss", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestNot_", kind: FUNCTION, name: "test_custom_msg", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestNot_", kind: FUNCTION, name: "test_bad_exception_args", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "TestOr", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestOr", kind: FUNCTION, name: "test_in_all", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestOr", kind: FUNCTION, name: "test_success", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestOr", kind: FUNCTION, name: "test_fail", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestOr", kind: FUNCTION, name: "test_repr", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Drafted from engine output; every function/class entry cross-checked against commit diff hunks (scripted heuristic) and reviewed; flagged entries verified against git show."

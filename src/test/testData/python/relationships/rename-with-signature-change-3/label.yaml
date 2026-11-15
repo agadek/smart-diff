@@ -1,0 +1,21 @@
+case: rename-with-signature-change-3
+language: Python
+corpus: python
+category: rename-with-signature-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Basket", kind: FUNCTION, name: "price", signature: "self, x" }
+      new: { path: "class Basket", kind: FUNCTION, name: "cost", signature: "self, x" }
+      usages: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Basket" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Basket", kind: FUNCTION, name: "cost", signature: "self, x" }
+      presence: MATCHED
+      content: CHANGED
+      signatureChanged: true
+  ambiguous: []
+notes: "A method renamed and its signature changed."
