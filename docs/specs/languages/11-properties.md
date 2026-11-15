@@ -1,6 +1,6 @@
 # Properties
 
-Status: accepted, 2026-11-15
+Status: implemented, 2026-11-15
 
 **Description:** The [declaration engine](../../GLOSSARY.md#declaration-engine) supports Java properties files through the IDE's properties parser, when the IDE has properties support.
 
@@ -14,7 +14,7 @@ Status: accepted, 2026-11-15
 - **R4** Keys do not nest: a dotted key such as `spring.datasource.url` is one key, and every key is a top-level declaration.
 - **R5** The value is the key's content: changing it changes the key.
 - **R6** A reorder of keys is reported as [moved](../../GLOSSARY.md#moved).
-- **R7** A change in spacing around the `=` or `:` separator, or in blank lines between keys, is [formatting-only](../../GLOSSARY.md#formatting-only) when nothing else changed.
+- **R7** A change in spacing around the `=` or `:` separator, or in blank lines between keys, is a change.
 - **R8** A change of separator character, a change in spacing inside a value, and a value split or joined with line continuations are changes.
 - **R9** Comments are changes.
 - **R10** A [key](../../GLOSSARY.md#key) renamed with its value unchanged is a [rename candidate](../../GLOSSARY.md#rename-candidate).
