@@ -1,0 +1,2 @@
+status: ANALYZED
+section tasks.register greet  rename candidate from section tasks.register hello  changed  old 1-3  new 1-3

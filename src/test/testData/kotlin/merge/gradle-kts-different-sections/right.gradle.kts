@@ -1,0 +1,8 @@
+plugins {
+  id("java")
+}
+
+dependencies {
+  implementation("a:a:1")
+  implementation("b:b:1")
+}

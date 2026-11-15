@@ -68,8 +68,9 @@ class MergeFixturesTest : BasePlatformTestCase() {
             val cases = mergeCases(directory)
             assertTrue("no $directory merge fixtures", cases.isNotEmpty())
             for (case in cases) {
+                val ext = extensionOf(case, extension)
                 for (name in listOf("base", "left", "right")) {
-                    assertTrue("${case.path}/$name.$extension", File(case, "$name.$extension").isFile)
+                    assertTrue("${case.path}/$name.$ext", File(case, "$name.$ext").isFile)
                 }
             }
         }
@@ -252,12 +253,13 @@ class MergeFixturesTest : BasePlatformTestCase() {
         assertTrue("no $directory merge fixtures", cases.isNotEmpty())
         val failures = mutableListOf<String>()
         for (case in cases) {
-            val base = read(File(case, "base.$extension"))
-            val left = read(File(case, "left.$extension"))
-            val right = read(File(case, "right.$extension"))
+            val ext = extensionOf(case, extension)
+            val base = read(File(case, "base.$ext"))
+            val left = read(File(case, "left.$ext"))
+            val right = read(File(case, "right.$ext"))
             val joined = MergeComparison.compare(
                 engine,
-                MergeTexts(base, left, right, languageId, "${case.name}.$extension"),
+                MergeTexts(base, left, right, languageId, "${case.name}.$ext"),
                 Cancellation.NONE,
                 executor,
             )
@@ -323,6 +325,11 @@ class MergeFixturesTest : BasePlatformTestCase() {
     private fun dialect(vararg texts: String): String? = ReadAction.compute(ThrowableComputable<String?, RuntimeException> {
         scala.dialect(project, texts.toList(), null)?.id
     })
+
+    private fun extensionOf(case: File, default: String): String {
+        val base = case.listFiles()?.firstOrNull { it.name.startsWith("base.") } ?: return default
+        return base.name.removePrefix("base.")
+    }
 
     /** Fixture texts are LF-separated like document snapshots, whatever the checkout's line ends. */
     private fun read(file: File): String = file.readText().replace("\r\n", "\n")

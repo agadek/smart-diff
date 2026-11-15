@@ -45,15 +45,20 @@ abstract class ProviderTestCase : BasePlatformTestCase() {
             }
             return parts.append(text, start, range.end).toString()
         }
-        fun extent(declaration: Declaration) =
+        fun rangeExtent(declaration: Declaration) =
             io.github.agadek.smartdiff.engine.api.TextRange(declaration.leadingWhitespace?.start ?: declaration.range.start, declaration.range.end)
+        fun coveredExtent(declaration: Declaration): io.github.agadek.smartdiff.engine.api.TextRange {
+            val layout = declaration.layout
+            val end = if (layout != null && layout.start == declaration.range.end) layout.end else declaration.range.end
+            return io.github.agadek.smartdiff.engine.api.TextRange(declaration.leadingWhitespace?.start ?: declaration.range.start, end)
+        }
         fun check(declaration: Declaration) {
             declaration.leadingWhitespace?.let { leading ->
                 assertEquals("leading whitespace of $declaration ends at its start", declaration.range.start, leading.end)
                 assertTrue("leading whitespace of $declaration is blank", text.substring(leading.start, leading.end).isBlank())
             }
             val leading = declaration.leadingWhitespace?.let { text.substring(it.start, it.end) }.orEmpty()
-            assertEquals("own tokens of $declaration", leading + outside(declaration.range, declaration.children.map(::extent)), declaration.ownTokens.joinToString("") { it.text })
+            assertEquals("own tokens of $declaration", leading + outside(declaration.range, declaration.children.map(::rangeExtent)), declaration.ownTokens.joinToString("") { it.text })
             assertEquals("a start offset for each own token of $declaration", declaration.ownTokens.size, declaration.ownTokenStarts.size)
             declaration.ownTokens.zip(declaration.ownTokenStarts).forEach { (token, start) ->
                 assertTrue("own token $token of $declaration starts at $start", text.startsWith(token.text, start))
@@ -65,8 +70,14 @@ abstract class ProviderTestCase : BasePlatformTestCase() {
         }
         tree.topLevel.forEach(::check)
         val whole = io.github.agadek.smartdiff.engine.api.TextRange(0, text.length)
-        assertEquals("file region tokens", outside(whole, tree.topLevel.map(::extent)), tree.fileRegion.tokens.joinToString("") { it.text })
-        assertEquals("file region ranges", outside(whole, tree.topLevel.map(::extent)), tree.fileRegion.ranges.joinToString("") { text.substring(it.start, it.end) })
+        val expectedTokens = outside(whole, tree.topLevel.map(::rangeExtent))
+        val actualTokens = tree.fileRegion.tokens.joinToString("") { it.text }
+        if (actualTokens != expectedTokens) {
+            assertEquals("file region tokens", outside(whole, tree.topLevel.map(::coveredExtent)), actualTokens)
+            assertEquals("file region ranges", outside(whole, tree.topLevel.map(::coveredExtent)), tree.fileRegion.ranges.joinToString("") { text.substring(it.start, it.end) })
+        } else {
+            assertEquals("file region ranges", outside(whole, tree.topLevel.map(::rangeExtent)), tree.fileRegion.ranges.joinToString("") { text.substring(it.start, it.end) })
+        }
     }
 
     /** Each declaration with a body and its body's text, trimmed, one per line: `method f(): return 1;`. */

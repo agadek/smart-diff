@@ -9,11 +9,12 @@ import com.intellij.psi.PsiFile
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.TextRange
+import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 import io.github.agadek.smartdiff.engine.declarations.model.Declaration
 import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
 import io.github.agadek.smartdiff.engine.declarations.model.FileRegion
+import io.github.agadek.smartdiff.engine.declarations.model.Token
 import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
-import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 
 /** What a provider says about a PSI element that is a declaration (technical specification §6.4, §6.5, §6.8). */
 class DeclarationInfo(
@@ -80,6 +81,13 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
      */
     open fun significantWhitespace(file: PsiFile): List<TextRange> = emptyList()
 
+    /** Whether separators between top-level declarations are layout owned by the preceding declaration. */
+    protected open fun trailingSeparatorsAreLayout(file: PsiFile): Boolean = false
+
+    /** Tokens treated as separator layout when [trailingSeparatorsAreLayout] is enabled for [file]. */
+    protected open fun isSeparatorLayoutToken(token: Token): Boolean =
+        token.kind == TokenKind.WHITESPACE || token.text.all { it.isWhitespace() }
+
     override fun build(file: PsiFile, cancellation: Cancellation): DeclarationTree {
         val text = file.viewProvider.contents
 
@@ -96,7 +104,13 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
 
         val significant = significantWhitespace(file)
         val tokens = LexedTokens.lex(createLexer(file), parserDefinition(file), text, cancellation, ::tokenKind)
-        PsiTreeParts.assignLeading(topLevel, tokens)
+        val trailingLayout = trailingSeparatorsAreLayout(file)
+        if (trailingLayout) {
+            PsiTreeParts.assignLeading(topLevel, tokens, isLayout = ::isSeparatorLayoutToken)
+            assignTrailingSeparators(topLevel, tokens, text.length)
+        } else {
+            PsiTreeParts.assignLeading(topLevel, tokens)
+        }
 
         fun declaration(node: Node): Declaration {
             cancellation.checkCanceled()
@@ -117,15 +131,34 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
                 ownTokenStarts = leadingStarts + tokens.ownStarts(node.range, excluded),
                 body = node.info.body?.let(::body),
                 nameRange = node.info.nameRange,
+                layout = node.trailing,
             )
         }
         val whole = TextRange(0, text.length)
+        val covered = topLevel.map { node ->
+            val start = node.leading?.start ?: node.range.start
+            val end = node.trailing?.end ?: node.range.end
+            TextRange(start, end)
+        }
         val fileRegion = FileRegion(
-            ranges = PsiTreeParts.gaps(whole, topLevel.map { it.extent }),
-            tokens = tokens.own(whole, topLevel.map { it.extent }, significant),
+            ranges = PsiTreeParts.gaps(whole, covered),
+            tokens = tokens.own(whole, covered, significant),
             hasParseError = fileRegionError,
         )
         return DeclarationTree(topLevel.map(::declaration), fileRegion, whitespacePolicy(file))
+    }
+
+    private fun assignTrailingSeparators(nodes: List<Node>, tokens: LexedTokens, containerEnd: Int) {
+        for ((index, node) in nodes.withIndex()) {
+            val limit = nodes.getOrNull(index + 1)?.range?.start ?: containerEnd
+            val end = tokens.layoutEnd(node.range.end, limit, ::isSeparatorLayoutToken)
+            if (end > node.range.end) node.trailing = TextRange(node.range.end, end)
+            val next = nodes.getOrNull(index + 1) ?: continue
+            val leading = next.leading ?: continue
+            if (leading.start < end) {
+                next.leading = if (end < leading.end) TextRange(end, leading.end) else null
+            }
+        }
     }
 
     private class Node(
@@ -135,6 +168,7 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
     ) : PsiDeclarationNode {
         override var parseError = false
         override var leading: TextRange? = null
+        var trailing: TextRange? = null
     }
 
     /** The inside of a block's braces, or the whole of any other body. */

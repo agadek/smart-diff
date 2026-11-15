@@ -1,6 +1,6 @@
 # Format Coverage Plan
 
-Status: proposal, 2026-11-13, with open question F1 decided the same day (§6); G0/G1 and D0/D1 implemented 2026-11-13; D2 (YAML) implemented 2026-11-14. It expands the roadmap's [more languages](ROADMAP.md#more-languages) entry into a programme: which languages and file formats of the JetBrains platform SMART Diff covers, what each one needs, and in which order. Section numbers (§) refer to the [technical specification](TECHNICAL-SPECIFICATION.md), and terms follow the [glossary](GLOSSARY.md). [Python](specs/languages/04-python.md) and [Rust](specs/languages/05-rust.md) are specified separately and are not repeated here; this plan builds on their pattern and their build-target decision (spike S8). Each phase below gets its own feature spec and details file, written as the [specification guide](SPEC-GUIDE.md) asks, in the first pull request of that phase.
+Status: proposal, 2026-11-13, with open question F1 decided the same day (§6); G0/G1 and D0/D1 implemented 2026-11-13; D2 (YAML) and M2 implemented 2026-11-14/2026-11-15. It expands the roadmap's [more languages](ROADMAP.md#more-languages) entry into a programme: which languages and file formats of the JetBrains platform SMART Diff covers, what each one needs, and in which order. Section numbers (§) refer to the [technical specification](TECHNICAL-SPECIFICATION.md), and terms follow the [glossary](GLOSSARY.md). [Python](specs/languages/04-python.md) and [Rust](specs/languages/05-rust.md) are specified separately and are not repeated here; this plan builds on their pattern and their build-target decision (spike S8). Each phase below gets its own feature spec and details file, written as the [specification guide](SPEC-GUIDE.md) asks, in the first pull request of that phase.
 
 ## 1. Problem
 
@@ -123,7 +123,7 @@ Each phase is one pull request, or a spec pull request and a code pull request, 
 | B1 | JavaScript and TypeScript provider | B0 | Not started |
 | B2 | Go provider | B0 | Not started |
 | M1 | Markdown provider | D0 (the `SECTION` kind) | Not started |
-| M2 | Groovy provider and build-script sections, Groovy and Kotlin | Nothing | Part 1 (Groovy declarations) implemented 2026-11-14; build-script sections (M2b) not started |
+| M2 | Groovy provider and build-script sections, Groovy and Kotlin | Nothing | Part 1 (Groovy declarations) implemented 2026-11-14; part 2 (build-script sections, M2b) implemented 2026-11-15 |
 | M3 | Shell provider | Nothing | Implemented 2026-11-14 |
 | B3 | CSS, SCSS and Less provider | B1 | Not started |
 | B4 | PHP provider | B0 | Not started |
