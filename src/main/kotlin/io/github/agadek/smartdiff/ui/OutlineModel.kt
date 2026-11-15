@@ -238,7 +238,7 @@ object OutlineModel {
     }
 
     internal fun kindName(kind: DeclarationKind): String =
-        if (kind == DeclarationKind.ITEM) "" else kind.name.lowercase().replace('_', ' ')
+        if (kind == DeclarationKind.ITEM) "" else kind.label()
 
     internal fun name(subject: Subject.Declaration): String = (subject.receiver?.let { "$it." } ?: "") + subject.name
 

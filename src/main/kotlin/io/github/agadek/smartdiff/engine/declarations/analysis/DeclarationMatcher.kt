@@ -348,13 +348,9 @@ object DeclarationMatcher {
     /** A declaration's container path on its side, as `class Order / method total(int)`. */
     private fun path(side: Side, declaration: Declaration): String =
         side.path(declaration).joinToString(" / ") { container ->
-            listOfNotNull(kindName(container.kind).takeIf { it.isNotEmpty() }, container.name.takeIf { it.isNotEmpty() })
-                .joinToString(" ")
+            val label = if (container.kind == DeclarationKind.ITEM) "" else container.kind.label()
+            listOfNotNull(label.takeIf { it.isNotEmpty() }, container.name.takeIf { it.isNotEmpty() }).joinToString(" ")
         }
-
-    /** A kind's word in a note; `ITEM` has none, so a generic structure-view container reads as its name (languages/06 R6). */
-    private fun kindName(kind: DeclarationKind): String =
-        if (kind == DeclarationKind.ITEM) "" else kind.name.lowercase().replace('_', ' ')
 
     /**
      * For each matched container pair and the top level, the matched children outside the longest common subsequence
@@ -684,7 +680,7 @@ object DeclarationMatcher {
     private val KIND_FAMILIES = listOf(
         setOf(
             DeclarationKind.CLASS, DeclarationKind.TRAIT, DeclarationKind.INTERFACE, DeclarationKind.ENUM,
-            DeclarationKind.RECORD, DeclarationKind.ANNOTATION_TYPE,
+            DeclarationKind.RECORD, DeclarationKind.ANNOTATION_TYPE, DeclarationKind.STRUCT, DeclarationKind.UNION,
         ),
         setOf(DeclarationKind.METHOD, DeclarationKind.FUNCTION, DeclarationKind.FIELD, DeclarationKind.PROPERTY),
     )

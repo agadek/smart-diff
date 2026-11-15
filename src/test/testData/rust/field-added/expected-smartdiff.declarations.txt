@@ -1,0 +1,3 @@
+status: ANALYZED
+struct S  changed  old 1-3  new 1-4
+  field y  added  new 3

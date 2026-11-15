@@ -1,0 +1,3 @@
+status: ANALYZED
+module tests  old 1-7  new 1-7
+  function it_works()  changed  old 3-6  new 3-6

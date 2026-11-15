@@ -1,0 +1,2 @@
+status: ANALYZED
+impl fmt::Debug for Wrapper<T>  rename candidate from impl fmt::Display for Wrapper<T>  changed  old 1-3  new 1-3

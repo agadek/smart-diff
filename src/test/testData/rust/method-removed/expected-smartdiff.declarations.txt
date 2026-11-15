@@ -1,0 +1,3 @@
+status: ANALYZED
+impl S  old 2-5  new 2-4
+  function b(&self)  removed  old 4

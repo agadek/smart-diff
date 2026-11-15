@@ -1,0 +1,3 @@
+status: ANALYZED
+function main()  changed  code extracted to helper()  old 1-5  new 1-3
+function helper()  added  extracted from main() old 2-4  new 5-9

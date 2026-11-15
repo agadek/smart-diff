@@ -47,7 +47,7 @@ object NothingHidden {
      * intervals and points rather than a full row of the table, and large files with local changes check in about
      * linear time. Matches the full dynamic programming exactly (`NothingHiddenTest`).
      */
-    internal fun alignable(old: CharSequence, oldCovered: BooleanArray, new: CharSequence, newCovered: BooleanArray): Boolean {
+    fun alignable(old: CharSequence, oldCovered: BooleanArray, new: CharSequence, newCovered: BooleanArray): Boolean {
         val m = new.length
         // runEnd[j]: the furthest offset reachable from j by skipping covered new characters.
         val runEnd = IntArray(m + 1)

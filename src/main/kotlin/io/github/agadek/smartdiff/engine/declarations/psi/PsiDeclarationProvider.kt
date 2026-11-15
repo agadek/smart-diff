@@ -74,6 +74,12 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
      */
     protected open fun tokenKind(type: String, text: String, kind: TokenKind): TokenKind = kind
 
+    /**
+     * Ranges whose whitespace tokens are compared exactly, so a change in their spacing is a change (technical
+     * specification §6.10, Rust R14). A provider that needs this returns the ranges of the source whose spacing matters.
+     */
+    open fun significantWhitespace(file: PsiFile): List<TextRange> = emptyList()
+
     override fun build(file: PsiFile, cancellation: Cancellation): DeclarationTree {
         val text = file.viewProvider.contents
 
@@ -88,12 +94,13 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
 
         val fileRegionError = PsiTreeParts.markParseErrors(file, topLevel, cancellation, ::isParseError)
 
+        val significant = significantWhitespace(file)
         val tokens = LexedTokens.lex(createLexer(file), parserDefinition(file), text, cancellation, ::tokenKind)
         PsiTreeParts.assignLeading(topLevel, tokens)
 
         fun declaration(node: Node): Declaration {
             cancellation.checkCanceled()
-            val leading = node.leading?.let { tokens.own(it, emptyList()) }.orEmpty()
+            val leading = node.leading?.let { tokens.own(it, emptyList(), significant) }.orEmpty()
             val leadingStarts = node.leading?.let { tokens.ownStarts(it, emptyList()) }.orEmpty()
             val excluded = node.children.map { it.extent }
             return Declaration(
@@ -102,7 +109,7 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
                 signature = node.info.signature,
                 range = node.range,
                 children = node.children.map(::declaration),
-                ownTokens = leading + tokens.own(node.range, excluded),
+                ownTokens = leading + tokens.own(node.range, excluded, significant),
                 hasParseError = node.parseError,
                 leadingWhitespace = node.leading,
                 displaySignature = node.info.displaySignature,
@@ -115,7 +122,7 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
         val whole = TextRange(0, text.length)
         val fileRegion = FileRegion(
             ranges = PsiTreeParts.gaps(whole, topLevel.map { it.extent }),
-            tokens = tokens.own(whole, topLevel.map { it.extent }),
+            tokens = tokens.own(whole, topLevel.map { it.extent }, significant),
             hasParseError = fileRegionError,
         )
         return DeclarationTree(topLevel.map(::declaration), fileRegion, whitespacePolicy(file))

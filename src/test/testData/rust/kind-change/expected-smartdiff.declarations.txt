@@ -1,0 +1,2 @@
+status: ANALYZED
+struct → enum S  changed  signature changed  old 1  new 1

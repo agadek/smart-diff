@@ -1,3 +1,6 @@
-<!-- Loaded when the Rust plugin is present. The Rust declaration provider will register here. -->
+<!-- Loaded when the Rust plugin is present. The Rust declaration provider registers here. -->
 <idea-plugin>
+    <extensions defaultExtensionNs="io.github.agadek.smartdiff">
+        <declarationProvider implementation="io.github.agadek.smartdiff.engine.declarations.psi.rust.RustDeclarationProvider"/>
+    </extensions>
 </idea-plugin>

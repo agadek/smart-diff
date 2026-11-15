@@ -1,0 +1,2 @@
+status: ANALYZED
+function f()  changed  old 1  new 1
