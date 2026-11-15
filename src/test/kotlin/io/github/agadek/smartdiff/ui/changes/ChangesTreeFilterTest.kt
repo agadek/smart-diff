@@ -373,6 +373,50 @@ class ChangesTreeFilterTest : BasePlatformTestCase() {
         assertEquals("a filter change does not compare again", calls, engine.calls.get())
     }
 
+
+    fun `test the tree filter and toggles apply to an added file`() {
+        // changes-tree/06 R5
+        val addedText = """
+            class Cart {
+                void total() {
+                }
+                void isEmpty() {
+                }
+            }
+        """.trimIndent()
+        val added = Change(null, SimpleContentRevision(addedText, VcsUtil.getFilePath("/repo/Added.java", false), "2"))
+        summaryNode(added)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        val node = summaryNode(added)!!
+        assertTrue(node.summary.contains("added"))
+        assertTrue(node.childCount > 0)
+
+        settings.hiddenChangesTreeChangeTypes = setOf(ChangeType.ADDED)
+        val hiddenNode = summaryNode(added)!!
+        assertTrue(hiddenNode.summary.contains("hidden"))
+        assertEquals(0, hiddenNode.childCount)
+
+        settings.hiddenChangesTreeChangeTypes = emptySet()
+        settings.showChangesDeclarations = false
+        val leaf = summaryNode(added)!!
+        assertTrue(leaf.isLeaf)
+        assertEquals(0, leaf.childCount)
+
+        settings.showChangesDeclarations = true
+        settings.showChangesSummary = false
+        val noText = summaryNode(added)!!
+        assertEquals("", noText.summary)
+        assertTrue(noText.childCount > 0)
+
+        settings.showChangesSummary = true
+        val deleted = Change(SimpleContentRevision(addedText, VcsUtil.getFilePath("/repo/Deleted.java", false), "1"), null)
+        summaryNode(deleted)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        val delNode = summaryNode(deleted)
+        assertNotNull(delNode)
+        assertTrue(delNode!!.summary.contains("removed"))
+    }
+
     private fun maskEngines(vararg engines: ComparisonEngine) {
         ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, engines.map(::factory), testRootDisposable)
     }

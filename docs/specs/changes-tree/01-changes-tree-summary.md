@@ -10,8 +10,8 @@ Status: implemented, 2026-10-22
 
 - **R1** The summary appears in the Local Changes view and the Commit tool window.
 - **R2** It is shown in grey after the file name, starting in lower case.
-- **R3** Only modified and moved files whose language has a [comparison engine](../../GLOSSARY.md#comparison-engine) get a summary. *(changes-tree/06, accepted 2026-11-10, adds added and deleted files when implemented.)*
-- **R4** Added and deleted files get no summary. *(changes-tree/06, accepted 2026-11-10, adds a summary and declaration rows for them when implemented.)*
+- **R3** Modified, moved, added and deleted files whose language has a [comparison engine](../../GLOSSARY.md#comparison-engine) get a summary when they have reported changes.
+- **R4** *(retired)* Added and deleted files got no summary; [changes-tree/06](06-added-deleted-file-summaries.md), implemented 2026-11-15, gives them a summary and declaration rows.
 - **R5** A file that could not be analyzed shows the reason in grey instead: `not analyzed: too large`, `not analyzed: timed out`, `not analyzed: parse errors` or `not analyzed: analysis failed`.
 - **R6** A file that timed out is tried once more after a short delay, and keeps its reason meanwhile.
 - **R7** At most 500 files of a tree get a summary.

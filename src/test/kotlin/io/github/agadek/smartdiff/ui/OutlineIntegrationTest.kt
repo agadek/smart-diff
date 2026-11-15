@@ -11,6 +11,9 @@ import com.intellij.diff.impl.DiffSettingsHolder.DiffSettings
 import com.intellij.diff.requests.DiffRequest
 import com.intellij.diff.requests.SimpleDiffRequest
 import com.intellij.diff.tools.simple.SimpleDiffChange
+import com.intellij.diff.tools.simple.SimpleOnesideDiffViewer
+import com.intellij.diff.contents.DiffContent
+import com.intellij.diff.DiffContentFactory
 import com.intellij.diff.tools.util.DiffDataKeys
 import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
 import com.intellij.diff.util.Side
@@ -1559,6 +1562,59 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertTrue(outline.isOutlineVisible)
         assertEquals(OutlineState.Hidden.javaClass != outline.state.javaClass, true)
         assertTrue(UIUtil.isAncestor(shown.viewer.component, outline.panel))
+    }
+
+
+    fun `test a one-sided diff of an added file shows the outline and frames the shown side`() {
+        // changes-tree/06 R6
+        val added = """
+            class Added {
+                void hello() {
+                }
+            }
+        """.trimIndent()
+        val file = myFixture.addFileToProject("oneside/Added.java", added).virtualFile
+        val request = SimpleDiffRequest(
+            "Added.java",
+            DiffContentFactory.getInstance().createEmpty(),
+            DiffContentFactory.getInstance().create(project, file),
+            "old",
+            "new",
+        )
+        val viewer = openAny(request)
+        assertTrue(viewer is SimpleOnesideDiffViewer)
+        val outline = OutlineController.of(viewer)!!
+        awaitResult(outline) { true }
+        assertTrue(outline.panel.summary.text.contains("added"))
+        val methodRow = rows(outline).firstOrNull { it.contains("method hello()") } ?: error("no method row: ${rows(outline)}")
+        select(outline, methodRow.trim())
+        assertTrue("the shown side is framed", outline.navigator.shown.isNotEmpty())
+    }
+
+    fun `test a one-sided diff of a deleted file frames the old side`() {
+        // changes-tree/06 R6
+        val deleted = """
+            class Deleted {
+                void hello() {
+                }
+            }
+        """.trimIndent()
+        val file = myFixture.addFileToProject("oneside/Deleted.java", deleted).virtualFile
+        val request = SimpleDiffRequest(
+            "Deleted.java",
+            DiffContentFactory.getInstance().create(project, file),
+            DiffContentFactory.getInstance().createEmpty(),
+            "old",
+            "new",
+        )
+        val viewer = openAny(request)
+        assertTrue(viewer is SimpleOnesideDiffViewer)
+        val outline = OutlineController.of(viewer)!!
+        awaitResult(outline) { true }
+        assertTrue(outline.panel.summary.text.contains("removed"))
+        val methodRow = rows(outline).firstOrNull { it.contains("method hello()") } ?: error("no method row: ${rows(outline)}")
+        select(outline, methodRow.trim())
+        assertTrue("the shown side is framed", outline.navigator.shown.isNotEmpty())
     }
 
     private fun method(name: String) = Subject.Declaration(DeclarationKind.METHOD, name, "")

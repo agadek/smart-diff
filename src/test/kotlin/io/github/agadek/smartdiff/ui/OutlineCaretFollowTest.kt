@@ -137,8 +137,8 @@ class OutlineCaretFollowTest : BasePlatformTestCase() {
         // outline/07 R4
         val shown = open(history(SCROLL_OLD, SCROLL_NEW, "LongFile.java"))
         val outline = shown.awaitResult()
-        val old = outline.viewer.editor1
-        val new = outline.viewer.editor2
+        val old = (outline.viewer as com.intellij.diff.tools.util.side.TwosideTextDiffViewer).editor1
+        val new = (outline.viewer as com.intellij.diff.tools.util.side.TwosideTextDiffViewer).editor2
         showEditor(old)
         showEditor(new)
         old.scrollingModel.scrollVertically(0)
@@ -268,7 +268,7 @@ class OutlineCaretFollowTest : BasePlatformTestCase() {
 
         // Make the result stale; the comparison is pending while the debounce runs.
         com.intellij.openapi.command.WriteCommandAction.runWriteCommandAction(project) {
-            outline.viewer.editor2.document.insertString(0, "// edit\n")
+            (outline.viewer as com.intellij.diff.tools.util.side.TwosideTextDiffViewer).editor2.document.insertString(0, "// edit\n")
         }
         val edited = "// edit\n" + JAVA_NEW
         moveCaret(outline, OutlineController.CaretSide.NEW, edited.indexOf("void bye()") + 2)
@@ -464,7 +464,7 @@ class OutlineCaretFollowTest : BasePlatformTestCase() {
         items.flatMap { listOf(it) + allItems(it.children) }
 
     private fun moveCaret(outline: OutlineController, side: OutlineController.CaretSide, offset: Int) {
-        val editor = if (side == OutlineController.CaretSide.OLD) outline.viewer.editor1 else outline.viewer.editor2
+        val editor = if (side == OutlineController.CaretSide.OLD) (outline.viewer as com.intellij.diff.tools.util.side.TwosideTextDiffViewer).editor1 else (outline.viewer as com.intellij.diff.tools.util.side.TwosideTextDiffViewer).editor2
         ApplicationManager.getApplication().invokeAndWait {
             editor.caretModel.moveToOffset(offset.coerceIn(0, editor.document.textLength))
         }

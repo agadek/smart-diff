@@ -44,7 +44,7 @@ sealed interface SummarySnapshot {
     data class Fresh(val summary: FileSummary) : SummarySnapshot
     data object Stale : SummarySnapshot   // an older summary is still in the cache
     data object Pending : SummarySnapshot // the current summary is being computed
-    data object None : SummarySnapshot    // no summary for this file
+    data object None : SummarySnapshot    // no summary for this file (or the summary is off / the file is not summarized)
 }
 
 fun snapshot(change: Change): SummarySnapshot
@@ -60,8 +60,7 @@ compares the current key with the entries for the same paths:
   after an edit and before the tree rebuild. Following keeps the current selection and retries on the rebuild.
 - `Pending`: the current key is `Pending` and there is no older entry. Following selects the file row until the summary
   arrives, then follows again on the rebuild.
-- `None`: there is no entry for the paths. This covers added and deleted files, a language without an engine, the summary
-  setting being off and a file after the 500-file limit. Following selects the file row.
+- `None`: there is no entry for the paths. This covers a language without an engine, the summary setting being off, a file after the 500-file limit, and an added or deleted file that is not summarized (for example binary or unsupported, or an existing side with no reported changes). Following selects the file row. An added or deleted file with a current summary is `Fresh`, `Pending` or `Stale` like any other summarized file.
 
 The version in the key is already computed from the revision number, or for a local file from the cached document's or
 file's modification stamp. Reading it is cheap and does not load revision content, so `snapshot` is safe on the EDT. The
@@ -144,8 +143,9 @@ All of this runs on the EDT, except the summary comparison that already runs in 
    there are no declaration rows, so the file row is selected (R10).
 
 The file row fallback covers R2, R8 and R10: the caret is outside every changed declaration, the file has no summary, the
-summary says it was not analyzed, the language has no engine, the file is added or deleted, the file is after the
-500-file limit, or the tree's filter hidden every row on the caret's path. A file row that is not in the tree is left alone.
+summary says it was not analyzed, the language has no engine, the file is after the 500-file limit, the selection-following
+Changes preview follows the file row, or the tree's filter hidden every row on the caret's path. An added or deleted file
+with a summary follows its declaration rows in a one-sided diff. A file row that is not in the tree is left alone.
 
 ### Staleness, rebuilds and the tree's own selection
 
@@ -296,7 +296,7 @@ language, a file over the size limit and a file with a timed-out or failed summa
 | R5 | `ChangesCaretFollowTest` `test following leaves focus and commit inclusion alone with the platform preview off and on`: the editor keeps its real focus owner, the included changes and the commit count are unchanged, with preview off the recording `DiffManager` receives no request, and with preview on only the platform's own preview may open, as for a click |
 | R6 | `ChangesCaretFollowTest` `test following leaves the tree alone while the tree has focus`; `ChangesCaretFollowTest` `test a tree selection is not overwritten by a late caret event`: click a row while a caret follow is pending, then let the timer fire; the clicked row stays; `ChangesCaretFollowTest` `test caret moves are debounced`: several events in a row produce one follow after the delay |
 | R7 | `ChangesCaretFollowTest` `test a stale summary keeps the row through an intermediate pending rebuild and follows when the summary arrives`: after an edit, a caret event before the rebuild leaves the row selected; the intermediate pending model keeps the retry, and the row under the caret is selected after the summary arrives. `test a pending summary keeps retrying through an intermediate rebuild and selects the declaration when it arrives` covers the same retry from the first pending state |
-| R8 | `ChangesCaretFollowTest` `test a file without a summary selects only the file row` (added, deleted and unsupported files); `test an added file in a one-sided diff selects only its file row` and `test a deleted file in a one-sided diff selects only its file row` (a real `SimpleOnesideDiffViewer` whose content has a null `highlightFile` as the platform's does, including a deleted file without a `DIFF_VIEWER`); `test a pending file selects only the file row`; `test a fresh summary with no items clears the pending retry`; `test a not analyzed file selects only the file row`; `test a file after the 500-file limit selects only its file row` |
+| R8 | `ChangesCaretFollowTest` `test a file without a summary selects only the file row` (unsupported file); `test a one-sided diff of an added file selects the declaration under the caret`, `test a one-sided diff of a deleted file selects the declaration under the caret` and `test the platform preview of an added file selects the file row` (changes-tree/06; a real `SimpleOnesideDiffViewer` whose content has a null `highlightFile` as the platform's does); `test a pending file selects only the file row`; `test a fresh summary with no items clears the pending retry`; `test a not analyzed file selects only the file row`; `test a file after the 500-file limit selects only its file row` |
 | R9 | `ChangesCaretFollowTest` `test following reads no revision content on the UI thread`: a `ContentRevision` whose `content` fails when read on the EDT is never read; `test a caret event and start from a background thread are marshalled to the EDT`; Plugin Verifier report: no new internal, experimental, deprecated or override-only usage from the follower, and the existing usages stay unchanged |
 | R12 | `ChangesCaretFollowTest` `test the splitter unified viewer lookup reads one data context and reports no read-access error`: a real `UnifiedDiffViewer` in a `PreviewDiffSplitterComponent` is the editor's ancestor, one follow reads one data context, and the lookup logs no error |
 | Failure logging | `ChangesCaretFollowTest` `test a mapping failure is logged once and leaves the tree unchanged` |
@@ -331,10 +331,11 @@ Run this on IntelliJ IDEA 2025.1 and the latest release, in the Local Changes vi
    stale; if the tree rebuilds with a plain pending row, it selects that file row and keeps retrying, then selects the row
    under the caret when the new summary arrives. With the Local Changes splitter preview on, the preview's own caret
    events while the summary is pending do not replace the retry (R11).
-6. Open an added file and a deleted file in their own diffs (the platform's one-sided viewer), a file in an unsupported
-   language, a file over the size limit and a file after the 500-file limit. Only the file row is selected, and the tree
-   shows no declaration row. Repeat the deleted file in the Commit tool window, where the editor can have no
-   `DIFF_VIEWER`.
+6. Open an added file and a deleted file in their own diffs (the platform's one-sided viewer). A summarized added or
+   deleted file selects the declaration under the caret, while the platform's selection-following preview selects the file
+   row. Open a file in an unsupported language, a file over the size limit and a file after the 500-file limit: only the
+   file row is selected and the tree shows no declaration row. Repeat the deleted file in the Commit tool window, where the
+   editor can have no `DIFF_VIEWER`.
 6a. Hide the change type of the method under the caret in the tree's filter. The nearest shown row above it is selected;
    with every declaration hidden, or with Declarations off, the file row is selected (R10).
 7. Turn "Follow the caret in the Changes tree" off and move the caret. The tree does not change. Turn it on and move the

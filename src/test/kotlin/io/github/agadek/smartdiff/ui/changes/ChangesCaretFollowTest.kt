@@ -456,32 +456,8 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
     }
 
     fun `test a file without a summary selects only the file row`() {
-        // changes-tree/05-changes-tree-caret-follow R8
+        // changes-tree/05-changes-tree-caret-follow R8 (changes-tree/06, implemented 2026-11-15: added/deleted files get summaries)
         maskEngines(RangeEngine())
-        val (addedEditor, addedFile) = configuredFile("AddedCart.java", NEW_TEXT)
-        val added = Change(null, SimpleContentRevision(NEW_TEXT, VcsUtil.getFilePath(addedFile), "2"))
-        val addedTree = buildTree(listOf(added))
-        val addedRow = fileRow(addedTree, added)
-        val addedFollower = follower(addedTree) { addedEditor.contentComponent }
-        addedFollower.followNow(addedEditor, NEW_TEXT.indexOf("return 2"))
-        assertSame("an added file gets only its file row", addedRow, addedTree.selectionPath?.lastPathComponent)
-
-        val (_, deletedFile) = configuredFile("DeletedCart.java", NEW_TEXT)
-        val deleted = Change(SimpleContentRevision(OLD_TEXT, VcsUtil.getFilePath(deletedFile), "1"), null)
-        val deletedTree = buildTree(listOf(deleted))
-        val deletedRow = fileRow(deletedTree, deleted)
-        val deletedRequest = SimpleDiffRequest(
-            "DeletedCart.java",
-            DiffContentFactory.getInstance().create(project, OLD_TEXT, deletedFile),
-            DiffContentFactory.getInstance().create(project, ""),
-            "old",
-            "new",
-        )
-        val deletedViewer = openViewer(deletedRequest) as TwosideTextDiffViewer
-        val deletedFollower = follower(deletedTree, viewer = deletedViewer)
-        deletedFollower.followNow(deletedViewer.editor1, OLD_TEXT.indexOf("return 1"))
-        assertSame("a deleted file gets only its file row", deletedRow, deletedTree.selectionPath?.lastPathComponent)
-
         val (textEditor, textFile) = configuredFile("notes.txt", "old\n")
         val text = Change(SimpleContentRevision("old\n", VcsUtil.getFilePath(textFile), "1"), SimpleContentRevision("new\n", VcsUtil.getFilePath(textFile), "2"))
         val textTree = buildTree(listOf(text))
@@ -491,13 +467,11 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
         assertSame("a file without an engine gets only its file row", textRow, textTree.selectionPath?.lastPathComponent)
     }
 
-    fun `test an added file in a one-sided diff selects only its file row`() {
-        // changes-tree/05-changes-tree-caret-follow R8
-        maskEngines(RangeEngine())
+    fun `test a one-sided diff of an added file selects the declaration under the caret`() {
+        // changes-tree/06 R8
         val (_, addedFile) = configuredFile("AddedOneside.java", NEW_TEXT)
         val added = Change(null, SimpleContentRevision(NEW_TEXT, VcsUtil.getFilePath(addedFile), "2"))
-        val tree = buildTree(listOf(added))
-        val addedRow = fileRow(tree, added)
+        val tree = summarizedTree(added)
         val request = SimpleDiffRequest(
             "AddedOneside.java",
             DiffContentFactory.getInstance().createEmpty(),
@@ -508,22 +482,19 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
         val viewer = openViewer(request)
         assertTrue("the platform shows an added file one-sided", viewer is SimpleOnesideDiffViewer)
         val oneside = viewer as SimpleOnesideDiffViewer
-        val content = oneside.side.select(oneside.request.contents) as DocumentContent
-        assertNull("the platform content has no highlight file", content.highlightFile)
         val follower = follower(tree, viewer = viewer)
 
         follower.followNow(oneside.editor, NEW_TEXT.indexOf("return 2"))
 
-        assertSame("an added file in a one-sided diff gets only its file row", addedRow, tree.selectionPath?.lastPathComponent)
+        val selected = tree.selectionPath?.lastPathComponent as? DeclarationNode
+        assertNotNull("a declaration row is selected in the one-sided diff of an added file", selected)
     }
 
-    fun `test a deleted file in a one-sided diff selects only its file row`() {
-        // changes-tree/05-changes-tree-caret-follow R8
-        maskEngines(RangeEngine())
-        val (_, deletedFile) = configuredFile("DeletedOneside.java", NEW_TEXT)
+    fun `test a one-sided diff of a deleted file selects the declaration under the caret`() {
+        // changes-tree/06 R8
+        val (_, deletedFile) = configuredFile("DeletedOneside.java", OLD_TEXT)
         val deleted = Change(SimpleContentRevision(OLD_TEXT, VcsUtil.getFilePath(deletedFile), "1"), null)
-        val tree = buildTree(listOf(deleted))
-        val deletedRow = fileRow(tree, deleted)
+        val tree = summarizedTree(deleted)
         val request = SimpleDiffRequest(
             "DeletedOneside.java",
             contentWithoutHighlight(deletedFile),
@@ -534,24 +505,46 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
         val viewer = openViewer(request)
         assertTrue("the platform shows a deleted file one-sided", viewer is SimpleOnesideDiffViewer)
         val oneside = viewer as SimpleOnesideDiffViewer
-        val content = oneside.side.select(oneside.request.contents) as DocumentContent
-        assertNull("the platform content has no highlight file", content.highlightFile)
         val follower = follower(tree, viewer = viewer)
 
         follower.followNow(oneside.editor, OLD_TEXT.indexOf("return 1"))
 
-        assertSame("a deleted file in a one-sided diff gets only its file row", deletedRow, tree.selectionPath?.lastPathComponent)
+        val selected = tree.selectionPath?.lastPathComponent as? DeclarationNode
+        assertNotNull(selected)
+    }
 
-        // On a tool window that does not publish DIFF_VIEWER the editor is a plain one over the old revision.
-        val (plainEditor, plainFile) = configuredFile("DeletedPlain.java", OLD_TEXT)
-        val plain = Change(SimpleContentRevision(OLD_TEXT, VcsUtil.getFilePath(plainFile), "1"), null)
-        val plainTree = buildTree(listOf(plain))
-        val plainRow = fileRow(plainTree, plain)
-        val plainFollower = follower(plainTree) { plainEditor.contentComponent }
+    fun `test the platform preview of an added file selects the file row`() {
+        // changes-tree/06 R8
+        maskEngines(RangeEngine { cartResultFor("", NEW_TEXT) })
+        val (_, addedFile) = configuredFile("PreviewAdded.java", NEW_TEXT)
+        val added = Change(null, SimpleContentRevision(NEW_TEXT, VcsUtil.getFilePath(addedFile), "2"))
+        val tree = summarizedTree(added)
+        val fileRow = summaryRow(tree, added)
+        val request = SimpleDiffRequest(
+            "PreviewAdded.java",
+            DiffContentFactory.getInstance().createEmpty(),
+            contentWithoutHighlight(addedFile),
+            "old",
+            "new",
+        )
+        val viewer = openViewer(request) as SimpleOnesideDiffViewer
+        val follower = ChangesTreeCaretFollower(
+            project = project,
+            treeProvider = { tree },
+            summaries = service,
+            focusOwner = { viewer.editor.contentComponent },
+            treeShowing = { true },
+            viewersOf = { ContextViewers(viewer, null) },
+            selectionFollowingPreview = { _, _ -> true },
+            logFailure = { error("unexpected failure: $it") },
+        ).also {
+            it.start()
+            followers += it
+        }
 
-        plainFollower.followNow(plainEditor, OLD_TEXT.indexOf("return 1"))
+        follower.followNow(viewer.editor, NEW_TEXT.indexOf("return 2"))
 
-        assertSame("a deleted file without a diff viewer gets only its file row", plainRow, plainTree.selectionPath?.lastPathComponent)
+        assertSame("the platform preview selects the file row", fileRow, tree.selectionPath?.lastPathComponent)
     }
 
     fun `test a plain editor prefers the change whose new revision is the file over a rename's old path`() {

@@ -8,7 +8,7 @@ Status: implemented, 2026-11-05
 
 ## Requirements
 
-- **R1** The outline opens beside the native side-by-side diff of a file whose language has a [comparison engine](../../GLOSSARY.md#comparison-engine). *(changes-tree/06 extends the outline to a one-sided diff of an added or deleted file when implemented.)*
+- **R1** The outline opens beside the native side-by-side diff of a file whose language has a [comparison engine](../../GLOSSARY.md#comparison-engine), and beside the [one-sided diff](../../GLOSSARY.md#one-sided-diff) of an added or deleted file with a summary ([changes-tree/06](../changes-tree/06-added-deleted-file-summaries.md)).
 - **R2** It works in diffs of local changes, of VCS history, and from "Compare with…" actions.
 - **R3** The native diff keeps working as usual, including editing the [new side](../../GLOSSARY.md#new-side).
 - **R4** When the outline cannot attach to a diff, the native diff shows alone.
