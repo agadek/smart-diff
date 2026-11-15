@@ -38,6 +38,7 @@ dependencies {
         plugin("org.intellij.scala", providers.gradleProperty("scalaPluginVersion").get())
         plugin("PythonCore", providers.gradleProperty("pythonPluginVersion").get())
         bundledPlugin("org.jetbrains.plugins.yaml")
+        bundledPlugin("com.intellij.properties")
         // The Rust provider compiles in :rust against the root's main classes and is packaged here; runtimeOnly keeps
         // it off the root compile classpath so :rust can compileOnly-depend on :root without a task cycle (05-rust-details §2).
         pluginModule(runtimeOnly(project(":rust")))

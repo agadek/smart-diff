@@ -34,6 +34,8 @@
     <depends optional="true" config-file="smartdiff-groovy.xml">org.intellij.groovy</depends>
     <depends optional="true" config-file="smartdiff-json.xml">com.intellij.modules.json</depends>
     <depends optional="true" config-file="smartdiff-yaml.xml">org.jetbrains.plugins.yaml</depends>
+    <depends optional="true" config-file="smartdiff-properties.xml">com.intellij.properties</depends>
+    <depends optional="true" config-file="smartdiff-toml.xml">org.toml.lang</depends>
     <depends optional="true" config-file="smartdiff-python.xml">PythonCore</depends>
     <depends optional="true" config-file="smartdiff-rust.xml">com.jetbrains.rust</depends>
     <depends optional="true" config-file="smartdiff-shell.xml">com.jetbrains.sh</depends>
