@@ -92,7 +92,7 @@ class OutlineController internal constructor(
         oldEditor,
         newEditor,
         { twosideViewer?.syncScrollSupport },
-        { twosideViewer?.syncScrollSupport != null },
+        { twosideViewer?.syncScrollSupport?.scrollable?.isSyncScrollEnabled == true },
     )
     internal val strip = OutlineStrip { setMinimised(false) }
     internal val usageHighlights = RelationshipHighlights(viewer)
