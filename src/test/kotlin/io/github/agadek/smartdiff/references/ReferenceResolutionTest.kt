@@ -3,8 +3,10 @@ package io.github.agadek.smartdiff.references
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
+import io.github.agadek.smartdiff.engine.api.Confidence
 import io.github.agadek.smartdiff.engine.api.Evidence
 import io.github.agadek.smartdiff.engine.api.RelationshipKind
+import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 import io.github.agadek.smartdiff.engine.api.compareSafely
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationEngine
@@ -175,13 +177,39 @@ class ReferenceResolutionTest : BasePlatformTestCase() {
 
     fun `test R19 Python does not group self access to renamed class variable`() {
         // languages/04-python R19
-        val old = "class C:\n    x = 1\n    def f(self):\n        return self.x\n"
-        val new = "class C:\n    y = 1\n    def f(self):\n        return self.y\n"
+        val old = """
+            class C:
+                x = {
+                    "a": 1,
+                    "b": 2,
+                    "c": 3,
+                    "d": 4,
+                }
+                def f(self):
+                    return self.x["a"]
+        """.trimIndent() + "\n"
+        val new = """
+            class C:
+                y = {
+                    "a": 1,
+                    "b": 2,
+                    "c": 3,
+                    "d": 4,
+                }
+                def f(self):
+                    return self.y["a"]
+        """.trimIndent() + "\n"
         val request = ComparisonRequest(old, new, "Python", "m.py")
         val result = compareSafely(DeclarationEngine(project), request, Cancellation.NONE)
         val outcome = ReferencePass.runForBenchmark(project, request, result, Cancellation.NONE)
+        val renameRels = outcome.result.relationships.filter { RelationshipKind.RENAME in it.kinds }
+        val xToY = renameRels.filter { rel ->
+            val oldSub = rel.old.singleOrNull()?.subject as? Subject.Declaration
+            val newSub = rel.new.singleOrNull()?.subject as? Subject.Declaration
+            oldSub?.name == "x" && newSub?.name == "y"
+        }
+        assertTrue("expected a HIGH-confidence RENAME x -> y", xToY.isNotEmpty() && xToY.any { it.confidence == Confidence.HIGH })
         val refs = outcome.result.relationships
-            .filter { RelationshipKind.RENAME in it.kinds }
             .flatMap { it.evidence.filterIsInstance<Evidence.Reference>() }
         assertTrue("self.x/self.y should not be grouped as variable usages", refs.isEmpty())
     }
