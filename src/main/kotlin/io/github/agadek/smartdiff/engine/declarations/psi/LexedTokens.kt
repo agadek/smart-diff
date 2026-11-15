@@ -21,14 +21,16 @@ internal class LexedTokens private constructor(private val starts: IntArray, pri
      * are returned as [TokenKind.OTHER] so whitespace normalization never drops them.
      */
     fun own(range: TextRange, excluded: List<TextRange>, significant: List<TextRange>): List<Token> =
-        ownIndices(range, excluded).map { i ->
-            val token = tokens[i]
-            if (significant.isNotEmpty() && token.kind == TokenKind.WHITESPACE && inAny(starts[i], significant)) {
-                Token(token.type, token.text, TokenKind.OTHER)
-            } else {
-                token
-            }
+        ownIndices(range, excluded).map { promoted(it, significant) }
+
+    private fun promoted(i: Int, significant: List<TextRange>): Token {
+        val token = tokens[i]
+        return if (significant.isNotEmpty() && token.kind == TokenKind.WHITESPACE && inAny(starts[i], significant)) {
+            Token(token.type, token.text, TokenKind.OTHER)
+        } else {
+            token
         }
+    }
 
     private fun inAny(offset: Int, ranges: List<TextRange>): Boolean = ranges.any { offset >= it.start && offset < it.end }
 
@@ -46,11 +48,7 @@ internal class LexedTokens private constructor(private val starts: IntArray, pri
         for (i in ownIndices(range, emptyList())) {
             val token = tokens[i]
             if (token.kind == TokenKind.WHITESPACE) {
-                layoutTokens += if (significant.isNotEmpty() && inAny(starts[i], significant)) {
-                    Token(token.type, token.text, TokenKind.OTHER)
-                } else {
-                    token
-                }
+                layoutTokens += promoted(i, significant)
                 layoutStarts += starts[i]
             } else if (token.text.isNotEmpty()) {
                 layoutTokens += token
