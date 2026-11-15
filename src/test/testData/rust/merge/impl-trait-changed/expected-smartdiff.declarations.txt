@@ -1,0 +1,5 @@
+left: ANALYZED  right: ANALYZED
+impl A for S  LEFT_ONLY  left: rename candidate → impl B for S  base 7-9  left 11-13  right 7-11
+  function f(&self)  RIGHT_ONLY  right: changed  base 8  left 12  right 8-10
+trait B  LEFT_ONLY  left: added  base -  left 7-9  right -
+  function f(&self)  LEFT_ONLY  left: added  base -  left 8  right -

@@ -59,7 +59,10 @@ object RelationshipBenchmark {
     const val DEFAULT_LABEL_ROOT = "src/test/testData"
 
     /** The corpora of R33; Scala 2 and Scala 3 are separate languages in every count. */
-    val CORPORA = listOf("java", "kotlin", "scala2", "scala3", "python")
+    val CORPORA = listOf("java", "kotlin", "scala2", "scala3", "python", "rust")
+
+    /** The corpora held to the R8 case matrix and the R10 real-commit minimum. */
+    val MATRIX_CORPORA = listOf("java", "kotlin", "scala2", "scala3")
 
     /**
      * The case matrix of R8, as kebab-case categories a label names in `category:` (the details file lists them as
@@ -707,7 +710,7 @@ object RelationshipBenchmark {
      */
     fun matrixFailures(
         labels: List<Label>,
-        corpora: List<String> = CORPORA,
+        corpora: List<String> = MATRIX_CORPORA,
         categories: List<String> = CATEGORIES,
         labelledCommits: Map<String, Int> = emptyMap(),
         minimum: Int = MINIMUM_CASES,
@@ -922,7 +925,7 @@ object RelationshipBenchmark {
         val repository = entry.repository ?: error("corpus line '${entry.line}' is not a case folder")
         if (!repository.isDirectory) error("real-commit repository not found: ${repository.path}")
         val result = CommitLine()
-        val commits = git(repository, listOf("rev-list") + entry.arguments + listOf("--", "*.java", "*.kt", "*.scala", "*.py"))
+        val commits = git(repository, listOf("rev-list") + entry.arguments + listOf("--", "*.java", "*.kt", "*.scala", "*.py", "*.rs"))
             .lines().map { it.trim() }.filter { it.isNotEmpty() }
         if (commits.isEmpty()) result.skippedCommitLines++
         for (commit in commits) {
@@ -935,7 +938,7 @@ object RelationshipBenchmark {
             val changes = git(
                 repository,
                 // A rename is a delete plus an add, so it is listed as skipped instead of vanishing from the run.
-                listOf("diff", "--no-renames", "--name-status", "--diff-filter=ADM", parent, commit, "--", "*.java", "*.kt", "*.scala", "*.py"),
+                listOf("diff", "--no-renames", "--name-status", "--diff-filter=ADM", parent, commit, "--", "*.java", "*.kt", "*.scala", "*.py", "*.rs"),
             ).lines().map { it.trim() }.filter { it.isNotEmpty() }
             val files = mutableListOf<CommitFile>()
             for (change in changes) {
@@ -959,7 +962,10 @@ object RelationshipBenchmark {
                     require(label.category == REAL_COMMIT_CATEGORY) { "label ${labelFile.path}: category must be $REAL_COMMIT_CATEGORY" }
                 }
                 // R33: an unlabelled Scala file's dialect decides its corpus; an unknown dialect is listed, not filed as Scala 2.
-                val corpus = label?.corpus ?: if (path.endsWith(".scala")) scalaCorpusFor(dialectId(old, new)) else candidates.single()
+                val corpus = label?.corpus ?: when {
+                    path.endsWith(".scala") -> scalaCorpusFor(dialectId(old, new))
+                    else -> candidates.single()
+                }
                 val languageId = label?.language ?: languageIdFor(path)
                 val request = ComparisonRequest(old, new, languageId, File(path).name, confidence = confidence)
                 val outcome = compare(engine, request)
@@ -1065,6 +1071,7 @@ object RelationshipBenchmark {
         "JAVA" -> "java"
         "KOTLIN" -> "kt"
         "PYTHON" -> "py"
+        "RUST" -> "rs"
         else -> "scala"
     }
 
@@ -1072,6 +1079,7 @@ object RelationshipBenchmark {
         path.endsWith(".kt") -> "kotlin"
         path.endsWith(".py") -> "Python"
         path.endsWith(".scala") -> "Scala"
+        path.endsWith(".rs") -> "Rust"
         else -> "JAVA"
     }
 
@@ -1079,6 +1087,7 @@ object RelationshipBenchmark {
         path.endsWith(".java") -> listOf("java")
         path.endsWith(".kt") -> listOf("kotlin")
         path.endsWith(".py") -> listOf("python")
+        path.endsWith(".rs") -> listOf("rust")
         else -> listOf("scala2", "scala3")
     }
 

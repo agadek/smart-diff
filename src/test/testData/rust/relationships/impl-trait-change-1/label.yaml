@@ -1,0 +1,26 @@
+case: impl-trait-change-1
+language: Rust
+corpus: rust
+category: class-rename
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "", kind: IMPL, name: "A for S", signature: null }
+      new: { path: "", kind: IMPL, name: "B for S", signature: null }
+      usages: []
+  changes:
+    - subject: { path: "", kind: STRUCT, name: "S", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: TRAIT, name: "A", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: TRAIT, name: "B", signature: null }
+      presence: ADDED
+      content: UNCHANGED
+    - subject: { path: "", kind: IMPL, name: "B for S", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "The implemented trait of an impl block changes; the impl is renamed."

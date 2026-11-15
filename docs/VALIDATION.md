@@ -21,6 +21,28 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-15: Rust R2 merge fixtures, benchmark cases and corpus validation
+
+[Rust](specs/languages/05-rust.md) R15 to R17 are implemented: extraction detection, inlining detection, rename
+candidates and kind changes work for Rust; merge fixtures and relationship benchmark cases with `corpus: rust` are added;
+and `CorpusValidationTest` and the benchmark's real-commit lines accept `.rs` files (the corpus validation run below used
+`RustCorpusValidationTest` in the `:rust` test task, where the Rust plugin is present). The engine is
+`smartdiff.declarations` 16 (unchanged).
+
+**Relationship benchmark.** Six Rust relationship cases were added (`extraction`, `inlining`, `rename-candidate`,
+`kind-change`, `move-in-file`, `impl-trait-change`) in `src/test/testData/rust/relationships/`, listed in
+`src/test/testData/relationships-corpus-rust.txt` and run by `RustRelationshipBenchmarkTest` in the `:rust` test task,
+giving the benchmark a `rust` row from a run where the Rust plugin is present. Rust has benchmark cases but is not held
+to the case matrix or the real-commit minimum. `RustRelationshipBenchmarkTest` passed with the `no-new-wrong-pairs` gate:
+6 cases, tp=6, fp=0, fn=0, precision=1.000, recall=1.000.
+
+**Corpus validation.** `RustCorpusValidationTest` ran on 30 recent non-merge commits touching `.rs` files in each of two
+open-source Rust projects of different styles, cloned shallowly outside the repository: `ripgrep` and `serde`. The run
+covered 119 modified `.rs` files from 58 commits (not every listed commit modified `.rs` files in that range). 114 files
+were `ANALYZED`, 5 were `PARTIAL`, 0 fell back, and 0 had `hidden` or `empty` flags. The 5 `PARTIAL` files were in
+`serde` (`serde_derive` bound and attribute internals) and were flagged as status-only. No machine-specific paths were
+recorded.
+
 ## 2026-11-13: extraction sources with scattered kept tokens
 
 [Extraction detection](specs/declarations/05-extraction-detection.md) R17 is implemented: an old token that the source

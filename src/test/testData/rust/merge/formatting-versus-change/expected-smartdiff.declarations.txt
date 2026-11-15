@@ -1,0 +1,3 @@
+left: ANALYZED  right: ANALYZED
+impl S  UNCHANGED  base 3-8  left 3-5  right 3-8
+  function total(&self)  CHANGED_ON_BOTH_SIDES  left: formatting-only  right: changed  base 4-7  left 4  right 4-7

@@ -22,13 +22,15 @@ Without a labelled benchmark, matcher changes are judged by anecdote and fixture
 In scope:
 
 - per-file comparisons;
-- Java, Kotlin, Scala 2, Scala 3 and Python;
+- Java, Kotlin, Scala 2, Scala 3 and Python in the case matrix and real-commit minimums; Rust has benchmark cases listed separately in `src/test/testData/relationships-corpus-rust.txt` and run by `RustRelationshipBenchmarkTest` in `:rust`, and is not held to the case matrix or the real-commit minimum;
 - declaration renames, moves, kind changes, signature changes, extraction and inlining;
 - duplicate bodies, overloads and ambiguous candidates;
 - formatting-only, comment-only and string changes;
 - malformed and partial source;
 - large files and performance-sensitive cases;
 - the existing golden fixtures, contract corpus and corpus validation as inputs.
+
+Rust relationship benchmark (2026-11-15, `:rust` run, `src/test/testData/relationships-corpus-rust.txt`): 6 cases, tp=6, fp=0, fn=0, precision=1.000, recall=1.000 (`rust` row, `no-new-wrong-pairs` gate; smoke run relative to core matrix/commit minimums).
 
 Later, after an explicit scope decision:
 
@@ -241,7 +243,7 @@ The report must contain:
 
 ## 10. Acceptance criteria
 
-- The labelled corpus covers every case category in §3 for Java and Kotlin, and the Scala categories the provider supports.
+- The labelled corpus covers every case category in §3 for Java and Kotlin, the Scala categories the provider supports, and the Rust cases the provider supports.
 - Every expected relationship is identified by endpoints, not just names.
 - The baseline report exists before the matcher changes start.
 - Every matcher change reports precision, recall, incorrect-match, ambiguity and latency against that baseline.
