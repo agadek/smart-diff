@@ -147,9 +147,8 @@ class DeclarationEngineTest : BasePlatformTestCase() {
 
 
 
-    // languages/04-python (attrs 3bb6382 pyrefly.py case) — see docs/specs/languages/04-python-details.md Open questions
-    fun `test known issue Python class reported changed after inserted block before decorator`() {
-        // Documents current broken behavior: class D is matched but reported CHANGED; see Open questions.
+    // languages/04-python R22
+    fun `test Python decorated class unchanged after inserted indented block above it`() {
         val old = """import attrs
 
 C = attrs.make_class("C", [])
@@ -186,8 +185,107 @@ class D:
         assertTrue("class D should be present", dNodes.isNotEmpty())
         dNodes.forEach { node ->
             assertEquals("class D matched despite inserted statements above decorator", Presence.MATCHED, node.presence)
-            assertEquals("class D currently reported CHANGED (see Open questions)", Content.CHANGED, node.content)
+            assertEquals("class D unchanged when its text is identical", Content.UNCHANGED, node.content)
         }
+    }
+
+    // languages/04-python R22
+    fun `test Python undecorated function unchanged after inserted indented block above it`() {
+        val old = """x = 1
+
+def target():
+    return 42
+"""
+        val new = """x = 1
+
+if True:
+    y = 2
+
+def target():
+    return 42
+"""
+        val result = DeclarationEngine(null).compare(
+            ComparisonRequest(old, new, "Python", "demo.py"),
+            Cancellation.NONE,
+        )
+        assertEquals(Status.ANALYZED, result.status)
+        val target = flatten(result).single {
+            it.subject is Subject.Declaration &&
+                (it.subject as Subject.Declaration).name == "target" &&
+                (it.subject as Subject.Declaration).kind == DeclarationKind.FUNCTION
+        }
+        assertEquals(Presence.MATCHED, target.presence)
+        assertEquals(Content.UNCHANGED, target.content)
+    }
+
+    // languages/04-python R22
+    fun `test Python nested method unchanged and file region unaffected by structural tokens inside class`() {
+        val old = """class C:
+    x = 1
+
+    def b(self):
+        return 2
+"""
+        val new = """class C:
+    def a(self):
+        return 1
+
+    def b(self):
+        return 2
+"""
+        val result = DeclarationEngine(null).compare(
+            ComparisonRequest(old, new, "Python", "demo.py"),
+            Cancellation.NONE,
+        )
+        assertEquals(Status.ANALYZED, result.status)
+        val b = flatten(result).single {
+            it.subject is Subject.Declaration &&
+                (it.subject as Subject.Declaration).name == "b" &&
+                (it.subject as Subject.Declaration).kind == DeclarationKind.FUNCTION
+        }
+        assertEquals(Presence.MATCHED, b.presence)
+        assertEquals(Content.UNCHANGED, b.content)
+        assertTrue(
+            "file region must not be changed by structural tokens inside the class",
+            result.fileRegion == null || result.fileRegion.content == Content.UNCHANGED,
+        )
+    }
+
+    // languages/04-python R22
+    fun `test Python adding a method leaves the class and file region unchanged`() {
+        val old = """class C:
+    def a(self):
+        return 1
+"""
+        val new = """class C:
+    def a(self):
+        return 1
+
+    def b(self):
+        return 2
+"""
+        val result = DeclarationEngine(null).compare(
+            ComparisonRequest(old, new, "Python", "demo.py"),
+            Cancellation.NONE,
+        )
+        assertEquals(Status.ANALYZED, result.status)
+        val c = flatten(result).first {
+            it.subject is Subject.Declaration &&
+                (it.subject as Subject.Declaration).name == "C" &&
+                (it.subject as Subject.Declaration).kind == DeclarationKind.CLASS
+        }
+        assertEquals(Presence.MATCHED, c.presence)
+        assertEquals(Content.UNCHANGED, c.content)
+        val b = flatten(result).single {
+            it.subject is Subject.Declaration &&
+                (it.subject as Subject.Declaration).name == "b" &&
+                (it.subject as Subject.Declaration).kind == DeclarationKind.FUNCTION
+        }
+        assertEquals(Presence.ADDED, b.presence)
+        assertTrue(
+            "file region must not be changed when a method is added to a class",
+            result.fileRegion == null || result.fileRegion.content == Content.UNCHANGED,
+        )
     }
 
     fun `test R7 R8 R18 the computed fields are read from the relationships over the golden fixtures`() {

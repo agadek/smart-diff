@@ -21,19 +21,42 @@ internal class LexedTokens private constructor(private val starts: IntArray, pri
      * are returned as [TokenKind.OTHER] so whitespace normalization never drops them.
      */
     fun own(range: TextRange, excluded: List<TextRange>, significant: List<TextRange>): List<Token> =
-        ownIndices(range, excluded).map { i ->
-            val token = tokens[i]
-            if (significant.isNotEmpty() && token.kind == TokenKind.WHITESPACE && inAny(starts[i], significant)) {
-                Token(token.type, token.text, TokenKind.OTHER)
-            } else {
-                token
-            }
+        ownIndices(range, excluded).map { promoted(it, significant) }
+
+    private fun promoted(i: Int, significant: List<TextRange>): Token {
+        val token = tokens[i]
+        return if (significant.isNotEmpty() && token.kind == TokenKind.WHITESPACE && inAny(starts[i], significant)) {
+            Token(token.type, token.text, TokenKind.OTHER)
+        } else {
+            token
         }
+    }
 
     private fun inAny(offset: Int, ranges: List<TextRange>): Boolean = ranges.any { offset >= it.start && offset < it.end }
 
     /** The start offsets of the tokens [own] returns, in the same order. */
     fun ownStarts(range: TextRange, excluded: List<TextRange>): List<Int> = ownIndices(range, excluded).map { starts[it] }
+
+    /**
+     * The whitespace tokens of [range] and their starts, with [significant] ranges promoted as in [own]. Zero-length
+     * non-whitespace tokens (e.g. structural boundary tokens) carry no text and are dropped; a non-whitespace token
+     * with text stays in the declaration's leading tokens.
+     */
+    fun ownLeading(range: TextRange, significant: List<TextRange>): Pair<List<Token>, List<Int>> {
+        val layoutTokens = mutableListOf<Token>()
+        val layoutStarts = mutableListOf<Int>()
+        for (i in ownIndices(range, emptyList())) {
+            val token = tokens[i]
+            if (token.kind == TokenKind.WHITESPACE) {
+                layoutTokens += promoted(i, significant)
+                layoutStarts += starts[i]
+            } else if (token.text.isNotEmpty()) {
+                layoutTokens += token
+                layoutStarts += starts[i]
+            }
+        }
+        return layoutTokens to layoutStarts
+    }
 
     private fun ownIndices(range: TextRange, excluded: List<TextRange>): List<Int> {
         val own = mutableListOf<Int>()
