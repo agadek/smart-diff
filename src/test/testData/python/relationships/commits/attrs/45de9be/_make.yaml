@@ -1,0 +1,429 @@
+case: attrs-45de9be-_make
+language: Python
+corpus: python
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "attrs"
+  commit: 45de9beb093d2142517ab7d1ebda6522e3d3c4ac
+  path: "src/attr/_make.py"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "_OBJ_SETATTR", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "_INIT_FACTORY_PAT", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "_CLASSVAR_PREFIXES", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "_HASH_CACHE_FIELD", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "_EMPTY_METADATA_SINGLETON", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "_SENTINEL", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "_DEFAULT_ON_SETATTR", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "_Nothing", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _Nothing", kind: VARIABLE, name: "NOTHING", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _Nothing", kind: FUNCTION, name: "__repr__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _Nothing", kind: FUNCTION, name: "__bool__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "NOTHING", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "_CacheHashWrapper", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _CacheHashWrapper", kind: FUNCTION, name: "__reduce__", signature: "self, _none_constructor, _args" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "attrib", signature: "default, validator, repr, cmp, hash, init, metadata, type, converter, factory, kw_only, eq, order, on_setattr, alias" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_compile_and_eval", signature: "script, globs, locs, filename" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_linecache_and_compile", signature: "script, filename, globs, locals" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_make_attr_tuple_class", signature: "cls_name, attr_names" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "_Attributes", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _Attributes", kind: VARIABLE, name: "attrs", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _Attributes", kind: VARIABLE, name: "base_attrs", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _Attributes", kind: VARIABLE, name: "base_attrs_map", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_is_class_var", signature: "annot" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_has_own_attribute", signature: "cls, attrib_name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_collect_base_attrs", signature: "cls, taken_attr_names" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_collect_base_attrs_broken", signature: "cls, taken_attr_names" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_transform_attrs", signature: "cls, these, auto_attribs, kw_only, collect_by_mro, field_transformer" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_make_cached_property_getattr", signature: "cached_properties, original_getattr, cls" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_frozen_setattrs", signature: "self, name, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_frozen_delattrs", signature: "self, name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "evolve", signature: "*args, **changes" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "_ClassBuilder", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _ClassBuilder", kind: VARIABLE, name: "__slots__", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _ClassBuilder", kind: FUNCTION, name: "__init__", signature: "self, cls, these, auto_attribs, props, has_custom_setattr" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _ClassBuilder", kind: FUNCTION, name: "__repr__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _ClassBuilder", kind: FUNCTION, name: "_eval_snippets", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _ClassBuilder", kind: FUNCTION, name: "build_class", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _ClassBuilder", kind: FUNCTION, name: "_patch_original_class", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _ClassBuilder", kind: FUNCTION, name: "_create_slots_class", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _ClassBuilder", kind: FUNCTION, name: "add_repr", signature: "self, ns" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _ClassBuilder", kind: FUNCTION, name: "add_str", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _ClassBuilder", kind: FUNCTION, name: "_make_getstate_setstate", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _ClassBuilder", kind: FUNCTION, name: "make_unhashable", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _ClassBuilder", kind: FUNCTION, name: "add_hash", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _ClassBuilder", kind: FUNCTION, name: "add_init", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _ClassBuilder", kind: FUNCTION, name: "add_replace", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _ClassBuilder", kind: FUNCTION, name: "add_match_args", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _ClassBuilder", kind: FUNCTION, name: "add_attrs_init", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _ClassBuilder", kind: FUNCTION, name: "add_eq", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _ClassBuilder", kind: FUNCTION, name: "add_order", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _ClassBuilder", kind: FUNCTION, name: "add_setattr", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _ClassBuilder", kind: FUNCTION, name: "_add_method_dunders_unsafe", signature: "self, method" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _ClassBuilder", kind: FUNCTION, name: "_add_method_dunders_safe", signature: "self, method" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_determine_attrs_eq_order", signature: "cmp, eq, order, default_eq" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_determine_attrib_eq_order", signature: "cmp, eq, order, default_eq" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_determine_whether_to_implement", signature: "cls, flag, auto_detect, dunders, default" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "attrs", signature: "maybe_cls, these, repr_ns, repr, cmp, hash, init, slots, frozen, weakref_slot, str, auto_attribs, kw_only, cache_hash, auto_exc, eq, order, auto_detect, collect_by_mro, getstate_setstate, on_setattr, field_transformer, match_args, unsafe_hash, force_kw_only" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: VARIABLE, name: "_attrs", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_has_frozen_base_class", signature: "cls" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_generate_unique_filename", signature: "cls, func_name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_make_hash_script", signature: "cls, attrs, frozen, cache_hash" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_add_hash", signature: "cls, attrs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "__ne__", signature: "self, other" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_make_eq_script", signature: "attrs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_make_order", signature: "cls, attrs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_add_eq", signature: "cls, attrs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_make_repr_script", signature: "attrs, ns" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_add_repr", signature: "cls, ns, attrs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "fields", signature: "cls" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "fields_dict", signature: "cls" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "validate", signature: "inst" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_is_slot_attr", signature: "a_name, base_attr_map" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_make_init_script", signature: "cls, attrs, pre_init, pre_init_has_args, post_init, frozen, slots, cache_hash, base_attr_map, is_exc, cls_on_setattr, attrs_init" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_setattr", signature: "attr_name, value_var, has_on_setattr" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_setattr_with_converter", signature: "attr_name, value_var, has_on_setattr, converter" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_assign", signature: "attr_name, value, has_on_setattr" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_assign_with_converter", signature: "attr_name, value_var, has_on_setattr, converter" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_determine_setters", signature: "frozen, slots, base_attr_map" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_attrs_to_init_script", signature: "attrs, is_frozen, is_slotted, call_pre_init, pre_init_has_args, call_post_init, does_cache_hash, base_attr_map, is_exc, needs_cached_setattr, has_cls_on_setattr, method_name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_default_init_alias_for", signature: "name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "Attribute", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Attribute", kind: VARIABLE, name: "__slots__", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Attribute", kind: FUNCTION, name: "__init__", signature: "self, name, default, validator, repr, cmp, hash, init, inherited, metadata, type, converter, kw_only, eq, eq_key, order, order_key, on_setattr, alias, alias_is_default" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Attribute", kind: FUNCTION, name: "__setattr__", signature: "self, name, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Attribute", kind: FUNCTION, name: "from_counting_attr", signature: "cls, name, ca, kw_only, type" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Attribute", kind: FUNCTION, name: "evolve", signature: "self, **changes" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Attribute", kind: FUNCTION, name: "__getstate__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Attribute", kind: FUNCTION, name: "__setstate__", signature: "self, state" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Attribute", kind: FUNCTION, name: "_setattrs", signature: "self, name_values_pairs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "_a", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "Attribute", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "_CountingAttr", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _CountingAttr", kind: VARIABLE, name: "__slots__", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _CountingAttr", kind: VARIABLE, name: "__attrs_attrs__", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _CountingAttr", kind: VARIABLE, name: "cls_counter", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _CountingAttr", kind: FUNCTION, name: "__init__", signature: "self, default, validator, repr, cmp, hash, init, converter, metadata, type, kw_only, eq, eq_key, order, order_key, on_setattr, alias" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _CountingAttr", kind: FUNCTION, name: "validator", signature: "self, meth" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _CountingAttr", kind: FUNCTION, name: "default", signature: "self, meth" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _CountingAttr", kind: FUNCTION, name: "converter", signature: "self, meth" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "_CountingAttr", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "ClassProps", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ClassProps", kind: CLASS, name: "Hashability", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ClassProps / class Hashability", kind: VARIABLE, name: "HASHABLE", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ClassProps / class Hashability", kind: VARIABLE, name: "HASHABLE_CACHED", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ClassProps / class Hashability", kind: VARIABLE, name: "UNHASHABLE", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ClassProps / class Hashability", kind: VARIABLE, name: "LEAVE_ALONE", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ClassProps", kind: CLASS, name: "KeywordOnly", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ClassProps / class KeywordOnly", kind: VARIABLE, name: "NO", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ClassProps / class KeywordOnly", kind: VARIABLE, name: "YES", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ClassProps / class KeywordOnly", kind: VARIABLE, name: "FORCE", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ClassProps", kind: VARIABLE, name: "__slots__", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ClassProps", kind: FUNCTION, name: "__init__", signature: "self, is_exception, is_slotted, has_weakref_slot, is_frozen, kw_only, collected_fields_by_mro, added_init, added_repr, added_eq, added_ordering, hashability, added_match_args, added_str, added_pickling, on_setattr_hook, field_transformer" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ClassProps", kind: FUNCTION, name: "is_hashable", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "_cas", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "ClassProps", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "Factory", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Factory", kind: VARIABLE, name: "__slots__", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Factory", kind: FUNCTION, name: "__init__", signature: "self, factory, takes_self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Factory", kind: FUNCTION, name: "__getstate__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Factory", kind: FUNCTION, name: "__setstate__", signature: "self, state" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "_f", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "Factory", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "Converter", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Converter", kind: VARIABLE, name: "__slots__", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Converter", kind: FUNCTION, name: "__init__", signature: "self, converter, *, takes_self, takes_field" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Converter", kind: FUNCTION, name: "_get_global_name", signature: "attr_name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Converter", kind: FUNCTION, name: "_fmt_converter_call", signature: "self, attr_name, value_var" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Converter", kind: FUNCTION, name: "__getstate__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Converter", kind: FUNCTION, name: "__setstate__", signature: "self, state" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "_f", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "Converter", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "make_class", signature: "name, attrs, bases, class_body, **attributes_arguments" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "_AndValidator", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _AndValidator", kind: VARIABLE, name: "_validators", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _AndValidator", kind: FUNCTION, name: "__call__", signature: "self, inst, attr, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "and_", signature: "*validators" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "pipe", signature: "*converters" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Drafted from engine output; every function/class entry cross-checked against commit diff hunks (scripted heuristic) and reviewed; flagged entries verified against git show."

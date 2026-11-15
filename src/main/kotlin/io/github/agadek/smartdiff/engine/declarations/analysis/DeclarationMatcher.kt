@@ -6,6 +6,7 @@ import io.github.agadek.smartdiff.engine.api.ConfidencePolicy
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.Evidence
 import io.github.agadek.smartdiff.engine.api.EvidenceOrder
+import io.github.agadek.smartdiff.engine.api.LanguageIds
 import io.github.agadek.smartdiff.engine.api.Relationship
 import io.github.agadek.smartdiff.engine.api.RelationshipEndpoint
 import io.github.agadek.smartdiff.engine.api.RelationshipKind
@@ -115,14 +116,19 @@ object DeclarationMatcher {
 
     /** Matches with the default [ConfidencePolicy], as a test or a caller without a request does. */
     fun match(old: DeclarationTree, new: DeclarationTree, cancellation: Cancellation): Matching =
-        match(old, new, ConfidencePolicy.DEFAULT, cancellation)
+        match(old, new, ConfidencePolicy.DEFAULT, null, cancellation)
+
+    /** Matches with the default [ConfidencePolicy]. */
+    fun match(old: DeclarationTree, new: DeclarationTree, confidence: ConfidencePolicy, cancellation: Cancellation): Matching =
+        match(old, new, confidence, null, cancellation)
 
     /**
      * Matches with [confidence] classifying the scored pairs. The policy never changes which pairs are found: the
      * rename floor stays at [RENAME_THRESHOLD], and the policy only tells a high pair from a medium or a low one
-     * (relationships/02 R9, R13, R25).
+     * (relationships/02 R9, R13, R25). [languageId] allows language-specific kind-change handling (e.g. Python CLASS<->FUNCTION
+     * as a kind change, languages/04-python R18).
      */
-    fun match(old: DeclarationTree, new: DeclarationTree, confidence: ConfidencePolicy, cancellation: Cancellation): Matching {
+    fun match(old: DeclarationTree, new: DeclarationTree, confidence: ConfidencePolicy, languageId: String?, cancellation: Cancellation): Matching {
         val oldSide = Side(old)
         val newSide = Side(new)
         // Old declaration -> its counterpart and the rule that matched it; newMatched holds the counterparts.
@@ -212,6 +218,26 @@ object DeclarationMatcher {
                 pairs[o] = n to MatchRule.KIND_CHANGED
                 newMatched += n
                 if (o.children.isNotEmpty() && n.children.isNotEmpty()) kindContainers += o to n
+            }
+            // Python (languages/04-python R18): a CLASS and a FUNCTION of the same name in the same container are a kind change.
+            if (languageId == LanguageIds.PYTHON) {
+                val removedPy = (oldContainer?.children ?: old.topLevel).filter { decl ->
+                    decl !in pairs && decl !in uncertainOld && (decl.kind == DeclarationKind.CLASS || decl.kind == DeclarationKind.FUNCTION)
+                }
+                val addedPy = (newContainer?.children ?: new.topLevel).filter { decl ->
+                    decl !in uncertainNew && (decl.kind == DeclarationKind.CLASS || decl.kind == DeclarationKind.FUNCTION)
+                }
+                for (o in removedPy) {
+                    val n = addedPy.singleOrNull { candidate ->
+                        candidate !in newMatched &&
+                            candidate.name == o.name &&
+                            candidate.kind != o.kind
+                    }
+                    if (n != null) {
+                        pairs[o] = n to MatchRule.KIND_CHANGED
+                        newMatched += n
+                    }
+                }
             }
         }
 
@@ -675,14 +701,15 @@ object DeclarationMatcher {
 
     /**
      * Types, and members that hold or compute a value (a Scala `def` turned into a `val`). An object is no type here:
-     * a class and its companion object share a name.
+     * a class and its companion object share a name. Functions and variables are the same family in Python
+     * (languages/04-python R18), so a function that becomes a variable is a kind change.
      */
     private val KIND_FAMILIES = listOf(
         setOf(
             DeclarationKind.CLASS, DeclarationKind.TRAIT, DeclarationKind.INTERFACE, DeclarationKind.ENUM,
             DeclarationKind.RECORD, DeclarationKind.ANNOTATION_TYPE, DeclarationKind.STRUCT, DeclarationKind.UNION,
         ),
-        setOf(DeclarationKind.METHOD, DeclarationKind.FUNCTION, DeclarationKind.FIELD, DeclarationKind.PROPERTY),
+        setOf(DeclarationKind.METHOD, DeclarationKind.FUNCTION, DeclarationKind.FIELD, DeclarationKind.PROPERTY, DeclarationKind.VARIABLE),
     )
 
     /** A matching key; a null [path] or [signature] is left out of the key. */

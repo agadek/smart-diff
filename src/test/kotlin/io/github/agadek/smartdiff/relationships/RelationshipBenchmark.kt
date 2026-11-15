@@ -59,7 +59,7 @@ object RelationshipBenchmark {
     const val DEFAULT_LABEL_ROOT = "src/test/testData"
 
     /** The corpora of R33; Scala 2 and Scala 3 are separate languages in every count. */
-    val CORPORA = listOf("java", "kotlin", "scala2", "scala3")
+    val CORPORA = listOf("java", "kotlin", "scala2", "scala3", "python")
 
     /**
      * The case matrix of R8, as kebab-case categories a label names in `category:` (the details file lists them as
@@ -922,7 +922,7 @@ object RelationshipBenchmark {
         val repository = entry.repository ?: error("corpus line '${entry.line}' is not a case folder")
         if (!repository.isDirectory) error("real-commit repository not found: ${repository.path}")
         val result = CommitLine()
-        val commits = git(repository, listOf("rev-list") + entry.arguments + listOf("--", "*.java", "*.kt", "*.scala"))
+        val commits = git(repository, listOf("rev-list") + entry.arguments + listOf("--", "*.java", "*.kt", "*.scala", "*.py"))
             .lines().map { it.trim() }.filter { it.isNotEmpty() }
         if (commits.isEmpty()) result.skippedCommitLines++
         for (commit in commits) {
@@ -935,7 +935,7 @@ object RelationshipBenchmark {
             val changes = git(
                 repository,
                 // A rename is a delete plus an add, so it is listed as skipped instead of vanishing from the run.
-                listOf("diff", "--no-renames", "--name-status", "--diff-filter=ADM", parent, commit, "--", "*.java", "*.kt", "*.scala"),
+                listOf("diff", "--no-renames", "--name-status", "--diff-filter=ADM", parent, commit, "--", "*.java", "*.kt", "*.scala", "*.py"),
             ).lines().map { it.trim() }.filter { it.isNotEmpty() }
             val files = mutableListOf<CommitFile>()
             for (change in changes) {
@@ -1064,11 +1064,13 @@ object RelationshipBenchmark {
     private fun extensionFor(language: String): String = when (language.uppercase()) {
         "JAVA" -> "java"
         "KOTLIN" -> "kt"
+        "PYTHON" -> "py"
         else -> "scala"
     }
 
     private fun languageIdFor(path: String): String = when {
         path.endsWith(".kt") -> "kotlin"
+        path.endsWith(".py") -> "Python"
         path.endsWith(".scala") -> "Scala"
         else -> "JAVA"
     }
@@ -1076,6 +1078,7 @@ object RelationshipBenchmark {
     private fun corporaFor(path: String): List<String> = when {
         path.endsWith(".java") -> listOf("java")
         path.endsWith(".kt") -> listOf("kotlin")
+        path.endsWith(".py") -> listOf("python")
         else -> listOf("scala2", "scala3")
     }
 

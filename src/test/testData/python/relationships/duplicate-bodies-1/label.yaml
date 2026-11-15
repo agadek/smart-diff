@@ -1,0 +1,16 @@
+case: duplicate-bodies-1
+language: Python
+corpus: python
+category: duplicate-bodies
+split: tuning
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "copyOne", signature: "self" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "An added method repeats the body of an existing method; it is still added."

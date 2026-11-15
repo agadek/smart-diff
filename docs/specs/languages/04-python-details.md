@@ -1,6 +1,6 @@
 # Python: details
 
-Status: in progress, P1 implemented 2026-11-13
+Status: implemented, 2026-11-15
 
 **Feature:** [Python](04-python.md)
 
@@ -69,7 +69,7 @@ Status: in progress, P1 implemented 2026-11-13
 
 ## 8. Relationships, merges and the Changes tree
 
-- **Extraction, inlining, rename candidates and kind changes (R18):** these work on the declaration model and need no Python code. A `class` that becomes a function of the same name, or a function that becomes a variable, is a kind change.
+- **Extraction, inlining, rename candidates and kind changes (R18):** extraction, inlining and rename candidates work on the declaration model. The matcher pairs a Python `class` and a `function` of the same name in the same container as a kind change (nothing changes for other languages); a Python `function` that becomes a `variable` is also a kind change.
 - **Rename grouping (R19):** a `PythonReferenceResolver` registers next to the provider. It finds usages of a function, class or variable in the compared file through `PyReferenceExpression.reference.resolve()` on the light copy, which needs no interpreter for names defined in the same file. S7 confirmed that, without an SDK, `MAX` resolves to a `PyTargetExpression`, `helper` to a `PyFunction`, `C` to a `PyClass`, and `self.method()` to the method's `PyFunction`, with `self` resolving to a `PyNamedParameter`. The resolver therefore includes `self.` calls to methods of the enclosing class; other attribute references (`obj.helper`) resolve through type inference and stay left out. A reference that does not resolve is left out, as for the other resolvers.
 - **Merges and Changes tree (R20):** both use the engine's result and need no Python code.
 
@@ -99,3 +99,5 @@ After P2 the feature is implemented, the plugin description, README and CHANGELO
 
 - **Signature form:** names with markers (§5, proposed), or also the annotated types where every parameter has one. Types would make `@overload` variants distinct keys, but a missing annotation would then change the key.
 - **Indentation width:** whether a later opt-in rule may treat a consistent re-indent as formatting-only. It needs the relative indentation of every line, which `INDENTATION_SIGNIFICANT` does not keep; left out for now.
+- **Class D false change (attrs 3bb6382 pyrefly.py):** inserting top-level statements before a decorated class (e.g. `import sys; if sys.version_info >= (3,13): ...` above `@attrs.define class D:`) can cause the engine to report class `D` as `CHANGED` despite no change to `D`'s text. Repro test: `DeclarationEngineTest.test known issue Python class reported changed after inserted block before decorator` documents current behavior (MATCHED but Content.CHANGED). Hypothesis (empty DEDENT/STATEMENT_BREAK tokens from prior indented block) not confirmed in a bounded attempt; needs investigation of content/tokenization/range scoping in Python provider and matcher.
+- **Benchmark miss (inlining-2):** `inlining-2` reports missed INLINE cases in the Python relationship benchmark (see `build/reports/smartdiff-relationships-py/report.md` from the python-only run); no fix applied in this pass.

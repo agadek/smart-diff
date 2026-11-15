@@ -1,0 +1,16 @@
+case: formatting-only-2
+language: Python
+corpus: python
+category: formatting-only
+split: held-out
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Invoice" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Invoice", kind: FUNCTION, name: "total", signature: "self" }
+      presence: MATCHED
+      content: FORMATTING_ONLY
+  ambiguous: []
+notes: "Whitespace only."

@@ -1,0 +1,192 @@
+case: flask-d086db8-app
+language: Python
+corpus: python
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "flask"
+  commit: d086db856be187255b8ec61ef409357393020f32
+  path: "src/flask/sansio/app.py"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: VARIABLE, name: "T_shell_context_processor", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "T_teardown", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "T_template_filter", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "T_template_global", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "T_template_test", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_make_timedelta", signature: "value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "App", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: VARIABLE, name: "aborter_class", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: VARIABLE, name: "jinja_environment", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: VARIABLE, name: "app_ctx_globals_class", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: VARIABLE, name: "config_class", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: VARIABLE, name: "testing", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: VARIABLE, name: "secret_key", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: VARIABLE, name: "permanent_session_lifetime", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: VARIABLE, name: "json_provider_class", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: VARIABLE, name: "jinja_options", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: VARIABLE, name: "url_rule_class", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: VARIABLE, name: "url_map_class", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: VARIABLE, name: "test_client_class", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: VARIABLE, name: "test_cli_runner_class", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: VARIABLE, name: "default_config", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class App", kind: VARIABLE, name: "response_class", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "__init__", signature: "self, import_name, static_url_path, static_folder, static_host, host_matching, subdomain_matching, template_folder, instance_path, instance_relative_config, root_path" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "_check_setup_finished", signature: "self, f_name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "name", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "logger", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "jinja_env", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "create_jinja_environment", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "make_config", signature: "self, instance_relative" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "make_aborter", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "auto_find_instance_path", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "create_global_jinja_loader", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "select_jinja_autoescape", signature: "self, filename" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "debug", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "debug", signature: "self, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "register_blueprint", signature: "self, blueprint, **options" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "iter_blueprints", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "add_url_rule", signature: "self, rule, endpoint, view_func, provide_automatic_options, **options" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "template_filter", signature: "self, name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "template_filter", signature: "self, name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "template_filter", signature: "self, name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "add_template_filter", signature: "self, f, name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "template_test", signature: "self, name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "template_test", signature: "self, name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "template_test", signature: "self, name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "add_template_test", signature: "self, f, name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "template_global", signature: "self, name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "template_global", signature: "self, name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "template_global", signature: "self, name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "add_template_global", signature: "self, f, name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "teardown_appcontext", signature: "self, f" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "shell_context_processor", signature: "self, f" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "_find_error_handler", signature: "self, e, blueprints" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "trap_http_exception", signature: "self, e" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: VARIABLE, name: "should_ignore_error", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "redirect", signature: "self, location, code" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "inject_url_defaults", signature: "self, endpoint, values" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class App", kind: FUNCTION, name: "handle_url_build_error", signature: "self, error, endpoint, values" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Drafted from engine output; every function/class entry cross-checked against commit diff hunks (scripted heuristic) and reviewed; flagged entries verified against git show."

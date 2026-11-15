@@ -1,0 +1,20 @@
+case: field-rename-3
+language: Python
+corpus: python
+category: field-rename
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Basket", kind: VARIABLE, name: "min_count" }
+      new: { path: "class Basket", kind: VARIABLE, name: "min_items" }
+      usages: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Basket" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Basket", kind: VARIABLE, name: "min_items" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A class variable renamed."

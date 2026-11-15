@@ -1,0 +1,20 @@
+case: class-rename-2
+language: Python
+corpus: python
+category: class-rename
+split: held-out
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "", kind: CLASS, name: "Invoice" }
+      new: { path: "", kind: CLASS, name: "Bill" }
+      usages: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Bill" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Bill", kind: FUNCTION, name: "compute_total", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "One class renamed, members follow."

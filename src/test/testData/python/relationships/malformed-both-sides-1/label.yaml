@@ -1,0 +1,10 @@
+case: malformed-both-sides-1
+language: Python
+corpus: python
+category: malformed-both-sides
+split: tuning
+expected:
+  relationships: []
+  changes: []
+  ambiguous: []
+notes: "Both sides malformed."

@@ -1,6 +1,7 @@
-<!-- Loaded when the Python plugin is present. The Python declaration provider registers here. -->
+<!-- Loaded when the Python plugin is present. The Python declaration provider and reference resolver register here. -->
 <idea-plugin>
     <extensions defaultExtensionNs="io.github.agadek.smartdiff">
         <declarationProvider implementation="io.github.agadek.smartdiff.engine.declarations.psi.python.PythonDeclarationProvider"/>
+        <referenceResolver implementation="io.github.agadek.smartdiff.references.PythonReferenceResolver"/>
     </extensions>
 </idea-plugin>

@@ -59,6 +59,9 @@ class MergeFixturesTest : BasePlatformTestCase() {
     // languages/10-yaml R16
     fun `test YAML merge fixtures`() = checkFixtures("yaml", "yaml", "yaml")
 
+    // languages/04-python R20 (merge fixtures)
+    fun `test Python merge fixtures`() = checkFixtures("python", "Python", "py")
+
     fun `test merge fixture files live in the language merge folders`() {
         // merge/05-scala-merges R9
         for ((directory, extension) in LANGUAGE_EXTENSIONS) {
@@ -336,6 +339,7 @@ class MergeFixturesTest : BasePlatformTestCase() {
             "groovy" to "groovy",
             "shell" to "sh",
             "yaml" to "yaml",
+            "python" to "py",
         )
         val REQUIRED_SCENARIOS = listOf(
             "changed-on-both-sides",

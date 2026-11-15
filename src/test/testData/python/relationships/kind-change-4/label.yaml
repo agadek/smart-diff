@@ -1,0 +1,17 @@
+case: kind-change-4
+language: Python
+corpus: python
+category: kind-change
+split: held-out
+expected:
+  relationships:
+    - kinds: [KIND_CHANGE]
+      old: { path: "class C", kind: FUNCTION, name: "val", signature: "self" }
+      new: { path: "class C", kind: VARIABLE, name: "val" }
+  changes:
+    - subject: { path: "class C", kind: VARIABLE, name: "val" }
+      presence: MATCHED
+      content: UNCHANGED
+      kindChangedFrom: FUNCTION
+  ambiguous: []
+notes: "Method becomes class attribute of the same name."

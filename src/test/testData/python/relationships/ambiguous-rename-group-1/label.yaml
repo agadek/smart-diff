@@ -1,0 +1,14 @@
+case: ambiguous-rename-group-1
+language: Python
+corpus: python
+category: ambiguous-rename-group
+split: tuning
+expected:
+  relationships: []
+  changes: []
+  ambiguous:
+    - { path: "class Order", kind: FUNCTION, name: "alpha", signature: "self" }
+    - { path: "class Order", kind: FUNCTION, name: "beta", signature: "self" }
+    - { path: "class Order", kind: FUNCTION, name: "gamma", signature: "self" }
+    - { path: "class Order", kind: FUNCTION, name: "delta", signature: "self" }
+notes: "Two equally plausible pairings; no pair is correct."
