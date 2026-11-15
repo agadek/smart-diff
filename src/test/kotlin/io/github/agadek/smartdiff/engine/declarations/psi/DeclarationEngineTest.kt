@@ -12,6 +12,7 @@ import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.Confidence
 import io.github.agadek.smartdiff.engine.api.Content
+import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.Evidence
 import io.github.agadek.smartdiff.engine.api.Limits
 import io.github.agadek.smartdiff.engine.api.RelationshipKind
@@ -64,8 +65,13 @@ class DeclarationEngineTest : BasePlatformTestCase() {
         val old = "class Foo:\n    pass\n"
         val new = "def Foo():\n    pass\n"
         val result = engine.compare(ComparisonRequest(old, new, "Python", "t.py"), Cancellation.NONE)
-        val kinds = result.relationships.filter { RelationshipKind.KIND_CHANGE in it.kinds }
-        assertTrue("expected a kind change", kinds.isNotEmpty())
+        val rel = result.relationships.single { RelationshipKind.KIND_CHANGE in it.kinds }
+        val oldSub = rel.old.single().subject as Subject.Declaration
+        val newSub = rel.new.single().subject as Subject.Declaration
+        assertEquals("Foo", oldSub.name)
+        assertEquals(DeclarationKind.CLASS, oldSub.kind)
+        assertEquals("Foo", newSub.name)
+        assertEquals(DeclarationKind.FUNCTION, newSub.kind)
     }
 
     // languages/04-python R18
@@ -74,8 +80,13 @@ class DeclarationEngineTest : BasePlatformTestCase() {
         val old = "def bar():\n    return 1\n"
         val new = "bar = 1\n"
         val result = engine.compare(ComparisonRequest(old, new, "Python", "t.py"), Cancellation.NONE)
-        val kinds = result.relationships.filter { RelationshipKind.KIND_CHANGE in it.kinds }
-        assertTrue("expected a kind change", kinds.isNotEmpty())
+        val rel = result.relationships.single { RelationshipKind.KIND_CHANGE in it.kinds }
+        val oldSub = rel.old.single().subject as Subject.Declaration
+        val newSub = rel.new.single().subject as Subject.Declaration
+        assertEquals("bar", oldSub.name)
+        assertEquals(DeclarationKind.FUNCTION, oldSub.kind)
+        assertEquals("bar", newSub.name)
+        assertEquals(DeclarationKind.VARIABLE, newSub.kind)
     }
 
     // languages/04-python R18
@@ -84,7 +95,13 @@ class DeclarationEngineTest : BasePlatformTestCase() {
         val old = "def foo():\n    return 1\n"
         val new = "def bar():\n    return 1\n"
         val result = engine.compare(ComparisonRequest(old, new, "Python", "t.py"), Cancellation.NONE)
-        assertTrue(result.relationships.any { RelationshipKind.RENAME in it.kinds })
+        val rel = result.relationships.single { RelationshipKind.RENAME in it.kinds }
+        val oldSub = rel.old.single().subject as Subject.Declaration
+        val newSub = rel.new.single().subject as Subject.Declaration
+        assertEquals("foo", oldSub.name)
+        assertEquals(DeclarationKind.FUNCTION, oldSub.kind)
+        assertEquals("bar", newSub.name)
+        assertEquals(DeclarationKind.FUNCTION, newSub.kind)
     }
 
     // languages/04-python R18
@@ -93,7 +110,9 @@ class DeclarationEngineTest : BasePlatformTestCase() {
         val old = "def summary():\n    print('a')\n    print('b')\n    print('c')\n    print('d')\n    print('e')\n"
         val new = "def summary():\n    print('a')\n    extracted()\n    print('e')\n\ndef extracted():\n    print('b')\n    print('c')\n    print('d')\n"
         val result = engine.compare(ComparisonRequest(old, new, "Python", "t.py"), Cancellation.NONE)
-        assertTrue(result.relationships.any { RelationshipKind.EXTRACT in it.kinds })
+        val rel = result.relationships.single { RelationshipKind.EXTRACT in it.kinds }
+        assertTrue(rel.new.any { (it.subject as? Subject.Declaration)?.name == "extracted" })
+        assertTrue(rel.old.any { (it.subject as? Subject.Declaration)?.name == "summary" })
     }
 
     // languages/04-python R18
@@ -102,8 +121,12 @@ class DeclarationEngineTest : BasePlatformTestCase() {
         val old = "def summary():\n    print('a')\n    extracted()\n    print('e')\n\ndef extracted():\n    print('b')\n    print('c')\n    print('d')\n"
         val new = "def summary():\n    print('a')\n    print('b')\n    print('c')\n    print('d')\n    print('e')\n"
         val result = engine.compare(ComparisonRequest(old, new, "Python", "t.py"), Cancellation.NONE)
-        assertTrue(result.relationships.any { RelationshipKind.INLINE in it.kinds })
+        val rel = result.relationships.single { RelationshipKind.INLINE in it.kinds }
+        assertTrue(rel.old.any { (it.subject as? Subject.Declaration)?.name == "extracted" })
+        assertTrue(rel.new.any { (it.subject as? Subject.Declaration)?.name == "summary" })
     }
+
+
 
     fun `test R7 R8 R18 the computed fields are read from the relationships over the golden fixtures`() {
         // relationships/02-relationship-model R7, R8, R18. GoldenFixturesTest proves these fields are the ones the
