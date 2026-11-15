@@ -1,3 +1,2 @@
 status: ANALYZED
-File region  changed  old 3-7  new 3
 section plugins  removed  old 1-3

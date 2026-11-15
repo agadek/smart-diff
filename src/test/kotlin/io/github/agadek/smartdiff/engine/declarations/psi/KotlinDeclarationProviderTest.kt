@@ -3,10 +3,11 @@ package io.github.agadek.smartdiff.engine.declarations.psi
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.Content
+import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
-import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
+import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
 import org.jetbrains.kotlin.idea.base.plugin.KotlinPluginModeProvider
 
 /** The Kotlin provider's declarations, names, signatures and ranges (technical specification §6.5, §6.6, §6.7). */
@@ -189,17 +190,17 @@ class KotlinDeclarationProviderTest : ProviderTestCase() {
         assertEquals(listOf("plugins", "dependencies", "helper", "Box", "tasks.register hello", "tasks.named test", "tasks.register copy"), tree.topLevel.map { it.name })
         assertEquals(
             listOf(
-                io.github.agadek.smartdiff.engine.api.DeclarationKind.SECTION,
-                io.github.agadek.smartdiff.engine.api.DeclarationKind.SECTION,
-                io.github.agadek.smartdiff.engine.api.DeclarationKind.FUNCTION,
-                io.github.agadek.smartdiff.engine.api.DeclarationKind.CLASS,
-                io.github.agadek.smartdiff.engine.api.DeclarationKind.SECTION,
-                io.github.agadek.smartdiff.engine.api.DeclarationKind.SECTION,
-                io.github.agadek.smartdiff.engine.api.DeclarationKind.SECTION,
+                DeclarationKind.SECTION,
+                DeclarationKind.SECTION,
+                DeclarationKind.FUNCTION,
+                DeclarationKind.CLASS,
+                DeclarationKind.SECTION,
+                DeclarationKind.SECTION,
+                DeclarationKind.SECTION,
             ),
             tree.topLevel.map { it.kind },
         )
-        assertTrue("sections have no signature", tree.topLevel.filter { it.kind == io.github.agadek.smartdiff.engine.api.DeclarationKind.SECTION }.all { it.signature == null })
+        assertTrue("sections have no signature", tree.topLevel.filter { it.kind == DeclarationKind.SECTION }.all { it.signature == null })
         val region = tree.fileRegion.ranges.joinToString("") { text.substring(it.start, it.end) } + tree.fileRegion.tokens.joinToString("") { it.text }
         assertFalse("section calls not in file region", region.contains("plugins {"))
         assertEquals(Status.ANALYZED, DeclarationEngine(null).compare(ComparisonRequest(text, text, "kotlin", "build.gradle.kts"), Cancellation.NONE).status)
@@ -211,10 +212,10 @@ class KotlinDeclarationProviderTest : ProviderTestCase() {
             val text = "plugins { id(\"java\") }\ndependencyResolutionManagement { }\n"
             val tree = build("kotlin", text, fileName = name)
             assertEquals(listOf("plugins", "dependencyResolutionManagement"), tree.topLevel.map { it.name })
-            assertTrue(tree.topLevel.all { it.kind == io.github.agadek.smartdiff.engine.api.DeclarationKind.SECTION })
+            assertTrue(tree.topLevel.all { it.kind == DeclarationKind.SECTION })
         }
         val mainTree = build("kotlin", "plugins { }\nprintln(1)\n", fileName = "Script.main.kts")
-        assertTrue("no sections in main.kts", mainTree.topLevel.none { it.kind == io.github.agadek.smartdiff.engine.api.DeclarationKind.SECTION })
+        assertTrue("no sections in main.kts", mainTree.topLevel.none { it.kind == DeclarationKind.SECTION })
     }
 
     // languages/02-kotlin R16, R17
@@ -237,7 +238,7 @@ class KotlinDeclarationProviderTest : ProviderTestCase() {
         val text = "dependencies { implementation(\"a:a:1\") }\ndependencies { testImplementation(\"b:b:1\") }\nandroid { defaultConfig { minSdk = 21 } }\n"
         val tree = build("kotlin", text, fileName = "build.gradle.kts")
         assertEquals(listOf("dependencies", "dependencies", "android"), tree.topLevel.map { it.name })
-        assertTrue(tree.topLevel.all { it.kind == io.github.agadek.smartdiff.engine.api.DeclarationKind.SECTION })
+        assertTrue(tree.topLevel.all { it.kind == DeclarationKind.SECTION })
         for (section in tree.topLevel) {
             assertEquals(text.substring(section.range.start, section.range.end).trimEnd(), text.substring(section.range.start, section.range.end).trimEnd())
             assertTrue(text.substring(section.range.start, section.range.end).isNotEmpty())
@@ -281,5 +282,75 @@ class KotlinDeclarationProviderTest : ProviderTestCase() {
             Cancellation.NONE,
         )
         assertEquals(Content.CHANGED, changed.changes.single().content)
+    }
+
+    // languages/02-kotlin R17
+    fun `test R17 assignments with closures stay in the file region`() {
+        val text = """
+            version = provider { "1.0" }
+            val x = listOf(1).map { it }
+            """.trimIndent() + "\n"
+        val tree = build("kotlin", text, fileName = "build.gradle.kts")
+        assertTrue("assignments with closures are not sections", tree.topLevel.none { it.kind == DeclarationKind.SECTION })
+    }
+
+    // languages/02-kotlin R14
+    fun `test R14 chained and qualified callees use the receiver chain names`() {
+        val text = """
+            tasks.withType<Test>().configureEach { }
+            project(":app") { }
+            subprojects { }
+            configure<JavaPluginExtension> { }
+            tasks.test { }
+            tasks.register<Map<String, Int>>("x") { }
+            """.trimIndent() + "\n"
+        val tree = build("kotlin", text, fileName = "build.gradle.kts")
+        assertEquals(
+            listOf(
+                "tasks.withType.configureEach",
+                "project :app",
+                "subprojects",
+                "configure",
+                "tasks.test",
+                "tasks.register x",
+            ),
+            tree.topLevel.map { it.name },
+        )
+    }
+
+    // languages/02-kotlin R20
+    fun `test R20 adding removing and reordering sections does not report other sections or the file region`() {
+        val engine = DeclarationEngine(null)
+        val base = "dependencies {\n  implementation(\"a:a:1\")\n}\n"
+        val added = "plugins {\n  id(\"java\")\n}\n\n$base"
+        val addedResult = engine.compare(ComparisonRequest(base, added, "kotlin", "build.gradle.kts"), Cancellation.NONE)
+        assertEquals(listOf("section plugins  added"), summarize(addedResult))
+
+        val removedResult = engine.compare(ComparisonRequest(added, base, "kotlin", "build.gradle.kts"), Cancellation.NONE)
+        assertEquals(listOf("section plugins  removed"), summarize(removedResult))
+
+        val reordered = "dependencies {\n  implementation(\"a:a:1\")\n}\n\nplugins {\n  id(\"java\")\n}\n"
+        val reorderedResult = engine.compare(ComparisonRequest(added, reordered, "kotlin", "build.gradle.kts"), Cancellation.NONE)
+        assertEquals(listOf("section dependencies  moved"), summarize(reorderedResult))
+
+        val two = "dependencies {\n  implementation(\"a:a:1\")\n}\n\ndependencies {\n  testImplementation(\"b:b:1\")\n}\n"
+        val twoResult = engine.compare(ComparisonRequest(base, two, "kotlin", "build.gradle.kts"), Cancellation.NONE)
+        assertEquals(listOf("section dependencies  added"), summarize(twoResult))
+    }
+
+    private fun summarize(result: io.github.agadek.smartdiff.engine.api.ComparisonResult): List<String> {
+        val rows = mutableListOf<String>()
+        result.fileRegion?.takeIf { it.content != Content.UNCHANGED }?.let { rows += "region ${it.content.name.lowercase()}" }
+        result.changes.forEach { change ->
+            if (!change.isReported) return@forEach
+            val subject = change.subject
+            val presence = if (change.moved) "moved" else change.presence.name.lowercase()
+            if (subject is Subject.Declaration) {
+                rows += "${subject.kind.label()} ${subject.name}  $presence"
+            } else {
+                rows += presence
+            }
+        }
+        return rows
     }
 }

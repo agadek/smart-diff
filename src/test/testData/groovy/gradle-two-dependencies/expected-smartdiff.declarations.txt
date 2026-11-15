@@ -1,3 +1,2 @@
 status: ANALYZED
-File region  changed  old 3  new 3-7
 section dependencies  added  new 5-7

@@ -217,7 +217,6 @@ class GroovyDeclarationProviderTest : BasePlatformTestCase() {
             tasks.register('hello') { }
             tasks.named('test') { }
             task hello { }
-            tasks.register<Copy>("copy") { }
             task clean(type: Delete) { }
             """.trimIndent() + "\n"
         val tree = GroovyDeclarationProvider().build(groovy(text, "build.gradle"), Cancellation.NONE)
@@ -231,7 +230,6 @@ class GroovyDeclarationProviderTest : BasePlatformTestCase() {
                 "tasks.register hello",
                 "tasks.named test",
                 "task hello",
-                "tasks.register copy",
                 "task clean",
             ),
             tree.topLevel.map { it.name },
@@ -256,6 +254,17 @@ class GroovyDeclarationProviderTest : BasePlatformTestCase() {
         assertTrue("version assignment in file region", region.contains("version = '1.0'"))
         assertTrue("group assignment in file region", region.contains("group = 'com.example'"))
         assertTrue("apply call in file region", region.contains("apply plugin: 'java'"))
+    }
+
+    // languages/08-groovy R16
+    fun `test R16 assignments with closures stay in the file region`() {
+        val text = """
+            version = providers.provider { '1.0' }
+            ext.libs = [a: { }]
+            x = list.collect { it }
+            """.trimIndent() + "\n"
+        val tree = GroovyDeclarationProvider().build(groovy(text, "build.gradle"), Cancellation.NONE)
+        assertTrue("assignments with closures are not sections", tree.topLevel.none { it.kind == DeclarationKind.SECTION })
     }
 
     // languages/08-groovy R14, R15
@@ -324,8 +333,65 @@ class GroovyDeclarationProviderTest : BasePlatformTestCase() {
             ),
             Cancellation.NONE,
         )
-        assertEquals("changed", changed.changes.single().content.name.lowercase().let { "changed" }.let { "changed" })
         assertEquals(Content.CHANGED, changed.changes.single().content)
+    }
+
+    // languages/08-groovy R12
+    fun `test R12 a call with a closure not in trailing position is not a section`() {
+        val text = "foo({ }, 1)\n"
+        val tree = GroovyDeclarationProvider().build(groovy(text, "build.gradle"), Cancellation.NONE)
+        assertTrue("foo({ }, 1) is not a section", tree.topLevel.none { it.kind == DeclarationKind.SECTION })
+    }
+
+    // languages/08-groovy R13
+    fun `test R13 chained and qualified callees use the receiver chain names`() {
+        val text = """
+            tasks.withType(Test).configureEach { }
+            project(':app') { }
+            subprojects { }
+            tasks.test { }
+            """.trimIndent() + "\n"
+        val tree = GroovyDeclarationProvider().build(groovy(text, "build.gradle"), Cancellation.NONE)
+        assertEquals(
+            listOf("tasks.withType.configureEach", "project :app", "subprojects", "tasks.test"),
+            tree.topLevel.map { it.name },
+        )
+    }
+
+    // languages/08-groovy R19
+    fun `test R19 adding removing and reordering sections does not report other sections or the file region`() {
+        val engine = DeclarationEngine(project)
+        val base = "dependencies {\n  implementation 'a:a:1'\n}\n"
+        val added = "plugins {\n  id 'java'\n}\n\n$base"
+        val addedResult = engine.compare(ComparisonRequest(base, added, "Groovy", "build.gradle"), Cancellation.NONE)
+        assertEquals(listOf("section plugins  added"), summarize(addedResult))
+
+        val removedResult = engine.compare(ComparisonRequest(added, base, "Groovy", "build.gradle"), Cancellation.NONE)
+        assertEquals(listOf("section plugins  removed"), summarize(removedResult))
+
+        val reordered = "dependencies {\n  implementation 'a:a:1'\n}\n\nplugins {\n  id 'java'\n}\n"
+        val reorderedResult = engine.compare(ComparisonRequest(added, reordered, "Groovy", "build.gradle"), Cancellation.NONE)
+        assertEquals(listOf("section dependencies  moved"), summarize(reorderedResult))
+
+        val two = "dependencies {\n  implementation 'a:a:1'\n}\n\ndependencies {\n  testImplementation 'b:b:1'\n}\n"
+        val twoResult = engine.compare(ComparisonRequest(base, two, "Groovy", "build.gradle"), Cancellation.NONE)
+        assertEquals(listOf("section dependencies  added"), summarize(twoResult))
+    }
+
+    private fun summarize(result: io.github.agadek.smartdiff.engine.api.ComparisonResult): List<String> {
+        val rows = mutableListOf<String>()
+        result.fileRegion?.takeIf { it.content != Content.UNCHANGED }?.let { rows += "region ${it.content.name.lowercase()}" }
+        result.changes.forEach { change ->
+            if (!change.isReported) return@forEach
+            val subject = change.subject
+            val presence = if (change.moved) "moved" else change.presence.name.lowercase()
+            if (subject is io.github.agadek.smartdiff.engine.api.Subject.Declaration) {
+                rows += "${subject.kind.label()} ${subject.name}  $presence"
+            } else {
+                rows += presence
+            }
+        }
+        return rows
     }
 
     private fun groovy(text: String, name: String = "A.groovy") =

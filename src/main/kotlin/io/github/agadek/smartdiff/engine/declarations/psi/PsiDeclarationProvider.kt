@@ -66,7 +66,7 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
     protected open fun whitespacePolicy(file: PsiFile): WhitespacePolicy = whitespacePolicy
 
     /** The lexer for the tokens: the one of the file language's parser definition. */
-    private fun createLexer(file: PsiFile): Lexer = parserDefinition(file).createLexer(file.project)
+    protected fun createLexer(file: PsiFile): Lexer = parserDefinition(file).createLexer(file.project)
 
     /**
      * How one lexer token counts for the declaration tree. A language can mark a token that separates declarations,
@@ -128,7 +128,7 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
         return DeclarationTree(topLevel.map(::declaration), fileRegion, whitespacePolicy(file))
     }
 
-    private class Node(
+    internal class Node(
         val info: DeclarationInfo,
         override val range: TextRange,
         override val children: List<Node>,
