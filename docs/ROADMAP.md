@@ -262,9 +262,9 @@ Give added and deleted files in the Changes tree a summary and declaration rows,
 
 *(weak-point review)* The outline now has two views, a change-type filter, a hide-by-kind menu, Hide and Minimise, the viewer switcher and separate Changes tree options, each with its own setting. Review which controls are used, using the [usability study](#usability-validation) where it helps, and merge or remove the ones that overlap, so the UI stays small enough to test and maintain.
 
-### Settings button in the outline
+### Settings button in the outline (implemented, 2026-11-15)
 
-A settings button in the outline panel's toolbar that opens *Settings | Tools | SMART Diff*, so the outline's options, such as opening automatically, how formatting-only changes are shown, the default engine and the analysis limits, can be reached from the diff instead of through the IDE's settings dialog. Specified in [outline/10](specs/outline/10-outline-settings-button.md) (proposed, 2026-11-14), which also makes open outlines pick up applied settings without being reopened.
+A settings button in the outline panel's toolbar that opens *Settings | Tools | SMART Diff*, so the outline's options, such as opening automatically, how formatting-only changes are shown, the default engine and the analysis limits, can be reached from the diff instead of through the IDE's settings dialog. Specified in [outline/10](specs/outline/10-outline-settings-button.md) (implemented, 2026-11-15), which also makes open outlines pick up applied settings without being reopened.
 
 ### Third-party engines
 

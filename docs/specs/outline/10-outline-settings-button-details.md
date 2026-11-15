@@ -1,6 +1,6 @@
 # Outline settings button: details
 
-Status: proposed, 2026-11-14
+Status: implemented, 2026-11-15
 
 Feature: [Outline settings button](10-outline-settings-button.md)
 

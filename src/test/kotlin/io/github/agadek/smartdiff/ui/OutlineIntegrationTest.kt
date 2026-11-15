@@ -19,9 +19,11 @@ import com.intellij.ide.util.PropertiesComponent
 import com.intellij.lang.Language
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionToolbar
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.actionSystem.KeyboardShortcut
+import com.intellij.openapi.actionSystem.impl.ActionToolbarImpl
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
@@ -63,6 +65,8 @@ import io.github.agadek.smartdiff.engine.lines.LineEngineFactory
 import io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory
 import io.github.agadek.smartdiff.engine.registry.EngineDefaults
 import io.github.agadek.smartdiff.references.ReferencePass
+import java.awt.Component
+import java.awt.Container
 import java.awt.event.ActionEvent
 import java.awt.event.FocusEvent
 import java.awt.event.KeyEvent
@@ -83,10 +87,12 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
     private val created = mutableListOf<Pair<DiffRequest, FrameDiffTool.DiffViewer>>()
     private val settings get() = SmartDiffSettings.getInstance()
     private var savedSettings: SmartDiffSettings.SettingsState? = null
+    private var savedSettingsOpener: ((com.intellij.openapi.project.Project?) -> Unit)? = null
 
     override fun setUp() {
         super.setUp()
         savedSettings = settings.state
+        savedSettingsOpener = OpenSmartDiffSettingsAction.settingsOpener
         // Registered after the plugin's own extension, so the outline is attached when this one runs.
         val extension = object : DiffExtension() {
             override fun onViewerCreated(viewer: FrameDiffTool.DiffViewer, context: DiffContext, request: DiffRequest) {
@@ -98,6 +104,7 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
 
     override fun tearDown() {
         try {
+            savedSettingsOpener?.let { OpenSmartDiffSettingsAction.settingsOpener = it }
             savedSettings?.let(settings::loadState)
             listOf("JAVA", "kotlin").forEach { EngineDefaults.getInstance().set(it, null) }
         } catch (e: Throwable) {
@@ -1360,6 +1367,200 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertTrue("the changed declaration is still shown", rows(outline).any { it.contains("method total → sum()") })
     }
 
+    fun `test outline 10 R1 the toolbar has the settings button after refresh`() {
+        // outline/10-outline-settings-button R1
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+        val actions = toolbarActions(outline.panel).mapNotNull { ActionManager.getInstance().getId(it) ?: it.templatePresentation.text }
+        val settings = actions.indexOfFirst { it == "SMART Diff Settings" }
+        val refresh = actions.indexOfFirst { it == "Refresh" }
+        assertTrue("settings action missing: $actions", settings >= 0)
+        assertEquals("settings should follow refresh: $actions", refresh + 1, settings)
+        val action = findAction(outline.panel, "SMART Diff Settings") as OpenSmartDiffSettingsAction
+        assertEquals(AllIcons.General.GearPlain, action.templatePresentation.icon)
+        assertEquals("Open Settings | Tools | SMART Diff", action.templatePresentation.description)
+    }
+
+    fun `test outline 10 R2 the button opens the SMART Diff settings`() {
+        // outline/10-outline-settings-button R2
+        val calls = mutableListOf<Project?>()
+        OpenSmartDiffSettingsAction.settingsOpener = { calls += it }
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+        val action = findAction(outline.panel, "SMART Diff Settings")!!
+        action.actionPerformed(TestActionEvent.createTestEvent(action, SimpleDataContext.getProjectContext(project)))
+        assertEquals(1, calls.size)
+        assertEquals(project, calls.single())
+    }
+
+    fun `test outline 10 R4 the button is enabled in every state`() {
+        // outline/10-outline-settings-button R4
+        val action = OpenSmartDiffSettingsAction()
+        fun assertEnabled(contextOutline: OutlineController) {
+            val event = TestActionEvent.createTestEvent(action, SimpleDataContext.getProjectContext(project))
+            action.update(event)
+            assertTrue("visible in ${contextOutline.state}", event.presentation.isVisible)
+            assertTrue("enabled in ${contextOutline.state}", event.presentation.isEnabled)
+        }
+
+        val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+        assertEnabled(shown)
+
+        run {
+            val disposable = Disposer.newDisposable(testRootDisposable)
+            try {
+                ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(SlowEngine())), disposable)
+                val loading = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).outline
+                assertEquals(OutlineState.Loading, loading.state)
+                assertEnabled(loading)
+            } finally {
+                Disposer.dispose(disposable)
+            }
+        }
+
+        run {
+            val disposable = Disposer.newDisposable(testRootDisposable)
+            val failed = ResultEngine().apply { status = Status.FAILED; reason = "failed" }
+            try {
+                ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(failed)), disposable)
+                val failedOutline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+                assertEquals(Status.FAILED, (failedOutline.state as OutlineState.Shown).result.status)
+                assertEnabled(failedOutline)
+            } finally {
+                Disposer.dispose(disposable)
+            }
+        }
+
+        run {
+            val disposable = Disposer.newDisposable(testRootDisposable)
+            val tooLarge = ResultEngine().apply { status = Status.TOO_LARGE; reason = "too large" }
+            try {
+                ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(tooLarge)), disposable)
+                val largeOutline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+                assertEquals(Status.TOO_LARGE, (largeOutline.state as OutlineState.Shown).result.status)
+                assertEnabled(largeOutline)
+            } finally {
+                Disposer.dispose(disposable)
+            }
+        }
+
+        run {
+            val disposable = Disposer.newDisposable(testRootDisposable)
+            try {
+                ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(JavaOnlyEngine())), disposable)
+                val noEngineOutline = open(history(KOTLIN_OLD, KOTLIN_NEW, "Greeter.kt")).outline
+                PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+                assertTrue(noEngineOutline.state is OutlineState.NoEngine)
+                assertEnabled(noEngineOutline)
+            } finally {
+                Disposer.dispose(disposable)
+            }
+        }
+    }
+
+    fun `test outline 10 R5 applied display settings rebuild the open outline`() {
+        // outline/10-outline-settings-button R5
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+        val before = outline.state as OutlineState.Shown
+        assertTrue(rows(outline).any { it.contains("added") })
+
+        settings.hiddenChangeTypes = setOf(ChangeType.ADDED)
+        publishSettingsChanged()
+        assertSame(before.result, (outline.state as OutlineState.Shown).result)
+        assertFalse(rows(outline).any { it.contains("added") })
+        assertTrue(outline.panel.summary.text.contains("hidden"))
+
+        settings.formattingOnlyInline = true
+        publishSettingsChanged()
+        assertSame(before.result, (outline.state as OutlineState.Shown).result)
+
+        settings.outlineView = OutlineView.REFACTORINGS
+        publishSettingsChanged()
+        assertSame(before.result, (outline.state as OutlineState.Shown).result)
+    }
+
+    fun `test outline 10 R6 analysis settings compare again`() {
+        // outline/10-outline-settings-button R6
+        val engineA = CountingEngine(id = EngineId("smartdiff.test.counting.a"), name = "A")
+        val engineB = CountingEngine(id = EngineId("smartdiff.test.counting.b"), name = "B")
+        ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(engineA), factory(engineB)), testRootDisposable)
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+        var total = engineA.calls + engineB.calls
+
+        settings.limits = settings.limits.copy(timeoutMillis = settings.limits.timeoutMillis + 1)
+        publishSettingsChanged()
+        PlatformTestUtil.waitWithEventsDispatching("limits compare", { engineA.calls + engineB.calls > total }, 10)
+        awaitResult(outline) { true }
+        total = engineA.calls + engineB.calls
+
+        EngineDefaults.getInstance().set("JAVA", engineB.id)
+        publishSettingsChanged()
+        PlatformTestUtil.waitWithEventsDispatching("engine compare", { engineA.calls + engineB.calls > total && engineB.calls > 0 }, 10)
+        awaitResult(outline) { it.result.engineId == engineB.id }
+        total = engineA.calls + engineB.calls
+
+        publishSettingsChanged()
+        Thread.sleep(200)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        assertEquals(total, engineA.calls + engineB.calls)
+
+        settings.showChangesSummary = !settings.showChangesSummary
+        publishSettingsChanged()
+        Thread.sleep(200)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        assertEquals(total, engineA.calls + engineB.calls)
+    }
+
+    fun `test outline 10 R6 a hidden outline does not compare twice after it is shown`() {
+        // outline/10-outline-settings-button R6
+        val engine = CountingEngine()
+        maskEngines(engine)
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+        var calls = engine.calls
+
+        outline.setOutlineVisible(false)
+        settings.limits = settings.limits.copy(timeoutMillis = settings.limits.timeoutMillis + 1)
+        publishSettingsChanged()
+        assertEquals(calls, engine.calls)
+
+        outline.setOutlineVisible(true)
+        PlatformTestUtil.waitWithEventsDispatching("shown compare", { engine.calls > calls }, 10)
+        awaitResult(outline) { true }
+        calls = engine.calls
+
+        publishSettingsChanged()
+        Thread.sleep(200)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        assertEquals(calls, engine.calls)
+    }
+
+    fun `test outline 10 R7 a rebuild keeps the selected row`() {
+        // outline/10-outline-settings-button R7
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+        select(outline, "method hello()  changed")
+        val selected = outline.panel.selectedItem()
+        assertNotNull(selected)
+
+        settings.hiddenChangeTypes = setOf(ChangeType.ADDED)
+        publishSettingsChanged()
+
+        assertNotNull(outline.panel.selectedItem())
+        assertEquals(selected!!.label, outline.panel.selectedItem()!!.label)
+        assertTrue(rows(outline).contains("  method hello()  changed"))
+    }
+
+    fun `test outline 10 R8 turning off automatic opening keeps an open outline`() {
+        // outline/10-outline-settings-button R8
+        val shown = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+        val outline = shown.awaitResult()
+        assertTrue(UIUtil.isAncestor(shown.viewer.component, outline.panel))
+
+        settings.showOutline = false
+        publishSettingsChanged()
+
+        assertTrue(outline.isOutlineVisible)
+        assertEquals(OutlineState.Hidden.javaClass != outline.state.javaClass, true)
+        assertTrue(UIUtil.isAncestor(shown.viewer.component, outline.panel))
+    }
+
     private fun method(name: String) = Subject.Declaration(DeclarationKind.METHOD, name, "")
 
     private fun labels(items: List<OutlineItem>): List<String> = items.flatMap { listOf(it.label) + labels(it.children) }
@@ -1467,6 +1668,51 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
 
     private fun maskEngines(vararg engines: ComparisonEngine) {
         ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, engines.map(::factory), testRootDisposable)
+    }
+
+    private fun publishSettingsChanged() {
+        ApplicationManager.getApplication().messageBus.syncPublisher(SmartDiffSettings.CHANGED).settingsChanged()
+    }
+
+    private fun awaitCallCount(engine: CountingEngine, expected: Int, outline: OutlineController): Int {
+        PlatformTestUtil.waitWithEventsDispatching("expected $expected calls, got ${engine.calls}", { engine.calls >= expected }, 10)
+        awaitResult(outline) { true }
+        return engine.calls
+    }
+
+    private fun toolbarActions(component: Component): List<com.intellij.openapi.actionSystem.AnAction> {
+        val toolbar = findToolbar(component) ?: return emptyList()
+        return toolbar.actionGroup.getChildren(null).toList()
+    }
+
+    private fun findAction(component: Component, text: String): com.intellij.openapi.actionSystem.AnAction? =
+        toolbarActions(component).firstOrNull { it.templatePresentation.text == text }
+
+    private fun findToolbar(component: Component): ActionToolbarImpl? {
+        if (component is ActionToolbarImpl) return component
+        if (component is Container) {
+            for (child in component.components) {
+                val found = findToolbar(child)
+                if (found != null) return found
+            }
+        }
+        return null
+    }
+
+    private class CountingEngine(
+        override val id: EngineId = EngineId("smartdiff.test.counting"),
+        name: String = "Counting (test)",
+        private val resultFactory: ((ComparisonRequest, Cancellation) -> ComparisonResult)? = null,
+    ) : ComparisonEngine {
+        override val displayName = name
+        override val version = "1"
+        @Volatile var calls = 0
+        override fun supports(languageId: String) = languageId == "JAVA"
+        override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult {
+            calls++
+            val result = resultFactory?.invoke(request, cancellation) ?: LineEngine().compare(request, cancellation)
+            return result.copy(engineId = id, engineVersion = version)
+        }
     }
 
     /** Returns the set status and reason for every file, so each outline fallback can be shown without a real engine. */
