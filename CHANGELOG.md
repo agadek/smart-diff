@@ -21,6 +21,7 @@
 
 ### Fixed
 
+- Python: a class or function is no longer reported as changed when statements are inserted before it, including before a decorator or after an indented block.
 - The structural outline follows the caret: moving it into another changed declaration on either side selects and frames that row without scrolling the editors, and a selected row no longer snaps the editors back to it when the outline's rows are rebuilt.
 - Extraction detection links a helper to every method it was taken from. When the call that replaced the code repeated a few of its tokens, such as `return doubled(x) + 1;`, that method was not linked; now only runs of at least 5 tokens the method still has keep it from being a source.
 - The outline panel keeps a minimum width of 200 px, scaled with the IDE font size, so dragging the splitter no longer squeezes the summary line and rows into a narrow column. A remembered width below the minimum opens the panel at the minimum, and the merge outline keeps the same floor.

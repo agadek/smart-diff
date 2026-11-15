@@ -35,6 +35,31 @@ internal class LexedTokens private constructor(private val starts: IntArray, pri
     /** The start offsets of the tokens [own] returns, in the same order. */
     fun ownStarts(range: TextRange, excluded: List<TextRange>): List<Int> = ownIndices(range, excluded).map { starts[it] }
 
+    /**
+     * The whitespace tokens of [range] and their starts, with [significant] ranges promoted as in [own]. Zero-length
+     * non-whitespace tokens (e.g. structural boundary tokens) carry no text and are dropped; a non-whitespace token
+     * with text stays in the declaration's leading tokens.
+     */
+    fun ownLeading(range: TextRange, significant: List<TextRange>): Pair<List<Token>, List<Int>> {
+        val layoutTokens = mutableListOf<Token>()
+        val layoutStarts = mutableListOf<Int>()
+        for (i in ownIndices(range, emptyList())) {
+            val token = tokens[i]
+            if (token.kind == TokenKind.WHITESPACE) {
+                layoutTokens += if (significant.isNotEmpty() && inAny(starts[i], significant)) {
+                    Token(token.type, token.text, TokenKind.OTHER)
+                } else {
+                    token
+                }
+                layoutStarts += starts[i]
+            } else if (token.text.isNotEmpty()) {
+                layoutTokens += token
+                layoutStarts += starts[i]
+            }
+        }
+        return layoutTokens to layoutStarts
+    }
+
     private fun ownIndices(range: TextRange, excluded: List<TextRange>): List<Int> {
         val own = mutableListOf<Int>()
         var next = 0

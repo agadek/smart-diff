@@ -114,8 +114,12 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
 
         fun declaration(node: Node): Declaration {
             cancellation.checkCanceled()
-            val leading = node.leading?.let { tokens.own(it, emptyList(), significant) }.orEmpty()
-            val leadingStarts = node.leading?.let { tokens.ownStarts(it, emptyList()) }.orEmpty()
+            val lead = node.leading
+            val (leading, leadingStarts) = if (lead != null) {
+                tokens.ownLeading(lead, significant)
+            } else {
+                emptyList<Token>() to emptyList<Int>()
+            }
             val excluded = node.children.map { it.extent }
             return Declaration(
                 kind = node.info.kind,
