@@ -18,6 +18,7 @@ import com.intellij.ui.OnePixelSplitter
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.Limits
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
@@ -26,6 +27,7 @@ import io.github.agadek.smartdiff.merge.JoinedResult
 import io.github.agadek.smartdiff.merge.MergeComparison
 import io.github.agadek.smartdiff.merge.MergeSide
 import io.github.agadek.smartdiff.merge.MergeTexts
+import io.github.agadek.smartdiff.ui.ChangeType
 import io.github.agadek.smartdiff.ui.OutlineToggleTarget
 import io.github.agadek.smartdiff.ui.OutlineVisibility
 import io.github.agadek.smartdiff.ui.SmartDiffSettings
@@ -102,14 +104,14 @@ class MergeOutlineController private constructor(
     private val debounce = Timer(DEBOUNCE_MILLIS) { refresh() }.apply { isRepeats = false }
 
     private data class DisplaySnapshot(
-        val hiddenChangeTypes: Set<io.github.agadek.smartdiff.ui.ChangeType>,
+        val hiddenChangeTypes: Set<ChangeType>,
         val mergeGroupedBySide: Boolean,
         val mergeHideBothSides: Boolean,
     )
 
     private data class AnalysisSnapshot(
         val engineId: EngineId?,
-        val limits: io.github.agadek.smartdiff.engine.api.Limits,
+        val limits: Limits,
         val useStructureViewFallback: Boolean,
     )
 
@@ -155,10 +157,15 @@ class MergeOutlineController private constructor(
     )
 
     private fun settingsChanged() {
-        if (disposed || !isOutlineVisible) return
+        if (disposed) return
         val settings = SmartDiffSettings.getInstance()
         val newAnalysis = analysisSnapshot(settings)
         val newDisplay = displaySnapshot(settings)
+        if (!isOutlineVisible) {
+            analysisSnapshot = newAnalysis
+            displaySnapshot = newDisplay
+            return
+        }
         val analysisChanged = newAnalysis != analysisSnapshot
         val displayChanged = newDisplay != displaySnapshot
         if (analysisChanged) {

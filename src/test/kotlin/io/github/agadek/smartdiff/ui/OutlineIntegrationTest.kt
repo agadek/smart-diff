@@ -1509,6 +1509,29 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertEquals(total, engineA.calls + engineB.calls)
     }
 
+    fun `test outline 10 R6 a hidden outline does not compare twice after it is shown`() {
+        // outline/10-outline-settings-button R6
+        val engine = CountingEngine()
+        maskEngines(engine)
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+        var calls = engine.calls
+
+        outline.setOutlineVisible(false)
+        settings.limits = settings.limits.copy(timeoutMillis = settings.limits.timeoutMillis + 1)
+        publishSettingsChanged()
+        assertEquals(calls, engine.calls)
+
+        outline.setOutlineVisible(true)
+        PlatformTestUtil.waitWithEventsDispatching("shown compare", { engine.calls > calls }, 10)
+        awaitResult(outline) { true }
+        calls = engine.calls
+
+        publishSettingsChanged()
+        Thread.sleep(200)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        assertEquals(calls, engine.calls)
+    }
+
     fun `test outline 10 R7 a rebuild keeps the selected row`() {
         // outline/10-outline-settings-button R7
         val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()

@@ -524,6 +524,29 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
         assertFalse(afterRows.any { it.contains("main: changed") && it.contains("feature: changed") })
     }
 
+    fun `test outline 10 R6 a hidden merge outline does not compare twice after it is shown`() {
+        // outline/10-outline-settings-button R6
+        val engine = CountingEngine()
+        ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(engine)), testRootDisposable)
+        val outline = open().awaitShown()
+        var calls = engine.calls
+
+        outline.setOutlineVisible(false)
+        settings.limits = settings.limits.copy(timeoutMillis = settings.limits.timeoutMillis + 1)
+        ApplicationManager.getApplication().messageBus.syncPublisher(SmartDiffSettings.CHANGED).settingsChanged()
+        assertEquals(calls, engine.calls)
+
+        outline.setOutlineVisible(true)
+        PlatformTestUtil.waitWithEventsDispatching("shown compare", { engine.calls > calls }, 10)
+        outline.awaitShown()
+        calls = engine.calls
+
+        ApplicationManager.getApplication().messageBus.syncPublisher(SmartDiffSettings.CHANGED).settingsChanged()
+        Thread.sleep(200)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+        assertEquals(calls, engine.calls)
+    }
+
     private fun open(
         fileName: String = "OrderService.java",
         base: String = BASE,

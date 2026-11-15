@@ -21,6 +21,7 @@ import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.Limits
 import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
@@ -125,7 +126,7 @@ class OutlineController internal constructor(
 
     private data class AnalysisSnapshot(
         val engineId: EngineId?,
-        val limits: io.github.agadek.smartdiff.engine.api.Limits,
+        val limits: Limits,
         val useStructureViewFallback: Boolean,
     )
 
@@ -195,10 +196,15 @@ class OutlineController internal constructor(
     )
 
     private fun settingsChanged() {
-        if (disposed || !isOutlineVisible) return
+        if (disposed) return
         val settings = SmartDiffSettings.getInstance()
         val newAnalysis = analysisSnapshot(settings)
         val newDisplay = displaySnapshot(settings)
+        if (!isOutlineVisible) {
+            analysisSnapshot = newAnalysis
+            displaySnapshot = newDisplay
+            return
+        }
         val analysisChanged = newAnalysis != analysisSnapshot
         val displayChanged = newDisplay != displaySnapshot
         if (analysisChanged) {
