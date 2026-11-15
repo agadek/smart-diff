@@ -1,0 +1,6 @@
+<!-- Loaded when the Groovy plugin is present. The Groovy declaration provider registers here. -->
+<idea-plugin>
+    <extensions defaultExtensionNs="io.github.agadek.smartdiff">
+        <declarationProvider implementation="io.github.agadek.smartdiff.engine.declarations.psi.groovy.GroovyDeclarationProvider"/>
+    </extensions>
+</idea-plugin>

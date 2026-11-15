@@ -1,0 +1,3 @@
+status: ANALYZED
+enum E  changed  old 1-3  new 1-3
+  enum constant C  added  new 2

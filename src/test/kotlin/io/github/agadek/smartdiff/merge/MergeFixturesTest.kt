@@ -50,6 +50,9 @@ class MergeFixturesTest : BasePlatformTestCase() {
     // languages/07-json R14
     fun `test JSON merge fixtures`() = checkFixtures("json", "JSON", "json")
 
+    // languages/08-groovy R1-R10
+    fun `test Groovy merge fixtures`() = checkFixtures("groovy", "Groovy", "groovy")
+
     // languages/09-shell R11
     fun `test Shell merge fixtures`() = checkFixtures("shell", "Shell Script", "sh")
 
@@ -330,6 +333,7 @@ class MergeFixturesTest : BasePlatformTestCase() {
             "scala2" to "scala",
             "scala3" to "scala",
             "json" to "json",
+            "groovy" to "groovy",
             "shell" to "sh",
             "yaml" to "yaml",
         )

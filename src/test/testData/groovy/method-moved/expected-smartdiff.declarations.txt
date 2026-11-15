@@ -1,0 +1,3 @@
+status: ANALYZED
+class B  old 4-5  new 3-5
+  method foo()  moved  old 2  new 4

@@ -1,0 +1,3 @@
+status: ANALYZED
+class A  old 1-4  new 1-4
+  method foo(int)  changed  old 2  new 2

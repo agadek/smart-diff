@@ -1,0 +1,3 @@
+status: ANALYZED
+class A  old 1-6  new 1-6
+  constructor A(int,int)  changed  signature changed  old 2  new 2

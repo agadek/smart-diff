@@ -6,6 +6,7 @@ import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.contract.NothingHidden
+import io.github.agadek.smartdiff.engine.declarations.psi.groovy.GroovyDeclarationProvider
 import io.github.agadek.smartdiff.engine.declarations.psi.json.JsonDeclarationProvider
 import io.github.agadek.smartdiff.engine.declarations.psi.yaml.YamlDeclarationProvider
 import java.io.File
@@ -41,6 +42,9 @@ class GoldenFixturesTest : BasePlatformTestCase() {
     // languages/07-json R14
     fun `test JSON fixtures`() = checkFixtures("json", "JSON", "json")
 
+    // languages/08-groovy R1-R10
+    fun `test Groovy fixtures`() = checkFixtures("groovy", "Groovy", "groovy")
+
     // languages/10-yaml R16
     fun `test YAML fixtures`() = checkFixtures("yaml", "yaml", "yaml")
 
@@ -60,8 +64,9 @@ class GoldenFixturesTest : BasePlatformTestCase() {
     // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
     fun `test structure-view properties fixtures`() = checkFixtures("structure-view/properties", "Properties", "properties")
 
-    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
-    fun `test structure-view Groovy fixtures`() = checkFixtures("structure-view/groovy", "Groovy", "groovy")
+    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11; Groovy now has a dedicated provider, so mask it.
+    fun `test structure-view Groovy fixtures`() =
+        checkFixtures("structure-view/groovy", "Groovy", "groovy", maskDedicatedGroovyProvider = true)
 
     // languages/09-shell R2-R12
     fun `test Shell fixtures`() = checkFixtures("shell", "Shell Script", "sh")
@@ -72,13 +77,15 @@ class GoldenFixturesTest : BasePlatformTestCase() {
         extension: String,
         maskDedicatedJsonProvider: Boolean = false,
         maskDedicatedYamlProvider: Boolean = false,
+        maskDedicatedGroovyProvider: Boolean = false,
     ) {
-        if (maskDedicatedJsonProvider || maskDedicatedYamlProvider) {
+        if (maskDedicatedJsonProvider || maskDedicatedYamlProvider || maskDedicatedGroovyProvider) {
             ExtensionTestUtil.maskExtensions(
                 DeclarationProvider.EP_NAME,
                 DeclarationProvider.EP_NAME.extensionList.filterNot {
                     (maskDedicatedJsonProvider && it is JsonDeclarationProvider) ||
-                        (maskDedicatedYamlProvider && it is YamlDeclarationProvider)
+                        (maskDedicatedYamlProvider && it is YamlDeclarationProvider) ||
+                        (maskDedicatedGroovyProvider && it is GroovyDeclarationProvider)
                 },
                 testRootDisposable,
             )
@@ -94,7 +101,7 @@ class GoldenFixturesTest : BasePlatformTestCase() {
             val ext = when {
                 File(case, "old.jsonc").isFile -> "jsonc"
                 File(case, "old.json5").isFile -> "json5"
-                else -> extension
+                else -> extensionOf(case, extension)
             }
             val requestLanguage = when (ext) {
                 "json5" -> "JSON5"
@@ -119,6 +126,11 @@ class GoldenFixturesTest : BasePlatformTestCase() {
             }
         }
         if (failures.isNotEmpty()) fail("${failures.size} of ${cases.size} $directory fixtures failed:\n\n" + failures.joinToString("\n"))
+    }
+
+    private fun extensionOf(case: File, default: String): String {
+        val old = case.listFiles()?.firstOrNull { it.name.startsWith("old.") } ?: return default
+        return old.name.removePrefix("old.")
     }
 
     /** Fixture texts are LF-separated like document snapshots, whatever the checkout's line ends. */

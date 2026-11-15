@@ -1,0 +1,5 @@
+status: PARTIAL
+reason: some source could not be parsed and was not analyzed
+File region  changed  old 3  new 1
+class A  unanalyzed  old 1-3  new 1-3
+  method f()  changed  old 2  new 2-3
