@@ -4,6 +4,7 @@
 
 ### Added
 
+- Settings button in the outline toolbar: a gear after Refresh in the two-sided and merge outlines opens *Settings | Tools | SMART Diff*, and an open outline picks up the applied settings without being reopened.
 - Shell scripts (`.sh`, `.bash`, `.zsh`, when the Shell Script plugin is installed): function definitions appear in the structural outline, and line breaks and whether tokens are separated by whitespace count as changes, while the amount of space and indentation are formatting-only.
 - Structure-view fallback: files whose language has a structure view but no dedicated provider show a structural outline built from the IDE's structure view (on by default, Settings | Tools | SMART Diff, *Use the IDE's structure view for other languages*). Such outlines are marked `· structure view`, use the generic `ITEM` kind where needed, treat whitespace as significant, and fall back to the native diff if the structure view cannot be read. Dedicated providers still take precedence.
 - With a row selected in the structural outline, the mouse wheel over the outline steps to the next or previous change and shows it in the editors.

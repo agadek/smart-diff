@@ -5,7 +5,13 @@ import com.intellij.diff.DiffContext
 import com.intellij.diff.DiffExtension
 import com.intellij.diff.DiffManager
 import com.intellij.diff.FrameDiffTool
+import com.intellij.diff.DiffManagerEx
+import com.intellij.diff.DiffRequestFactory
 import com.intellij.diff.contents.DocumentContent
+import com.intellij.diff.merge.MergeContext
+import com.intellij.diff.merge.MergeResult
+import com.intellij.diff.merge.MergeTool
+import com.intellij.diff.merge.TextMergeRequest
 import com.intellij.diff.requests.DiffRequest
 import com.intellij.diff.requests.SimpleDiffRequest
 import com.intellij.diff.tools.util.side.ThreesideTextDiffViewer
@@ -17,8 +23,10 @@ import com.intellij.openapi.actionSystem.ActionToolbar
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.impl.ActionToolbarImpl
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.EditorTestUtil
@@ -61,10 +69,12 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
     private val viewers = mutableListOf<Pair<DiffRequest, FrameDiffTool.DiffViewer>>()
     private val settings get() = SmartDiffSettings.getInstance()
     private var savedSettings: SmartDiffSettings.SettingsState? = null
+    private var savedSettingsOpener: ((com.intellij.openapi.project.Project?) -> Unit)? = null
 
     override fun setUp() {
         super.setUp()
         savedSettings = settings.state
+        savedSettingsOpener = io.github.agadek.smartdiff.ui.OpenSmartDiffSettingsAction.settingsOpener
         ExtensionTestUtil.addExtensions(
             DiffExtension.EP_NAME,
             listOf(object : DiffExtension() {
@@ -78,6 +88,7 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
 
     override fun tearDown() {
         try {
+            savedSettingsOpener?.let { io.github.agadek.smartdiff.ui.OpenSmartDiffSettingsAction.settingsOpener = it }
             savedSettings?.let(settings::loadState)
         } catch (e: Throwable) {
             addSuppressedException(e)
@@ -479,6 +490,40 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
         assertFalse(labels, labels.contains("usages renamed"))
     }
 
+    fun `test outline 10 R3 the merge outline has the settings button`() {
+        // outline/10-outline-settings-button R3
+        val threeSided = open().awaitShown()
+        val actions = toolbarActions(threeSided.panel).map { it.templatePresentation.text }
+        assertEquals("settings should be last: $actions", "SMART Diff Settings", actions.last())
+
+        val (viewer, mergeWindow) = openMergeWindow()
+        try {
+            val mergeActions = toolbarActions(mergeWindow.panel).map { it.templatePresentation.text }
+            assertEquals("settings should be last: $mergeActions", "SMART Diff Settings", mergeActions.last())
+            assertFalse("no refresh in merge window: $mergeActions", mergeActions.contains("Refresh"))
+        } finally {
+            Disposer.dispose(viewer)
+        }
+    }
+
+    fun `test outline 10 R5 applied display settings rebuild the merge outline`() {
+        // outline/10-outline-settings-button R5
+        val outline = open().awaitShown()
+        outline.setLayout(MergeOutlineLayout.CONTAINER_TREE)
+        val before = outline.state as MergeOutlineState.Shown
+        val beforeRows = rows(outline)
+        assertTrue("expected both-sides rows: $beforeRows", beforeRows.any { it.contains("main: changed") && it.contains("feature: changed") })
+
+        settings.mergeHideBothSides = true
+        ApplicationManager.getApplication().messageBus.syncPublisher(SmartDiffSettings.CHANGED).settingsChanged()
+
+        val after = outline.state as MergeOutlineState.Shown
+        assertSame(before.joined, after.joined)
+        val afterRows = rows(outline)
+        assertNotEquals(beforeRows, afterRows)
+        assertFalse(afterRows.any { it.contains("main: changed") && it.contains("feature: changed") })
+    }
+
     private fun open(
         fileName: String = "OrderService.java",
         base: String = BASE,
@@ -603,6 +648,53 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
 
     private fun factory(engine: ComparisonEngine) = object : ComparisonEngineFactory {
         override fun create(project: Project?): ComparisonEngine = engine
+    }
+
+    private fun toolbarActions(panel: MergeOutlinePanel): List<AnAction> {
+        val toolbar = findToolbar(panel) ?: return emptyList()
+        return toolbar.actionGroup.getChildren(null).toList()
+    }
+
+    private fun openMergeWindow(): Pair<MergeTool.MergeViewer, MergeOutlineController> {
+        val output = EditorFactory.getInstance().createDocument(BASE)
+        val request = DiffRequestFactory.getInstance()
+            .createMergeRequest(
+                project,
+                JavaFileType.INSTANCE,
+                output,
+                listOf(LEFT, BASE, RIGHT),
+                "Merge",
+                listOf("main", "Base", "feature"),
+                null,
+            ) as TextMergeRequest
+        val context = object : MergeContext() {
+            override fun getProject(): Project = this@MergeOutlineIntegrationTest.project
+            override fun isFocusedInWindow(): Boolean = false
+            override fun requestFocusInWindow() {}
+            override fun finishMerge(result: MergeResult) {}
+        }
+        val tool = DiffManagerEx.getInstance().mergeTools.first { it.canShow(context, request) }
+        val viewer = tool.createComponent(context, request)
+        viewer.init()
+        val outline = MergeOutlineController.of(viewer) ?: error("no merge outline in the merge window")
+        outline.awaitShown()
+        val result = outline.selection as? MergeResultPane
+        if (result != null) {
+            PlatformTestUtil.waitWithEventsDispatching({ "the result is not mapped" }, { result.isMapped }, 60)
+        }
+        return viewer to outline
+    }
+
+    private class CountingEngine : ComparisonEngine {
+        override val id = EngineId("smartdiff.test.merge.counting")
+        override val displayName = "Counting merge (test)"
+        override val version = "1"
+        @Volatile var calls = 0
+        override fun supports(languageId: String) = true
+        override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult {
+            calls++
+            return LineEngine().compare(request, cancellation).copy(engineId = id, engineVersion = version)
+        }
     }
 
     /** Fails the left comparison and delegates the right one to the line engine, for the one-side status case. */

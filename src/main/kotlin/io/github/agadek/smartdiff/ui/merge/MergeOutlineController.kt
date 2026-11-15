@@ -100,12 +100,36 @@ class MergeOutlineController private constructor(
     private var shownConflicts: List<TextRange>? = null
     private var disposed = false
     private val debounce = Timer(DEBOUNCE_MILLIS) { refresh() }.apply { isRepeats = false }
+
+    private data class DisplaySnapshot(
+        val hiddenChangeTypes: Set<io.github.agadek.smartdiff.ui.ChangeType>,
+        val mergeGroupedBySide: Boolean,
+        val mergeHideBothSides: Boolean,
+    )
+
+    private data class AnalysisSnapshot(
+        val engineId: EngineId?,
+        val limits: io.github.agadek.smartdiff.engine.api.Limits,
+        val useStructureViewFallback: Boolean,
+    )
+
+    private var displaySnapshot: DisplaySnapshot? = null
+    private var analysisSnapshot: AnalysisSnapshot? = null
+    private var settingsSubscribed = false
     private val documentListener = object : DocumentListener {
         override fun documentChanged(event: DocumentEvent) = documentChanged()
     }
 
     internal fun start() {
         component.putClientProperty(CONTROLLER, this)
+        if (!settingsSubscribed) {
+            settingsSubscribed = true
+            val settings = SmartDiffSettings.getInstance()
+            displaySnapshot = displaySnapshot(settings)
+            analysisSnapshot = analysisSnapshot(settings)
+            ApplicationManager.getApplication().messageBus.connect(this)
+                .subscribe(SmartDiffSettings.CHANGED, SmartDiffSettings.Listener { settingsChanged() })
+        }
         if (!mergeWindow) {
             baseDocument.addDocumentListener(documentListener, this)
             if (leftDocument !== baseDocument) leftDocument.addDocumentListener(documentListener, this)
@@ -116,6 +140,41 @@ class MergeOutlineController private constructor(
         applyVisibility()
         // The merge window computes the outline once even when it starts hidden, so R11's "on opening" is the window.
         if (mergeWindow && !isOutlineVisible && state === MergeOutlineState.Hidden) refresh()
+    }
+
+    private fun displaySnapshot(settings: SmartDiffSettings): DisplaySnapshot = DisplaySnapshot(
+        settings.hiddenChangeTypes,
+        settings.mergeGroupedBySide,
+        settings.mergeHideBothSides,
+    )
+
+    private fun analysisSnapshot(settings: SmartDiffSettings): AnalysisSnapshot = AnalysisSnapshot(
+        selection().selected?.id,
+        settings.limits,
+        settings.useStructureViewFallback,
+    )
+
+    private fun settingsChanged() {
+        if (disposed || !isOutlineVisible) return
+        val settings = SmartDiffSettings.getInstance()
+        val newAnalysis = analysisSnapshot(settings)
+        val newDisplay = displaySnapshot(settings)
+        val analysisChanged = newAnalysis != analysisSnapshot
+        val displayChanged = newDisplay != displaySnapshot
+        if (analysisChanged) {
+            analysisSnapshot = newAnalysis
+            displaySnapshot = newDisplay
+            refresh()
+            return
+        }
+        if (displayChanged && state is MergeOutlineState.Shown) {
+            displaySnapshot = newDisplay
+            rebuild()
+            return
+        }
+        if (displayChanged) {
+            displaySnapshot = newDisplay
+        }
     }
 
     override fun setOutlineVisible(visible: Boolean) {
@@ -144,6 +203,8 @@ class MergeOutlineController private constructor(
         val registry = EngineRegistry.getInstance(project)
         if (registry.select(languageId).selected?.id == engineId) return
         registry.choose(languageId, engineId)
+        val settings = SmartDiffSettings.getInstance()
+        analysisSnapshot = analysisSnapshot(settings)
         refresh()
     }
 
