@@ -1,0 +1,2 @@
+status: ANALYZED
+key b  removed  old 2

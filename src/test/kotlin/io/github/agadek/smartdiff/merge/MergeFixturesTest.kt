@@ -59,6 +59,12 @@ class MergeFixturesTest : BasePlatformTestCase() {
     // languages/10-yaml R16
     fun `test YAML merge fixtures`() = checkFixtures("yaml", "yaml", "yaml")
 
+    // languages/11-properties R14
+    fun `test Properties merge fixtures`() = checkFixtures("properties", "Properties", "properties")
+
+    // languages/12-toml R18
+    fun `test TOML merge fixtures`() = checkFixtures("toml", "TOML", "toml")
+
     // languages/04-python R20 (merge fixtures)
     fun `test Python merge fixtures`() = checkFixtures("python", "Python", "py")
 
@@ -94,6 +100,16 @@ class MergeFixturesTest : BasePlatformTestCase() {
     fun `test YAML merge fixtures cover key changed on both sides`() {
         // languages/10-yaml R16
         assertTrue(File(TEST_DATA, "yaml/merge/key-changed-on-both-sides").isDirectory)
+    }
+
+    fun `test Properties merge fixtures cover key changed on both sides`() {
+        // languages/11-properties R14
+        assertTrue(File(TEST_DATA, "properties/merge/key-changed-on-both-sides").isDirectory)
+    }
+
+    fun `test TOML merge fixtures cover key changed on both sides`() {
+        // languages/12-toml R18
+        assertTrue(File(TEST_DATA, "toml/merge/key-changed-on-both-sides").isDirectory)
     }
 
     fun `test Scala 3 covers braces to indentation and a given on both sides`() {
@@ -346,6 +362,8 @@ class MergeFixturesTest : BasePlatformTestCase() {
             "groovy" to "groovy",
             "shell" to "sh",
             "yaml" to "yaml",
+            "properties" to "properties",
+            "toml" to "toml",
             "python" to "py",
         )
         val REQUIRED_SCENARIOS = listOf(

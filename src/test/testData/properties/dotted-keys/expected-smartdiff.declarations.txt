@@ -1,0 +1,3 @@
+status: ANALYZED
+key spring.datasource.url  changed  old 1  new 1
+key spring.datasource.user  changed  old 2  new 2
