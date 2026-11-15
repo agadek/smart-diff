@@ -1,0 +1,159 @@
+case: flask-8999295-scaffold
+language: Python
+corpus: python
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "flask"
+  commit: 89992954ec71b594b1b911f98977cdc8ad46a057
+  path: "src/flask/sansio/scaffold.py"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "_sentinel", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "F", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "T_after_request", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "T_before_request", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "T_error_handler", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "T_teardown", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "T_template_context_processor", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "T_url_defaults", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "T_url_value_preprocessor", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "T_route", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "setupmethod", signature: "f" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "Scaffold", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: VARIABLE, name: "cli", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: VARIABLE, name: "name", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: VARIABLE, name: "_static_folder", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: VARIABLE, name: "_static_url_path", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "__init__", signature: "self, import_name, static_folder, static_url_path, template_folder, root_path" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "__repr__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "_check_setup_finished", signature: "self, f_name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "static_folder", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "static_folder", signature: "self, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "has_static_folder", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "static_url_path", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "static_url_path", signature: "self, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "jinja_loader", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "_method_route", signature: "self, method, rule, options" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "get", signature: "self, rule, **options" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "query", signature: "self, rule, **options" }
+      presence: ADDED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "post", signature: "self, rule, **options" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "put", signature: "self, rule, **options" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "delete", signature: "self, rule, **options" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "patch", signature: "self, rule, **options" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "route", signature: "self, rule, **options" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "add_url_rule", signature: "self, rule, endpoint, view_func, provide_automatic_options, **options" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "endpoint", signature: "self, endpoint" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "before_request", signature: "self, f" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "after_request", signature: "self, f" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "teardown_request", signature: "self, f" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "context_processor", signature: "self, f" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "url_value_preprocessor", signature: "self, f" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "url_defaults", signature: "self, f" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "errorhandler", signature: "self, code_or_exception" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "register_error_handler", signature: "self, code_or_exception, f" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Scaffold", kind: FUNCTION, name: "_get_exc_class_and_code", signature: "exc_class_or_code" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_endpoint_from_view_func", signature: "view_func" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_find_package_path", signature: "import_name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "find_package", signature: "import_name" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Drafted from engine output; every function/class entry cross-checked against commit diff hunks (scripted heuristic) and reviewed; flagged entries verified against git show."

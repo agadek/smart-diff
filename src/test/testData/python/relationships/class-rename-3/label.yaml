@@ -1,0 +1,20 @@
+case: class-rename-3
+language: Python
+corpus: python
+category: class-rename
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "", kind: CLASS, name: "Basket" }
+      new: { path: "", kind: CLASS, name: "Ticket" }
+      usages: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Ticket" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Ticket", kind: FUNCTION, name: "price", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "One class renamed, members follow."

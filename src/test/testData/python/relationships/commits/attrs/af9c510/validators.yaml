@@ -1,0 +1,258 @@
+case: attrs-af9c510-validators
+language: Python
+corpus: python
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "attrs"
+  commit: af9c510912ce604a94896cc35c27368d5baf6ae6
+  path: "src/attr/validators.py"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "__all__", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "set_disabled", signature: "disabled" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "get_disabled", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "disabled", signature: "" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: CLASS, name: "_InstanceOfValidator", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _InstanceOfValidator", kind: VARIABLE, name: "type", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _InstanceOfValidator", kind: FUNCTION, name: "__call__", signature: "self, inst, attr, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _InstanceOfValidator", kind: FUNCTION, name: "__repr__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "instance_of", signature: "type" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "_MatchesReValidator", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _MatchesReValidator", kind: VARIABLE, name: "pattern", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _MatchesReValidator", kind: VARIABLE, name: "match_func", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _MatchesReValidator", kind: FUNCTION, name: "__call__", signature: "self, inst, attr, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _MatchesReValidator", kind: FUNCTION, name: "__repr__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "matches_re", signature: "regex, flags, func" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "_OptionalValidator", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _OptionalValidator", kind: VARIABLE, name: "validator", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _OptionalValidator", kind: FUNCTION, name: "__call__", signature: "self, inst, attr, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _OptionalValidator", kind: FUNCTION, name: "__repr__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "optional", signature: "validator" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "_InValidator", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _InValidator", kind: VARIABLE, name: "options", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _InValidator", kind: VARIABLE, name: "_original_options", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _InValidator", kind: FUNCTION, name: "__call__", signature: "self, inst, attr, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _InValidator", kind: FUNCTION, name: "__repr__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "in_", signature: "options" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "_IsCallableValidator", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _IsCallableValidator", kind: FUNCTION, name: "__call__", signature: "self, inst, attr, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _IsCallableValidator", kind: FUNCTION, name: "__repr__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "is_callable", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "_DeepIterable", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _DeepIterable", kind: VARIABLE, name: "member_validator", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _DeepIterable", kind: VARIABLE, name: "iterable_validator", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _DeepIterable", kind: FUNCTION, name: "__call__", signature: "self, inst, attr, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _DeepIterable", kind: FUNCTION, name: "__repr__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "deep_iterable", signature: "member_validator, iterable_validator" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "_DeepMapping", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _DeepMapping", kind: VARIABLE, name: "key_validator", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _DeepMapping", kind: VARIABLE, name: "value_validator", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _DeepMapping", kind: VARIABLE, name: "mapping_validator", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _DeepMapping", kind: FUNCTION, name: "__call__", signature: "self, inst, attr, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _DeepMapping", kind: FUNCTION, name: "__repr__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "deep_mapping", signature: "key_validator, value_validator, mapping_validator" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "_NumberValidator", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _NumberValidator", kind: VARIABLE, name: "bound", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _NumberValidator", kind: VARIABLE, name: "compare_op", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _NumberValidator", kind: VARIABLE, name: "compare_func", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _NumberValidator", kind: FUNCTION, name: "__call__", signature: "self, inst, attr, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _NumberValidator", kind: FUNCTION, name: "__repr__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "lt", signature: "val" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "le", signature: "val" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "ge", signature: "val" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "gt", signature: "val" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "_MaxLengthValidator", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _MaxLengthValidator", kind: VARIABLE, name: "max_length", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _MaxLengthValidator", kind: FUNCTION, name: "__call__", signature: "self, inst, attr, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _MaxLengthValidator", kind: FUNCTION, name: "__repr__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "max_len", signature: "length" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "_MinLengthValidator", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _MinLengthValidator", kind: VARIABLE, name: "min_length", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _MinLengthValidator", kind: FUNCTION, name: "__call__", signature: "self, inst, attr, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _MinLengthValidator", kind: FUNCTION, name: "__repr__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "min_len", signature: "length" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "_SubclassOfValidator", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _SubclassOfValidator", kind: VARIABLE, name: "type", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _SubclassOfValidator", kind: FUNCTION, name: "__call__", signature: "self, inst, attr, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _SubclassOfValidator", kind: FUNCTION, name: "__repr__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_subclass_of", signature: "type" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "_NotValidator", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _NotValidator", kind: VARIABLE, name: "validator", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _NotValidator", kind: VARIABLE, name: "msg", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _NotValidator", kind: VARIABLE, name: "exc_types", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _NotValidator", kind: FUNCTION, name: "__call__", signature: "self, inst, attr, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _NotValidator", kind: FUNCTION, name: "__repr__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "not_", signature: "validator, *, msg, exc_types" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "_OrValidator", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _OrValidator", kind: VARIABLE, name: "validators", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _OrValidator", kind: FUNCTION, name: "__call__", signature: "self, inst, attr, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class _OrValidator", kind: FUNCTION, name: "__repr__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "or_", signature: "*validators" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Drafted from engine output; every function/class entry cross-checked against commit diff hunks (scripted heuristic) and reviewed; flagged entries verified against git show."

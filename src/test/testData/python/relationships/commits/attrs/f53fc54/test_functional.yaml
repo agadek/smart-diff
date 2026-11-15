@@ -1,0 +1,234 @@
+case: attrs-f53fc54-test_functional
+language: Python
+corpus: python
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "attrs"
+  commit: f53fc5440d7f86aac4328aec7a563eb48634177f
+  path: "tests/test_functional.py"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: CLASS, name: "C1", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class C1", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class C1", kind: VARIABLE, name: "y", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "C1Slots", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class C1Slots", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class C1Slots", kind: VARIABLE, name: "y", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "foo", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "C2", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class C2", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class C2", kind: VARIABLE, name: "y", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "C2Slots", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class C2Slots", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class C2Slots", kind: VARIABLE, name: "y", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "Base", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Base", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Base", kind: FUNCTION, name: "meth", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "BaseSlots", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class BaseSlots", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class BaseSlots", kind: FUNCTION, name: "meth", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "Sub", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Sub", kind: VARIABLE, name: "y", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "SubSlots", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SubSlots", kind: VARIABLE, name: "y", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "Frozen", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Frozen", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "SubFrozen", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SubFrozen", kind: VARIABLE, name: "y", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "FrozenNoSlots", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class FrozenNoSlots", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "Meta", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "WithMeta", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "WithMetaSlots", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "FromMakeClass", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "TestFunctional", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_fields", signature: "self, cls" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_asdict", signature: "self, cls" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_validator", signature: "self, cls" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_renaming", signature: "self, slots" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_programmatic", signature: "self, slots, frozen" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_subclassing_with_extra_attrs", signature: "self, cls" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_subclass_without_extra_attrs", signature: "self, base" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_frozen_instance", signature: "self, frozen_class" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_pickle_attributes", signature: "self, cls, protocol" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_pickle_object", signature: "self, cls, protocol" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_subclassing_frozen_gives_frozen", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_metaclass_preserved", signature: "self, cls" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_default_decorator", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_attrib_overwrite", signature: "self, slots, frozen, weakref_slot" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_dict_patch_class", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_hash_by_id", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_handles_different_defaults", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_unsafe_hash_false_eq_false", signature: "self, slots" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_hash_deprecated", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_eq_false", signature: "self, slots" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_overwrite_base", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_frozen_slots_combo", signature: "self, base_slots, sub_slots, base_frozen, sub_frozen, base_weakref_slot, sub_weakref_slot, base_converter, sub_converter" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_tuple_class_aliasing", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_auto_exc", signature: "self, slots, frozen" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_auto_exc_one_attrib", signature: "self, slots, frozen" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_eq_only", signature: "self, slots, frozen" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_attrib_cmp_shortcut", signature: "self, slots, cmp" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_no_setattr_if_validate_without_validators", signature: "self, slots" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_no_setattr_if_convert_without_converters", signature: "self, slots" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_no_setattr_with_ng_defaults", signature: "self, slots" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_on_setattr_detect_inherited_validators", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_unsafe_hash", signature: "self, slots" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestFunctional", kind: FUNCTION, name: "test_init_subclass", signature: "self, slots" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "TestReplace", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestReplace", kind: FUNCTION, name: "test_replaces", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestReplace", kind: FUNCTION, name: "test_already_has_one", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestReplace", kind: FUNCTION, name: "test_invalid_field_name", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestReplace", kind: FUNCTION, name: "test_is_not_evolve", signature: "self" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Drafted from engine output; every function/class entry cross-checked against commit diff hunks (scripted heuristic) and reviewed; flagged entries verified against git show."

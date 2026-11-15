@@ -1,0 +1,16 @@
+case: statement-reorder-1
+language: Python
+corpus: python
+category: statement-reorder
+split: tuning
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "total", signature: "self" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Two statements swap."

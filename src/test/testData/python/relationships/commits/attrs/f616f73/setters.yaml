@@ -1,0 +1,33 @@
+case: attrs-f616f73-setters
+language: Python
+corpus: python
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "attrs"
+  commit: f616f732c6c5f87a8f7a762176422baed250a6be
+  path: "src/attr/setters.py"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "pipe", signature: "*setters" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: FUNCTION, name: "frozen", signature: "_, __, ___" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "validate", signature: "instance, attrib, new_value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "convert", signature: "instance, attrib, new_value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "NO_OP", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Drafted from engine output; every function/class entry cross-checked against commit diff hunks (scripted heuristic) and reviewed; flagged entries verified against git show."

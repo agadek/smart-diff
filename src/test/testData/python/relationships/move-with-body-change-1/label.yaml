@@ -1,0 +1,20 @@
+case: move-with-body-change-1
+language: Python
+corpus: python
+category: move-with-body-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [MOVE]
+      old: { path: "class Order", kind: FUNCTION, name: "second", signature: "self" }
+      new: { path: "class Order", kind: FUNCTION, name: "second", signature: "self" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "second", signature: "self" }
+      presence: MATCHED
+      content: CHANGED
+      moved: true
+  ambiguous: []
+notes: "The second method moves and its body changes."

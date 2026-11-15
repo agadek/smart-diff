@@ -47,6 +47,7 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
         maxDeclarations: Int,
         cancellation: Cancellation,
         confidence: ConfidencePolicy = ConfidencePolicy.DEFAULT,
+        languageId: String? = null,
     ): ComparisonResult {
         val largest = maxOf(old.all.size, new.all.size)
         if (largest > maxDeclarations) {
@@ -55,7 +56,7 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
         unparsable(old, "old")?.let { return result(Status.FAILED, reason = it) }
         unparsable(new, "new")?.let { return result(Status.FAILED, reason = it) }
 
-        val matching = DeclarationMatcher.match(old, new, confidence, cancellation)
+        val matching = DeclarationMatcher.match(old, new, confidence, languageId, cancellation)
         val tree = Tree(old, new, matching, cancellation)
         tree.detectLinks()
         val changes = tree.build()

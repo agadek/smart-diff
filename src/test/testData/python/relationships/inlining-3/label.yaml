@@ -1,0 +1,28 @@
+case: inlining-3
+language: Python
+corpus: python
+category: inlining
+split: tuning
+expected:
+  relationships:
+    - kinds: [INLINE]
+      old: { path: "class Basket", kind: FUNCTION, name: "heading", signature: "self, name, count, text" }
+      new: { path: "class Basket", kind: FUNCTION, name: "render", signature: "self, name, count" }
+    - kinds: [INLINE]
+      old: { path: "class Basket", kind: FUNCTION, name: "footer", signature: "self, name, count, text" }
+      new: { path: "class Basket", kind: FUNCTION, name: "render", signature: "self, name, count" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Basket" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Basket", kind: FUNCTION, name: "render", signature: "self, name, count" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Basket", kind: FUNCTION, name: "heading", signature: "self, name, count, text" }
+      presence: REMOVED
+      content: UNCHANGED
+    - subject: { path: "class Basket", kind: FUNCTION, name: "footer", signature: "self, name, count, text" }
+      presence: REMOVED
+      content: UNCHANGED
+  ambiguous: []
+notes: "The helper is inlined into its caller."

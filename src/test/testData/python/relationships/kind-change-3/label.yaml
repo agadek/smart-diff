@@ -1,0 +1,17 @@
+case: kind-change-3
+language: Python
+corpus: python
+category: kind-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [KIND_CHANGE]
+      old: { path: "", kind: VARIABLE, name: "TIMEOUT" }
+      new: { path: "", kind: FUNCTION, name: "TIMEOUT" }
+  changes:
+    - subject: { path: "", kind: FUNCTION, name: "TIMEOUT" }
+      presence: MATCHED
+      content: UNCHANGED
+      kindChangedFrom: VARIABLE
+  ambiguous: []
+notes: "Module variable becomes function of the same name."

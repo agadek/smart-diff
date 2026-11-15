@@ -1,0 +1,294 @@
+case: flask-8999295-test_basic
+language: Python
+corpus: python
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "flask"
+  commit: 89992954ec71b594b1b911f98977cdc8ad46a057
+  path: "tests/test_basic.py"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: VARIABLE, name: "require_cpython_gc", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_options_work", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_options_on_multiple_rules", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_method_route", signature: "app, client, method" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_method_route_no_methods", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_provide_automatic_options_attr_disable", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_provide_automatic_options_attr_enable", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_provide_automatic_options_arg_disable", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_provide_automatic_options_method_disable", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_request_dispatching", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_disallow_string_for_allowed_methods", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_url_mapping", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_werkzeug_routing", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_endpoint_decorator", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_session_accessed", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_session_path", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_session_using_application_root", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_session_using_session_settings", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_session_using_samesite_attribute", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_missing_session", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_session_secret_key_fallbacks", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_session_expiration", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_session_stored_last", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_session_special_types", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_session_cookie_setting", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_session_vary_cookie", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_session_refresh_vary", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_flashes", signature: "app, req_ctx" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_extended_flashing", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_request_processing", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_request_preprocessing_early_return", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_after_request_processing", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_teardown_request_handler", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_teardown_request_handler_debug_mode", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_teardown_request_handler_error", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_before_after_request_order", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_error_handling", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_error_handling_processing", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_baseexception_error_handling", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_before_request_and_routing_errors", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_user_error_handling", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_http_error_subclass_handling", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_errorhandler_precedence", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_trap_bad_request_key_error", signature: "app, client, debug, trap, expect_key, expect_abort" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_trapping_of_all_http_exceptions", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_error_handler_after_processor_error", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_enctype_debug_helper", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_response_types", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_response_type_errors", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_make_response", signature: "app, req_ctx" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_make_response_with_response_instance", signature: "app, req_ctx" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_jsonify_no_prettyprint", signature: "app, compact" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_jsonify_mimetype", signature: "app, req_ctx" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_json_dump_dataclass", signature: "app, req_ctx" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_jsonify_args_and_kwargs_check", signature: "app, req_ctx" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_url_generation", signature: "app, req_ctx" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_build_error_handler", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_build_error_handler_reraise", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_url_for_passes_special_values_to_build_error_handler", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_static_files", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_static_url_path", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_static_url_path_with_ending_slash", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_static_url_empty_path", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_static_url_empty_path_default", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_static_folder_with_pathlib_path", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_static_folder_with_ending_slash", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_static_route_with_host_matching", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_request_locals", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "werkzeug_3_2", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_server_name_matching", signature: "subdomain_matching, host_matching, expect_subdomain, expect_host" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_server_name_subdomain", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_exception_propagation", signature: "app, client, key" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_werkzeug_passthrough_errors", signature: "monkeypatch, debug, use_debugger, use_reloader, propagate_exceptions, app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_url_processors", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_inject_blueprint_url_defaults", signature: "app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_nonascii_pathinfo", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_no_setup_after_first_request", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_routing_redirect_debugging", signature: "monkeypatch, app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_route_decorator_custom_endpoint", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_get_method_on_g", signature: "app_ctx" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_g_iteration_protocol", signature: "app_ctx" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_subdomain_basic_support", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_subdomain_matching", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_subdomain_matching_with_ports", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_subdomain_matching_other_name", signature: "matching" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_multi_route_rules", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_multi_route_class_views", signature: "app, client" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_run_defaults", signature: "monkeypatch, app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_run_server_port", signature: "monkeypatch, app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_run_from_config", signature: "monkeypatch, host, port, server_name, expect_host, expect_port, app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_max_cookie_size", signature: "app, client, recwarn" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_app_freed_on_zero_refcount", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Drafted from engine output; every function/class entry cross-checked against commit diff hunks (scripted heuristic) and reviewed; flagged entries verified against git show."

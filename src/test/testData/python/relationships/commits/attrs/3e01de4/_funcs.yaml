@@ -1,0 +1,39 @@
+case: attrs-3e01de4-_funcs
+language: Python
+corpus: python
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "attrs"
+  commit: 3e01de41b0efb9f51b92cc3372477be92033f4a8
+  path: "src/attr/_funcs.py"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "_ATOMIC_TYPES", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "asdict", signature: "inst, recurse, filter, dict_factory, retain_collection_types, value_serializer" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_asdict_anything", signature: "val, is_key, filter, dict_factory, retain_collection_types, value_serializer" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "astuple", signature: "inst, recurse, filter, tuple_factory, retain_collection_types" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "has", signature: "cls" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "assoc", signature: "inst, **changes" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "resolve_types", signature: "cls, globalns, localns, attribs, include_extras" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "Drafted from engine output; every function/class entry cross-checked against commit diff hunks (scripted heuristic) and reviewed; flagged entries verified against git show."

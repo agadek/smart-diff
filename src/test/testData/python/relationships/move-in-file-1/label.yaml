@@ -1,0 +1,25 @@
+case: move-in-file-1
+language: Python
+corpus: python
+category: move-in-file
+split: tuning
+expected:
+  relationships:
+    - kinds: [MOVE]
+      old: { path: "class A", kind: FUNCTION, name: "foo", signature: "self" }
+      new: { path: "class B", kind: FUNCTION, name: "foo", signature: "self" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "A" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "B" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class A", kind: FUNCTION, name: "foo" }
+      presence: REMOVED
+      content: UNCHANGED
+    - subject: { path: "class B", kind: FUNCTION, name: "foo" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Method moved between classes."

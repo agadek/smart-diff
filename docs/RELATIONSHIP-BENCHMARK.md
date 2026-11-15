@@ -22,7 +22,7 @@ Without a labelled benchmark, matcher changes are judged by anecdote and fixture
 In scope:
 
 - per-file comparisons;
-- Java, Kotlin, Scala 2 and Scala 3 in the case matrix and real-commit minimums; Rust has benchmark cases listed separately in `src/test/testData/relationships-corpus-rust.txt` and run by `RustRelationshipBenchmarkTest` in `:rust`, and is not held to the case matrix or the real-commit minimum;
+- Java, Kotlin, Scala 2, Scala 3 and Python in the case matrix and real-commit minimums; Rust has benchmark cases listed separately in `src/test/testData/relationships-corpus-rust.txt` and run by `RustRelationshipBenchmarkTest` in `:rust`, and is not held to the case matrix or the real-commit minimum;
 - declaration renames, moves, kind changes, signature changes, extraction and inlining;
 - duplicate bodies, overloads and ambiguous candidates;
 - formatting-only, comment-only and string changes;

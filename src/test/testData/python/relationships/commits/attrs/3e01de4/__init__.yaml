@@ -1,0 +1,54 @@
+case: attrs-3e01de4-__init__
+language: Python
+corpus: python
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "attrs"
+  commit: 3e01de41b0efb9f51b92cc3372477be92033f4a8
+  path: "src/attr/__init__.py"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: VARIABLE, name: "s", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "attributes", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "ib", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "attr", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "dataclass", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "AttrsInstance", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "NothingType", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "__all__", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "_LAZY_SUBMODULES", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_make_getattr", signature: "mod_name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "__getattr__", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "__dir__", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Drafted from engine output; every function/class entry cross-checked against commit diff hunks (scripted heuristic) and reviewed; flagged entries verified against git show."

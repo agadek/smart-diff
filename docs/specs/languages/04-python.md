@@ -1,6 +1,6 @@
 # Python
 
-Status: in progress, P1 implemented 2026-11-13
+Status: implemented, 2026-11-15
 
 **Description:** The [declaration engine](../../GLOSSARY.md#declaration-engine) supports Python files, through the Python plugin's parser, when the IDE has the Python plugin.
 

@@ -1,0 +1,14 @@
+case: ambiguous-rename-group-2
+language: Python
+corpus: python
+category: ambiguous-rename-group
+split: held-out
+expected:
+  relationships: []
+  changes: []
+  ambiguous:
+    - { path: "class Invoice", kind: FUNCTION, name: "alpha", signature: "self" }
+    - { path: "class Invoice", kind: FUNCTION, name: "beta", signature: "self" }
+    - { path: "class Invoice", kind: FUNCTION, name: "gamma", signature: "self" }
+    - { path: "class Invoice", kind: FUNCTION, name: "delta", signature: "self" }
+notes: "Two equally plausible pairings; no pair is correct."

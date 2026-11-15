@@ -1,0 +1,10 @@
+case: overloads-same-body-3
+language: Python
+corpus: python
+category: overloads-same-body
+split: tuning
+expected:
+  relationships: []
+  changes: []
+  ambiguous: []
+notes: "Overloads with same body."

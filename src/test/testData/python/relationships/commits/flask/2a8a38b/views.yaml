@@ -1,0 +1,54 @@
+case: flask-2a8a38b-views
+language: Python
+corpus: python
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "flask"
+  commit: 2a8a38b051fc248865730bf3511bf2e2ea325e81
+  path: "src/flask/views.py"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "F", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "http_method_funcs", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: CLASS, name: "View", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class View", kind: VARIABLE, name: "methods", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class View", kind: VARIABLE, name: "provide_automatic_options", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class View", kind: VARIABLE, name: "decorators", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class View", kind: VARIABLE, name: "init_every_request", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class View", kind: FUNCTION, name: "dispatch_request", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class View", kind: FUNCTION, name: "as_view", signature: "cls, name, *class_args, **class_kwargs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "MethodView", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class MethodView", kind: FUNCTION, name: "__init_subclass__", signature: "cls, **kwargs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class MethodView", kind: FUNCTION, name: "dispatch_request", signature: "self, **kwargs" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Drafted from engine output; every function/class entry cross-checked against commit diff hunks (scripted heuristic) and reviewed; flagged entries verified against git show."
