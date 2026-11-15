@@ -123,9 +123,10 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
             templatePresentation.icon = IconLoader.getIcon(RELATIONSHIP_KIND_FILTER_ICON_PATH, OutlinePanel::class.java)
             isPopup = true
         }
+        val settingsAction = OpenSmartDiffSettingsAction()
         val toolbar = ActionManager.getInstance().createActionToolbar(
             "SmartDiffOutline",
-            DefaultActionGroup(viewAction, filter, kindsAction, refresh, minimiseAction, hideAction),
+            DefaultActionGroup(viewAction, filter, kindsAction, refresh, settingsAction, minimiseAction, hideAction),
             true,
         )
         toolbar.targetComponent = this

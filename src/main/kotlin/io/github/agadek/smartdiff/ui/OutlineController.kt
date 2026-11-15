@@ -21,6 +21,7 @@ import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.Limits
 import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
@@ -116,6 +117,22 @@ class OutlineController internal constructor(
     private var disposed = false
     private val debounce = Timer(DEBOUNCE_MILLIS) { refresh() }.apply { isRepeats = false }
 
+    private data class DisplaySnapshot(
+        val hiddenChangeTypes: Set<ChangeType>,
+        val formattingOnlyInline: Boolean,
+        val outlineView: OutlineView,
+        val hiddenRelationshipKinds: Set<RelationshipKind>,
+    )
+
+    private data class AnalysisSnapshot(
+        val engineId: EngineId?,
+        val limits: Limits,
+        val useStructureViewFallback: Boolean,
+    )
+
+    private var displaySnapshot: DisplaySnapshot? = null
+    private var analysisSnapshot: AnalysisSnapshot? = null
+
     /** The caret side followed by [caretDebounce] (outline/07). */
     internal enum class CaretSide { OLD, NEW }
 
@@ -148,9 +165,11 @@ class OutlineController internal constructor(
         viewer.component.putClientProperty(CONTROLLER, this)
         if (!settingsSubscribed) {
             settingsSubscribed = true
-            // The settings page publishes CHANGED after Apply, so the view and filters update without a new comparison.
+            val settings = SmartDiffSettings.getInstance()
+            displaySnapshot = displaySnapshot(settings)
+            analysisSnapshot = analysisSnapshot(settings)
             ApplicationManager.getApplication().messageBus.connect(this)
-                .subscribe(SmartDiffSettings.CHANGED, SmartDiffSettings.Listener { rebuild() })
+                .subscribe(SmartDiffSettings.CHANGED, SmartDiffSettings.Listener { settingsChanged() })
         }
         val listener = object : DocumentListener {
             override fun documentChanged(event: DocumentEvent) = documentChanged()
@@ -161,6 +180,47 @@ class OutlineController internal constructor(
         viewer.editor2.caretModel.addCaretListener(caretListener(CaretSide.NEW), this)
         applyVisibility()
         if (isOutlineVisible) refresh()
+    }
+
+    private fun displaySnapshot(settings: SmartDiffSettings): DisplaySnapshot = DisplaySnapshot(
+        settings.hiddenChangeTypes,
+        settings.formattingOnlyInline,
+        settings.outlineView,
+        settings.hiddenRelationshipKinds,
+    )
+
+    private fun analysisSnapshot(settings: SmartDiffSettings): AnalysisSnapshot = AnalysisSnapshot(
+        selection().selected?.id,
+        settings.limits,
+        settings.useStructureViewFallback,
+    )
+
+    private fun settingsChanged() {
+        if (disposed) return
+        val settings = SmartDiffSettings.getInstance()
+        val newAnalysis = analysisSnapshot(settings)
+        val newDisplay = displaySnapshot(settings)
+        if (!isOutlineVisible) {
+            analysisSnapshot = newAnalysis
+            displaySnapshot = newDisplay
+            return
+        }
+        val analysisChanged = newAnalysis != analysisSnapshot
+        val displayChanged = newDisplay != displaySnapshot
+        if (analysisChanged) {
+            analysisSnapshot = newAnalysis
+            displaySnapshot = newDisplay
+            refresh()
+            return
+        }
+        if (displayChanged && state is OutlineState.Shown) {
+            displaySnapshot = newDisplay
+            rebuild()
+            return
+        }
+        if (displayChanged) {
+            displaySnapshot = newDisplay
+        }
     }
 
     /** Shows or hides the outline in this diff window only; the editors stay as they are (§10). */
@@ -231,6 +291,8 @@ class OutlineController internal constructor(
         val registry = EngineRegistry.getInstance(project)
         if (registry.select(languageId).selected?.id == engineId) return
         registry.choose(languageId, engineId)
+        val settings = SmartDiffSettings.getInstance()
+        analysisSnapshot = analysisSnapshot(settings)
         refresh()
     }
 

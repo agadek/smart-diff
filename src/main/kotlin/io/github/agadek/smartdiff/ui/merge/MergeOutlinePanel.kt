@@ -22,6 +22,7 @@ import com.intellij.util.ui.UIUtil
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import io.github.agadek.smartdiff.engine.registry.EngineSelection
 import io.github.agadek.smartdiff.ui.ChangeType
+import io.github.agadek.smartdiff.ui.OpenSmartDiffSettingsAction
 import io.github.agadek.smartdiff.ui.SmartDiffSettings
 import io.github.agadek.smartdiff.ui.Tag
 import io.github.agadek.smartdiff.ui.outlineMinimumWidth
@@ -70,8 +71,10 @@ class MergeOutlinePanel internal constructor(private val controller: MergeOutlin
             templatePresentation.icon = AllIcons.General.Filter
             isPopup = true
         }
+        val settingsAction = OpenSmartDiffSettingsAction()
         val toolbarActions = DefaultActionGroup(layout, filter).apply {
             if (controller.showsRefresh) add(refresh)
+            add(settingsAction)
         }
         val toolbar = ActionManager.getInstance()
             .createActionToolbar("SmartDiffMergeOutline", toolbarActions, true)

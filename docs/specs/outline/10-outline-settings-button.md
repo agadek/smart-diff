@@ -1,6 +1,6 @@
 # Outline settings button
 
-Status: proposed, 2026-11-14
+Status: implemented, 2026-11-15
 
 **Description:** A settings button in the [structural outline](../../GLOSSARY.md#structural-outline)'s toolbar opens *Settings | Tools | SMART Diff*, and the outline that is open shows the new settings as soon as they are applied.
 
