@@ -66,22 +66,6 @@ internal object RustInterop {
         expandItems(PsiTreeUtil.getChildrenOfTypeAsList(file, PsiElement::class.java))
     }
 
-    fun children(element: PsiElement): List<PsiElement> = link {
-        when (element) {
-            is RsStructItem -> element.blockFields?.namedFieldDeclList.orEmpty<PsiElement>()
-            is RsEnumItem -> element.enumBody?.enumVariantList.orEmpty<PsiElement>()
-            is RsEnumVariant -> element.blockFields?.namedFieldDeclList.orEmpty<PsiElement>()
-            is RsTraitItem -> traitMembers(element.members)
-            is RsImplItem -> implMembers(element.members)
-            is RsModItem -> {
-                val block = PsiTreeUtil.getChildOfType(element, RsBlock::class.java)
-                if (block != null) expandItems(PsiTreeUtil.getChildrenOfTypeAsList(block, PsiElement::class.java))
-                else expandItems(PsiTreeUtil.getChildrenOfTypeAsList(element, PsiElement::class.java))
-            }
-            else -> emptyList()
-        }
-    }
-
     fun decl(element: PsiElement): Decl? = link {
         when (element) {
             is RsFunction -> functionDecl(element)
@@ -98,13 +82,8 @@ internal object RustInterop {
             is RsTraitItem -> Decl(element, "TRAIT", element.name.orEmpty(), null, null, traitMembers(element.members), element.members)
             is RsImplItem -> implDecl(element)
             is RsModItem -> {
-                val block = PsiTreeUtil.getChildOfType(element, RsBlock::class.java)
-                val members = if (block != null) {
-                    expandItems(PsiTreeUtil.getChildrenOfTypeAsList(block, PsiElement::class.java))
-                } else {
-                    expandItems(PsiTreeUtil.getChildrenOfTypeAsList(element, PsiElement::class.java))
-                }
-                Decl(element, "MODULE", element.name.orEmpty(), null, null, members, block)
+                val members = expandItems(PsiTreeUtil.getChildrenOfTypeAsList(element, PsiElement::class.java))
+                Decl(element, "MODULE", element.name.orEmpty(), null, null, members, null)
             }
             is RsModDeclItem -> Decl(element, "MODULE", element.name.orEmpty(), null, null, emptyList(), null)
             is RsTypeAlias -> Decl(element, "TYPE_ALIAS", element.name.orEmpty(), null, null, emptyList(), null)
@@ -122,7 +101,7 @@ internal object RustInterop {
         }
     }
 
-    /** Token ranges inside macro-call arguments that carry meaning (languages/05-rust-details §10 R1). */
+    /** Token ranges inside macro-call arguments that carry meaning (languages/05-rust-details §7 R14). */
     fun significantWhitespace(file: PsiFile): List<TextRange> = link {
         val ranges = mutableListOf<TextRange>()
         PsiTreeUtil.processElements(file) { element ->
@@ -168,7 +147,8 @@ internal object RustInterop {
         val parts = mutableListOf<String>()
         function.selfParameter?.let { parts += selfDisplay(it) }
         for (param in function.valueParameters) {
-            parts += param.typeReference?.text?.trim().orEmpty().ifEmpty { "_" }
+            val type = param.typeReference
+            parts += if (type != null) normalizeDisplay(type) else "_"
         }
         return parts.joinToString(", ")
     }
@@ -177,57 +157,57 @@ internal object RustInterop {
         val parts = mutableListOf<String>()
         function.selfParameter?.let { parts += selfKey(it) }
         for (param in function.valueParameters) {
-            parts += param.typeReference?.text ?: "_"
+            val type = param.typeReference
+            parts += if (type != null) normalizeKey(type) else "_"
         }
-        return parts.joinToString(",").replace(Regex("\\s+"), "")
+        return parts.joinToString(",")
     }
 
-    private fun selfDisplay(self: RsSelfParameter): String = buildString {
-        if (self.and != null) append("&")
-        self.lifetime?.let { append(it.text).append(" ") }
-        if (self.mut != null) append(if (length == 0 || last() == ' ' || last() == '&') "mut " else " mut ")
+    private fun selfDisplay(self: RsSelfParameter): String {
         val type = self.typeReference
-        if (type != null) append(type.text?.trim().orEmpty()) else append("self")
-    }.trim()
+        if (type != null) return normalizeDisplay(type)
+        val byRef = self.and != null
+        return buildString {
+            if (self.and != null) append("&")
+            self.lifetime?.let { append(it.text).append(" ") }
+            if (byRef && self.mut != null) append("mut ")
+            append("self")
+        }.trim().replace(Regex("\\s+"), " ")
+    }
 
-    private fun selfKey(self: RsSelfParameter): String = buildString {
-        if (self.and != null) append('&')
-        self.lifetime?.let { append(it.text).append(' ') }
-        if (self.mut != null) append(if (isEmpty() || last() == ' ') "mut " else " mut ")
+    private fun selfKey(self: RsSelfParameter): String {
         val type = self.typeReference
-        if (type != null) append(type.text) else append("self")
-    }.trim()
+        if (type != null) return normalizeKey(type)
+        val byRef = self.and != null
+        return buildString {
+            if (self.and != null) append("&")
+            self.lifetime?.let { append(it.text) }
+            if (byRef && self.mut != null) append("mut")
+            append("self")
+        }
+    }
 
     private fun variantDecl(variant: RsEnumVariant): Decl {
         val block = variant.blockFields
         val tuple = variant.tupleFields
-        val sig = tuple?.text ?: if (block != null) "{…}" else null
         val fields: List<PsiElement> = block?.namedFieldDeclList.orEmpty()
         val body: PsiElement? = block ?: tuple
-        return Decl(variant, "VARIANT", variant.name.orEmpty(), sig, sig, fields, body)
+        return Decl(variant, "VARIANT", variant.name.orEmpty(), null, null, fields, body)
     }
 
 
-    private fun isUnion(struct: RsStructItem): Boolean = try {
-        struct.kind == RsStructKind.UNION
-    } catch (_: Throwable) {
-        struct.node.getChildren(null).any { it.text == "union" }
-    }
+    private fun isUnion(struct: RsStructItem): Boolean = struct.kind == RsStructKind.UNION
 
-    private fun isConst(constant: RsConstant): Boolean = try {
-        constant.kind == RsConstantKind.CONST
-    } catch (_: Throwable) {
-        constant.node.getChildren(null).any { it.text == "const" }
-    }
+    private fun isConst(constant: RsConstant): Boolean = constant.kind == RsConstantKind.CONST
 
     private fun implDecl(impl: RsImplItem): Decl {
-        val type = impl.typeReference?.text.orEmpty()
-        val trait = impl.traitRef?.text
+        val type = impl.typeReference?.let(::normalizeDisplay).orEmpty()
+        val trait = impl.traitRef?.let(::normalizeDisplay)
         val name = when {
             trait != null && impl.isNegativeImpl -> "!$trait for $type"
             trait != null -> "$trait for $type"
             else -> type
-        }.trim()
+        }
         return Decl(impl, "IMPL", name, null, null, implMembers(impl.members), impl.members)
     }
 
@@ -262,19 +242,66 @@ internal object RustInterop {
         else -> false
     }
 
-    private fun collectSignificant(element: PsiElement, out: MutableList<TextRange>) {
-        var child = element.firstChild
-        while (child != null) {
-            when (child) {
-                is PsiComment -> out += TextRange(child.textRange.startOffset, child.textRange.endOffset)
-                is PsiWhiteSpace -> if (child.textLength > 0) {
-                    out += TextRange(child.textRange.startOffset, child.textRange.endOffset)
-                }
-                else -> collectSignificant(child, out)
+
+
+    private fun tokens(element: PsiElement): List<String> = buildList {
+        fun visit(e: PsiElement) {
+            var child = e.firstChild
+            if (child == null) {
+                if (e !is PsiWhiteSpace && e !is PsiComment) add(e.text)
+                return
             }
-            child = child.nextSibling
+            while (child != null) {
+                when (child) {
+                    is PsiWhiteSpace, is PsiComment -> {}
+                    else -> if (child.firstChild == null) add(child.text) else visit(child)
+                }
+                child = child.nextSibling
+            }
         }
+        visit(element)
     }
+
+    private fun normalizeKey(element: PsiElement): String = tokens(element).joinToString("")
+
+    private fun normalizeDisplay(element: PsiElement): String {
+        val toks = tokens(element)
+        if (toks.isEmpty()) return ""
+        val sb = StringBuilder()
+        var prev: String? = null
+        var i = 0
+        while (i < toks.size) {
+            val t = toks[i]
+            val next = toks.getOrNull(i + 1)
+            val arrow = t == "-" && next == ">"
+            val token = if (arrow) "->" else t
+            if (sb.isNotEmpty()) {
+                val needSpace = when {
+                    arrow -> !noSpaceAfter(prev ?: "")
+                    prev == "->" -> !noSpaceBefore(token)
+                    noSpaceAfter(prev ?: "") -> false
+                    noSpaceBefore(token) -> false
+                    isWord(prev ?: "") && isWord(token) -> true
+                    isWord(prev ?: "") || isWord(token) -> true
+                    else -> false
+                }
+                if (needSpace) sb.append(' ')
+            }
+            sb.append(token)
+            prev = token
+            i += if (arrow) 2 else 1
+        }
+        return sb.toString()
+    }
+
+    private fun noSpaceBefore(token: String): Boolean =
+        token in setOf("<", ">", "(", ")", "[", "]", ",", ":", ".", "&", "::", ";")
+
+    private fun noSpaceAfter(token: String): Boolean =
+        token in setOf("<", "(", "[", ".", "&", "::", "!", "#")
+
+    private fun isWord(token: String): Boolean =
+        token.isNotEmpty() && (token[0].isLetterOrDigit() || token[0] == '_' || token[0] == '\'')
 
     private inline fun <T> link(block: () -> T): T = try {
         block()

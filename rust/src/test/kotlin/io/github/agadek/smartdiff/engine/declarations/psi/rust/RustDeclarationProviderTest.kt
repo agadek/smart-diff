@@ -180,7 +180,20 @@ class RustDeclarationProviderTest : BasePlatformTestCase() {
         assertEquals("x", field.name)
         val variants = tree.topLevel.single { it.name == "E" }.children
         assertTrue(variants.all { it.kind == DeclarationKind.VARIANT })
+        assertTrue("variants have no signature", variants.all { it.signature == null })
         assertOffsetsEqualRequestText(text, tree)
+    }
+
+    fun `test R7 tuple variant payload change is one changed variant`() {
+        // languages/05-rust R7
+        val old = "enum E { V(i32) }\n"
+        val new = "enum E { V(i64) }\n"
+        val result = compare(old, new)
+        assertEquals(Status.ANALYZED, result.status)
+        val enumChange = result.changes.single()
+        val v = enumChange.children.single()
+        assertEquals("V", (v.subject as io.github.agadek.smartdiff.engine.api.Subject.Declaration).name)
+        assertEquals(io.github.agadek.smartdiff.engine.api.Content.CHANGED, v.content)
     }
 
     fun `test R8 extern blocks expose their declarations`() {
@@ -243,6 +256,8 @@ class RustDeclarationProviderTest : BasePlatformTestCase() {
                 fn f(&self, x: i32, y: &mut str) {}
                 fn g(&'a mut self, x: i32) {}
                 fn h(self: Box<Self>) {}
+                fn m(mut self) {}
+                fn r(&mut self) {}
             }
         """.trimIndent() + "\n"
         val tree = tree(text)
@@ -254,6 +269,12 @@ class RustDeclarationProviderTest : BasePlatformTestCase() {
         assertTrue("display keeps self form", g.displaySignature?.contains("&'a mut self") == true)
         val h = impl.children.single { it.name == "h" }
         assertEquals("Box<Self>", h.signature?.replace(" ", ""))
+        val m = impl.children.single { it.name == "m" }
+        assertEquals("self", m.signature)
+        assertEquals("self", m.displaySignature)
+        val r = impl.children.single { it.name == "r" }
+        assertEquals("&mutself", r.signature)
+        assertEquals("&mut self", r.displaySignature)
         assertOffsetsEqualRequestText(text, tree)
     }
 
@@ -278,6 +299,32 @@ class RustDeclarationProviderTest : BasePlatformTestCase() {
         val fnChange = result.changes.single()
         assertTrue(
             "formatting-only outside macros",
+            fnChange.content == Content.FORMATTING_ONLY || fnChange.content == Content.UNCHANGED,
+        )
+    }
+
+    fun `test R13 reformatted impl header stays formatting-only`() {
+        // languages/05-rust R13
+        val old = "impl Foo<A, B> { fn f(&self) {} }\n"
+        val new = "impl Foo<A,\n  B> { fn f(&self) {} }\n"
+        val result = compare(old, new)
+        assertEquals(Status.ANALYZED, result.status)
+        val implChange = result.changes.single()
+        assertTrue(
+            "reformatted impl header",
+            implChange.content == Content.FORMATTING_ONLY || implChange.content == Content.UNCHANGED,
+        )
+    }
+
+    fun `test R13 multi-line parameter type stays formatting-only`() {
+        // languages/05-rust R13
+        val old = "fn f(x: Foo<A, B>) {}\n"
+        val new = "fn f(x: Foo<A,\n  B>) {}\n"
+        val result = compare(old, new)
+        assertEquals(Status.ANALYZED, result.status)
+        val fnChange = result.changes.single()
+        assertTrue(
+            "multi-line parameter type",
             fnChange.content == Content.FORMATTING_ONLY || fnChange.content == Content.UNCHANGED,
         )
     }
