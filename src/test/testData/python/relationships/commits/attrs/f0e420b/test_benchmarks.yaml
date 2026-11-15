@@ -1,0 +1,132 @@
+case: attrs-f0e420b-test_benchmarks
+language: Python
+corpus: python
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "attrs"
+  commit: f0e420b71af1a5cd5dbf43efd1a42aece6ce8f4e
+  path: "bench/test_benchmarks.py"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "pytestmark", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "ROUNDS", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_create_simple_class", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_create_frozen_class", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_create_simple_class_make_class", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "C", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class C", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class C", kind: VARIABLE, name: "y", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class C", kind: VARIABLE, name: "z", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_instantiate_no_defaults", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_instantiate_with_defaults", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_eq_equal", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_eq_unequal", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "HashableC", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class HashableC", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class HashableC", kind: VARIABLE, name: "y", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class HashableC", kind: VARIABLE, name: "z", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_hash", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_asdict_complicated", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_astuple_complicated", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "AtomicFields", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class AtomicFields", kind: VARIABLE, name: "a", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class AtomicFields", kind: VARIABLE, name: "b", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class AtomicFields", kind: VARIABLE, name: "c", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class AtomicFields", kind: VARIABLE, name: "d", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class AtomicFields", kind: VARIABLE, name: "e", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_asdict_atomic", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "test_astuple_atomic", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "TestCachedProperties", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestCachedProperties", kind: CLASS, name: "Slotted", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestCachedProperties / class Slotted", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestCachedProperties / class Slotted", kind: FUNCTION, name: "cached", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestCachedProperties", kind: CLASS, name: "Unslotted", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestCachedProperties / class Unslotted", kind: VARIABLE, name: "x", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestCachedProperties / class Unslotted", kind: FUNCTION, name: "cached", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestCachedProperties", kind: FUNCTION, name: "test_first_access", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestCachedProperties", kind: FUNCTION, name: "test_repeated_access", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class TestCachedProperties", kind: FUNCTION, name: "test_create_cached_property_class", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Drafted from engine output; every function/class entry cross-checked against commit diff hunks (scripted heuristic) and reviewed; flagged entries verified against git show."

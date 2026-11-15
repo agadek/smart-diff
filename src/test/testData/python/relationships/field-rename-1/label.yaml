@@ -1,0 +1,20 @@
+case: field-rename-1
+language: Python
+corpus: python
+category: field-rename
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Order", kind: VARIABLE, name: "default_total" }
+      new: { path: "class Order", kind: VARIABLE, name: "default_sum" }
+      usages: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: VARIABLE, name: "default_sum" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A class variable renamed."

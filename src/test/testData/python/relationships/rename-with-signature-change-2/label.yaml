@@ -1,0 +1,21 @@
+case: rename-with-signature-change-2
+language: Python
+corpus: python
+category: rename-with-signature-change
+split: held-out
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Invoice", kind: FUNCTION, name: "compute_total", signature: "self, x" }
+      new: { path: "class Invoice", kind: FUNCTION, name: "total", signature: "self, x" }
+      usages: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Invoice" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Invoice", kind: FUNCTION, name: "total", signature: "self, x" }
+      presence: MATCHED
+      content: CHANGED
+      signatureChanged: true
+  ambiguous: []
+notes: "A method renamed and its signature changed."

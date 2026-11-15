@@ -102,6 +102,7 @@ class RefactoringsCoverageTest : BasePlatformTestCase() {
         "JAVA" -> "java"
         "kotlin" -> "kt"
         "Scala" -> "scala"
+        "Python" -> "py"
         else -> error("unknown language $language")
     }
 
@@ -112,6 +113,7 @@ class RefactoringsCoverageTest : BasePlatformTestCase() {
             Triple("kotlin", "kotlin", "kt"),
             Triple("scala2", "Scala", "scala"),
             Triple("scala3", "Scala", "scala"),
+            Triple("python", "Python", "py"),
         )
     }
 }

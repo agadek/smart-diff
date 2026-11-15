@@ -1,0 +1,69 @@
+case: flask-de8429f-testing
+language: Python
+corpus: python
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "flask"
+  commit: de8429ffda8cfb54db175529e2bae72a24e1fa7e
+  path: "src/flask/testing.py"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "EnvironBuilder", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class EnvironBuilder", kind: FUNCTION, name: "__init__", signature: "self, app, path, base_url, subdomain, url_scheme, *args, **kwargs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class EnvironBuilder", kind: FUNCTION, name: "json_dumps", signature: "self, obj, **kwargs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "_werkzeug_version", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_get_werkzeug_version", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "FlaskClient", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class FlaskClient", kind: VARIABLE, name: "application", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class FlaskClient", kind: FUNCTION, name: "__init__", signature: "self, *args, **kwargs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class FlaskClient", kind: FUNCTION, name: "session_transaction", signature: "self, *args, **kwargs" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class FlaskClient", kind: FUNCTION, name: "_copy_environ", signature: "self, other" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class FlaskClient", kind: FUNCTION, name: "_request_from_builder_args", signature: "self, args, kwargs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class FlaskClient", kind: FUNCTION, name: "open", signature: "self, *args, buffered, follow_redirects, **kwargs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class FlaskClient", kind: FUNCTION, name: "__enter__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class FlaskClient", kind: FUNCTION, name: "__exit__", signature: "self, exc_type, exc_value, tb" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "FlaskCliRunner", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class FlaskCliRunner", kind: FUNCTION, name: "__init__", signature: "self, app, **kwargs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class FlaskCliRunner", kind: FUNCTION, name: "invoke", signature: "self, cli, args, **kwargs" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Drafted from engine output; every function/class entry cross-checked against commit diff hunks (scripted heuristic) and reviewed; flagged entries verified against git show."

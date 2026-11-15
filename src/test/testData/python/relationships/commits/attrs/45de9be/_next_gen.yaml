@@ -1,0 +1,39 @@
+case: attrs-45de9be-_next_gen
+language: Python
+corpus: python
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "attrs"
+  commit: 45de9beb093d2142517ab7d1ebda6522e3d3c4ac
+  path: "src/attr/_next_gen.py"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "define", signature: "maybe_cls, *, these, repr, unsafe_hash, hash, init, slots, frozen, weakref_slot, str, auto_attribs, kw_only, cache_hash, auto_exc, eq, order, auto_detect, getstate_setstate, on_setattr, field_transformer, match_args, force_kw_only" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: VARIABLE, name: "mutable", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "frozen", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "field", signature: "*, default, validator, repr, hash, init, metadata, type, converter, factory, kw_only, eq, order, on_setattr, alias" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "asdict", signature: "inst, *, recurse, filter, value_serializer" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "astuple", signature: "inst, *, recurse, filter" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "inspect", signature: "cls" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Drafted from engine output; every function/class entry cross-checked against commit diff hunks (scripted heuristic) and reviewed; flagged entries verified against git show."

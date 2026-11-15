@@ -1,0 +1,22 @@
+case: inlining-4
+language: Python
+corpus: python
+category: inlining
+split: tuning
+expected:
+  relationships:
+    - kinds: [INLINE]
+      old: { path: "class Receipt", kind: FUNCTION, name: "line", signature: "self, customer, amount" }
+      new: { path: "class Receipt", kind: FUNCTION, name: "total", signature: "self, customer, amount" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Receipt" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Receipt", kind: FUNCTION, name: "total", signature: "self, customer, amount" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Receipt", kind: FUNCTION, name: "line", signature: "self, customer, amount" }
+      presence: REMOVED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A reformatted helper is inlined into its caller."

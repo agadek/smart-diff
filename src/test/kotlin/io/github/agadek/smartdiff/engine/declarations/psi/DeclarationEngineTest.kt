@@ -58,6 +58,53 @@ class DeclarationEngineTest : BasePlatformTestCase() {
 
     fun `test cancellation propagates promptly`() = contract.`cancellation propagates promptly`()
 
+    // languages/04-python R18
+    fun `test Python kind change class to function is detected`() {
+        val engine = DeclarationEngine(null)
+        val old = "class Foo:\n    pass\n"
+        val new = "def Foo():\n    pass\n"
+        val result = engine.compare(ComparisonRequest(old, new, "Python", "t.py"), Cancellation.NONE)
+        val kinds = result.relationships.filter { RelationshipKind.KIND_CHANGE in it.kinds }
+        assertTrue("expected a kind change", kinds.isNotEmpty())
+    }
+
+    // languages/04-python R18
+    fun `test Python kind change function to variable is detected`() {
+        val engine = DeclarationEngine(null)
+        val old = "def bar():\n    return 1\n"
+        val new = "bar = 1\n"
+        val result = engine.compare(ComparisonRequest(old, new, "Python", "t.py"), Cancellation.NONE)
+        val kinds = result.relationships.filter { RelationshipKind.KIND_CHANGE in it.kinds }
+        assertTrue("expected a kind change", kinds.isNotEmpty())
+    }
+
+    // languages/04-python R18
+    fun `test Python rename candidate is detected`() {
+        val engine = DeclarationEngine(null)
+        val old = "def foo():\n    return 1\n"
+        val new = "def bar():\n    return 1\n"
+        val result = engine.compare(ComparisonRequest(old, new, "Python", "t.py"), Cancellation.NONE)
+        assertTrue(result.relationships.any { RelationshipKind.RENAME in it.kinds })
+    }
+
+    // languages/04-python R18
+    fun `test Python extraction is detected`() {
+        val engine = DeclarationEngine(null)
+        val old = "def summary():\n    print('a')\n    print('b')\n    print('c')\n    print('d')\n    print('e')\n"
+        val new = "def summary():\n    print('a')\n    extracted()\n    print('e')\n\ndef extracted():\n    print('b')\n    print('c')\n    print('d')\n"
+        val result = engine.compare(ComparisonRequest(old, new, "Python", "t.py"), Cancellation.NONE)
+        assertTrue(result.relationships.any { RelationshipKind.EXTRACT in it.kinds })
+    }
+
+    // languages/04-python R18
+    fun `test Python inlining is detected`() {
+        val engine = DeclarationEngine(null)
+        val old = "def summary():\n    print('a')\n    extracted()\n    print('e')\n\ndef extracted():\n    print('b')\n    print('c')\n    print('d')\n"
+        val new = "def summary():\n    print('a')\n    print('b')\n    print('c')\n    print('d')\n    print('e')\n"
+        val result = engine.compare(ComparisonRequest(old, new, "Python", "t.py"), Cancellation.NONE)
+        assertTrue(result.relationships.any { RelationshipKind.INLINE in it.kinds })
+    }
+
     fun `test R7 R8 R18 the computed fields are read from the relationships over the golden fixtures`() {
         // relationships/02-relationship-model R7, R8, R18. GoldenFixturesTest proves these fields are the ones the
         // engine set before the move, since it compares the rendered outline with the checked-in expected files.
@@ -68,6 +115,7 @@ class DeclarationEngineTest : BasePlatformTestCase() {
             Triple("kotlin", "kotlin", "kt"),
             Triple("scala2", "Scala", "scala"),
             Triple("scala3", "Scala", "scala"),
+            Triple("python", "Python", "py"),
         )) {
             val cases = File("src/test/testData", directory)
                 .listFiles { file -> file.isDirectory && file.name != "merge" && file.name != "relationships" }
@@ -173,9 +221,9 @@ class DeclarationEngineTest : BasePlatformTestCase() {
 
     fun `test R24 the engine version names its own version, the IDE build and the Scala plugin`() {
         // relationships/02-relationship-model R24; relationships/03-relationship-matching R18
-        assertEquals("16", DeclarationEngine.VERSION)
-        assertEquals("16 (251.26927.53)", DeclarationEngine.formatVersion("251.26927.53", null))
-        assertEquals("16 (251.26927.53; Scala 2025.1.32)", DeclarationEngine.formatVersion("251.26927.53", "2025.1.32"))
+        assertEquals("17", DeclarationEngine.VERSION)
+        assertEquals("17 (251.26927.53)", DeclarationEngine.formatVersion("251.26927.53", null))
+        assertEquals("17 (251.26927.53; Scala 2025.1.32)", DeclarationEngine.formatVersion("251.26927.53", "2025.1.32"))
 
         // This IDE loads the Scala plugin, so its parser is named: it can change a result without a platform update.
         // The plugin manager is the independent source of truth; reading the descriptor through the shared test
@@ -196,7 +244,7 @@ class DeclarationEngineTest : BasePlatformTestCase() {
         ExtensionTestUtil.maskExtensions(DeclarationProvider.EP_NAME, listOf(JavaDeclarationProvider()), testRootDisposable)
         val version = DeclarationEngine(null).version
 
-        assertTrue(version, version.startsWith("16 ("))
+        assertTrue(version, version.startsWith("17 ("))
         assertFalse("no Scala plugin is named without its provider: $version", version.contains("Scala"))
     }
 

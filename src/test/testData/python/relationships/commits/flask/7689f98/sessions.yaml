@@ -1,0 +1,153 @@
+case: flask-7689f98-sessions
+language: Python
+corpus: python
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "flask"
+  commit: 7689f98403e2c0b0bc8d1031e60f8cff2620e86a
+  path: "src/flask/sessions.py"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: CLASS, name: "SessionMixin", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SessionMixin", kind: FUNCTION, name: "permanent", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SessionMixin", kind: FUNCTION, name: "permanent", signature: "self, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SessionMixin", kind: VARIABLE, name: "new", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SessionMixin", kind: VARIABLE, name: "modified", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SessionMixin", kind: VARIABLE, name: "accessed", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "SecureCookieSession", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SecureCookieSession", kind: VARIABLE, name: "modified", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SecureCookieSession", kind: FUNCTION, name: "__init__", signature: "self, initial" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "NullSession", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class NullSession", kind: FUNCTION, name: "_fail", signature: "self, *args, **kwargs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class NullSession", kind: VARIABLE, name: "__setitem__", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class NullSession", kind: VARIABLE, name: "__delitem__", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class NullSession", kind: VARIABLE, name: "clear", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class NullSession", kind: VARIABLE, name: "pop", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class NullSession", kind: VARIABLE, name: "popitem", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class NullSession", kind: VARIABLE, name: "update", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class NullSession", kind: VARIABLE, name: "setdefault", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "SessionInterface", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SessionInterface", kind: VARIABLE, name: "null_session_class", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SessionInterface", kind: VARIABLE, name: "pickle_based", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SessionInterface", kind: FUNCTION, name: "make_null_session", signature: "self, app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SessionInterface", kind: FUNCTION, name: "is_null_session", signature: "self, obj" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SessionInterface", kind: FUNCTION, name: "get_cookie_name", signature: "self, app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SessionInterface", kind: FUNCTION, name: "get_cookie_domain", signature: "self, app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SessionInterface", kind: FUNCTION, name: "get_cookie_path", signature: "self, app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SessionInterface", kind: FUNCTION, name: "get_cookie_httponly", signature: "self, app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SessionInterface", kind: FUNCTION, name: "get_cookie_secure", signature: "self, app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SessionInterface", kind: FUNCTION, name: "get_cookie_samesite", signature: "self, app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SessionInterface", kind: FUNCTION, name: "get_cookie_partitioned", signature: "self, app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SessionInterface", kind: FUNCTION, name: "get_expiration_time", signature: "self, app, session" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class SessionInterface", kind: FUNCTION, name: "should_set_cookie", signature: "self, app, session" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SessionInterface", kind: FUNCTION, name: "open_session", signature: "self, app, request" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SessionInterface", kind: FUNCTION, name: "save_session", signature: "self, app, session, response" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "session_json_serializer", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_lazy_sha1", signature: "string" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "SecureCookieSessionInterface", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SecureCookieSessionInterface", kind: VARIABLE, name: "salt", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SecureCookieSessionInterface", kind: VARIABLE, name: "digest_method", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SecureCookieSessionInterface", kind: VARIABLE, name: "key_derivation", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SecureCookieSessionInterface", kind: VARIABLE, name: "serializer", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SecureCookieSessionInterface", kind: VARIABLE, name: "session_class", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SecureCookieSessionInterface", kind: FUNCTION, name: "get_signing_serializer", signature: "self, app" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SecureCookieSessionInterface", kind: FUNCTION, name: "open_session", signature: "self, app, request" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SecureCookieSessionInterface", kind: FUNCTION, name: "save_session", signature: "self, app, session, response" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Drafted from engine output; every function/class entry cross-checked against commit diff hunks (scripted heuristic) and reviewed; flagged entries verified against git show."

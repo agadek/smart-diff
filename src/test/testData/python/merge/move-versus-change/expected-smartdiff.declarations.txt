@@ -1,0 +1,4 @@
+left: ANALYZED  right: ANALYZED
+class A  UNCHANGED  base 1-6  left 1-6  right 1-6
+  function f1(self)  LEFT_ONLY  left: changed  base 2-3  left 5-6  right 2-3
+  function f2(self)  CHANGED_ON_BOTH_SIDES  left: moved, changed  right: changed  base 5-6  left 2-3  right 5-6

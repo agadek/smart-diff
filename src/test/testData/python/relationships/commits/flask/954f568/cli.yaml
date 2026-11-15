@@ -1,0 +1,159 @@
+case: flask-954f568-cli
+language: Python
+corpus: python
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "flask"
+  commit: 954f5684e4841aad84a8eec7ace7b81a0d3f6831
+  path: "src/flask/cli.py"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "NoAppException", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "find_best_app", signature: "module" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_called_with_wrong_args", signature: "f" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "find_app_by_string", signature: "module, app_name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "prepare_import", signature: "path" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "locate_app", signature: "module_name, app_name, raise_if_not_found" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "locate_app", signature: "module_name, app_name, raise_if_not_found" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "locate_app", signature: "module_name, app_name, raise_if_not_found" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "get_version", signature: "ctx, param, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "version_option", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "ScriptInfo", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ScriptInfo", kind: FUNCTION, name: "__init__", signature: "self, app_import_path, create_app, set_debug_flag, load_dotenv_defaults" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class ScriptInfo", kind: FUNCTION, name: "load_app", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "pass_script_info", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "F", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "with_appcontext", signature: "f" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "AppGroup", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class AppGroup", kind: FUNCTION, name: "command", signature: "self, *args, **kwargs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class AppGroup", kind: FUNCTION, name: "group", signature: "self, *args, **kwargs" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_set_app", signature: "ctx, param, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "_app_option", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_set_debug", signature: "ctx, param, value" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: VARIABLE, name: "_debug_option", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_env_file_callback", signature: "ctx, param, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "_env_file_option", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "FlaskGroup", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class FlaskGroup", kind: FUNCTION, name: "__init__", signature: "self, add_default_commands, create_app, add_version_option, load_dotenv, set_debug_flag, **extra" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class FlaskGroup", kind: FUNCTION, name: "_load_plugin_commands", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class FlaskGroup", kind: FUNCTION, name: "get_command", signature: "self, ctx, name" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class FlaskGroup", kind: FUNCTION, name: "list_commands", signature: "self, ctx" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class FlaskGroup", kind: FUNCTION, name: "make_context", signature: "self, info_name, args, parent, **extra" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class FlaskGroup", kind: FUNCTION, name: "parse_args", signature: "self, ctx, args" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_path_is_ancestor", signature: "path, other" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "load_dotenv", signature: "path, load_defaults" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "show_server_banner", signature: "debug, app_import_path" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "CertParamType", signature: null }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class CertParamType", kind: VARIABLE, name: "name", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class CertParamType", kind: FUNCTION, name: "__init__", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class CertParamType", kind: FUNCTION, name: "convert", signature: "self, value, param, ctx" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: FUNCTION, name: "_validate_key", signature: "ctx, param, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "SeparatedPathType", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class SeparatedPathType", kind: FUNCTION, name: "convert", signature: "self, value, param, ctx" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "run_command", signature: "info, host, port, reload, debugger, with_threads, cert, extra_files, exclude_patterns" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "shell_command", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "routes_command", signature: "sort, all_methods" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: VARIABLE, name: "cli", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "main", signature: "" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Drafted from engine output; every function/class entry cross-checked against commit diff hunks (scripted heuristic) and reviewed; flagged entries verified against git show."

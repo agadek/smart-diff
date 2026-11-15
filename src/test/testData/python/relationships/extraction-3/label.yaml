@@ -1,0 +1,22 @@
+case: extraction-3
+language: Python
+corpus: python
+category: extraction
+split: tuning
+expected:
+  relationships:
+    - kinds: [EXTRACT]
+      old: { path: "class Basket", kind: FUNCTION, name: "render", signature: "self, lines" }
+      new: { path: "class Basket", kind: FUNCTION, name: "render_lines", signature: "self, lines" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Basket" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Basket", kind: FUNCTION, name: "render", signature: "self, lines" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Basket", kind: FUNCTION, name: "render_lines", signature: "self, lines" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "The body of render is extracted to a new helper."

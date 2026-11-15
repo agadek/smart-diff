@@ -1,0 +1,90 @@
+case: flask-f2ef7a5-wrappers
+language: Python
+corpus: python
+category: real-commit
+split: held-out
+reviewed: true
+source:
+  repository: "flask"
+  commit: f2ef7a553e800989f5e7c4ed4487dfd011c6dd40
+  path: "src/flask/wrappers.py"
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "", kind: INITIALIZER, name: "File region", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "Request", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Request", kind: VARIABLE, name: "json_module", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Request", kind: VARIABLE, name: "url_rule", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Request", kind: VARIABLE, name: "view_args", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Request", kind: VARIABLE, name: "routing_exception", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Request", kind: VARIABLE, name: "_max_content_length", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Request", kind: VARIABLE, name: "_max_form_memory_size", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Request", kind: VARIABLE, name: "_max_form_parts", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Request", kind: FUNCTION, name: "max_content_length", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Request", kind: FUNCTION, name: "max_content_length", signature: "self, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Request", kind: FUNCTION, name: "max_form_memory_size", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Request", kind: FUNCTION, name: "max_form_memory_size", signature: "self, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Request", kind: FUNCTION, name: "max_form_parts", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Request", kind: FUNCTION, name: "max_form_parts", signature: "self, value" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Request", kind: FUNCTION, name: "endpoint", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Request", kind: FUNCTION, name: "blueprint", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Request", kind: FUNCTION, name: "blueprints", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Request", kind: FUNCTION, name: "_load_form_data", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Request", kind: FUNCTION, name: "on_json_loading_failed", signature: "self, e" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: CLASS, name: "Response", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Response", kind: VARIABLE, name: "default_mimetype", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Response", kind: VARIABLE, name: "json_module", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Response", kind: VARIABLE, name: "autocorrect_location_header", signature: null }
+      presence: REMOVED
+      content: UNCHANGED
+    - subject: { path: "class Response", kind: FUNCTION, name: "max_cookie_size", signature: "self" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Drafted from engine output; every function/class entry cross-checked against commit diff hunks (scripted heuristic) and reviewed; flagged entries verified against git show."

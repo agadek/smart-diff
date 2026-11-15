@@ -1,0 +1,28 @@
+case: extraction-many-targets-1
+language: Python
+corpus: python
+category: extraction-many-targets
+split: tuning
+expected:
+  relationships:
+    - kinds: [EXTRACT]
+      old: { path: "class Order", kind: FUNCTION, name: "compute", signature: "self, x" }
+      new: { path: "class Order", kind: FUNCTION, name: "doubled", signature: "self, x" }
+    - kinds: [EXTRACT]
+      old: { path: "class Order", kind: FUNCTION, name: "compute", signature: "self, x" }
+      new: { path: "class Order", kind: FUNCTION, name: "trimmed", signature: "self, x" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "compute", signature: "self, x" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "doubled", signature: "self, x" }
+      presence: ADDED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "trimmed", signature: "self, x" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "One method is split into two extracted helpers."

@@ -1,6 +1,6 @@
 # Python: details
 
-Status: in progress, P1 implemented 2026-11-13
+Status: implemented, 2026-11-15
 
 **Feature:** [Python](04-python.md)
 
@@ -69,7 +69,7 @@ Status: in progress, P1 implemented 2026-11-13
 
 ## 8. Relationships, merges and the Changes tree
 
-- **Extraction, inlining, rename candidates and kind changes (R18):** these work on the declaration model and need no Python code. A `class` that becomes a function of the same name, or a function that becomes a variable, is a kind change.
+- **Extraction, inlining, rename candidates and kind changes (R18):** extraction, inlining and rename candidates work on the declaration model. The matcher pairs a Python `class` and a `function` of the same name in the same container as a kind change (nothing changes for other languages); a Python `function` that becomes a `variable` is also a kind change.
 - **Rename grouping (R19):** a `PythonReferenceResolver` registers next to the provider. It finds usages of a function, class or variable in the compared file through `PyReferenceExpression.reference.resolve()` on the light copy, which needs no interpreter for names defined in the same file. S7 confirmed that, without an SDK, `MAX` resolves to a `PyTargetExpression`, `helper` to a `PyFunction`, `C` to a `PyClass`, and `self.method()` to the method's `PyFunction`, with `self` resolving to a `PyNamedParameter`. The resolver therefore includes `self.` calls to methods of the enclosing class; other attribute references (`obj.helper`) resolve through type inference and stay left out. A reference that does not resolve is left out, as for the other resolvers.
 - **Merges and Changes tree (R20):** both use the engine's result and need no Python code.
 
