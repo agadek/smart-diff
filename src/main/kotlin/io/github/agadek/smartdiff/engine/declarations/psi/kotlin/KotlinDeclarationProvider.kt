@@ -14,30 +14,39 @@ import org.jetbrains.kotlin.idea.KotlinLanguage
 import org.jetbrains.kotlin.psi.KtAnnotation
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtAnonymousInitializer
+import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtCallableDeclaration
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtEnumEntry
+import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtObjectDeclaration
 import org.jetbrains.kotlin.psi.KtProperty
+import org.jetbrains.kotlin.psi.KtQualifiedExpression
 import org.jetbrains.kotlin.psi.KtScript
 import org.jetbrains.kotlin.psi.KtScriptInitializer
 import org.jetbrains.kotlin.psi.KtSecondaryConstructor
+import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 import org.jetbrains.kotlin.psi.KtTypeAlias
 import org.jetbrains.kotlin.psi.KtTypeReference
 
 /**
  * Kotlin declarations (technical specification §6.5). Uses PSI only, no analysis API, so it works in K1 and K2 mode.
  * Local declarations, object literals and the bodies of enum entries are part of the declaration that contains them;
- * the primary constructor and its parameters are part of the class.
+ * the primary constructor and its parameters are part of the class. In Gradle Kotlin build scripts, top-level calls
+ * with a trailing lambda are section declarations.
  */
 class KotlinDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_BREAKS_SIGNIFICANT) {
 
     override fun supports(languageId: String): Boolean = languageId == KotlinLanguage.INSTANCE.id
 
     override fun parse(project: Project, text: CharSequence, fileName: String?, dialect: Language?): PsiFile {
-        val name = if (fileName?.endsWith(".kts") == true) "SmartDiff.kts" else "SmartDiff.kt"
+        val name = when {
+            fileName != null && isGradleKtsBuildScript(fileName) -> fileName
+            fileName?.endsWith(".kts") == true -> "SmartDiff.kts"
+            else -> "SmartDiff.kt"
+        }
         return PsiFileFactory.getInstance(project).createFileFromText(name, KotlinLanguage.INSTANCE, text, false, false)
     }
 
@@ -70,8 +79,8 @@ class KotlinDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_B
             )
         }
         is KtTypeAlias -> element.name?.let { DeclarationInfo(DeclarationKind.TYPE_ALIAS, it, signature = null) }
-        // A script's statements are wrapped in initializers; they are part of the file region.
-        is KtScriptInitializer -> null
+        // In a .gradle.kts build script, a top-level call with a trailing lambda is a section (languages/02-kotlin R13).
+        is KtScriptInitializer -> describeSection(element)
         is KtAnonymousInitializer -> DeclarationInfo(DeclarationKind.INITIALIZER, "", signature = null)
         else -> null
     }
@@ -82,6 +91,50 @@ class KotlinDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_B
         ktClass.isEnum() -> DeclarationKind.ENUM
         else -> DeclarationKind.CLASS
     }
+
+    private fun describeSection(initializer: KtScriptInitializer): DeclarationInfo? {
+        if (!isGradleKtsBuildScript(initializer.containingFile.name)) return null
+        val body = initializer.body ?: return null
+        val call = callWithTrailingLambda(body) ?: return null
+        return DeclarationInfo(DeclarationKind.SECTION, sectionName(call), signature = null)
+    }
+
+    private fun callWithTrailingLambda(expression: KtExpression): KtCallExpression? {
+        return when (expression) {
+            is KtCallExpression -> if (expression.lambdaArguments.isNotEmpty()) expression else null
+            is KtQualifiedExpression -> callWithTrailingLambda(expression.selectorExpression ?: return null)
+            else -> null
+        }
+    }
+
+    private fun sectionName(call: KtCallExpression): String {
+        val callee = calleeName(call)
+        val argument = nameArgument(call) ?: return callee
+        return "$callee $argument"
+    }
+
+    private fun calleeName(call: KtCallExpression): String {
+        val qualified = call.parent as? KtQualifiedExpression
+        val callee = if (qualified != null && qualified.selectorExpression == call) {
+            qualified.text.substringBefore('(').substringBefore('{').trim()
+        } else {
+            call.calleeExpression?.text ?: call.text.substringBefore('(').substringBefore('{').trim()
+        }
+        return callee.replace(TYPE_ARGUMENTS, "")
+    }
+
+    private fun nameArgument(call: KtCallExpression): String? {
+        val first = call.valueArguments.firstOrNull()?.getArgumentExpression() ?: return null
+        return stringLiteralValue(first)
+    }
+
+    private fun stringLiteralValue(expression: KtExpression): String? {
+        val template = expression as? KtStringTemplateExpression ?: return null
+        if (template.hasInterpolation()) return null
+        return template.entries.joinToString("") { it.text }
+    }
+
+    private fun isGradleKtsBuildScript(name: String): Boolean = name.lowercase().endsWith(".gradle.kts")
 
     /** The receiver type followed by `.`, if there is one, then the parameter types: `List<T>.Int,String...`. */
     private fun functionSignature(function: KtNamedFunction): String =
@@ -105,4 +158,8 @@ class KotlinDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_B
 
     private fun typeLabel(reference: KtTypeReference): String =
         Signatures.label(reference) { it is KtAnnotationEntry || it is KtAnnotation }
+
+    private companion object {
+        val TYPE_ARGUMENTS = Regex("<[^>]*>")
+    }
 }

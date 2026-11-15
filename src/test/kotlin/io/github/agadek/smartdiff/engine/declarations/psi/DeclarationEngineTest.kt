@@ -74,9 +74,10 @@ class DeclarationEngineTest : BasePlatformTestCase() {
                 .orEmpty()
                 .sortedBy { it.name }
             for (case in cases) {
-                val old = File(case, "old.$extension").readText().replace("\r\n", "\n")
-                val new = File(case, "new.$extension").readText().replace("\r\n", "\n")
-                val result = engine.compare(ComparisonRequest(old, new, languageId, "${case.name}.$extension"), Cancellation.NONE)
+                val ext = case.listFiles()?.firstOrNull { it.name.startsWith("old.") }?.name?.removePrefix("old.") ?: extension
+                val old = File(case, "old.$ext").readText().replace("\r\n", "\n")
+                val new = File(case, "new.$ext").readText().replace("\r\n", "\n")
+                val result = engine.compare(ComparisonRequest(old, new, languageId, "${case.name}.$ext"), Cancellation.NONE)
                 val nodes = flatten(result)
                 val matchLinks = result.relationships.filter { RelationshipKind.EXTRACT !in it.kinds && it.confidence != Confidence.LOW }
                 for (node in nodes) {
@@ -172,10 +173,10 @@ class DeclarationEngineTest : BasePlatformTestCase() {
     }
 
     fun `test R24 the engine version names its own version, the IDE build and the Scala plugin`() {
-        // relationships/02-relationship-model R24; relationships/03-relationship-matching R18
-        assertEquals("16", DeclarationEngine.VERSION)
-        assertEquals("16 (251.26927.53)", DeclarationEngine.formatVersion("251.26927.53", null))
-        assertEquals("16 (251.26927.53; Scala 2025.1.32)", DeclarationEngine.formatVersion("251.26927.53", "2025.1.32"))
+        // relationships/02-relationship-model R24; relationships/03-relationship-matching R18; languages/08-groovy R11-R20
+        assertEquals("17", DeclarationEngine.VERSION)
+        assertEquals("17 (251.26927.53)", DeclarationEngine.formatVersion("251.26927.53", null))
+        assertEquals("17 (251.26927.53; Scala 2025.1.32)", DeclarationEngine.formatVersion("251.26927.53", "2025.1.32"))
 
         // This IDE loads the Scala plugin, so its parser is named: it can change a result without a platform update.
         // The plugin manager is the independent source of truth; reading the descriptor through the shared test
@@ -196,7 +197,7 @@ class DeclarationEngineTest : BasePlatformTestCase() {
         ExtensionTestUtil.maskExtensions(DeclarationProvider.EP_NAME, listOf(JavaDeclarationProvider()), testRootDisposable)
         val version = DeclarationEngine(null).version
 
-        assertTrue(version, version.startsWith("16 ("))
+        assertTrue(version, version.startsWith("17 ("))
         assertFalse("no Scala plugin is named without its provider: $version", version.contains("Scala"))
     }
 

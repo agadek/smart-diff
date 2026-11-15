@@ -173,4 +173,113 @@ class KotlinDeclarationProviderTest : ProviderTestCase() {
         val plain = result.changes.single { (it.subject as? Subject.Declaration)?.name == "Plain" }
         assertEquals("object Plain has the same own source: ${Rendering.result(result, old, new)}", Content.FORMATTING_ONLY, plain.content)
     }
+
+    // languages/02-kotlin R12, R13, R14, R17, R18
+    fun `test R12 R13 R14 R17 R18 gradle kts build scripts expose section declarations`() {
+        val text = """
+            plugins { id("java") }
+            dependencies { implementation("a:a:1") }
+            fun helper() = 1
+            class Box
+            tasks.register("hello") { }
+            tasks.named("test") { }
+            tasks.register<Copy>("copy") { }
+            """.trimIndent() + "\n"
+        val tree = build("kotlin", text, fileName = "build.gradle.kts")
+        assertEquals(listOf("plugins", "dependencies", "helper", "Box", "tasks.register hello", "tasks.named test", "tasks.register copy"), tree.topLevel.map { it.name })
+        assertEquals(
+            listOf(
+                io.github.agadek.smartdiff.engine.api.DeclarationKind.SECTION,
+                io.github.agadek.smartdiff.engine.api.DeclarationKind.SECTION,
+                io.github.agadek.smartdiff.engine.api.DeclarationKind.FUNCTION,
+                io.github.agadek.smartdiff.engine.api.DeclarationKind.CLASS,
+                io.github.agadek.smartdiff.engine.api.DeclarationKind.SECTION,
+                io.github.agadek.smartdiff.engine.api.DeclarationKind.SECTION,
+                io.github.agadek.smartdiff.engine.api.DeclarationKind.SECTION,
+            ),
+            tree.topLevel.map { it.kind },
+        )
+        assertTrue("sections have no signature", tree.topLevel.filter { it.kind == io.github.agadek.smartdiff.engine.api.DeclarationKind.SECTION }.all { it.signature == null })
+        val region = tree.fileRegion.ranges.joinToString("") { text.substring(it.start, it.end) } + tree.fileRegion.tokens.joinToString("") { it.text }
+        assertFalse("section calls not in file region", region.contains("plugins {"))
+        assertEquals(Status.ANALYZED, DeclarationEngine(null).compare(ComparisonRequest(text, text, "kotlin", "build.gradle.kts"), Cancellation.NONE).status)
+    }
+
+    // languages/02-kotlin R12
+    fun `test R12 settings and init gradle kts scripts and non-build kts scripts`() {
+        for (name in listOf("settings.gradle.kts", "init.gradle.kts")) {
+            val text = "plugins { id(\"java\") }\ndependencyResolutionManagement { }\n"
+            val tree = build("kotlin", text, fileName = name)
+            assertEquals(listOf("plugins", "dependencyResolutionManagement"), tree.topLevel.map { it.name })
+            assertTrue(tree.topLevel.all { it.kind == io.github.agadek.smartdiff.engine.api.DeclarationKind.SECTION })
+        }
+        val mainTree = build("kotlin", "plugins { }\nprintln(1)\n", fileName = "Script.main.kts")
+        assertTrue("no sections in main.kts", mainTree.topLevel.none { it.kind == io.github.agadek.smartdiff.engine.api.DeclarationKind.SECTION })
+    }
+
+    // languages/02-kotlin R16, R17
+    fun `test R16 R17 assignments and calls without a trailing lambda stay in the file region`() {
+        val text = """
+            version = "1.0"
+            apply(plugin = "java")
+            buildscript { }
+            fun helper() = 1
+            """.trimIndent() + "\n"
+        val tree = build("kotlin", text, fileName = "build.gradle.kts")
+        assertEquals(listOf("buildscript", "helper"), tree.topLevel.map { it.name })
+        val region = tree.fileRegion.ranges.joinToString("") { text.substring(it.start, it.end) } + tree.fileRegion.tokens.joinToString("") { it.text }
+        assertTrue(region.contains("version = \"1.0\""))
+        assertTrue(region.contains("apply(plugin = \"java\")"))
+    }
+
+    // languages/02-kotlin R15, R16
+    fun `test R15 R16 repeated sections nested blocks as content and offsets`() {
+        val text = "dependencies { implementation(\"a:a:1\") }\ndependencies { testImplementation(\"b:b:1\") }\nandroid { defaultConfig { minSdk = 21 } }\n"
+        val tree = build("kotlin", text, fileName = "build.gradle.kts")
+        assertEquals(listOf("dependencies", "dependencies", "android"), tree.topLevel.map { it.name })
+        assertTrue(tree.topLevel.all { it.kind == io.github.agadek.smartdiff.engine.api.DeclarationKind.SECTION })
+        for (section in tree.topLevel) {
+            assertEquals(text.substring(section.range.start, section.range.end).trimEnd(), text.substring(section.range.start, section.range.end).trimEnd())
+            assertTrue(text.substring(section.range.start, section.range.end).isNotEmpty())
+        }
+        val android = tree.topLevel.last()
+        assertTrue(text.substring(android.range.start, android.range.end).contains("defaultConfig"))
+    }
+
+    // languages/02-kotlin R19, R20
+    fun `test R19 R20 section whitespace and changes inside a section`() {
+        val engine = DeclarationEngine(null)
+        val insideLine = engine.compare(
+            ComparisonRequest(
+                "dependencies {\n  implementation(\"a:a:1\")\n}\n",
+                "dependencies {\n  implementation(  \"a:a:1\")\n}\n",
+                "kotlin",
+                "build.gradle.kts",
+            ),
+            Cancellation.NONE,
+        )
+        assertEquals(Content.FORMATTING_ONLY, insideLine.changes.single().content)
+
+        val lineSplit = engine.compare(
+            ComparisonRequest(
+                "dependencies { implementation(\"a:a:1\") }\n",
+                "dependencies {\n  implementation(\"a:a:1\")\n}\n",
+                "kotlin",
+                "build.gradle.kts",
+            ),
+            Cancellation.NONE,
+        )
+        assertEquals(Content.CHANGED, lineSplit.changes.single().content)
+
+        val changed = engine.compare(
+            ComparisonRequest(
+                "dependencies {\n  implementation(\"a:a:1\")\n}\n",
+                "dependencies {\n  implementation(\"a:a:2\")\n}\n",
+                "kotlin",
+                "build.gradle.kts",
+            ),
+            Cancellation.NONE,
+        )
+        assertEquals(Content.CHANGED, changed.changes.single().content)
+    }
 }

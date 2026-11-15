@@ -1,0 +1,3 @@
+status: ANALYZED
+section dependencies  moved  formatting-only  old 5-7  new 1-3
+section plugins  formatting-only  old 1-3  new 5-7

@@ -28,9 +28,10 @@ class RefactoringsCoverageTest : BasePlatformTestCase() {
             assertTrue("no fixtures in $directory", folders.isNotEmpty())
             for (case in folders) {
                 cases++
-                val old = read(File(case, "old.$extension"))
-                val new = read(File(case, "new.$extension"))
-                val result = engine.compare(ComparisonRequest(old, new, languageId, "${case.name}.$extension"), Cancellation.NONE)
+                val ext = extensionOf(case, extension)
+                val old = read(File(case, "old.$ext"))
+                val new = read(File(case, "new.$ext"))
+                val result = engine.compare(ComparisonRequest(old, new, languageId, "${case.name}.$ext"), Cancellation.NONE)
                 assertCovered("$directory/${case.name}", result, old, new)
             }
         }
@@ -95,6 +96,9 @@ class RefactoringsCoverageTest : BasePlatformTestCase() {
             }
         }
     }
+
+    private fun extensionOf(case: File, default: String): String =
+        case.listFiles()?.firstOrNull { it.name.startsWith("old.") }?.name?.removePrefix("old.") ?: default
 
     private fun read(file: File): String = file.readText().replace("\r\n", "\n")
 
