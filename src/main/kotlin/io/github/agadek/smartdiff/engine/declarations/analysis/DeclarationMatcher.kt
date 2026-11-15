@@ -222,7 +222,7 @@ object DeclarationMatcher {
             // Python (languages/04-python R18): a CLASS and a FUNCTION of the same name in the same container are a kind change.
             if (languageId == LanguageIds.PYTHON) {
                 val removedPy = (oldContainer?.children ?: old.topLevel).filter { decl ->
-                    decl !in uncertainOld && (decl.kind == DeclarationKind.CLASS || decl.kind == DeclarationKind.FUNCTION)
+                    decl !in pairs && decl !in uncertainOld && (decl.kind == DeclarationKind.CLASS || decl.kind == DeclarationKind.FUNCTION)
                 }
                 val addedPy = (newContainer?.children ?: new.topLevel).filter { decl ->
                     decl !in uncertainNew && (decl.kind == DeclarationKind.CLASS || decl.kind == DeclarationKind.FUNCTION)

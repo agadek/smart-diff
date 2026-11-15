@@ -76,6 +76,24 @@ class DeclarationEngineTest : BasePlatformTestCase() {
     }
 
     // languages/04-python R18
+    fun `test Python class unchanged and new same-named function added`() {
+        val engine = DeclarationEngine(null)
+        val old = "class Foo:\n    def bar(self):\n        return 1\n"
+        val new = "class Foo:\n    def bar(self):\n        return 1\n\ndef Foo():\n    pass\n"
+        val result = engine.compare(ComparisonRequest(old, new, "Python", "t.py"), Cancellation.NONE)
+        val fooClassNodes = flatten(result).filter {
+            it.subject is Subject.Declaration && (it.subject as Subject.Declaration).name == "Foo" && (it.subject as Subject.Declaration).kind == DeclarationKind.CLASS
+        }
+        assertTrue(fooClassNodes.isNotEmpty())
+        fooClassNodes.forEach { node -> assertEquals(Presence.MATCHED, node.presence) }
+        assertTrue(result.relationships.none { RelationshipKind.KIND_CHANGE in it.kinds && it.old.any { ep -> (ep.subject as? Subject.Declaration)?.name == "Foo" } })
+        val fooFuncAdded = flatten(result).filter {
+            it.subject is Subject.Declaration && (it.subject as Subject.Declaration).name == "Foo" && (it.subject as Subject.Declaration).kind == DeclarationKind.FUNCTION && it.presence == Presence.ADDED
+        }
+        assertTrue("expected added function Foo", fooFuncAdded.isNotEmpty())
+    }
+
+    // languages/04-python R18
     fun `test Python kind change function to variable is detected`() {
         val engine = DeclarationEngine(null)
         val old = "def bar():\n    return 1\n"
@@ -130,7 +148,7 @@ class DeclarationEngineTest : BasePlatformTestCase() {
 
 
     // languages/04-python (attrs 3bb6382 pyrefly.py case) — see docs/specs/languages/04-python-details.md Open questions
-    fun `test Python class D unchanged when statements inserted before decorator`() {
+    fun `test known issue Python class reported changed after inserted block before decorator`() {
         // Documents current broken behavior: class D is matched but reported CHANGED; see Open questions.
         val old = """import attrs
 
