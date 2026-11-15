@@ -138,6 +138,7 @@ A draft is a starting point only. The labeller checks every relationship and cla
 `matrixFailures` runs on every run, after the cases are read (R30). It counts the reviewed labels per category and corpus (R33), checks each category of the list below against the R9 minimum where the language has the construct, and checks the labelled commits per corpus against the R10 minimum.
 
 - Constructs a language does not have are listed in `RelationshipBenchmark.NOT_APPLICABLE`, with a reason for each; no category is left out without one.
+- Rust has benchmark cases but is not held to the case matrix or the real-commit minimum. Its cases are listed separately in `src/test/testData/relationships-corpus-rust.txt`, run by `RustRelationshipBenchmarkTest` in `:rust`, and reported as the `rust` row from that run; the root corpus lists and their counts exclude them.
 - When any minimum is missed, the report header says `smoke run`, lists every shortfall, and `report.json` has `"smoke": true` (R31).
 - A baseline whose `report.json` has `"smoke": true` fails the run with `baseline is a smoke run` (R32).
 - The VALIDATION.md baseline of R29 is the first run with no shortfall, and its `report.json` is checked in.

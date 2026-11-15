@@ -326,9 +326,3 @@ src/test/testData/scala3/relationships/usage-grouping-1
 src/test/testData/scala3/relationships/usage-grouping-2
 src/test/testData/scala3/relationships/usage-grouping-3
 src/test/testData/scala3/relationships/usage-grouping-4
-src/test/testData/rust/relationships/extraction-1
-src/test/testData/rust/relationships/impl-trait-change-1
-src/test/testData/rust/relationships/inlining-1
-src/test/testData/rust/relationships/kind-change-1
-src/test/testData/rust/relationships/move-in-file-1
-src/test/testData/rust/relationships/rename-candidate-1

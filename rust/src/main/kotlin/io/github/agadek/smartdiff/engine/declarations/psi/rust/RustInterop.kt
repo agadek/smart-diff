@@ -281,7 +281,6 @@ internal object RustInterop {
                     prev == "->" -> !noSpaceBefore(token)
                     noSpaceAfter(prev ?: "") -> false
                     noSpaceBefore(token) -> false
-                    prev == "*" && (token == "const" || token == "mut") -> false
                     isWord(prev ?: "") && isWord(token) -> true
                     isWord(prev ?: "") || isWord(token) -> true
                     else -> false

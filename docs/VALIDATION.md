@@ -30,9 +30,11 @@ and `CorpusValidationTest` and the benchmark's real-commit lines accept `.rs` fi
 `smartdiff.declarations` 16 (unchanged).
 
 **Relationship benchmark.** Six Rust relationship cases were added (`extraction`, `inlining`, `rename-candidate`,
-`kind-change`, `move-in-file`, `impl-trait-change`) and included in `src/test/testData/relationships-corpus.txt`, giving
-the benchmark a `rust` row. The `no-new-wrong-pairs` gate is kept for the checked-in cases; the Rust cases add no wrong or
-forced pairs.
+`kind-change`, `move-in-file`, `impl-trait-change`) in `src/test/testData/rust/relationships/`, listed in
+`src/test/testData/relationships-corpus-rust.txt` and run by `RustRelationshipBenchmarkTest` in the `:rust` test task,
+giving the benchmark a `rust` row from a run where the Rust plugin is present. Rust has benchmark cases but is not held
+to the case matrix or the real-commit minimum. `RustRelationshipBenchmarkTest` passed with the `no-new-wrong-pairs` gate:
+6 cases, tp=6, fp=0, fn=0, precision=1.000, recall=1.000.
 
 **Corpus validation.** `RustCorpusValidationTest` ran on 30 recent non-merge commits touching `.rs` files in each of two
 open-source Rust projects of different styles, cloned shallowly outside the repository: `ripgrep` and `serde`. The run

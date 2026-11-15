@@ -61,6 +61,9 @@ object RelationshipBenchmark {
     /** The corpora of R33; Scala 2 and Scala 3 are separate languages in every count. */
     val CORPORA = listOf("java", "kotlin", "scala2", "scala3", "rust")
 
+    /** The corpora held to the R8 case matrix and the R10 real-commit minimum. */
+    val MATRIX_CORPORA = listOf("java", "kotlin", "scala2", "scala3")
+
     /**
      * The case matrix of R8, as kebab-case categories a label names in `category:` (the details file lists them as
      * "method rename", "move in the file" and so on).
@@ -707,7 +710,7 @@ object RelationshipBenchmark {
      */
     fun matrixFailures(
         labels: List<Label>,
-        corpora: List<String> = CORPORA,
+        corpora: List<String> = MATRIX_CORPORA,
         categories: List<String> = CATEGORIES,
         labelledCommits: Map<String, Int> = emptyMap(),
         minimum: Int = MINIMUM_CASES,
@@ -715,9 +718,7 @@ object RelationshipBenchmark {
         notApplicable: Map<String, Map<String, String>> = NOT_APPLICABLE,
         categoryMinimums: Map<String, Int> = CATEGORY_MINIMUMS,
     ): List<MatrixFailure> = buildList {
-        val present = labels.map { it.corpus }.toSet() + labelledCommits.keys
         for (corpus in corpora) {
-            if (corpus !in present) continue
             for (category in categories) {
                 if (notApplicable[corpus]?.containsKey(category) == true) continue
                 val count = labels.count { it.corpus == corpus && it.category == category && it.reviewed }

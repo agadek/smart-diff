@@ -119,7 +119,7 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
             corpus.writeText(
                 buildString {
                     appendLine(case.absolutePath)
-                    for (language in listOf("java", "kotlin", "scala2", "scala3")) {
+                    for (language in RelationshipBenchmark.MATRIX_CORPORA) {
                         repeat(30) { appendLine("/src/$language --max-count=1 HEAD") }
                     }
                 },
@@ -231,7 +231,7 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
             entries.filter { it.repository != null }.sumOf { entry -> entry.arguments.count { Regex("[0-9a-f]{40}").matches(it) } },
         )
         val labels = entries.mapNotNull { it.path }.map { RelationshipBenchmark.parseLabel(File(it, "label.yaml")) }
-        for (corpus in listOf("java", "kotlin", "scala2", "scala3")) {
+        for (corpus in RelationshipBenchmark.MATRIX_CORPORA) {
             assertEquals("$corpus has four usage-grouping cases", 4, labels.count { it.corpus == corpus && it.category == "usage-grouping" })
         }
         val renames = labels.sumOf { label -> label.relationships.count { RelationshipBenchmark.Kind.RENAME in it.kinds } }
@@ -241,7 +241,7 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         )
 
         // Every real-commit label with a rename is reviewed too, including the 30 commits per corpus.
-        val commitLabels = listOf("java", "kotlin", "scala2", "scala3").flatMap { corpus ->
+        val commitLabels = RelationshipBenchmark.MATRIX_CORPORA.flatMap { corpus ->
             File("src/test/testData/$corpus/relationships/commits").walkTopDown()
                 .filter { it.isFile && it.extension == "yaml" }
                 .map { RelationshipBenchmark.parseLabel(it) }
@@ -331,15 +331,8 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         val listed = entries.mapNotNull { it.path }.map { it.absoluteFile.normalize() }.toSet()
         assertEquals("every checked-in case folder is in the list", checkedIn, listed)
         assertTrue("every case is reviewed", labels.all { it.reviewed })
-        val coreLabels = labels.filter { it.corpus in setOf("java", "kotlin", "scala2", "scala3") }
-        val failures = RelationshipBenchmark.matrixFailures(
-            coreLabels,
-            corpora = listOf("java", "kotlin", "scala2", "scala3"),
-            labelledCommits = emptyMap(),
-            commitMinimum = 0,
-        )
+        val failures = RelationshipBenchmark.matrixFailures(labels, labelledCommits = emptyMap(), commitMinimum = 0)
         assertTrue("shortfalls: $failures", failures.isEmpty())
-        assertTrue("Rust cases present", labels.any { it.corpus == "rust" })
         for ((corpus, categories) in RelationshipBenchmark.NOT_APPLICABLE) {
             for ((category, reason) in categories) {
                 assertTrue("$corpus $category needs a reason", reason.isNotBlank())
@@ -353,12 +346,11 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         val text = file.readText()
         assertFalse("no absolute path names a user", text.contains("/Users/"))
         val entries = RelationshipBenchmark.parseCorpus(file)
-        val fullCorpusCases = checkedInCaseFolders().filter { !it.path.replace(File.separatorChar, '/').contains("/rust/relationships/") }
-        assertEquals("all checked-in cases are listed", fullCorpusCases.size, entries.count { it.path != null })
+        assertEquals("all checked-in cases are listed", checkedInCaseFolders().size, entries.count { it.path != null })
         val commits = entries.filter { it.repository != null }
         assertTrue("the full list names the real-commit clones", commits.size >= 4)
         val hashes = commits.flatMap { line -> Regex("[0-9a-f]{40}").findAll(line.line).map { it.value }.toList() }
-        val folders = checkedInCommitFolders().filter { !it.path.replace(File.separatorChar, '/').contains("/rust/relationships/commits/") }
+        val folders = checkedInCommitFolders()
         assertEquals("every checked-in labelled commit is in the list, once", folders.size, hashes.distinct().size)
         for (folder in folders) {
             assertTrue(
@@ -370,7 +362,7 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
 
     fun `test the checked-in real commit labels meet the commit minimum`() {
         // relationships/01-relationship-benchmark R10, R35, R36, R37
-        for (corpus in listOf("java", "kotlin", "scala2", "scala3")) {
+        for (corpus in RelationshipBenchmark.MATRIX_CORPORA) {
             val directory = File("src/test/testData/$corpus/relationships/commits")
             val commits = directory.listFiles().orEmpty().filter { it.isDirectory }
                 .flatMap { repository -> repository.listFiles().orEmpty().filter { it.isDirectory } }
@@ -1445,10 +1437,14 @@ notes: "Built inside the test."
         return output
     }
 
-    /** Every checked-in case folder, which is a folder under a corpus's relationships folder with a label beside its texts. */
+    /** Every checked-in case folder in the root corpora, with a label beside its texts. */
     private fun checkedInCaseFolders(): List<File> =
         File("src/test/testData").walkTopDown()
-            .filter { it.isFile && it.name == "label.yaml" && !it.path.replace(File.separatorChar, '/').contains("/commits/") }
+            .filter { file ->
+                file.isFile && file.name == "label.yaml" &&
+                    !file.path.replace(File.separatorChar, '/').contains("/commits/") &&
+                    !file.path.replace(File.separatorChar, '/').contains("/rust/relationships/")
+            }
             .map { it.parentFile }
             .sortedBy { it.path }
             .toList()

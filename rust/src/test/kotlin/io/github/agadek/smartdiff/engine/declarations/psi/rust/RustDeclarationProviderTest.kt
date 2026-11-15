@@ -13,6 +13,13 @@ import io.github.agadek.smartdiff.engine.declarations.model.Declaration
 import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationEngine
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationProvider
+import io.github.agadek.smartdiff.merge.MergeComparison
+import io.github.agadek.smartdiff.merge.MergeTexts
+import io.github.agadek.smartdiff.ui.OutlineModel
+import io.github.agadek.smartdiff.ui.merge.MergeOutlineLayout
+import io.github.agadek.smartdiff.ui.merge.MergeOutlineModel
+import io.github.agadek.smartdiff.ui.merge.MergeSideName
+import java.util.concurrent.Executors
 
 class RustDeclarationProviderTest : BasePlatformTestCase() {
 
@@ -282,11 +289,19 @@ class RustDeclarationProviderTest : BasePlatformTestCase() {
         // languages/05-rust R11
         val text = """
             fn f(p: *const T, q: *mut T) {}
+            fn g(p: *const *mut T) {}
+            fn h(p: &*const T) {}
         """.trimIndent() + "\n"
         val tree = tree(text)
         val f = tree.topLevel.single { it.name == "f" }
         assertEquals("*constT,*mutT", f.signature)
         assertEquals("*const T, *mut T", f.displaySignature)
+        val g = tree.topLevel.single { it.name == "g" }
+        assertEquals("*const*mutT", g.signature)
+        assertEquals("*const *mut T", g.displaySignature)
+        val h = tree.topLevel.single { it.name == "h" }
+        assertEquals("&*constT", h.signature)
+        assertEquals("&*const T", h.displaySignature)
         assertOffsetsEqualRequestText(text, tree)
     }
 
@@ -529,11 +544,41 @@ class RustDeclarationProviderTest : BasePlatformTestCase() {
                 fn f(&self) -> i32 { 3 }
             }
         """.trimIndent() + "\n"
-        val leftResult = compare(base, left)
-        val rightResult = compare(base, right)
-        assertEquals(Status.ANALYZED, leftResult.status)
-        assertEquals(Status.ANALYZED, rightResult.status)
-        assertTrue("left side reports changes", leftResult.changes.isNotEmpty())
-        assertTrue("right side reports changes", rightResult.changes.isNotEmpty())
+        val executor = Executors.newSingleThreadExecutor()
+        try {
+            val engine = DeclarationEngine(ProjectManager.getInstance().defaultProject)
+            val joined = ReadAction.compute(ThrowableComputable {
+                MergeComparison.compare(
+                    engine,
+                    MergeTexts(base, left, right, "Rust", "file.rs"),
+                    Cancellation.NONE,
+                    executor,
+                )
+            })
+            assertTrue("left side analyzed", joined.isAnalyzed(io.github.agadek.smartdiff.merge.MergeSide.LEFT))
+            assertTrue("right side analyzed", joined.isAnalyzed(io.github.agadek.smartdiff.merge.MergeSide.RIGHT))
+
+            val model = MergeOutlineModel.build(
+                joined,
+                base,
+                left,
+                right,
+                MergeSideName("main", "main"),
+                MergeSideName("feature", "feature"),
+                MergeOutlineLayout.GROUPED_BY_SIDE,
+            )
+            assertEquals("1 changed on both sides", model.summary)
+            val group = model.items.single()
+            assertEquals("Changed on both sides", group.title)
+            val row = group.children.single()
+            assertTrue("row has group side labels: ${row.label}", row.label.contains("main:") && row.label.contains("feature:"))
+
+            val leftResult = compare(base, left)
+            assertEquals(Status.ANALYZED, leftResult.status)
+            val summary = OutlineModel.summary(leftResult, oldText = base, newText = left)
+            assertTrue("Changes tree summary reports a change: $summary", summary.contains("changed"))
+        } finally {
+            executor.shutdownNow()
+        }
     }
 }

@@ -48,7 +48,6 @@ class RefactoringsCoverageTest : BasePlatformTestCase() {
             val old = read(File(case, "old.$extension"))
             val new = read(File(case, "new.$extension"))
             val result = engine.compare(ComparisonRequest(old, new, label.language, "${label.case}.$extension"), Cancellation.NONE)
-            if (result.status == Status.UNSUPPORTED) continue
             assertCovered(case.name, result, old, new)
         }
     }
@@ -103,7 +102,6 @@ class RefactoringsCoverageTest : BasePlatformTestCase() {
         "JAVA" -> "java"
         "kotlin" -> "kt"
         "Scala" -> "scala"
-        "Rust" -> "rs"
         else -> error("unknown language $language")
     }
 
