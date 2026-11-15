@@ -1,10 +1,13 @@
 package io.github.agadek.smartdiff.merge
 
+import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import io.github.agadek.smartdiff.engine.api.AnalysisNote
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationEngine
+import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationProvider
+import io.github.agadek.smartdiff.engine.declarations.psi.properties.PropertiesDeclarationProvider
 import java.util.concurrent.Executor
 
 /** The merge outline for a structure-view fallback file (languages/06-structure-view-fallback R11). */
@@ -12,6 +15,11 @@ class StructureViewMergeTest : BasePlatformTestCase() {
 
     // languages/06-structure-view-fallback R11
     fun `test R11 both sides of a merge are compared through the fallback`() {
+        ExtensionTestUtil.maskExtensions(
+            DeclarationProvider.EP_NAME,
+            DeclarationProvider.EP_NAME.extensionList.filterNot { it is PropertiesDeclarationProvider },
+            testRootDisposable,
+        )
         val engine = DeclarationEngine(project)
         val base = "a=1\nb=2\n"
         val left = "a=1\nb=3\n"

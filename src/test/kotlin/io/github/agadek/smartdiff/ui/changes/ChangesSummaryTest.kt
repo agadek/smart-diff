@@ -56,6 +56,8 @@ import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
+import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationProvider
+import io.github.agadek.smartdiff.engine.declarations.psi.properties.PropertiesDeclarationProvider
 import io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory
 import io.github.agadek.smartdiff.ui.OutlineController
 import io.github.agadek.smartdiff.ui.OutlinePath
@@ -312,6 +314,11 @@ class ChangesSummaryTest : BasePlatformTestCase() {
 
     fun `test R11 a fallback file gets a summary with its structure-view note`() {
         // languages/06-structure-view-fallback R11
+        ExtensionTestUtil.maskExtensions(
+            DeclarationProvider.EP_NAME,
+            DeclarationProvider.EP_NAME.extensionList.filterNot { it is PropertiesDeclarationProvider },
+            testRootDisposable,
+        )
         val change = modified("service.properties", "port=8080\n", "port=9090\n")
 
         summaryNode(change)
