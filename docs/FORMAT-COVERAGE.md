@@ -50,8 +50,8 @@ Plugin ids and licensing are as known on 2026-11-13. The first phase of each gro
 | --- | --- | --- | --- | --- | --- |
 | JSON, JSON with comments, JSON5 | `com.intellij.modules.json`, bundled | Free, open source | Current target | Object members, nested; arrays as in [ADR 0009](adr/0009-structured-data-keys-are-declarations.md) | Insignificant outside strings |
 | YAML | `org.jetbrains.plugins.yaml`, bundled | Free, open source | Current target | Mapping keys, nested; each document of a multi-document file as a section | Indentation significant; formatting-only only after a tested rule ([ADR 0003](adr/0003-conservative-classification.md)) |
-| TOML | `org.toml.lang`, bundled | Free, open source | Current target | Tables and array-of-tables entries as sections, keys as members, dotted keys split | Line breaks significant |
-| Properties | `com.intellij.properties`, bundled | Free, open source | Current target | Each key; no nesting | Insignificant around the separator; line continuations are layout |
+| TOML | `org.toml.lang`, bundled | Free, open source | Current target | Tables and array-of-tables entries as sections, keys as members, dotted keys one key each ([languages/12](specs/languages/12-toml.md)) | Line breaks significant |
+| Properties | `com.intellij.properties`, bundled | Free, open source | Current target | Each key; no nesting ([languages/11](specs/languages/11-properties.md)) | Insignificant around the separator; line continuations are content |
 | XML (Maven, Spring, Android, any) | `com.intellij.modules.xml`, platform | Free, open source | Current target | Tags, named by tag and an identifying attribute or child (§4) | Insignificant inside a tag; text content compared exactly |
 
 - **Common noise.** Reordered keys, reformatted files and re-indented blocks are the usual noise in configuration reviews, and a renamed key is otherwise shown as a removed and an added line far apart.
@@ -117,7 +117,7 @@ Each phase is one pull request, or a spec pull request and a code pull request, 
 | D0 | Spike S10, ADR 0009 accepted, the `KEY`, `TAG` and `SECTION` kinds | Nothing; can run beside G0 | Not started |
 | D1 | JSON provider | D0 | Not started |
 | D2 | YAML provider, with the indentation rule as its own requirement | D1 | Implemented 2026-11-14 |
-| D3 | Properties and TOML providers | D1 | Not started |
+| D3 | Properties and TOML providers | D1 | Specified 2026-11-15 in [languages/11](specs/languages/11-properties.md) and [languages/12](specs/languages/12-toml.md) |
 | D4 | XML provider, with POM and Spring naming; HTML on the same provider | D1 | Not started |
 | B0 | Build pattern for paid IDEs, as an amendment to the S8 ADR; verifier jobs for WebStorm and GoLand | R0 | Not started |
 | B1 | JavaScript and TypeScript provider | B0 | Not started |

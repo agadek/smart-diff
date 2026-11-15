@@ -390,6 +390,14 @@ Implemented ([languages/08](specs/languages/08-groovy.md)), when the Groovy plug
 
 In `.gradle.kts` build scripts, a top-level script initializer whose expression is a call with a trailing lambda becomes a `SECTION` declaration, following the same naming rule as Groovy build scripts (M2b). Other `.kts` scripts are unchanged. See [Kotlin](specs/languages/02-kotlin.md) and [Groovy: details](specs/languages/08-groovy-details.md).
 
+### 6.17 Properties provider
+
+Accepted, 2026-11-15 ([languages/11](specs/languages/11-properties.md)). Each property is a `KEY` named by its unescaped key, with no nesting; the PSI mapping, whitespace policy, packaging and tests are in its [details file](specs/languages/11-properties-details.md).
+
+### 6.18 TOML provider
+
+Accepted, 2026-11-15 ([languages/12](specs/languages/12-toml.md)). Pairs are `KEY`s, tables and array-of-tables entries are flat `SECTION`s; the PSI mapping, the array identity and array-of-tables naming rules, whitespace policy, packaging and tests are in its [details file](specs/languages/12-toml-details.md).
+
 ## 7. Declaration engine: matching
 
 Inputs: the old and new `DeclarationTree`. Matching is global over all declarations in the file, so a declaration can be matched across containers. Each rule runs over the declarations still unmatched after the previous rule. Within a rule, declarations are processed in source order of the old side, which makes the result deterministic.

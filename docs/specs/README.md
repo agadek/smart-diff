@@ -72,6 +72,8 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [08 Groovy](languages/08-groovy.md) | implemented, 2026-11-15 |
 | [09 Shell](languages/09-shell.md) | implemented, 2026-11-14 |
 | [10 YAML](languages/10-yaml.md) | implemented, 2026-11-14 |
+| [11 Properties](languages/11-properties.md) | accepted, 2026-11-15 |
+| [12 TOML](languages/12-toml.md) | accepted, 2026-11-15 |
 
 ## Outline
 
