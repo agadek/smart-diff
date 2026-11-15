@@ -6,6 +6,7 @@ import io.github.agadek.smartdiff.engine.api.ConfidencePolicy
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.Evidence
 import io.github.agadek.smartdiff.engine.api.EvidenceOrder
+import io.github.agadek.smartdiff.engine.api.LanguageIds
 import io.github.agadek.smartdiff.engine.api.Relationship
 import io.github.agadek.smartdiff.engine.api.RelationshipEndpoint
 import io.github.agadek.smartdiff.engine.api.RelationshipKind
@@ -219,17 +220,22 @@ object DeclarationMatcher {
                 if (o.children.isNotEmpty() && n.children.isNotEmpty()) kindContainers += o to n
             }
             // Python (languages/04-python R18): a CLASS and a FUNCTION of the same name in the same container are a kind change.
-            // Matches PythonReferenceResolver.PYTHON language id ("Python").
-            if (languageId == "Python") {
-                val removedPy = (oldContainer?.children ?: old.topLevel).filter { it !in pairs && it !in uncertainOld && (it.kind == DeclarationKind.CLASS || it.kind == DeclarationKind.FUNCTION) }
-                val addedPy = (newContainer?.children ?: new.topLevel).filter { it !in newMatched && it !in uncertainNew && (it.kind == DeclarationKind.CLASS || it.kind == DeclarationKind.FUNCTION) }
+            if (languageId == LanguageIds.PYTHON) {
+                val removedPy = (oldContainer?.children ?: old.topLevel).filter { decl ->
+                    decl !in uncertainOld && (decl.kind == DeclarationKind.CLASS || decl.kind == DeclarationKind.FUNCTION)
+                }
+                val addedPy = (newContainer?.children ?: new.topLevel).filter { decl ->
+                    decl !in uncertainNew && (decl.kind == DeclarationKind.CLASS || decl.kind == DeclarationKind.FUNCTION)
+                }
                 for (o in removedPy) {
-                    if (o !in pairs) {
-                        val n = addedPy.singleOrNull { it.name == o.name && it !in newMatched && (it.kind == DeclarationKind.CLASS || it.kind == DeclarationKind.FUNCTION) && it.kind != o.kind }
-                        if (n != null) {
-                            pairs[o] = n to MatchRule.KIND_CHANGED
-                            newMatched += n
-                        }
+                    val n = addedPy.singleOrNull { candidate ->
+                        candidate !in newMatched &&
+                            candidate.name == o.name &&
+                            candidate.kind != o.kind
+                    }
+                    if (n != null) {
+                        pairs[o] = n to MatchRule.KIND_CHANGED
+                        newMatched += n
                     }
                 }
             }

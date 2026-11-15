@@ -98,6 +98,7 @@ class ReferenceResolutionTest : BasePlatformTestCase() {
     }
 
     fun `test R19 Python resolves a renamed class usage`() {
+        // languages/04-python R19
         val old = "class Order:\n    def value(self):\n        return 1\n\no = Order()\n"
         val new = "class Cart:\n    def value(self):\n        return 1\n\no = Cart()\n"
         val references = usages("Python", "m.py", old, new)
@@ -106,6 +107,7 @@ class ReferenceResolutionTest : BasePlatformTestCase() {
     }
 
     fun `test R19 Python resolves a renamed variable usage`() {
+        // languages/04-python R19
         val old = """
             CONFIG = {
                 "a": 1,
@@ -131,11 +133,15 @@ class ReferenceResolutionTest : BasePlatformTestCase() {
                 return SETTINGS["b"]
         """.trimIndent() + "\n"
         val references = usages("Python", "m.py", old, new)
+        assertEquals(2, references.size)
         assertEquals("CONFIG", old.substring(references[0].oldRange.start, references[0].oldRange.end))
         assertEquals("SETTINGS", new.substring(references[0].newRange.start, references[0].newRange.end))
+        assertEquals("CONFIG", old.substring(references[1].oldRange.start, references[1].oldRange.end))
+        assertEquals("SETTINGS", new.substring(references[1].newRange.start, references[1].newRange.end))
     }
 
     fun `test R19 Python resolves a self method call`() {
+        // languages/04-python R19
         val old = "class C:\n    def helper(self):\n        return 1 + 2\n    def use(self):\n        return self.helper()\n"
         val new = "class C:\n    def helper2(self):\n        return 1 + 2\n    def use(self):\n        return self.helper2()\n"
         val references = usages("Python", "m.py", old, new)
@@ -144,8 +150,9 @@ class ReferenceResolutionTest : BasePlatformTestCase() {
     }
 
     fun `test R19 Python excludes obj helper and unresolved names`() {
+        // languages/04-python R19
         val old = "class C:\n    def helper(self):\n        return 1 + 2\n\no = C()\nprint(o.helper())\nprint(missing())\n"
-        val new = "class C:\n    def helper2(self):\n        return 1 + 2\n\no = C()\nprint(o.helper())\nprint(missing())\n"
+        val new = "class C:\n    def helper2(self):\n        return 1 + 2\n\no = C()\nprint(o.helper2())\nprint(missing())\n"
         val request = ComparisonRequest(old, new, "Python", "m.py")
         val result = compareSafely(DeclarationEngine(project), request, Cancellation.NONE)
         val outcome = ReferencePass.runForBenchmark(project, request, result, Cancellation.NONE)
@@ -157,6 +164,7 @@ class ReferenceResolutionTest : BasePlatformTestCase() {
     }
 
     fun `test R19 Python groups only the renamed method when same name exists`() {
+        // languages/04-python R19
         val old = "def helper():\n    return 1 + 2\n\nclass C:\n    def helper(self):\n        return 3\n    def use(self):\n        return self.helper()\n"
         val new = "def helper():\n    return 1 + 2\n\nclass C:\n    def helper2(self):\n        return 3\n    def use(self):\n        return self.helper2()\n"
         val references = usages("Python", "m.py", old, new)

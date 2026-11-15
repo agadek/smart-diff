@@ -15,9 +15,11 @@ import com.jetbrains.python.psi.PyStatement
 import com.jetbrains.python.psi.PyTargetExpression
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
+import io.github.agadek.smartdiff.engine.api.LanguageIds
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
+import java.util.concurrent.CancellationException
 
 /**
  * Python usages (languages/04-python-details.md R19) through [PyReferenceExpression.reference.resolve()]. Only references
@@ -26,7 +28,7 @@ import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
  */
 class PythonReferenceResolver : ReferenceResolver {
 
-    override fun supports(languageId: String): Boolean = languageId == PYTHON
+    override fun supports(languageId: String): Boolean = languageId == LanguageIds.PYTHON
 
     override fun target(file: PsiFile, range: TextRange, subject: Subject.Declaration): PsiElement? {
         return when (subject.kind) {
@@ -72,17 +74,21 @@ class PythonReferenceResolver : ReferenceResolver {
             cancellation.checkCanceled()
             val refExpr = element as PyReferenceExpression
             val qualifier = refExpr.qualifier
-            if (qualifier != null) {
-                // details section 8: only allow self.method() to methods of the enclosing class
-                if (!isSelfMethodCallInEnclosingClass(refExpr, targets)) continue
-            }
             val range = refExpr.nameElement?.textRange ?: continue
             val resolved = try {
                 refExpr.reference?.resolve()
+            } catch (e: com.intellij.openapi.progress.ProcessCanceledException) {
+                throw e
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Throwable) {
                 LOG.debug(e)
                 null
             } ?: continue
+            if (qualifier != null) {
+                // details section 8: only allow self.method() to methods of the enclosing class
+                if (!isSelfMethodCallToClassMethod(refExpr, resolved)) continue
+            }
             for (target in targets) {
                 if (sameDeclaration(resolved, target)) {
                     found.getOrPut(target, ::linkedSetOf) += TextRange(range.startOffset, range.endOffset)
@@ -93,18 +99,14 @@ class PythonReferenceResolver : ReferenceResolver {
         return found.mapValues { (_, ranges) -> ranges.sortedBy { it.start } }
     }
 
-    private fun isSelfMethodCallInEnclosingClass(refExpr: PyReferenceExpression, targets: Set<PsiElement>): Boolean {
+    private fun isSelfMethodCallToClassMethod(refExpr: PyReferenceExpression, resolved: PsiElement?): Boolean {
         val qualifier = refExpr.qualifier ?: return false
-        // qualifier must be a plain reference named "self"
         if (qualifier !is PyReferenceExpression) return false
-        val qName = qualifier.referencedName
-        if (qName != "self") return false
+        if (qualifier.referencedName != "self") return false
         val fn = PsiTreeUtil.getParentOfType(refExpr, PyFunction::class.java) ?: return false
         val cls = PsiTreeUtil.getParentOfType(fn, PyClass::class.java) ?: return false
-        // target must be a PyFunction that is a method of this same class
-        return targets.any { t ->
-            t is PyFunction && PsiTreeUtil.getParentOfType(t, PyClass::class.java) == cls
-        }
+        if (resolved !is PyFunction) return false
+        return PsiTreeUtil.getParentOfType(resolved, PyClass::class.java) == cls
     }
 
     private fun sameDeclaration(resolved: PsiElement, target: PsiElement): Boolean {
@@ -131,7 +133,6 @@ class PythonReferenceResolver : ReferenceResolver {
     override fun whitespacePolicy(file: PsiFile): WhitespacePolicy = WhitespacePolicy.INDENTATION_SIGNIFICANT
 
     private companion object {
-        const val PYTHON = "Python"
         val LOG: Logger = Logger.getInstance(PythonReferenceResolver::class.java)
     }
 }
