@@ -1,0 +1,17 @@
+case: kind-change-1
+language: Rust
+corpus: rust
+category: kind-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [KIND_CHANGE]
+      old: { path: "", kind: STRUCT, name: "Item", signature: null }
+      new: { path: "", kind: ENUM, name: "Item", signature: null }
+  changes:
+    - subject: { path: "", kind: ENUM, name: "Item", signature: null }
+      presence: MATCHED
+      content: CHANGED
+      kindChangedFrom: STRUCT
+  ambiguous: []
+notes: "A struct becomes an enum."

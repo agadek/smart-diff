@@ -1,0 +1,6 @@
+src/test/testData/rust/relationships/extraction-1
+src/test/testData/rust/relationships/impl-trait-change-1
+src/test/testData/rust/relationships/inlining-1
+src/test/testData/rust/relationships/kind-change-1
+src/test/testData/rust/relationships/move-in-file-1
+src/test/testData/rust/relationships/rename-candidate-1

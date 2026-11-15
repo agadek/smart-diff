@@ -1,6 +1,6 @@
 # Rust: details
 
-Status: proposed, 2026-11-13
+Status: implemented, 2026-11-15
 
 **Feature:** [Rust](05-rust.md)
 
@@ -110,7 +110,7 @@ They run in parallel with the [Python phases](04-python-details.md#9-phases) (de
 | R1 | `RustDeclarationProvider`, `RustInterop`, the new kinds, the macro whitespace rule, provider tests and golden fixtures | R1 to R14 pass in tests named after them |
 | R2 | Merge fixtures, relationship benchmark fixtures and the corpus validation | R15 to R17 pass; the benchmark keeps its `no-new-wrong-pairs` gate; a corpus run is in [VALIDATION.md](../../VALIDATION.md) |
 
-After R2 the feature is implemented, the plugin description, README and CHANGELOG name Rust, and it ships in the next release.
+R2 is done: R15 to R17 pass, the benchmark keeps its `no-new-wrong-pairs` gate, and corpus validation is recorded in [VALIDATION.md](../../VALIDATION.md). The feature is implemented, the plugin description, README and CHANGELOG name Rust, and it ships in the next release.
 
 ## 11. Tests
 
@@ -119,9 +119,9 @@ After R2 the feature is implemented, the plugin description, README and CHANGELO
 - **`RustDeclarationProviderTest`** (R1, `rust/src/test/kotlin/.../psi/rust/`): tests named after R1 to R14; each names its requirement with `// languages/05-rust Rn`, and offset checks assert every declaration's range and tokens match the request text. R1 also checks the optional descriptor registers the provider when the Rust plugin is present.
 - **Golden fixtures** in `src/test/testData/rust/`: the standard set of technical specification §12 (overloads become repeated keys through `#[cfg]`, since Rust has no overloading), plus Rust cases: a derive added (R10), a trait impl's trait changed (§6), two inherent impls of one type (R12), an item added to an inline module (R4), a variant added (R7), a field added to a struct (R7), a method turned into an associated function (§5), a `macro_rules!` changed, `println!` arguments re-spaced (R14), a whole file reformatted outside macros (R13), items in an `extern` block (R8), and a `#[cfg(test)] mod tests` with a changed test. `RustGoldenFixturesTest` (`rust/src/test/kotlin/.../psi/rust/`) runs them from the `:rust` test task via the shared golden harness.
 - **Shared golden harness:** `Rendering`, `NothingHidden` and `GoldenFixtures` live in the root project's `testFixtures` source set (`src/testFixtures/kotlin/...`) so both the root `GoldenFixturesTest` and `:rust` tests use the same outline rendering and nothing-hidden checks. `:rust` forwards `-Psmartdiff.updateGolden` to its test task.
-- **Merge fixtures** in `src/test/testData/rust/merge/`, covering every case of [merge/05](../merge/05-scala-merges.md) R11, plus an `impl` block changed on both sides (R16).
-- **Relationship benchmark** cases in `src/test/testData/rust/relationships/` with `corpus: rust`: extraction, inlining, rename candidate and kind change, labelled as in [relationships/01](../relationships/01-relationship-benchmark.md); usage labels are left empty, since Rust has no usage groups.
-- **Corpus validation:** `CorpusValidationTest` and the benchmark's real-commit lines accept `.rs` files. The first run uses recent commits from two active open-source Rust projects, for example a command-line tool and a serialization library, and records the results in [VALIDATION.md](../../VALIDATION.md).
+- **Merge fixtures:** `RustMergeFixturesTest` (`rust/src/test/kotlin/.../merge/`) runs the cases in `src/test/testData/rust/merge/` from the `:rust` test task, covering every case of [merge/05](../merge/05-scala-merges.md) R11 and Rust-specific merge cases (R16/R17).
+- **Relationship benchmark:** `RustRelationshipBenchmarkTest` (`rust/src/test/kotlin/.../relationships/`) runs the Rust cases listed in `src/test/testData/relationships-corpus-rust.txt` from the `:rust` test task, with `corpus: rust` cases in `src/test/testData/rust/relationships/` labelled as in [relationships/01](../relationships/01-relationship-benchmark.md) (usage labels left empty, since Rust has no usage groups).
+- **Corpus validation:** `RustCorpusValidationTest` (`rust/src/test/kotlin/.../psi/rust/`) runs from the `:rust` test task with `-Psmartdiff.validation.rust.corpus=<list>`; `CorpusValidationTest` and the benchmark's real-commit lines accept `.rs` files. The first run uses recent commits from two active open-source Rust projects and records the results in [VALIDATION.md](../../VALIDATION.md).
 - **Requirement names:** every test names its requirement, such as `// languages/05-rust R14`.
 
 ## 12. Open questions

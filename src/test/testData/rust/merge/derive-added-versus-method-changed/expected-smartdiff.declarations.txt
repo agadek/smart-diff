@@ -1,0 +1,4 @@
+left: ANALYZED  right: ANALYZED
+struct Point  LEFT_ONLY  left: changed  base 1-3  left 1-4  right 1-3
+impl Point  UNCHANGED  base 5-9  left 6-10  right 5-9
+  function value(&self)  RIGHT_ONLY  right: changed  base 6-8  left 7-9  right 6-8

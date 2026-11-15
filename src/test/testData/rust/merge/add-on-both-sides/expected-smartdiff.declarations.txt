@@ -1,0 +1,4 @@
+left: ANALYZED  right: ANALYZED
+impl S  UNCHANGED  base 3-5  left 3-6  right 3-6
+  function left_added(&self)  LEFT_ONLY  left: added  base -  left 5  right -
+  function right_added(&self)  RIGHT_ONLY  right: added  base -  left -  right 5

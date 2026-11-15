@@ -1,0 +1,17 @@
+case: rename-candidate-1
+language: Rust
+corpus: rust
+category: method-rename
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "", kind: FUNCTION, name: "calculate_total", signature: "&[i32]" }
+      new: { path: "", kind: FUNCTION, name: "compute_sum", signature: "&[i32]" }
+      usages: []
+  changes:
+    - subject: { path: "", kind: FUNCTION, name: "compute_sum", signature: "&[i32]" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A function is renamed with the same body."

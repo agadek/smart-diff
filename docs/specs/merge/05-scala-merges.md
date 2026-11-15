@@ -16,7 +16,7 @@ Status: implemented, 2026-11-01
 - **R6** A class and its companion object are separate rows, and a change to one never pairs with the other.
 - **R7** A given, an extension block and its methods each get their own row, as in a two-sided Scala diff.
 - **R8** A [kind change](../../GLOSSARY.md#kind-change) on one side, such as a class turned into a trait, is a change on that side, and a member changed on the other side stays in place, changed on that side only.
-- **R9** Golden merge fixtures exist for Java, Kotlin, Scala 2 and Scala 3, in `src/test/testData/<language>/merge/<case>/` with `base`, `left` and `right` files.
+- **R9** Golden merge fixtures exist for Java, Kotlin, Scala 2, Scala 3 and Rust, in `src/test/testData/<language>/merge/<case>/` with `base`, `left` and `right` files. Rust fixtures run in the `:rust` test task.
 - **R10** Each fixture has an expected rendering: one line per row with its group, each side's labels and the lines it spans in the base, left and right.
 - **R11** Every language covers: changed on both sides, changed on one side only, rename versus change, remove versus change, add on both sides, move versus change, formatting-only versus change, the [same change on both sides](../../GLOSSARY.md#same-change-on-both-sides), and imports changed on both sides.
 - **R12** Scala 3 also covers a braces-to-indentation change on one side and a given changed on both sides.
