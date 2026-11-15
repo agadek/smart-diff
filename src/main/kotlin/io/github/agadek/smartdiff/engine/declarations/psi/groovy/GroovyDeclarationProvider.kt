@@ -9,17 +9,10 @@ import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiModifierList
 import com.intellij.psi.util.PsiTreeUtil
-import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
-import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
-import io.github.agadek.smartdiff.engine.declarations.model.Token
-import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationInfo
-import io.github.agadek.smartdiff.engine.declarations.psi.LexedTokens
 import io.github.agadek.smartdiff.engine.declarations.psi.PsiDeclarationProvider
-import io.github.agadek.smartdiff.engine.declarations.psi.PsiDeclarationNode
-import io.github.agadek.smartdiff.engine.declarations.psi.PsiTreeParts
 import io.github.agadek.smartdiff.engine.declarations.psi.Signatures
 import org.jetbrains.plugins.groovy.GroovyLanguage
 import org.jetbrains.plugins.groovy.lang.groovydoc.psi.api.GrDocComment
@@ -49,92 +42,9 @@ class GroovyDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_B
 
     override fun supports(languageId: String): Boolean = languageId == GroovyLanguage.id
 
-    override fun build(file: PsiFile, cancellation: Cancellation): io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree {
-        if (isGradleBuildScript(file.name)) return buildWithTrailingSeparators(file, cancellation)
-        return super.build(file, cancellation)
-    }
-
-    private fun buildWithTrailingSeparators(file: PsiFile, cancellation: Cancellation): io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree {
-        val text = file.viewProvider.contents
-        fun node(element: PsiElement): Node? {
-            cancellation.checkCanceled()
-            val info = describe(element) ?: return null
-            val range = info.range ?: element.textRange.let { TextRange(it.startOffset, it.endOffset) }
-            if (range.length == 0) return null
-            return Node(info, range, info.members.mapNotNull(::node))
-        }
-        val topLevel = topLevel(file).mapNotNull(::node)
-        val fileRegionError = PsiTreeParts.markParseErrors(file, topLevel, cancellation, ::isParseError)
-        val significant = significantWhitespace(file)
-        val tokens = LexedTokens.lex(createLexer(file), parserDefinition(file), text, cancellation, ::tokenKind)
-        PsiTreeParts.assignLeading(topLevel, tokens, isLayout = ::isLayoutToken)
-        assignTrailingSeparators(topLevel, tokens, text.length)
-
-        fun declaration(node: Node): io.github.agadek.smartdiff.engine.declarations.model.Declaration {
-            cancellation.checkCanceled()
-            val leading = node.leading?.let { tokens.own(it, emptyList(), significant) }.orEmpty()
-            val leadingStarts = node.leading?.let { tokens.ownStarts(it, emptyList()) }.orEmpty()
-            val excluded = node.children.map { it.extent }
-            return io.github.agadek.smartdiff.engine.declarations.model.Declaration(
-                kind = node.info.kind,
-                name = node.info.name,
-                signature = node.info.signature,
-                range = node.range,
-                children = node.children.map(::declaration),
-                ownTokens = leading + tokens.own(node.range, excluded, significant),
-                hasParseError = node.parseError,
-                leadingWhitespace = node.leading,
-                displaySignature = node.info.displaySignature,
-                receiver = node.info.receiver,
-                ownTokenStarts = leadingStarts + tokens.ownStarts(node.range, excluded),
-                body = node.info.body?.let(::bodyRange),
-                nameRange = node.info.nameRange,
-                layout = node.trailing,
-            )
-        }
-        val whole = TextRange(0, text.length)
-        val covered = topLevel.map { node ->
-            val start = node.leading?.start ?: node.range.start
-            val end = node.trailing?.end ?: node.range.end
-            TextRange(start, end)
-        }
-        val fileRegion = io.github.agadek.smartdiff.engine.declarations.model.FileRegion(
-            ranges = PsiTreeParts.gaps(whole, covered),
-            tokens = tokens.own(whole, covered, significant),
-            hasParseError = fileRegionError,
-        )
-        return io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree(topLevel.map(::declaration), fileRegion, whitespacePolicy(file))
-    }
-
-    // Between top-level script declarations the separator is trailing layout of the previous declaration, so adding,
-    // removing or moving one leaves the others unchanged (languages/08-groovy R21; declarations/02-change-classification R14).
-    private fun assignTrailingSeparators(nodes: List<Node>, tokens: LexedTokens, containerEnd: Int) {
-        for ((index, node) in nodes.withIndex()) {
-            val limit = nodes.getOrNull(index + 1)?.range?.start ?: containerEnd
-            val end = tokens.layoutEnd(node.range.end, limit, ::isLayoutToken)
-            if (end > node.range.end) node.trailing = TextRange(node.range.end, end)
-            val next = nodes.getOrNull(index + 1) ?: continue
-            val leading = next.leading ?: continue
-            if (leading.start < end) {
-                next.leading = if (end < leading.end) TextRange(end, leading.end) else null
-            }
-        }
-    }
-
-    private fun isLayoutToken(token: Token): Boolean =
-        token.kind == TokenKind.WHITESPACE || token.text.all { it.isWhitespace() }
-
-    /** The inside of a block's braces, or the whole of any other body. */
-    private fun bodyRange(element: PsiElement): TextRange {
-        val range = element.textRange
-        val first = element.firstChild
-        val last = element.lastChild
-        return if (first != null && last != null && first !== last && first.text == "{" && last.text == "}") {
-            TextRange(first.textRange.endOffset, last.textRange.startOffset)
-        } else {
-            TextRange(range.startOffset, range.endOffset)
-        }
-    }
+    // In Gradle build scripts, separators between top-level sections are trailing layout of the previous declaration
+    // (languages/08-groovy R21; declarations/02-change-classification R14).
+    override fun trailingSeparatorsAreLayout(file: PsiFile): Boolean = isGradleBuildScript(file.name)
 
     override fun parse(project: Project, text: CharSequence, fileName: String?, dialect: Language?): PsiFile {
         val name = when {
@@ -340,16 +250,6 @@ class GroovyDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_B
     }
 
     private fun isGradleBuildScript(name: String): Boolean = name.lowercase().endsWith(".gradle")
-
-    private class Node(
-        val info: DeclarationInfo,
-        override val range: TextRange,
-        override val children: List<Node>,
-    ) : PsiDeclarationNode {
-        override var parseError = false
-        override var leading: TextRange? = null
-        var trailing: TextRange? = null
-    }
 
     private companion object {
         const val FILE_NAME = "SmartDiff.groovy"
