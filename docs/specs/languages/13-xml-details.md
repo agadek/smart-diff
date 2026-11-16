@@ -1,6 +1,6 @@
 # XML: details
 
-Status: accepted, 2026-11-16
+Status: implemented, 2026-11-16
 
 **Feature:** [XML](13-xml.md)
 
@@ -8,7 +8,7 @@ Status: accepted, 2026-11-16
 
 - **Module:** XML PSI is platform support, module `com.intellij.modules.xml` (R1), present in every IntelliJ-based IDE on the current target. The optional descriptor is re-checked on IntelliJ Platform 2025.1.3 and the latest release.
 - **Descriptor:** the provider registers in `META-INF/smartdiff-xml.xml`, loaded through `<depends optional="true" config-file="smartdiff-xml.xml">com.intellij.modules.xml</depends>` in `plugin.xml`, after the TOML line. The module is platform, so the guard is a precaution and the provider is available in every supported IDE; the pattern stays the same as the other providers'.
-- **Build:** `bundledPlugin("com.intellij.modules.xml")` in `build.gradle.kts`, as for `com.intellij.modules.json`, so the XML PSI is on the compile and test classpath; it stays optional at runtime through the optional descriptor.
+- **Build:** no change to `build.gradle.kts`. The XML PSI is part of the platform, so it is on the compile and test classpath of the current target without a `bundledPlugin` entry; it stays optional at runtime through the optional descriptor.
 - **IDE versions:** no change to P6.
 
 ## 2. Language id and file types
@@ -55,7 +55,8 @@ A tag is named by the first rule that applies:
 ## 6. Whitespace and text (R9, R10)
 
 - **Policy:** XML files use `WhitespacePolicy.INSIGNIFICANT`. `OutlineController.whitespacePolicy` maps the `XML` language id to `INSIGNIFICANT`, so spacing inside a tag, between attributes and between child tags, is formatting-only when nothing else changed (R10).
-- **Exact text (R9):** the provider overrides `significantWhitespace(file)` to return the ranges of text content that compares exactly: every `XmlText` whose text holds at least one non-whitespace character, and every CDATA section. `LexedTokens` promotes whitespace tokens that start in those ranges to `TokenKind.OTHER`, so whitespace normalization never drops them and text spacing compares exactly. Whitespace-only `XmlText` is left out, so re-indenting a file stays formatting-only. S10 records how the XML lexer splits character data and whitespace and how the parser reports CDATA.
+- **Exact text (R9):** the provider overrides `significantWhitespace(file)` to return the ranges of text content that compares exactly: every `XmlText` whose text holds at least one non-whitespace character, from its first to its last non-whitespace character, and every CDATA section. Trimming keeps the indentation before and after the text as layout, so re-indenting `<a>\n  text\n</a>` stays formatting-only. `LexedTokens` promotes whitespace tokens that start in those ranges to `TokenKind.OTHER`, so whitespace normalization never drops them and text spacing compares exactly. Whitespace-only `XmlText` is left out, so re-indenting a file stays formatting-only. S10 records how the XML lexer splits character data and whitespace and how the parser reports CDATA.
+- **Content whitespace:** the XML lexer writes whitespace in tag content as its own token type, which the parser definition does not list as whitespace. The provider's `tokenKind` treats every blank token as `TokenKind.WHITESPACE`, so it is layout under `INSIGNIFICANT` unless it falls in one of the exact ranges above.
 - **Consequences:** re-indenting a whole file is formatting-only; changing a space inside text, or inside a CDATA section, is a change; an attribute value's spacing is part of its token and compares exactly.
 - **Whitespace-only text:** a tag whose whole text is whitespace, such as `<version>   </version>`, compares as layout too, so emptying it is formatting-only. Telling meaningful whitespace-only text from indentation would need a DTD or schema, which is out of scope; the rule keeps the common case, re-indenting, formatting-only (ADR 0003). A fixture records it.
 
@@ -103,6 +104,6 @@ D4b (HTML on the same provider) is the later part of format coverage D4 and is o
 - **`XmlDeclarationProviderTest`:** one test per mapping rule (R3 to R6, R12); offsets equal the request text for every declaration.
 - **Golden fixtures** in `src/test/testData/xml/`: attribute value changed (tag changed), attributes reordered (changed, F4), tag added, tag removed, child tags reordered (moved), named siblings reordered (moved), tag moved into another container, bean `id` renamed with the same content (rename candidate), tag name renamed (rename candidate), POM version bump (one changed dependency), POM dependency added and removed, POM coordinates renamed, repeated unnamed sibling tags, text content changed, text spacing changed (changed), whitespace-only text emptied (formatting-only), CDATA changed, whole file re-indented (formatting-only), spacing between attributes (formatting-only), comment changed, XML declaration encoding changed (file region changed), DOCTYPE changed, processing instruction changed, namespace prefix changed, parse error on one side, empty and identical files.
 - **Merge fixtures** in `src/test/testData/xml/merge/`, as in section 11.
-- **Relationship benchmark:** rename cases only, as for JSON: a bean `id` rename, a tag-name rename and a POM coordinate rename.
+- **Rename cases:** a bean `id` rename, a tag-name rename and a POM coordinate rename, as golden fixtures; the relationship benchmark has no data-format cases yet, as for JSON, so they are not added there.
 - **Corpus validation:** `CorpusValidationTest` accepts `.xml` for a later run over real commits, as for the other data formats.
 - **Requirement names:** every test names its requirement, such as `// languages/13-xml R8`.

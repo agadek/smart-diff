@@ -1,6 +1,6 @@
 # XML
 
-Status: accepted, 2026-11-16
+Status: implemented, 2026-11-16
 
 **Description:** The [declaration engine](../../GLOSSARY.md#declaration-engine) supports XML files, Maven POMs, Spring configuration and Android XML included, through the platform's XML parser.
 

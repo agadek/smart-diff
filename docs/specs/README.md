@@ -74,7 +74,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [10 YAML](languages/10-yaml.md) | implemented, 2026-11-14 |
 | [11 Properties](languages/11-properties.md) | implemented, 2026-11-15 |
 | [12 TOML](languages/12-toml.md) | implemented, 2026-11-15 |
-| [13 XML](languages/13-xml.md) | accepted, 2026-11-16 |
+| [13 XML](languages/13-xml.md) | implemented, 2026-11-16 |
 
 ## Outline
 
