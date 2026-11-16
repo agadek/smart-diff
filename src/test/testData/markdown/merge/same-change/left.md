@@ -1,0 +1,7 @@
+# A
+
+Shared.
+
+# B
+
+Text.

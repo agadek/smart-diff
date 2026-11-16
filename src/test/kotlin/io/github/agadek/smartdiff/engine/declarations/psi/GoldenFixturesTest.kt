@@ -8,6 +8,7 @@ import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.contract.NothingHidden
 import io.github.agadek.smartdiff.engine.declarations.psi.groovy.GroovyDeclarationProvider
 import io.github.agadek.smartdiff.engine.declarations.psi.json.JsonDeclarationProvider
+import io.github.agadek.smartdiff.engine.declarations.psi.markdown.MarkdownDeclarationProvider
 import io.github.agadek.smartdiff.engine.declarations.psi.properties.PropertiesDeclarationProvider
 import io.github.agadek.smartdiff.engine.declarations.psi.toml.TomlDeclarationProvider
 import io.github.agadek.smartdiff.engine.declarations.psi.yaml.YamlDeclarationProvider
@@ -56,6 +57,9 @@ class GoldenFixturesTest : BasePlatformTestCase() {
     // languages/12-toml R19
     fun `test TOML fixtures`() = checkFixtures("toml", "TOML", "toml")
 
+    // languages/14-markdown R20
+    fun `test Markdown fixtures`() = checkFixtures("markdown", "Markdown", "md")
+
     // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11; languages/06 R2 / languages/07
     // JSON now has a dedicated provider, so these fallback fixtures mask it and run through the real engine path.
     fun `test structure-view JSON fixtures`() =
@@ -66,8 +70,10 @@ class GoldenFixturesTest : BasePlatformTestCase() {
     fun `test structure-view YAML fixtures`() =
         checkFixtures("structure-view/yaml", "yaml", "yaml", maskDedicatedYamlProvider = true)
 
-    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
-    fun `test structure-view Markdown fixtures`() = checkFixtures("structure-view/md", "Markdown", "md")
+    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11; languages/06 R2 / languages/14
+    // Markdown now has a dedicated provider, so these fallback fixtures mask it and run through the structure view.
+    fun `test structure-view Markdown fixtures`() =
+        checkFixtures("structure-view/md", "Markdown", "md", maskDedicatedMarkdownProvider = true)
 
     // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11; languages/06 R2 / languages/11
     // Properties now has a dedicated provider, so these fallback fixtures mask it and run through the structure view.
@@ -90,8 +96,9 @@ class GoldenFixturesTest : BasePlatformTestCase() {
         maskDedicatedGroovyProvider: Boolean = false,
         maskDedicatedPropertiesProvider: Boolean = false,
         maskDedicatedTomlProvider: Boolean = false,
+        maskDedicatedMarkdownProvider: Boolean = false,
     ) {
-        if (maskDedicatedJsonProvider || maskDedicatedYamlProvider || maskDedicatedGroovyProvider || maskDedicatedPropertiesProvider || maskDedicatedTomlProvider) {
+        if (maskDedicatedJsonProvider || maskDedicatedYamlProvider || maskDedicatedGroovyProvider || maskDedicatedPropertiesProvider || maskDedicatedTomlProvider || maskDedicatedMarkdownProvider) {
             ExtensionTestUtil.maskExtensions(
                 DeclarationProvider.EP_NAME,
                 DeclarationProvider.EP_NAME.extensionList.filterNot {
@@ -99,7 +106,8 @@ class GoldenFixturesTest : BasePlatformTestCase() {
                         (maskDedicatedYamlProvider && it is YamlDeclarationProvider) ||
                         (maskDedicatedGroovyProvider && it is GroovyDeclarationProvider) ||
                         (maskDedicatedPropertiesProvider && it is PropertiesDeclarationProvider) ||
-                        (maskDedicatedTomlProvider && it is TomlDeclarationProvider)
+                        (maskDedicatedTomlProvider && it is TomlDeclarationProvider) ||
+                        (maskDedicatedMarkdownProvider && it is MarkdownDeclarationProvider)
                 },
                 testRootDisposable,
             )

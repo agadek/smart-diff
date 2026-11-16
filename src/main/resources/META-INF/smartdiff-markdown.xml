@@ -1,0 +1,6 @@
+<!-- Loaded when the Markdown plugin is present. The Markdown declaration provider registers here. -->
+<idea-plugin>
+    <extensions defaultExtensionNs="io.github.agadek.smartdiff">
+        <declarationProvider implementation="io.github.agadek.smartdiff.engine.declarations.psi.markdown.MarkdownDeclarationProvider"/>
+    </extensions>
+</idea-plugin>

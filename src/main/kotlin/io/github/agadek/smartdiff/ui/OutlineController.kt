@@ -685,6 +685,7 @@ class OutlineController internal constructor(
             "yaml" -> WhitespacePolicy.SIGNIFICANT
             "Properties" -> WhitespacePolicy.INSIGNIFICANT
             "TOML" -> WhitespacePolicy.LINE_BREAKS_SIGNIFICANT
+            "Markdown" -> WhitespacePolicy.SIGNIFICANT
             "Python" -> WhitespacePolicy.INDENTATION_SIGNIFICANT
             "Rust" -> WhitespacePolicy.INSIGNIFICANT
             else -> WhitespacePolicy.SIGNIFICANT
