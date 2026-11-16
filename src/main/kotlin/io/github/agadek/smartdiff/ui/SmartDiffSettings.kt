@@ -39,6 +39,9 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         /** Show formatting-only changes inline instead of in a collapsed group per container. */
         var formattingOnlyInline: Boolean = false
 
+        /** Label changed declarations whose only difference is in comments as comment-only in the outline (outline/11 R1). */
+        var markCommentOnly: Boolean = false
+
         /** List merge rows grouped by side instead of as the base's container tree. */
         var mergeGroupedBySide: Boolean = true
 
@@ -115,6 +118,11 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
     var formattingOnlyInline: Boolean
         get() = current.formattingOnlyInline
         set(value) = update { formattingOnlyInline = value }
+
+    /** Whether the outline labels comment-only changes (outline/11 R1, R2). Display-only: no new comparison (R12). */
+    var markCommentOnly: Boolean
+        get() = current.markCommentOnly
+        set(value) = update { markCommentOnly = value }
 
     var mergeGroupedBySide: Boolean
         get() = current.mergeGroupedBySide
@@ -196,6 +204,7 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
             it.showChangesDeclarations = old.showChangesDeclarations
             it.followChangesTreeCaret = old.followChangesTreeCaret
             it.formattingOnlyInline = old.formattingOnlyInline
+            it.markCommentOnly = old.markCommentOnly
             it.mergeGroupedBySide = old.mergeGroupedBySide
             it.mergeHideBothSides = old.mergeHideBothSides
             it.hiddenChangeTypes = old.hiddenChangeTypes

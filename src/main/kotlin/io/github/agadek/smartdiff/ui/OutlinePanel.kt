@@ -6,6 +6,7 @@ import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.DumbAwareToggleAction
 import com.intellij.openapi.ui.ComboBox
@@ -106,7 +107,10 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
             override fun actionPerformed(e: AnActionEvent) = controller.refresh()
             override fun getActionUpdateThread() = ActionUpdateThread.BGT
         }
-        val filter = DefaultActionGroup("Hide Change Types", ChangeType.entries.map(::HideAction)).apply {
+        // The comment-only entry shows only while comment-only changes are marked (outline/11 R8, R9); the option itself
+        // ends the menu (R2).
+        val filterActions = ChangeType.entries.map(::HideAction) + Separator.getInstance() + MarkCommentOnlyAction()
+        val filter = DefaultActionGroup("Hide Change Types", filterActions).apply {
             templatePresentation.description = "Hide types of changes from the outline"
             templatePresentation.icon = AllIcons.General.Filter
             isPopup = true
@@ -384,6 +388,17 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
     private inner class HideAction(private val type: ChangeType) : DumbAwareToggleAction(type.text) {
         override fun isSelected(e: AnActionEvent): Boolean = type in SmartDiffSettings.getInstance().hiddenChangeTypes
         override fun setSelected(e: AnActionEvent, state: Boolean) = controller.setHidden(type, state)
+        override fun update(e: AnActionEvent) {
+            super.update(e)
+            if (type == ChangeType.COMMENT_ONLY) e.presentation.isEnabledAndVisible = SmartDiffSettings.getInstance().markCommentOnly
+        }
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+    }
+
+    /** The filter menu's "Mark Comment-Only Changes" checkbox, the same setting as on the settings page (outline/11 R2). */
+    private inner class MarkCommentOnlyAction : DumbAwareToggleAction(MARK_COMMENT_ONLY) {
+        override fun isSelected(e: AnActionEvent): Boolean = SmartDiffSettings.getInstance().markCommentOnly
+        override fun setSelected(e: AnActionEvent, state: Boolean) = controller.setMarkCommentOnly(state)
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
     }
 
@@ -406,6 +421,9 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         const val TREE = "tree"
         const val MESSAGE = "message"
         const val RELATIONSHIP_KIND_FILTER_ICON_PATH = "/icons/relationshipKindFilter.svg"
+
+        /** The filter menu checkbox and settings page label for outline/11 R2. */
+        const val MARK_COMMENT_ONLY = "Mark Comment-Only Changes"
 
         fun escape(text: String) = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     }

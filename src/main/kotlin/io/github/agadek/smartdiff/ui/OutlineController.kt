@@ -120,6 +120,7 @@ class OutlineController internal constructor(
     private data class DisplaySnapshot(
         val hiddenChangeTypes: Set<ChangeType>,
         val formattingOnlyInline: Boolean,
+        val markCommentOnly: Boolean,
         val outlineView: OutlineView,
         val hiddenRelationshipKinds: Set<RelationshipKind>,
     )
@@ -185,6 +186,7 @@ class OutlineController internal constructor(
     private fun displaySnapshot(settings: SmartDiffSettings): DisplaySnapshot = DisplaySnapshot(
         settings.hiddenChangeTypes,
         settings.formattingOnlyInline,
+        settings.markCommentOnly,
         settings.outlineView,
         settings.hiddenRelationshipKinds,
     )
@@ -399,6 +401,14 @@ class OutlineController internal constructor(
         rebuild()
     }
 
+    /** Turns comment-only labels on or off in every outline, and rebuilds this one's rows without comparing again (outline/11 R2, R12). */
+    fun setMarkCommentOnly(mark: Boolean) {
+        val settings = SmartDiffSettings.getInstance()
+        if (settings.markCommentOnly == mark) return
+        settings.markCommentOnly = mark
+        rebuild()
+    }
+
     /** Switches this outline and every later one to [view], without comparing the file again (relationships/06 R1, R2). */
     fun setOutlineView(view: OutlineView) {
         val settings = SmartDiffSettings.getInstance()
@@ -430,25 +440,28 @@ class OutlineController internal constructor(
     ) {
         val settings = SmartDiffSettings.getInstance()
         val hidden = settings.hiddenChangeTypes
+        val markCommentOnly = settings.markCommentOnly
         val whitespacePolicy = policy ?: whitespacePolicy(languageId)
         val selection = if (keepSelection) panel.selectedPath() else null
         val view = settings.outlineView
         val items = if (view == OutlineView.REFACTORINGS) {
             RefactoringsModel.build(
                 result, request.oldText, request.newText, settings.formattingOnlyInline, hidden,
-                settings.hiddenRelationshipKinds, whitespacePolicy,
+                settings.hiddenRelationshipKinds, whitespacePolicy, markCommentOnly,
             )
         } else {
-            OutlineModel.build(result, request.oldText, request.newText, settings.formattingOnlyInline, hidden, whitespacePolicy)
+            OutlineModel.build(
+                result, request.oldText, request.newText, settings.formattingOnlyInline, hidden, whitespacePolicy, markCommentOnly,
+            )
         }
         val revealApplied = !keepSelection && reveal != null
         shownRequest = request
         show(
             OutlineState.Shown(
                 result,
-                OutlineModel.summary(result, hidden, request.oldText, request.newText, whitespacePolicy),
+                OutlineModel.summary(result, hidden, request.oldText, request.newText, whitespacePolicy, markCommentOnly),
                 items,
-                OutlineModel.hiddenCount(result, hidden),
+                OutlineModel.hiddenCount(result, hidden, markCommentOnly),
                 note,
                 whitespacePolicy,
             ),
@@ -463,7 +476,7 @@ class OutlineController internal constructor(
             !keepSelection -> reveal?.let(panel::reveal)
         }
         if (!keepSelection) reveal = null
-        (viewer as? FilteringDiffViewer)?.hide(HiddenLines.of(result, hidden, request.oldText, request.newText))
+        (viewer as? FilteringDiffViewer)?.hide(HiddenLines.of(result, hidden, request.oldText, request.newText, markCommentOnly))
         // Follow once after a result shown when a caret move was skipped while a comparison was pending (R8); ranges stay valid during the reference pass.
         if (!revealApplied && caretFollowPending) followLastCaret(afterResult = true)
     }
