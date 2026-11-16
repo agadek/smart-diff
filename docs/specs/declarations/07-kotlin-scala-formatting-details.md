@@ -1,6 +1,6 @@
 # Kotlin and Scala formatting: details
 
-Status: accepted, 2026-11-16
+Status: implemented, 2026-11-16
 
 **Feature:** [Kotlin and Scala formatting](07-kotlin-scala-formatting.md)
 

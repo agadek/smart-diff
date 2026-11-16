@@ -1,6 +1,6 @@
 # Kotlin and Scala formatting
 
-Status: accepted, 2026-11-16
+Status: implemented, 2026-11-16
 
 **Description:** In Kotlin and Scala, a [declaration](../../GLOSSARY.md#declaration) whose own source differs only in line breaks the language ignores, such as a wrapped argument list or a split call chain, is [formatting-only](../../GLOSSARY.md#formatting-only) instead of [changed](../../GLOSSARY.md#changed).
 

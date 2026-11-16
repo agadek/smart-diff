@@ -244,9 +244,9 @@ Give added and deleted files in the Changes tree a summary and declaration rows,
 
 *(weak-point review)* The benchmark reports precision 1.000 but overall recall around 0.83 (0.821 on the held-out split), so about one refactoring in six is still shown as a removed and an added declaration. Work through the missed relationships listed in [VALIDATION.md](VALIDATION.md) by kind and language, for example extraction to several sources, and raise recall without lowering precision or forcing an ambiguous pair, under the benchmark's `no-new-wrong-pairs` gate.
 
-### Formatting-only recall in Kotlin and Scala
+### Formatting-only recall in Kotlin and Scala (implemented, 2026-11-16)
 
-*(weak-point review)* The 0.3.0 manual check labelled an intended formatting-only change to `price()` as `changed` in Kotlin and Scala 2, and the benchmark's formatting-only recall is below 1. Find which whitespace and line-break cases the Kotlin and Scala policies treat as content, add fixtures for them, and classify them as formatting-only where the language allows it, keeping Scala 3 indentation significant. Specified in [declarations/07](specs/declarations/07-kotlin-scala-formatting.md) (accepted, 2026-11-16): line breaks inside brackets and next to tokens that continue or close an expression become formatting, and a whole Scala 3 declaration re-indented by the same amount is formatting-only.
+*(weak-point review)* The 0.3.0 manual check labelled an intended formatting-only change to `price()` as `changed` in Kotlin and Scala 2, and the benchmark's formatting-only recall is below 1. Find which whitespace and line-break cases the Kotlin and Scala policies treat as content, add fixtures for them, and classify them as formatting-only where the language allows it, keeping Scala 3 indentation significant. Implemented in [declarations/07](specs/declarations/07-kotlin-scala-formatting.md): line breaks inside brackets and next to tokens that continue or close an expression become formatting, and a whole Scala 3 declaration re-indented by the same amount is formatting-only. The [benchmark record](VALIDATION.md#2026-11-16-kotlin-and-scala-formatting-only-line-breaks) shows formatting-only accuracy 1.000 in every language and no lower recall.
 
 ### Close the open manual checks
 
