@@ -1,0 +1,5 @@
+status: ANALYZED
+tag project  old 2-10  new 2-10
+  tag dependencies  old 3-9  new 3-9
+    tag dependency junit:junit-dep  rename candidate from tag dependency junit:junit  old 4-8  new 4-8
+      tag artifactId  changed  old 6  new 6

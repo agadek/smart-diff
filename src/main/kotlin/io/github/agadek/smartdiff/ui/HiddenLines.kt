@@ -33,19 +33,25 @@ class HiddenLines private constructor(private val old: BitSet, private val new: 
     companion object {
         val NONE = HiddenLines(BitSet(), BitSet())
 
-        fun of(result: ComparisonResult, hidden: Set<ChangeType>, oldText: CharSequence, newText: CharSequence): HiddenLines {
+        fun of(
+            result: ComparisonResult,
+            hidden: Set<ChangeType>,
+            oldText: CharSequence,
+            newText: CharSequence,
+            markCommentOnly: Boolean = false,
+        ): HiddenLines {
             if (hidden.isEmpty()) return NONE
             val sides = Sides(LineIndex(oldText), LineIndex(newText))
             val grouped = OutlineModel.groupedUsageNodes(result)
             result.fileRegion?.let { region ->
-                if (region.isChangedItself) sides.add(region.details.map { it.old }, region.details.map { it.new }, OutlineModel.isHidden(region, hidden))
+                if (region.isChangedItself) sides.add(region.details.map { it.old }, region.details.map { it.new }, OutlineModel.isHidden(region, hidden, markCommentOnly = markCommentOnly))
             }
             fun visit(node: ChangeNode) {
                 if (node.isChangedItself) {
                     val children = node.children.filter { it.isReported }
                     val olds = subtract(listOf(node.oldRange) + node.details.map { it.old }, children.flatMap { extent(it).first })
                     val news = subtract(listOf(node.newRange) + node.details.map { it.new }, children.flatMap { extent(it).second })
-                    sides.add(olds, news, OutlineModel.isHidden(node, hidden, node in grouped))
+                    sides.add(olds, news, OutlineModel.isHidden(node, hidden, node in grouped, markCommentOnly))
                 }
                 node.children.forEach(::visit)
             }

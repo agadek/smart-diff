@@ -1,0 +1,4 @@
+status: ANALYZED
+tag beans  old 2-7  new 2-7
+  tag bean id=a  old 3-6  new 3-6
+    tag constructor-arg  changed  old 5  new 5

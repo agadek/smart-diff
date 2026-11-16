@@ -1,0 +1,4 @@
+left: ANALYZED  right: ANALYZED
+tag config  UNCHANGED  base 2-5  left 2-5  right 2-5
+  tag a  LEFT_ONLY  left: changed  base 3  left 3  right 3
+  tag b  RIGHT_ONLY  right: changed  base 4  left 4  right 4
