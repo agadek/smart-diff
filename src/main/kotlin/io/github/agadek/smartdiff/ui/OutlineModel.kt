@@ -100,24 +100,34 @@ class OutlineItem(
     val frames: List<RangePair> = emptyList(),
     /** A rename's palette index, or null for rows without grouped usages (relationships/06 R12). */
     val colour: Int? = null,
+    /** The change node this row is built from, when it is built from one (outline/12 details). */
+    val node: ChangeNode? = null,
+    /** The change nodes a relationship row frames through its endpoints (outline/12 R13). */
+    val endpoints: List<ChangeNode> = emptyList(),
+    /** Whether every markable node of this row and its children is reviewed (outline/12 R4, R5). */
+    var reviewed: Boolean = false,
 ) {
     val isGroup: Boolean
         get() = kind == ItemKind.FORMATTING_GROUP || kind == ItemKind.UNCERTAIN_GROUP ||
             kind == ItemKind.UNANALYZED_GROUP || kind == ItemKind.SECTION
 
-    /** The row's text, which is also its accessible name: the title, then the change labels, the note and the confidence. */
+    /** The row's text, which is also its accessible name: the title, the labels, the note, the confidence and its mark. */
     val label: String get() {
-        val labels = tags.map { it.text } + listOfNotNull(note, confidence?.name?.lowercase())
+        val labels = tags.map { it.text } + listOfNotNull(note, confidence?.name?.lowercase()) +
+            if (reviewed) listOf("reviewed") else emptyList()
         return if (labels.isEmpty()) title else "$title  ${labels.joinToString(", ")}"
     }
 
     /** A copy of this row with new children, which keeps every other field. */
     internal fun withChildren(children: List<OutlineItem>): OutlineItem =
-        OutlineItem(kind, title, tags, oldRange, newRange, details, children, note, confidence, frames, colour)
+        OutlineItem(kind, title, tags, oldRange, newRange, details, children, note, confidence, frames, colour, node, endpoints, reviewed)
 
     /** A copy of this row without its own labels or details, as a container of the rows that remain. */
     internal fun asContainer(children: List<OutlineItem>): OutlineItem =
-        OutlineItem(kind, title, emptyList(), oldRange, newRange, emptyList(), children, note = null, confidence = null, frames = emptyList())
+        OutlineItem(
+            kind, title, emptyList(), oldRange, newRange, emptyList(), children,
+            note = null, confidence = null, frames = emptyList(), node = node, endpoints = endpoints, reviewed = reviewed,
+        )
 
     override fun toString(): String = label
 }
@@ -133,7 +143,8 @@ object OutlineModel {
      * Unanalyzed groups. Only reported nodes and their containers are shown, and a container shown only because of its
      * children has no change label. Formatting-only changes are collected in a group per container unless [formattingInline].
      * A change whose every label is of a [hidden] type is left out, or shown only as a container of its other changes.
-     * [oldText] and [newText] are read only to name the lines of unanalyzed ranges.
+     * [reviewed] nodes make their rows grey with a `reviewed` label; with [hideReviewed] they are hidden as a change type
+     * is. [oldText] and [newText] are read only to name the lines of unanalyzed ranges and to know grouped usages.
      */
     fun build(
         result: ComparisonResult,
@@ -143,16 +154,27 @@ object OutlineModel {
         hidden: Set<ChangeType> = emptySet(),
         whitespacePolicy: WhitespacePolicy = WhitespacePolicy.INSIGNIFICANT,
         markCommentOnly: Boolean = false,
+        reviewed: Set<ChangeNode> = emptySet(),
+        hideReviewed: Boolean = false,
     ): List<OutlineItem> {
         val uncertain = mutableListOf<OutlineItem>()
         val usages = Usages(result, oldText, newText, whitespacePolicy)
-        val builder = Builder(formattingInline, hidden, uncertain, Links(result), usages, markCommentOnly)
+        val reviewedSet = identitySetOf(reviewed)
+        val markable = markableNodes(result, oldText, newText, whitespacePolicy)
+        val reviewedState = Reviewed(reviewedSet, markable, emptyMap(), emptyMap())
+        val builder = Builder(formattingInline, hidden, uncertain, Links(result), usages, markCommentOnly, reviewedState, hideReviewed)
         val rows = mutableListOf<OutlineItem>()
-        result.fileRegion?.takeIf { it.isReported && !isHidden(it, hidden, markCommentOnly = markCommentOnly) }?.let { region ->
-            rows += OutlineItem(ItemKind.FILE_REGION, "File region", tags(region, markCommentOnly = markCommentOnly), region.oldRange, region.newRange, region.details)
+        result.fileRegion?.takeIf { it.isReported && !isHidden(it, hidden, markCommentOnly = markCommentOnly, hideReviewed = hideReviewed, reviewed = reviewedSet) }?.let { region ->
+            rows += OutlineItem(
+                ItemKind.FILE_REGION, "File region", tags(region, markCommentOnly = markCommentOnly), region.oldRange, region.newRange, region.details,
+                node = region,
+            ).also { it.reviewed = reviewedState.isReviewed(it) }
         }
         rows += builder.children(result.changes)
-        if (uncertain.isNotEmpty()) rows += OutlineItem(ItemKind.UNCERTAIN_GROUP, "Uncertain (${uncertain.size})", children = uncertain)
+        if (uncertain.isNotEmpty()) {
+            rows += OutlineItem(ItemKind.UNCERTAIN_GROUP, "Uncertain (${uncertain.size})", children = uncertain)
+                .also { it.reviewed = reviewedState.isReviewed(it) }
+        }
         if (result.unanalyzed.isNotEmpty()) {
             val ranges = result.unanalyzed.map { pair ->
                 val sides = listOfNotNull(pair.old?.let { "old ${lines(it, oldText)}" }, pair.new?.let { "new ${lines(it, newText)}" })
@@ -167,7 +189,8 @@ object OutlineModel {
      * The file summary line, such as `3 changed · 1 extracted · 1 added · 1 inlined · 1 removed · 1 moved`. An added
      * declaration extracted from old code counts as extracted instead of added; a removed declaration inlined into
      * another counts as inlined instead of removed. It counts every change, hidden or not, and ends with how many are
-     * [hidden], such as `· 2 hidden`.
+     * [hidden], such as `· 2 hidden`. When at least one change is [reviewed], it ends with `N of M reviewed`, after the
+     * hidden count and before the analysis note (outline/12 R6).
      */
     fun summary(
         result: ComparisonResult,
@@ -176,8 +199,10 @@ object OutlineModel {
         newText: CharSequence = "",
         whitespacePolicy: WhitespacePolicy = WhitespacePolicy.INSIGNIFICANT,
         markCommentOnly: Boolean = false,
+        reviewed: Set<ChangeNode> = emptySet(),
+        hideReviewed: Boolean = false,
     ): String {
-        val parts = summaryParts(result, hidden, oldText, newText, whitespacePolicy, markCommentOnly)
+        val parts = summaryParts(result, hidden, oldText, newText, whitespacePolicy, markCommentOnly, reviewed, hideReviewed)
         return if (parts.isEmpty()) "No structural changes" else parts.joinToString(" · ")
     }
 
@@ -201,6 +226,8 @@ object OutlineModel {
         newText: CharSequence,
         whitespacePolicy: WhitespacePolicy,
         markCommentOnly: Boolean = false,
+        reviewed: Set<ChangeNode> = emptySet(),
+        hideReviewed: Boolean = false,
     ): List<String> {
         val usages = Usages(result, oldText, newText, whitespacePolicy)
         val counts = LinkedHashMap<String, Int>()
@@ -221,33 +248,68 @@ object OutlineModel {
         result.fileRegion?.let(::count)
         result.changes.forEach(::count)
         counts[Tag.UNANALYZED.text] = counts.getValue(Tag.UNANALYZED.text) + result.unanalyzed.size
+        val markable = markableNodes(result, oldText, newText, whitespacePolicy)
+        val reviewedSet = identitySetOf(reviewed)
+        val reviewedCount = markable.count { it in reviewedSet }
+        val reviewedPart = if (reviewedCount > 0) listOf("$reviewedCount of ${markable.size} reviewed") else emptyList()
         return counts.filterValues { it > 0 }.map { (label, n) -> "$n $label" } +
-            listOfNotNull(hiddenCount(result, hidden, markCommentOnly).takeIf { it > 0 }?.let { "$it hidden" }) +
+            listOfNotNull(hiddenCount(result, hidden, markCommentOnly, reviewedSet, hideReviewed).takeIf { it > 0 }?.let { "$it hidden" }) +
+            reviewedPart +
             if (result.status == Status.ANALYZED || result.status == Status.PARTIAL)
                 listOfNotNull(result.analysisNote) else emptyList()
     }
 
     /** How many changes [build] leaves out, or shows only as containers, because their types are [hidden]. */
-    fun hiddenCount(result: ComparisonResult, hidden: Set<ChangeType>, markCommentOnly: Boolean = false): Int {
-        if (hidden.isEmpty()) return 0
+    fun hiddenCount(
+        result: ComparisonResult,
+        hidden: Set<ChangeType>,
+        markCommentOnly: Boolean = false,
+        reviewed: Set<ChangeNode> = emptySet(),
+        hideReviewed: Boolean = false,
+    ): Int {
+        if (hidden.isEmpty() && !hideReviewed) return 0
         val usages = Usages(result, "", "", WhitespacePolicy.INSIGNIFICANT)
+        val reviewedSet = identitySetOf(reviewed)
         fun count(node: ChangeNode): Int =
-            (if (node.isReported && isHidden(node, hidden, usages.hasUsages(node), markCommentOnly)) 1 else 0) + node.children.sumOf(::count)
+            (if (node.isReported && isHidden(node, hidden, usages.hasUsages(node), markCommentOnly, hideReviewed, reviewedSet)) 1 else 0) +
+                node.children.sumOf(::count)
         return (result.fileRegion?.let(::count) ?: 0) + result.changes.sumOf(::count)
+    }
+
+    /** The nodes a mark can be put on: every reported change, a node with grouped usages and the reported file region. */
+    internal fun markableNodes(
+        result: ComparisonResult,
+        oldText: CharSequence,
+        newText: CharSequence,
+        whitespacePolicy: WhitespacePolicy,
+    ): Set<ChangeNode> {
+        val usages = Usages(result, oldText, newText, whitespacePolicy)
+        val nodes = identitySetOf<ChangeNode>()
+        fun visit(node: ChangeNode) {
+            if (node.isChangedItself || usages.hasUsages(node)) nodes += node
+            node.children.forEach(::visit)
+        }
+        result.fileRegion?.takeIf { it.isReported }?.let(nodes::add)
+        result.changes.forEach(::visit)
+        return nodes
     }
 
     /** The nodes whose innermost matched declaration contains a grouped usage, for the native diff's hidden lines (R8). */
     fun groupedUsageNodes(result: ComparisonResult): Set<ChangeNode> =
         Usages(result, "", "", WhitespacePolicy.INSIGNIFICANT).nodesWithUsages()
 
-    /** A change itself whose every label is of a [hidden] type; an uncertain, rename candidate, grouped usage or unanalyzed change never is. */
+    /** A change itself whose every label is of a [hidden] type; an uncertain, rename candidate, grouped usage or unanalyzed change never is. With [hideReviewed], a [reviewed] change is hidden too. */
     fun isHidden(
         node: ChangeNode,
         hidden: Set<ChangeType>,
         groupedUsages: Boolean = false,
         markCommentOnly: Boolean = false,
+        hideReviewed: Boolean = false,
+        reviewed: Set<ChangeNode> = emptySet(),
     ): Boolean {
-        if (groupedUsages || !node.isChangedItself || hidden.isEmpty()) return false
+        if (groupedUsages || !node.isChangedItself) return false
+        if (hideReviewed && node in reviewed) return true
+        if (hidden.isEmpty()) return false
         val hiddenTags = hidden.flatMapTo(HashSet()) { it.tags }
         return tags(node, markCommentOnly = markCommentOnly).all { it in hiddenTags }
     }
@@ -470,7 +532,12 @@ object OutlineModel {
         private val links: Links,
         private val usages: Usages,
         private val markCommentOnly: Boolean,
+        private val reviewed: Reviewed,
+        private val hideReviewed: Boolean,
     ) {
+
+        /** Sets a row's reviewed flag from its own and its children's markable nodes (outline/12 R4, R5). */
+        private fun <T : OutlineItem> marked(item: T): T = item.also { it.reviewed = reviewed.isReviewed(it) }
 
         /** The rows for [nodes], the children of one container; uncertain nodes go to [uncertain] instead. */
         fun children(nodes: List<ChangeNode>): List<OutlineItem> {
@@ -485,7 +552,7 @@ object OutlineModel {
                 val item = item(node) ?: continue
                 if (!formattingInline && isFormattingOnly(node)) formatting += item else rows += item
             }
-            if (formatting.isNotEmpty()) rows += OutlineItem(ItemKind.FORMATTING_GROUP, "Formatting-only (${formatting.size})", children = formatting)
+            if (formatting.isNotEmpty()) rows += marked(OutlineItem(ItemKind.FORMATTING_GROUP, "Formatting-only (${formatting.size})", children = formatting))
             return rows
         }
 
@@ -497,9 +564,9 @@ object OutlineModel {
         private fun item(node: ChangeNode): OutlineItem? {
             val children = children(node.children)
             val grouped = usages.references(node)
-            if (isHidden(node, hidden, grouped.isNotEmpty(), markCommentOnly)) {
+            if (isHidden(node, hidden, grouped.isNotEmpty(), markCommentOnly, hideReviewed, reviewed.reviewed)) {
                 if (children.isEmpty()) return null
-                return OutlineItem(ItemKind.CHANGE, title(node), emptyList(), node.oldRange, node.newRange, children = children)
+                return marked(OutlineItem(ItemKind.CHANGE, title(node), emptyList(), node.oldRange, node.newRange, children = children, node = node))
             }
             if (!node.isChangedItself && children.isEmpty() && grouped.isEmpty()) return null
             // An extraction frames the code it came from on the old side, where it is otherwise absent; an inlining
@@ -514,9 +581,12 @@ object OutlineModel {
                 val count = usages.renameReferences(node).size
                 if (count == 0) null else if (count == 1) "1 usage" else "$count usages"
             }
-            return OutlineItem(
-                ItemKind.CHANGE, title(node), tags(node, usages.isRenameOnly(node), markCommentOnly), oldRange, newRange,
-                details.distinct(), children, listOfNotNull(usageNote, links.note(node)).joinToString(", ").ifEmpty { null },
+            return marked(
+                OutlineItem(
+                    ItemKind.CHANGE, title(node), tags(node, usages.isRenameOnly(node), markCommentOnly), oldRange, newRange,
+                    details.distinct(), children, listOfNotNull(usageNote, links.note(node)).joinToString(", ").ifEmpty { null },
+                    node = node,
+                ),
             )
         }
 
@@ -531,7 +601,9 @@ object OutlineModel {
                     newRange = candidate.range.takeUnless { onOldSide },
                 )
             }
-            return OutlineItem(ItemKind.CHANGE, title(node), tags(node), node.oldRange, node.newRange, node.details, candidates + children(node.children))
+            return marked(
+                OutlineItem(ItemKind.CHANGE, title(node), tags(node), node.oldRange, node.newRange, node.details, candidates + children(node.children), node = node),
+            )
         }
 
         /** A matched node whose only change is formatting, with nothing reported inside it. */

@@ -1,8 +1,10 @@
 package io.github.agadek.smartdiff.engine.declarations.psi.toml
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.ThrowableComputable
+import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
@@ -11,6 +13,7 @@ import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
+import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationEngine
 import io.github.agadek.smartdiff.engine.declarations.psi.ProviderTestCase
 import org.toml.lang.psi.TomlArrayTable
@@ -19,6 +22,8 @@ import org.toml.lang.psi.TomlInlineTable
 import org.toml.lang.psi.TomlKeyValue
 import org.toml.lang.psi.TomlTable
 import java.io.File
+import java.util.concurrent.Callable
+import java.util.concurrent.TimeUnit
 
 class TomlDeclarationProviderTest : ProviderTestCase() {
 
@@ -72,6 +77,38 @@ class TomlDeclarationProviderTest : ProviderTestCase() {
         val plain = "[[bin]]\npath = \"a\"\n\n[[bin]]\npath = \"b\"\n"
         val plainTree = build("TOML", plain, "Cargo.toml")
         assertEquals(listOf("bin", "bin"), plainTree.topLevel.map { it.name })
+    }
+
+    // languages/12-toml R9
+    fun `test concurrent builds of different files keep their own array-of-tables names`() {
+        val provider = provider("TOML")
+        val entryCount = 100
+        val leftNames = (1..entryCount).map { "bin[name=left-$it]" }
+        val rightNames = (1..entryCount).map { "bin[name=right-$it]" }
+        fun text(prefix: String) =
+            (1..entryCount).joinToString("\n\n") { "[[bin]]\nname = \"$prefix-$it\"" } + "\n"
+        val (leftFile, rightFile) = ReadAction.compute(ThrowableComputable<Pair<PsiFile, PsiFile>, RuntimeException> {
+            val project = ProjectManager.getInstance().defaultProject
+            provider.parse(project, text("left"), "left.toml", null) to provider.parse(project, text("right"), "right.toml", null)
+        })
+
+        val futures = (0 until 8).map { thread ->
+            ApplicationManager.getApplication().executeOnPooledThread(Callable {
+                repeat(120) { iteration ->
+                    val useLeft = (thread + iteration) % 2 == 0
+                    val file = if (useLeft) leftFile else rightFile
+                    val expected = if (useLeft) leftNames else rightNames
+                    val tree = ReadAction.compute(ThrowableComputable<DeclarationTree, RuntimeException> {
+                        provider.build(file, Cancellation.NONE)
+                    })
+                    assertTrue(
+                        "the tree of ${file.name} contains its own array-of-tables names",
+                        tree.topLevel.map { it.name } == expected,
+                    )
+                }
+            })
+        }
+        futures.forEach { it.get(2, TimeUnit.MINUTES) }
     }
 
     // languages/12-toml R6, R9

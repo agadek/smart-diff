@@ -138,7 +138,7 @@ class ScalaDeclarationProviderTest : ProviderTestCase() {
             tree, text,
         )
         assertFalse(tree.fileRegion.hasParseError || tree.all.any { it.hasParseError })
-        assertEquals(WhitespacePolicy.LINE_BREAKS_SIGNIFICANT, tree.whitespacePolicy)
+        assertEquals(WhitespacePolicy.SCALA2_LINE_BREAKS, tree.whitespacePolicy)
     }
 
     fun `test Scala 3 declarations of every kind, in source order`() {
@@ -208,7 +208,7 @@ class ScalaDeclarationProviderTest : ProviderTestCase() {
             tree, text,
         )
         assertFalse(tree.fileRegion.hasParseError || tree.all.any { it.hasParseError })
-        assertEquals(WhitespacePolicy.INDENTATION_SIGNIFICANT, tree.whitespacePolicy)
+        assertEquals(WhitespacePolicy.SCALA3_INDENTATION, tree.whitespacePolicy)
     }
 
     fun `test definitions in package clauses, braced or not, are top level`() {
@@ -403,7 +403,7 @@ class ScalaDeclarationProviderTest : ProviderTestCase() {
 
         assertFalse(tree.fileRegion.hasParseError || tree.all.any { it.hasParseError })
         assertEquals(listOf("Ordering[Int]", "Color", "String", "A", "After"), tree.topLevel.map { it.name })
-        assertEquals(WhitespacePolicy.INDENTATION_SIGNIFICANT, tree.whitespacePolicy)
+        assertEquals(WhitespacePolicy.SCALA3_INDENTATION, tree.whitespacePolicy)
     }
 
     fun `test Scala 2 code that Scala 3 also parses goes to Scala 2`() {
@@ -480,7 +480,7 @@ class ScalaDeclarationProviderTest : ProviderTestCase() {
         val tree = build("Scala", SCALA_2_ONLY)
 
         assertFalse(tree.fileRegion.hasParseError || tree.all.any { it.hasParseError })
-        assertEquals(WhitespacePolicy.LINE_BREAKS_SIGNIFICANT, tree.whitespacePolicy)
+        assertEquals(WhitespacePolicy.SCALA2_LINE_BREAKS, tree.whitespacePolicy)
     }
 
     fun `test both sides are parsed in the dialect with fewer errors on both`() {
@@ -563,8 +563,8 @@ class ScalaDeclarationProviderTest : ProviderTestCase() {
         }
     }
 
-    fun `test re-indenting a Scala 3 declaration is still a change`() {
-        // languages/03-scala R13
+    fun `test a whole Scala 3 declaration re-indented by two spaces is formatting-only`() {
+        // declarations/07-kotlin-scala-formatting R8
         val old = "object A:\n  def f = 1\n"
         val new = "object A:\n    def f = 1\n"
 
@@ -572,7 +572,19 @@ class ScalaDeclarationProviderTest : ProviderTestCase() {
 
         assertEquals(Status.ANALYZED, result.status)
         val a = result.changes.single { (it.subject as? Subject.Declaration)?.name == "A" }
-        assertEquals(Content.CHANGED, a.children.single { (it.subject as? Subject.Declaration)?.name == "f" }.content)
+        assertEquals(Content.FORMATTING_ONLY, a.children.single { (it.subject as? Subject.Declaration)?.name == "f" }.content)
+    }
+
+    fun `test moving a Scala 3 declaration from braces to indentation is still a change`() {
+        // languages/03-scala R13, declarations/07-kotlin-scala-formatting R7
+        val old = "object A {\n  def f = 1\n}\n"
+        val new = "object A:\n  def f = 1\n"
+
+        val result = compare(old, new)
+
+        assertEquals(Status.ANALYZED, result.status)
+        val a = result.changes.single { (it.subject as? Subject.Declaration)?.name == "A" }
+        assertEquals(Content.CHANGED, a.content)
     }
 
     private fun dialect(vararg texts: String): String? = ReadAction.compute(ThrowableComputable<String?, RuntimeException> {

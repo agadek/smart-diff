@@ -1,0 +1,30 @@
+case: usage-grouping-rewrapped
+language: kotlin
+corpus: kotlin
+category: usage-grouping
+split: held-out
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Order", kind: FUNCTION, name: "total", signature: "Int,Int" }
+      new: { path: "class Order", kind: FUNCTION, name: "sum", signature: "Int,Int" }
+      usages:
+        - old: "80..85"
+          new: "78..81"
+        - old: "116..121"
+          new: "134..137"
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "sum", signature: "Int,Int" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "first", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: FUNCTION, name: "second", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "A renamed function whose call sites were also re-wrapped stays a rename with grouped usages (declarations/07 R10)."

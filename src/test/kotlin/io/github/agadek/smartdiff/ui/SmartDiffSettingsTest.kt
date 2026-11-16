@@ -40,6 +40,8 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
         assertTrue("the Changes tree follows the caret by default", settings.followChangesTreeCaret)
         // outline/11-comment-only-changes R1
         assertFalse("comment-only changes are not marked by default", settings.markCommentOnly)
+        // outline/12-reviewed-marks R12
+        assertFalse("reviewed changes are shown by default", settings.hideReviewed)
         assertFalse("formatting-only changes are grouped by default", settings.formattingOnlyInline)
         // outline/11-comment-only-changes R1
         assertFalse("comment-only changes are not marked by default", settings.markCommentOnly)
@@ -48,6 +50,24 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
         assertEquals("the tree filter starts with nothing hidden", emptySet<ChangeType>(), settings.hiddenChangesTreeChangeTypes)
         assertEquals("the container tree is the default outline view", OutlineView.CONTAINER_TREE, settings.outlineView)
         assertEquals("no relationship kind is hidden by default", emptySet<RelationshipKind>(), settings.hiddenRelationshipKinds)
+    }
+
+    // outline/12-reviewed-marks R12
+    fun `test outline 12 R12 Hide Reviewed is off by default, persisted and a display setting`() {
+        settings.loadState(SmartDiffSettings.SettingsState())
+        assertFalse("reviewed changes are shown by default", settings.hideReviewed)
+        val analysis = settings.analysisRevision
+        val tree = settings.treeRevision
+
+        settings.hideReviewed = true
+
+        assertTrue(settings.state.hideReviewed)
+        assertTrue(settings.hideReviewed)
+        assertEquals("hiding does not compare files again", analysis, settings.analysisRevision)
+        assertEquals("hiding does not rebuild the Changes tree", tree, settings.treeRevision)
+
+        settings.loadState(SmartDiffSettings.SettingsState().apply { hideReviewed = true })
+        assertTrue("a stored true value is read back", settings.hideReviewed)
     }
 
     // outline/11-comment-only-changes R1, R2, R12
@@ -262,14 +282,14 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
     }
 
     fun `test the settings page lists each dedicated language with an engine`() {
-        // languages/15-html R21; languages/13-xml R21
+        // languages/15-html R21; languages/13-xml R21; languages/14-markdown R1
         settings.useStructureViewFallback = false
         val engines = EngineRegistry.getInstance(ProjectManager.getInstance().defaultProject).engines()
 
         val languages = SmartDiffConfigurable.languagesWithEngines(engines).map { (language, _) -> language.id }
 
         assertEquals(
-            listOf("Groovy", "HTML", "JAVA", "JSON", "JSON5", "kotlin", "Properties", "Python", "Scala", "Shell Script", "TOML", "XHTML", "XML", "yaml"),
+            listOf("Groovy", "HTML", "JAVA", "JSON", "JSON5", "kotlin", "Markdown", "Properties", "Python", "Scala", "Shell Script", "TOML", "XHTML", "XML", "yaml"),
             languages,
         )
     }

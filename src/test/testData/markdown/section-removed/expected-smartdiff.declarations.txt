@@ -1,0 +1,3 @@
+status: ANALYZED
+section A  changed  old 1-7  new 1-3
+  section B  removed  old 5-7

@@ -44,16 +44,6 @@ internal object StructureViewCases {
             fileRegion = listOf(TextRange(31, 32)),
         ),
         Case(
-            fileName = "a.md",
-            languageId = "Markdown",
-            text = "# Title\n\nText\n\n## Section\n\nMore\n",
-            expected = listOf(
-                "ITEM Title [0, 7)",
-                "  ITEM Section [15, 25)",
-            ),
-            fileRegion = listOf(TextRange(7, 32)),
-        ),
-        Case(
             fileName = "a.properties",
             languageId = "Properties",
             text = "foo.bar=1\nbaz=2\n",

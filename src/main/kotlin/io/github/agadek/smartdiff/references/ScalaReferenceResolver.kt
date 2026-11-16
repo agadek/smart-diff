@@ -111,7 +111,7 @@ class ScalaReferenceResolver : ReferenceResolver {
     }
 
     override fun whitespacePolicy(file: PsiFile): WhitespacePolicy =
-        if (file.language == Scala3Language.INSTANCE) WhitespacePolicy.INDENTATION_SIGNIFICANT else WhitespacePolicy.LINE_BREAKS_SIGNIFICANT
+        if (file.language == Scala3Language.INSTANCE) WhitespacePolicy.SCALA3_INDENTATION else WhitespacePolicy.SCALA2_LINE_BREAKS
 
     private fun nameMatches(element: PsiNamedElement, subject: Subject.Declaration): Boolean {
         if (subject.name.isEmpty()) return true

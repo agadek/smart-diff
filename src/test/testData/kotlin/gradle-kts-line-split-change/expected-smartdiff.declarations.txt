@@ -1,2 +1,2 @@
 status: ANALYZED
-section dependencies  changed  old 1  new 1-3
+section dependencies  formatting-only  old 1  new 1-3

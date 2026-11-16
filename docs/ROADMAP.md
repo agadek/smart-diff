@@ -112,6 +112,8 @@ Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.
 | [Python](#python) | [languages/04](specs/languages/04-python.md) |
 | [Rust](#rust) | [languages/05](specs/languages/05-rust.md) |
 | [Hide comment-only changes](#hide-comment-only-changes) | [outline/11](specs/outline/11-comment-only-changes.md) |
+| [Formatting-only recall in Kotlin and Scala](#formatting-only-recall-in-kotlin-and-scala) | [declarations/07](specs/declarations/07-kotlin-scala-formatting.md) |
+| [Reviewed marks in the outline](#reviewed-marks-in-the-outline) | [outline/12](specs/outline/12-reviewed-marks.md) (implemented 2026-11-16) |
 | [More languages](#more-languages) | [Format coverage plan](FORMAT-COVERAGE.md); feature specs with each phase |
 | Every other item below | Not specified yet |
 
@@ -225,7 +227,7 @@ Give added and deleted files in the Changes tree a summary and declaration rows,
 
 ### Reviewed marks in the outline
 
-*(gap review)* Let the reviewer mark a declaration in the outline as reviewed and show progress in the summary line, for example `5 of 8 reviewed`. A mark resets when that declaration changes again. SemanticDiff's pull request viewer tracks reviewed files the same way.
+Let the reviewer mark a change in the outline as reviewed and show progress in the summary line, for example `5 of 8 reviewed`. A mark resets when that declaration changes again. SemanticDiff's pull request viewer tracks reviewed files the same way. Implemented 2026-11-16 in [outline/12](specs/outline/12-reviewed-marks.md): the context menu and Space mark and unmark change rows and the file region, marks persist per project in the workspace file and are dropped when the declaration's text changes, the summary ends with `N of M reviewed`, and an off-by-default "Hide Reviewed" filter leaves reviewed changes out. Marks are local to the diff when its file has no path in the project.
 
 ### Expand context to the enclosing declaration
 
@@ -243,9 +245,9 @@ Give added and deleted files in the Changes tree a summary and declaration rows,
 
 *(weak-point review)* The benchmark reports precision 1.000 but overall recall around 0.83 (0.821 on the held-out split), so about one refactoring in six is still shown as a removed and an added declaration. Work through the missed relationships listed in [VALIDATION.md](VALIDATION.md) by kind and language, for example extraction to several sources, and raise recall without lowering precision or forcing an ambiguous pair, under the benchmark's `no-new-wrong-pairs` gate.
 
-### Formatting-only recall in Kotlin and Scala
+### Formatting-only recall in Kotlin and Scala (implemented, 2026-11-16)
 
-*(weak-point review)* The 0.3.0 manual check labelled an intended formatting-only change to `price()` as `changed` in Kotlin and Scala 2, and the benchmark's formatting-only recall is below 1. Find which whitespace and line-break cases the Kotlin and Scala policies treat as content, add fixtures for them, and classify them as formatting-only where the language allows it, keeping Scala 3 indentation significant.
+*(weak-point review)* The 0.3.0 manual check labelled an intended formatting-only change to `price()` as `changed` in Kotlin and Scala 2, and the benchmark's formatting-only recall is below 1. Find which whitespace and line-break cases the Kotlin and Scala policies treat as content, add fixtures for them, and classify them as formatting-only where the language allows it, keeping Scala 3 indentation significant. Implemented in [declarations/07](specs/declarations/07-kotlin-scala-formatting.md): line breaks inside brackets and next to tokens that continue or close an expression become formatting, and a whole Scala 3 declaration re-indented by the same amount is formatting-only. The [benchmark record](VALIDATION.md#2026-11-16-kotlin-and-scala-formatting-only-line-breaks) shows formatting-only accuracy 1.000 in every language and no lower recall.
 
 ### Close the open manual checks
 

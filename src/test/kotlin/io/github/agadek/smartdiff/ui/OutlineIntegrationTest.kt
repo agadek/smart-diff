@@ -23,6 +23,7 @@ import com.intellij.lang.Language
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionToolbar
+import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.actionSystem.KeyboardShortcut
@@ -97,6 +98,7 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         super.setUp()
         savedSettings = settings.state
         savedSettingsOpener = OpenSmartDiffSettingsAction.settingsOpener
+        ReviewedMarks.getInstance(project).loadState(ReviewedMarksState())
         // Registered after the plugin's own extension, so the outline is attached when this one runs.
         val extension = object : DiffExtension() {
             override fun onViewerCreated(viewer: FrameDiffTool.DiffViewer, context: DiffContext, request: DiffRequest) {
@@ -110,6 +112,7 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         try {
             savedSettingsOpener?.let { OpenSmartDiffSettingsAction.settingsOpener = it }
             savedSettings?.let(settings::loadState)
+            ReviewedMarks.getInstance(project).loadState(ReviewedMarksState())
             listOf("JAVA", "kotlin").forEach { EngineDefaults.getInstance().set(it, null) }
         } catch (e: Throwable) {
             addSuppressedException(e)
@@ -1679,7 +1682,227 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertTrue("the shown side is framed", outline.navigator.shown.isNotEmpty())
     }
 
+    fun `test outline 12 R2 the context menu and Space mark and unmark without a new comparison and keep the selection`() {
+        // outline/12-reviewed-marks R2, R14
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+        val before = (outline.state as OutlineState.Shown).result
+        val group = outline.panel.reviewedActionGroup
+        val mark = group.getChildren(null).single { it.templatePresentation.text == "Mark as Reviewed" }
+        val unmark = group.getChildren(null).single { it.templatePresentation.text == "Unmark Reviewed" }
+        val clear = group.getChildren(null).single { it.templatePresentation.text == "Clear Reviewed Marks" }
+        fun enabled(action: AnAction): Boolean {
+            val event = TestActionEvent.createTestEvent(action)
+            action.update(event)
+            return event.presentation.isEnabled
+        }
+
+        select(outline, "method hello()  changed")
+        assertTrue(enabled(mark))
+        assertFalse("nothing is reviewed yet", enabled(unmark))
+        assertFalse("there are no marks to clear", enabled(clear))
+
+        mark.actionPerformed(TestActionEvent.createTestEvent(mark))
+
+        assertEquals("method hello()  changed, reviewed", outline.panel.selectedItem()?.label)
+        assertSame("marking never compares again", before, (outline.state as OutlineState.Shown).result)
+        assertFalse(enabled(mark))
+        assertTrue(enabled(unmark))
+        assertTrue(enabled(clear))
+
+        unmark.actionPerformed(TestActionEvent.createTestEvent(unmark))
+
+        assertEquals("method hello()  changed", outline.panel.selectedItem()?.label)
+        assertSame("unmarking never compares again", before, (outline.state as OutlineState.Shown).result)
+
+        select(outline, "method bye()  added")
+        val space = KeyEvent(outline.panel.tree, KeyEvent.KEY_PRESSED, System.currentTimeMillis(), 0, KeyEvent.VK_SPACE, ' ')
+        outline.panel.tree.keyListeners.forEach { it.keyPressed(space) }
+        assertEquals("Space marks the selected row", "method bye()  added, reviewed", outline.panel.selectedItem()?.label)
+        outline.panel.tree.keyListeners.forEach { it.keyPressed(space) }
+        assertEquals("Space unmarks a fully reviewed row", "method bye()  added", outline.panel.selectedItem()?.label)
+        assertSame(before, (outline.state as OutlineState.Shown).result)
+    }
+
+    fun `test outline 12 R11 Clear Reviewed Marks removes every mark of the file`() {
+        // outline/12-reviewed-marks R11
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+        val before = (outline.state as OutlineState.Shown).result
+        val mark = outline.panel.markReviewedAction
+        select(outline, "method hello()  changed")
+        mark.actionPerformed(TestActionEvent.createTestEvent(mark))
+        select(outline, "method bye()  added")
+        mark.actionPerformed(TestActionEvent.createTestEvent(mark))
+        assertEquals("1 changed · 1 added · 2 of 2 reviewed", outline.panel.summary.text)
+
+        val clear = outline.panel.clearReviewedAction
+        val event = TestActionEvent.createTestEvent(clear)
+        clear.update(event)
+        assertTrue(event.presentation.isEnabled)
+        clear.actionPerformed(event)
+
+        assertFalse("no reviewed count stays", outline.panel.summary.text.contains("reviewed"))
+        assertEquals("1 changed · 1 added", outline.panel.summary.text)
+        assertSame(before, (outline.state as OutlineState.Shown).result)
+        val after = TestActionEvent.createTestEvent(clear)
+        clear.update(after)
+        assertFalse("Clear is disabled once the file has no marks", after.presentation.isEnabled)
+    }
+
+    fun `test outline 12 R14 a second outline of the same file updates`() {
+        // outline/12-reviewed-marks R14
+        val file = projectFile("local/Greeter.java", JAVA_NEW)
+        fun request() = SimpleDiffRequest(
+            "Greeter.java",
+            DiffContents.vcsRevision(project, JAVA_OLD, "/repo/Greeter.java"),
+            DiffContents.localFile(project, file),
+            "HEAD", "Current",
+        )
+        val first = open(request()).awaitResult()
+        val second = open(request()).awaitResult()
+        assertNotNull("the local file has a project key", first.fileKey)
+        assertEquals(first.fileKey, second.fileKey)
+        val before = (second.state as OutlineState.Shown).result
+
+        select(first, "method hello()  changed")
+        first.panel.markReviewedAction.actionPerformed(TestActionEvent.createTestEvent(first.panel.markReviewedAction))
+
+        assertTrue("the second outline shows the mark: ${rows(second)}", rows(second).any { it == "  method hello()  changed, reviewed" })
+        assertSame("the second outline does not compare again", before, (second.state as OutlineState.Shown).result)
+    }
+
+    fun `test outline 12 R8 another outline with different text does not drop the mark on rebuild`() {
+        // outline/12-reviewed-marks R8
+        val localText = "class Two {\n    int shared() { return 2; }\n}\n"
+        val firstOld = "class Two {\n    int shared() { return 1; }\n}\n"
+        val secondOld = "class Two {\n    int shared() { return 0; }\n}\n"
+        val file = projectFile("local/Two.java", localText)
+        val first = open(
+            SimpleDiffRequest(
+                "Two.java", DiffContents.vcsRevision(project, firstOld, "/repo/Two.java"),
+                DiffContents.localFile(project, file), "HEAD", "Current",
+            ),
+        ).awaitResult()
+        val second = open(
+            SimpleDiffRequest(
+                "Two.java", DiffContents.vcsRevision(project, secondOld, "/repo/Two.java"),
+                DiffContents.localFile(project, file), "abc123", "Current",
+            ),
+        ).awaitResult()
+        assertNotNull("the local file has a project key", first.fileKey)
+        assertEquals(first.fileKey, second.fileKey)
+
+        val firstItem = selectItem(first) { it.label == "method shared()  changed" }
+        val secondItem = selectItem(second) { it.label == "method shared()  changed" }
+        check(firstItem.node != null && secondItem.node != null) { "both outlines show the declaration" }
+        val firstFingerprint = first.reviewed.fingerprints[firstItem.node]
+        val secondFingerprint = second.reviewed.fingerprints[secondItem.node]
+        assertTrue("the outlines show the declaration with different text", firstFingerprint != null && firstFingerprint != secondFingerprint)
+
+        var events = 0
+        project.messageBus.connect(testRootDisposable).subscribe(
+            ReviewedMarks.CHANGED, ReviewedMarks.Listener { events++ },
+        )
+        select(first, "method shared()  changed")
+        first.panel.markReviewedAction.actionPerformed(TestActionEvent.createTestEvent(first.panel.markReviewedAction))
+
+        assertTrue("the first outline shows the mark: ${rows(first)}", rows(first).any { it == "  method shared()  changed, reviewed" })
+        assertFalse("the second outline shows other text, so no mark: ${rows(second)}", rows(second).any { it.contains("reviewed") })
+        assertEquals("the mark is still stored", 1, ReviewedMarks.getInstance(project).marksFor(first.fileKey!!).size)
+        assertEquals("marking publishes once and the rebuilds publish nothing", 1, events)
+    }
+
+    fun `test outline 12 R8 a fresh comparison with changed text still drops the mark`() {
+        // outline/12-reviewed-marks R8
+        val localText = "class Two {\n    int shared() { return 2; }\n}\n"
+        val firstOld = "class Two {\n    int shared() { return 1; }\n}\n"
+        val secondOld = "class Two {\n    int shared() { return 0; }\n}\n"
+        val file = projectFile("local/Two.java", localText)
+        val key = ReviewedMarks.keyOf(file.path, project.basePath)!!
+        val first = open(
+            SimpleDiffRequest(
+                "Two.java", DiffContents.vcsRevision(project, firstOld, "/repo/Two.java"),
+                DiffContents.localFile(project, file), "HEAD", "Current",
+            ),
+        ).awaitResult()
+        val second = open(
+            SimpleDiffRequest(
+                "Two.java", DiffContents.vcsRevision(project, secondOld, "/repo/Two.java"),
+                DiffContents.localFile(project, file), "abc123", "Current",
+            ),
+        ).awaitResult()
+        select(first, "method shared()  changed")
+        first.panel.markReviewedAction.actionPerformed(TestActionEvent.createTestEvent(first.panel.markReviewedAction))
+        assertTrue("the mark is stored", ReviewedMarks.getInstance(project).marksFor(key).isNotEmpty())
+        assertFalse("a rebuild alone keeps the mark", rows(second).any { it.contains("reviewed") })
+
+        second.refresh()
+
+        PlatformTestUtil.waitWithEventsDispatching(
+            "a fresh comparison drops the mark", { ReviewedMarks.getInstance(project).marksFor(key).isEmpty() }, 10,
+        )
+        awaitResult(first) { !it.summary.contains("reviewed") }
+        assertFalse("the first outline loses the mark too: ${rows(first)}", rows(first).any { it.contains("reviewed") })
+        assertFalse("the second outline has no mark: ${rows(second)}", rows(second).any { it.contains("reviewed") })
+    }
+
+    fun `test outline 12 R8 an edit to one declaration drops only its mark`() {
+        // outline/12-reviewed-marks R8, R9
+        val old = "class Edit {\n    int a() { return 1; }\n    int b() { return 2; }\n}\n"
+        val new = "class Edit {\n    int a() { return 3; }\n    int b() { return 4; }\n}\n"
+        val file = projectFile("local/Edit.java", new)
+        val shown = open(SimpleDiffRequest("Edit.java", DiffContents.vcsRevision(project, old, "/repo/Edit.java"), DiffContents.localFile(project, file), "HEAD", "Current"))
+        val outline = shown.awaitResult()
+        val mark = outline.panel.markReviewedAction
+        select(outline, "method a()  changed")
+        mark.actionPerformed(TestActionEvent.createTestEvent(mark))
+        select(outline, "method b()  changed")
+        mark.actionPerformed(TestActionEvent.createTestEvent(mark))
+        assertEquals("2 changed · 2 of 2 reviewed", outline.panel.summary.text)
+
+        val document = shown.viewer.editor2.document
+        WriteCommandAction.runWriteCommandAction(project) {
+            val start = document.text.indexOf("int a() { return 3; }")
+            document.replaceString(start, start + "int a() { return 3; }".length, "int a() { return 9; }")
+        }
+
+        awaitResult(outline) { it.summary == "2 changed · 1 of 2 reviewed" }
+        assertFalse("the edited declaration lost its mark", rows(outline).any { it == "  method a()  changed, reviewed" })
+        assertTrue("the other mark stays: ${rows(outline)}", rows(outline).any { it == "  method b()  changed, reviewed" })
+    }
+
+    fun `test outline 12 R9 marks survive closing and reopening the diff`() {
+        // outline/12-reviewed-marks R9
+        val file = projectFile("local/Persist.java", JAVA_NEW)
+        fun request() = SimpleDiffRequest(
+            "Persist.java",
+            DiffContents.vcsRevision(project, JAVA_OLD, "/repo/Persist.java"),
+            DiffContents.localFile(project, file),
+            "HEAD", "Current",
+        )
+        val shown = open(request())
+        val first = shown.awaitResult()
+        select(first, "method hello()  changed")
+        first.panel.markReviewedAction.actionPerformed(TestActionEvent.createTestEvent(first.panel.markReviewedAction))
+        assertTrue(rows(first).any { it.contains("reviewed") })
+
+        Disposer.dispose(shown.disposable)
+        val second = open(request()).awaitResult()
+
+        assertTrue("the mark survived closing the diff: ${rows(second)}", rows(second).any { it == "  method hello()  changed, reviewed" })
+        assertEquals("1 changed · 1 added · 1 of 2 reviewed", second.panel.summary.text)
+    }
+
     private fun method(name: String) = Subject.Declaration(DeclarationKind.METHOD, name, "")
+
+    /** A real file under the project base, so the outline gets a file key and marks persist across diffs. */
+    private fun projectFile(relative: String, text: String): com.intellij.openapi.vfs.VirtualFile {
+        val base = requireNotNull(project.basePath) { "the light test project needs a base path" }
+        VfsRootAccess.allowRootAccess(testRootDisposable, base)
+        val target = java.io.File(base, relative)
+        target.parentFile.mkdirs()
+        target.writeText(text)
+        return LocalFileSystem.getInstance().refreshAndFindFileByIoFile(target)!!
+    }
 
     private fun labels(items: List<OutlineItem>): List<String> = items.flatMap { listOf(it.label) + labels(it.children) }
 

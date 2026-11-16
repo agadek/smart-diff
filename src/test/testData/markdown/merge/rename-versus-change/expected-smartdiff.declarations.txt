@@ -1,0 +1,2 @@
+left: ANALYZED  right: ANALYZED
+section A  CHANGED_ON_BOTH_SIDES  left: rename candidate → section Renamed  right: changed  base 1-17  left 1-17  right 1-17

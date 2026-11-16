@@ -65,6 +65,9 @@ class MergeFixturesTest : BasePlatformTestCase() {
     // languages/12-toml R18
     fun `test TOML merge fixtures`() = checkFixtures("toml", "TOML", "toml")
 
+    // languages/14-markdown R19, R20 (merge fixtures)
+    fun `test Markdown merge fixtures`() = checkFixtures("markdown", "Markdown", "md")
+
     // languages/13-xml R19, R21
     fun `test XML merge fixtures`() = checkFixtures("xml", "XML", "xml")
 
@@ -116,6 +119,16 @@ class MergeFixturesTest : BasePlatformTestCase() {
     fun `test TOML merge fixtures cover key changed on both sides`() {
         // languages/12-toml R18
         assertTrue(File(TEST_DATA, "toml/merge/key-changed-on-both-sides").isDirectory)
+    }
+
+    fun `test Markdown merge fixtures cover a section changed on both sides`() {
+        // languages/14-markdown R19
+        assertTrue(File(TEST_DATA, "markdown/merge/changed-on-both-sides").isDirectory)
+        val joined = joinFixture("markdown", "changed-on-both-sides", "Markdown", "md")
+        assertTrue(
+            "a section changed on both sides",
+            joined.nodes.any { it.subject is Subject.Declaration && it.group == MergeGroup.CHANGED_ON_BOTH_SIDES },
+        )
     }
 
     fun `test XML merge fixtures cover a tag changed on both sides`() {
@@ -380,6 +393,7 @@ class MergeFixturesTest : BasePlatformTestCase() {
             "yaml" to "yaml",
             "properties" to "properties",
             "toml" to "toml",
+            "markdown" to "md",
             "xml" to "xml",
             "html" to "html",
             "python" to "py",

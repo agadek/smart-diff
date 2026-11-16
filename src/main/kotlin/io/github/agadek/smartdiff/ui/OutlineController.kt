@@ -100,6 +100,18 @@ class OutlineController internal constructor(
     var state: OutlineState = OutlineState.Hidden
         private set
 
+    /** The marks that apply to the shown result, and the identity of every node a mark can be put on (outline/12). */
+    internal var reviewed: Reviewed = Reviewed.EMPTY
+        private set
+
+    /** A file path inside the project, or null when marks must stay local to this open diff (outline/12 R10). */
+    internal val fileKey: String? = ReviewedMarks.keyOf(file?.path, project.basePath)
+
+    /** Marks of a diff without a file key; they go away with the controller (outline/12 R10). */
+    private val localMarks = mutableListOf<ReviewedMark>()
+
+    private val marks = ReviewedMarks.getInstance(project)
+
     /**
      * Whether the outline is shown; starts from the window's last choice, or from the setting in a new window, and is
      * shown for a diff opened to show a row of it.
@@ -132,6 +144,7 @@ class OutlineController internal constructor(
         val hiddenChangeTypes: Set<ChangeType>,
         val formattingOnlyInline: Boolean,
         val markCommentOnly: Boolean,
+        val hideReviewed: Boolean,
         val outlineView: OutlineView,
         val hiddenRelationshipKinds: Set<RelationshipKind>,
     )
@@ -182,6 +195,9 @@ class OutlineController internal constructor(
             analysisSnapshot = analysisSnapshot(settings)
             ApplicationManager.getApplication().messageBus.connect(this)
                 .subscribe(SmartDiffSettings.CHANGED, SmartDiffSettings.Listener { settingsChanged() })
+            project.messageBus.connect(this).subscribe(ReviewedMarks.CHANGED, ReviewedMarks.Listener { key ->
+                if (key == fileKey && !disposed) rebuild()
+            })
         }
         val listener = object : DocumentListener {
             override fun documentChanged(event: DocumentEvent) = documentChanged()
@@ -198,6 +214,7 @@ class OutlineController internal constructor(
         settings.hiddenChangeTypes,
         settings.formattingOnlyInline,
         settings.markCommentOnly,
+        settings.hideReviewed,
         settings.outlineView,
         settings.hiddenRelationshipKinds,
     )
@@ -420,6 +437,66 @@ class OutlineController internal constructor(
         rebuild()
     }
 
+    /** Hides or shows reviewed changes in every outline, without comparing again (outline/12 R12). */
+    fun setHideReviewed(hide: Boolean) {
+        val settings = SmartDiffSettings.getInstance()
+        if (settings.hideReviewed == hide) return
+        settings.hideReviewed = hide
+        rebuild()
+    }
+
+    /** Whether this file has any mark, for the Clear Reviewed Marks action (outline/12 R11). */
+    fun hasReviewedMarks(): Boolean = fileKey?.let(marks::hasMarks) ?: localMarks.isNotEmpty()
+
+    /** Marks or unmarks the selected row's nodes, keeping the selection and never comparing again (outline/12 R2, R14). */
+    fun markSelected(mark: Boolean) {
+        panel.selectedItem()?.let { setReviewed(it, mark) }
+    }
+
+    /** Space toggles a row: all its nodes reviewed unmarks them, otherwise they are marked (outline/12 R2). */
+    fun toggleReviewed(item: OutlineItem) {
+        val nodes = reviewed.nodesOf(item)
+        if (nodes.isEmpty()) return
+        setReviewed(item, !nodes.all { it in reviewed.reviewed })
+    }
+
+    private fun setReviewed(item: OutlineItem, mark: Boolean) {
+        val request = shownRequest ?: return
+        val nodes = reviewed.nodesOf(item)
+        if (nodes.isEmpty()) return
+        val entries = nodes.mapNotNull { node ->
+            val path = reviewed.paths[node] ?: return@mapNotNull null
+            val fingerprint = reviewed.fingerprints[node] ?: return@mapNotNull null
+            ReviewedMark(path = path, fingerprint = fingerprint, markedAt = System.currentTimeMillis())
+        }
+        if (fileKey == null) {
+            if (mark) {
+                for (entry in entries) {
+                    if (localMarks.none { it.path == entry.path && it.fingerprint == entry.fingerprint }) localMarks += entry
+                }
+            } else {
+                val paths = entries.mapTo(HashSet()) { it.path }
+                localMarks.removeAll { it.path in paths }
+            }
+            rebuild()
+        } else if (mark) {
+            marks.add(fileKey, entries)
+        } else {
+            marks.removePaths(fileKey, entries.mapTo(HashSet()) { it.path })
+        }
+    }
+
+    /** Removes every mark of this file (outline/12 R11). */
+    fun clearReviewedMarks() {
+        if (fileKey == null) {
+            if (localMarks.isEmpty()) return
+            localMarks.clear()
+            rebuild()
+        } else {
+            marks.clear(fileKey)
+        }
+    }
+
     /** Switches this outline and every later one to [view], without comparing the file again (relationships/06 R1, R2). */
     fun setOutlineView(view: OutlineView) {
         val settings = SmartDiffSettings.getInstance()
@@ -435,34 +512,52 @@ class OutlineController internal constructor(
         rebuild()
     }
 
-    /** Rebuilds the shown rows from the kept result for a display-only setting change. */
+    /** Rebuilds the shown rows from the kept result, reading the marks without dropping stale ones (outline/12 R8). */
     private fun rebuild() {
         val shown = state as? OutlineState.Shown ?: return
         val request = shownRequest ?: return
-        showResult(request, shown.result, shown.usageNote, keepSelection = true, policy = shown.whitespacePolicy)
+        showResult(
+            request, shown.result, shown.usageNote, keepSelection = true,
+            policy = shown.whitespacePolicy, dropStale = false,
+        )
     }
 
+    /**
+     * Shows [result]. [dropStale] is false only for a rebuild from the kept result, which reads the marks without
+     * dropping those whose text no longer matches; a freshly compared result drops them (outline/12 R8).
+     */
     private fun showResult(
         request: ComparisonRequest,
         result: ComparisonResult,
         note: String? = null,
         keepSelection: Boolean = false,
         policy: WhitespacePolicy? = null,
+        dropStale: Boolean = true,
     ) {
         val settings = SmartDiffSettings.getInstance()
         val hidden = settings.hiddenChangeTypes
         val markCommentOnly = settings.markCommentOnly
+        val hideReviewed = settings.hideReviewed
         val whitespacePolicy = policy ?: whitespacePolicy(languageId)
         val selection = if (keepSelection) panel.selectedPath() else null
         val view = settings.outlineView
+        reviewed = if (fileKey == null) {
+            val applied = ReviewedMarks.applyMarks(localMarks, result, request, whitespacePolicy)
+            if (dropStale && applied.stale.isNotEmpty()) localMarks.removeAll(applied.stale)
+            applied
+        } else {
+            marks.apply(fileKey, result, request, whitespacePolicy, dropStale)
+        }
+        val reviewedNodes = reviewed.reviewed
         val items = if (view == OutlineView.REFACTORINGS) {
             RefactoringsModel.build(
                 result, request.oldText, request.newText, settings.formattingOnlyInline, hidden,
-                settings.hiddenRelationshipKinds, whitespacePolicy, markCommentOnly,
+                settings.hiddenRelationshipKinds, whitespacePolicy, markCommentOnly, reviewedNodes, hideReviewed,
             )
         } else {
             OutlineModel.build(
-                result, request.oldText, request.newText, settings.formattingOnlyInline, hidden, whitespacePolicy, markCommentOnly,
+                result, request.oldText, request.newText, settings.formattingOnlyInline, hidden, whitespacePolicy,
+                markCommentOnly, reviewedNodes, hideReviewed,
             )
         }
         val revealApplied = !keepSelection && reveal != null
@@ -470,13 +565,14 @@ class OutlineController internal constructor(
         show(
             OutlineState.Shown(
                 result,
-                OutlineModel.summary(result, hidden, request.oldText, request.newText, whitespacePolicy, markCommentOnly),
+                OutlineModel.summary(result, hidden, request.oldText, request.newText, whitespacePolicy, markCommentOnly, reviewedNodes, hideReviewed),
                 items,
-                OutlineModel.hiddenCount(result, hidden, markCommentOnly),
+                OutlineModel.hiddenCount(result, hidden, markCommentOnly, reviewedNodes, hideReviewed),
                 note,
                 whitespacePolicy,
             ),
         )
+        if (fileKey != null && dropStale && reviewed.stale.isNotEmpty()) marks.publish(fileKey)
         if (view == OutlineView.REFACTORINGS) {
             usageHighlights.show(result, settings.hiddenRelationshipKinds)
         } else {
@@ -691,14 +787,15 @@ class OutlineController internal constructor(
         /** The fallback whitespace policy before the pass reports the parsed dialect; Scala keeps its stricter policy. */
         internal fun whitespacePolicy(languageId: String): WhitespacePolicy = when (languageId) {
             "JAVA" -> WhitespacePolicy.INSIGNIFICANT
-            "kotlin" -> WhitespacePolicy.LINE_BREAKS_SIGNIFICANT
+            "kotlin" -> WhitespacePolicy.KOTLIN_LINE_BREAKS
             "Shell Script" -> WhitespacePolicy.SEPARATION_SIGNIFICANT
-            "Scala" -> WhitespacePolicy.INDENTATION_SIGNIFICANT
+            "Scala" -> WhitespacePolicy.SCALA3_INDENTATION
             "JSON", "JSON5" -> WhitespacePolicy.INSIGNIFICANT
             "yaml" -> WhitespacePolicy.SIGNIFICANT
             "Properties" -> WhitespacePolicy.INSIGNIFICANT
             "TOML" -> WhitespacePolicy.LINE_BREAKS_SIGNIFICANT
             "XML", "HTML", "XHTML" -> WhitespacePolicy.INSIGNIFICANT
+            "Markdown" -> WhitespacePolicy.SIGNIFICANT
             "Python" -> WhitespacePolicy.INDENTATION_SIGNIFICANT
             "Rust" -> WhitespacePolicy.INSIGNIFICANT
             else -> WhitespacePolicy.SIGNIFICANT
