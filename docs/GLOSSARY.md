@@ -83,6 +83,11 @@ _Avoid_: header, preamble, top-level code
 A named entry of a structured data file, such as a JSON object member.
 _Avoid_: property, field, attribute
 
+### Tag
+
+A named element of an XML or HTML file, such as a Maven POM dependency or a Spring bean.
+_Avoid_: element, node
+
 ### Section
 
 A named container of a structured data file, such as a TOML table, a YAML document or a Markdown heading.

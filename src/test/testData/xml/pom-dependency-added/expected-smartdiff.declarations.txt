@@ -1,0 +1,7 @@
+status: ANALYZED
+tag project  old 2-10  new 2-15
+  tag dependencies  old 3-9  new 3-14
+    tag dependency org.junit.jupiter:junit-jupiter  added  new 9-13
+      tag groupId  added  new 10
+      tag artifactId  added  new 11
+      tag version  added  new 12

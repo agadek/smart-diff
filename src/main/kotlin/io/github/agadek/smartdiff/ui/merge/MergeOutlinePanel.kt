@@ -66,7 +66,7 @@ class MergeOutlinePanel internal constructor(private val controller: MergeOutlin
             override fun getActionUpdateThread() = ActionUpdateThread.BGT
         }
         val layout = LayoutAction()
-        val filter = DefaultActionGroup("Hide Change Types", ChangeType.entries.map(::HideAction) + HideBothSidesAction()).apply {
+        val filter = DefaultActionGroup("Hide Change Types", ChangeType.withoutCommentOnly.map(::HideAction) + HideBothSidesAction()).apply {
             templatePresentation.description = "Hide types of changes from the merge outline"
             templatePresentation.icon = AllIcons.General.Filter
             isPopup = true

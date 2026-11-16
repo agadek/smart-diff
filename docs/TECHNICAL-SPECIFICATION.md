@@ -398,9 +398,13 @@ Implemented, 2026-11-15 ([languages/11](specs/languages/11-properties.md)). Each
 
 Implemented, 2026-11-15 ([languages/12](specs/languages/12-toml.md)). Pairs are `KEY`s, tables and array-of-tables entries are flat `SECTION`s; the PSI mapping, the array identity and array-of-tables naming rules, whitespace policy, packaging and tests are in its [details file](specs/languages/12-toml-details.md).
 
+### 6.19 XML provider
+
+Implemented, 2026-11-16 ([languages/13](specs/languages/13-xml.md)). Tags are `TAG`s named by tag name and an `id` or `name` attribute, Maven POM `dependency` and `plugin` tags by `groupId:artifactId`; attributes are content, so a reorder changes the tag (F4). The PSI mapping, naming rules, exact text comparison, prolog and DOCTYPE handling, packaging and tests are in its [details file](specs/languages/13-xml-details.md). HTML on the same provider is D4b, not specified here.
+
 ### 6.20 Markdown provider
 
-Accepted, 2026-11-16 ([languages/14](specs/languages/14-markdown.md)). Top-level ATX and setext headings are `SECTION`s nested by level, front matter is one `SECTION`, and whitespace is `SIGNIFICANT`; the PSI mapping, nesting rule, packaging and tests are in its [details file](specs/languages/14-markdown-details.md). Section 6.19 is reserved for the XML provider.
+Accepted, 2026-11-16 ([languages/14](specs/languages/14-markdown.md)). Top-level ATX and setext headings are `SECTION`s nested by level, front matter is one `SECTION`, and whitespace is `SIGNIFICANT`; the PSI mapping, nesting rule, packaging and tests are in its [details file](specs/languages/14-markdown-details.md).
 
 ## 7. Declaration engine: matching
 

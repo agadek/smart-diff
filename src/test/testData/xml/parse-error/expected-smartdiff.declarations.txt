@@ -1,0 +1,4 @@
+status: PARTIAL
+reason: some source could not be parsed and was not analyzed
+tag config  changed  old 2-5  new 2-5
+  tag b  unanalyzed  old 4  new 4

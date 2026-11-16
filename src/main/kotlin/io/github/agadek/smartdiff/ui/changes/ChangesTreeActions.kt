@@ -47,7 +47,7 @@ class ChangesTreeHideChangeTypesGroup : DefaultActionGroup("Hide Change Types", 
     init {
         templatePresentation.description = "Hide types of changes from the Changes tree"
         templatePresentation.icon = AllIcons.General.Filter
-        ChangeType.entries.forEach { add(HideChangeTypeAction(it)) }
+        ChangeType.withoutCommentOnly.forEach { add(HideChangeTypeAction(it)) }
     }
 
     private class HideChangeTypeAction(private val type: ChangeType) : DumbAwareToggleAction(type.text) {

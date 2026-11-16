@@ -1,0 +1,5 @@
+status: ANALYZED
+tag root  old 2-7  new 2-7
+  tag one  changed  old 3-5  new 3
+  tag two  changed  old 6  new 4-6
+    tag item  moved  old 4  new 5

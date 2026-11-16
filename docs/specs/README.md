@@ -75,6 +75,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [10 YAML](languages/10-yaml.md) | implemented, 2026-11-14 |
 | [11 Properties](languages/11-properties.md) | implemented, 2026-11-15 |
 | [12 TOML](languages/12-toml.md) | implemented, 2026-11-15 |
+| [13 XML](languages/13-xml.md) | implemented, 2026-11-16 |
 | [14 Markdown](languages/14-markdown.md) | accepted, 2026-11-16 |
 
 ## Outline
@@ -91,7 +92,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [08 Wheel steps through rows](outline/08-wheel-steps-through-rows.md) | implemented, 2026-11-14 |
 | [09 Outline minimum width](outline/09-outline-minimum-width.md) | implemented, 2026-11-14 |
 | [10 Outline settings button](outline/10-outline-settings-button.md) | implemented, 2026-11-15 |
-| [11 Comment-only changes](outline/11-comment-only-changes.md) | accepted, 2026-11-16 |
+| [11 Comment-only changes](outline/11-comment-only-changes.md) | implemented, 2026-11-16 |
 
 ## Changes tree
 
