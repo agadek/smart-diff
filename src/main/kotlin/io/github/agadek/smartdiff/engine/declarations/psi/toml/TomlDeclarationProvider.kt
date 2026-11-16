@@ -6,9 +6,12 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
 import com.intellij.psi.util.PsiTreeUtil
+import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
+import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
+import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationInfo
 import io.github.agadek.smartdiff.engine.declarations.psi.PsiDeclarationProvider
 import org.toml.lang.TomlLanguage
@@ -29,12 +32,23 @@ import org.toml.lang.psi.TomlValue
  */
 class TomlDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_BREAKS_SIGNIFICANT) {
 
+    private var arrayTableNames: Map<TomlArrayTable, String>? = null
+
     override fun supports(languageId: String): Boolean = languageId == "TOML"
 
     override fun parse(project: Project, text: CharSequence, fileName: String?, dialect: Language?): PsiFile {
         val name = fileName ?: DEFAULT_NAME
         val language = Language.findLanguageByID("TOML") ?: TomlLanguage
         return PsiFileFactory.getInstance(project).createFileFromText(name, language, text, false, false)
+    }
+
+    override fun build(file: PsiFile, cancellation: Cancellation): DeclarationTree {
+        arrayTableNames = computeArrayTableNames(file)
+        return try {
+            super.build(file, cancellation)
+        } finally {
+            arrayTableNames = null
+        }
     }
 
     override fun topLevel(file: PsiFile): List<PsiElement> {
@@ -118,11 +132,9 @@ class TomlDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_BRE
         )
     }
 
-    private fun tableEntries(table: TomlTable): List<TomlKeyValue> =
-        try { table.entries.toList() } catch (_: Throwable) { PsiTreeUtil.getChildrenOfTypeAsList(table, TomlKeyValue::class.java) }
+    private fun tableEntries(table: TomlTable): List<TomlKeyValue> = table.entries.toList()
 
-    private fun arrayTableEntries(table: TomlArrayTable): List<TomlKeyValue> =
-        try { table.entries.toList() } catch (_: Throwable) { PsiTreeUtil.getChildrenOfTypeAsList(table, TomlKeyValue::class.java) }
+    private fun arrayTableEntries(table: TomlArrayTable): List<TomlKeyValue> = table.entries.toList()
 
     /** Items of an identified-item array of inline tables, or null when the array is content. */
     private fun identifiedInlineItems(array: TomlArray): List<PsiElement>? {
@@ -143,38 +155,39 @@ class TomlDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_BRE
         return null
     }
 
-    private fun arrayElements(array: TomlArray): List<PsiElement> =
-        try {
-            array.elements.toList()
-        } catch (_: Throwable) {
-            PsiTreeUtil.getChildrenOfTypeAsList(array, TomlValue::class.java)
-                .ifEmpty { array.children.toList() }
-        }
+    private fun arrayElements(array: TomlArray): List<PsiElement> = array.elements.toList()
 
-    private fun inlineEntries(table: TomlInlineTable): List<TomlKeyValue> =
-        try {
-            table.entries.toList()
-        } catch (_: Throwable) {
-            PsiTreeUtil.getChildrenOfTypeAsList(table, TomlKeyValue::class.java)
-        }
+    private fun inlineEntries(table: TomlInlineTable): List<TomlKeyValue> = table.entries.toList()
 
     /** Name of an array-of-tables entry: `bin[name=web]` when identified, else the header name. */
-    private fun arrayTableName(entry: TomlArrayTable, headerName: String): String {
-        val file = entry.containingFile as? TomlFile ?: return headerName
-        val entries = PsiTreeUtil.getChildrenOfTypeAsList(file, TomlArrayTable::class.java)
-            .ifEmpty { file.children.filterIsInstance<TomlArrayTable>() }
-            .filter { headerName == it.header?.key?.let(::keyText) }
-        if (entries.isEmpty()) return headerName
-        for (candidate in IDENTIFIERS) {
-            val values = entries.map { e -> identifyingValue(arrayTableEntries(e), candidate) }
-            if (values.any { it == null }) continue
-            val distinct = values.requireNoNulls()
-            if (distinct.toSet().size == distinct.size) {
-                val value = identifyingValue(arrayTableEntries(entry), candidate) ?: return headerName
-                return "$headerName[$candidate=$value]"
+    private fun arrayTableName(entry: TomlArrayTable, headerName: String): String =
+        arrayTableNames?.get(entry) ?: headerName
+
+    private fun computeArrayTableNames(file: PsiFile): Map<TomlArrayTable, String> {
+        val toml = file as? TomlFile ?: return emptyMap()
+        val entries = toml.children.filterIsInstance<TomlArrayTable>()
+        val byHeader = entries.groupBy { it.header?.key?.let(::keyText) ?: return@groupBy "" }
+        val names = mutableMapOf<TomlArrayTable, String>()
+        for ((headerName, group) in byHeader) {
+            if (headerName.isEmpty()) continue
+            var identified = false
+            for (candidate in IDENTIFIERS) {
+                val values = group.map { e -> identifyingValue(arrayTableEntries(e), candidate) }
+                if (values.any { it == null }) continue
+                val distinct = values.requireNoNulls()
+                if (distinct.toSet().size == distinct.size) {
+                    for ((entry, value) in group.zip(distinct)) {
+                        names[entry] = "$headerName[$candidate=$value]"
+                    }
+                    identified = true
+                    break
+                }
+            }
+            if (!identified) {
+                for (entry in group) names[entry] = headerName
             }
         }
-        return headerName
+        return names
     }
 
     private fun identifyingValue(entries: Collection<TomlKeyValue>, key: String): String? {
@@ -184,48 +197,46 @@ class TomlDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_BRE
     }
 
     private fun scalarValueText(value: TomlValue): String? = when (value) {
-        is TomlLiteral -> {
-            val text = value.text
-            if (text.length >= 2 && ((text.first() == '"' && text.last() == '"') || (text.first() == '\'' && text.last() == '\''))) {
-                text.substring(1, text.length - 1)
-            } else {
-                text
-            }
-        }
+        is TomlLiteral -> literalIdentifierText(value.text)
         else -> null
+    }
+
+    private fun literalIdentifierText(text: String): String? {
+        if (text.startsWith("\"\"\"") || text.startsWith("'''")) return null
+        if (text.length >= 2 && ((text.first() == '"' && text.last() == '"') || (text.first() == '\'' && text.last() == '\''))) {
+            return text.substring(1, text.length - 1)
+        }
+        if (text == "true" || text == "false") return null
+        return if (NUMBER_LITERAL.matches(text)) text else null
     }
 
     private fun keyText(key: TomlKey): String {
         val segments = PsiTreeUtil.getChildrenOfTypeAsList(key, TomlKeySegment::class.java)
         return if (segments.isNotEmpty()) {
-            segments.joinToString(".") { segment ->
-                val text = segment.text
-                if (text.length >= 2 && ((text.first() == '"' && text.last() == '"') || (text.first() == '\'' && text.last() == '\''))) {
-                    text.substring(1, text.length - 1)
-                } else {
-                    text
-                }
-            }
+            segments.joinToString(".") { segment -> unquoteKeySegment(segment.text) }
         } else {
-            // Fallback: join key text without outer quotes per segment when segments API differs.
-            key.text.split('.').joinToString(".") { part ->
-                val t = part.trim()
-                if (t.length >= 2 && ((t.first() == '"' && t.last() == '"') || (t.first() == '\'' && t.last() == '\''))) {
-                    t.substring(1, t.length - 1)
-                } else t
-            }
+            key.text.split('.').joinToString(".") { part -> unquoteKeySegment(part.trim()) }
         }
     }
 
-    override fun tokenKind(type: String, text: String, kind: io.github.agadek.smartdiff.engine.declarations.model.TokenKind): io.github.agadek.smartdiff.engine.declarations.model.TokenKind {
+    private fun unquoteKeySegment(text: String): String {
+        if (text.length >= 6 && ((text.startsWith("\"\"\"") && text.endsWith("\"\"\"")) || (text.startsWith("'''") && text.endsWith("'''")))) {
+            return text.substring(3, text.length - 3)
+        }
+        if (text.length >= 2 && ((text.first() == '"' && text.last() == '"') || (text.first() == '\'' && text.last() == '\''))) {
+            return text.substring(1, text.length - 1)
+        }
+        return text
+    }
+
+    override fun tokenKind(type: String, text: String, kind: TokenKind): TokenKind {
         // Commas separate array/inline-table items: treat as separators like JSON to avoid noise.
-        return if (kind == io.github.agadek.smartdiff.engine.declarations.model.TokenKind.OTHER && text == ",") {
-            io.github.agadek.smartdiff.engine.declarations.model.TokenKind.SEPARATOR
-        } else kind
+        return if (kind == TokenKind.OTHER && text == ",") TokenKind.SEPARATOR else kind
     }
 
     private companion object {
         const val DEFAULT_NAME = "SmartDiff.toml"
         val IDENTIFIERS = listOf("name", "id", "key")
+        val NUMBER_LITERAL = Regex("""[+-]?(?:0x[0-9A-Fa-f_]+|0o[0-7_]+|0b[01_]+|(?:\d[\d_]*(?:\.\d[\d_]*)?|\.\d[\d_]*)(?:[eE][+-]?\d[\d_]*)?|(?:inf|nan))""")
     }
 }

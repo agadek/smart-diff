@@ -74,6 +74,26 @@ class TomlDeclarationProviderTest : ProviderTestCase() {
         assertEquals(listOf("bin", "bin"), plainTree.topLevel.map { it.name })
     }
 
+    // languages/12-toml R6, R9
+    fun `test boolean identifying values do not identify array items or array-of-tables entries`() {
+        val inline = "services = [{ name = true, port = 80 }, { name = false, port = 81 }]\n"
+        val inlineTree = build("TOML", inline, "config.toml")
+        val services = inlineTree.topLevel.single()
+        assertEquals("boolean ids leave an inline-table array as content", emptyList<String>(), services.children.map { it.name })
+
+        val tables = """
+            [[bin]]
+            name = true
+            path = "a"
+
+            [[bin]]
+            name = false
+            path = "b"
+        """.trimIndent() + "\n"
+        val tablesTree = build("TOML", tables, "Cargo.toml")
+        assertEquals("boolean ids leave array-of-tables entries named by header", listOf("bin", "bin"), tablesTree.topLevel.map { it.name })
+    }
+
     // languages/12-toml R15
     fun `test duplicate keys are separate declarations`() {
         val text = "a = 1\na = 2\n"
