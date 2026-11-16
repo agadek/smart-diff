@@ -97,6 +97,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [11 Comment-only changes](outline/11-comment-only-changes.md) | implemented, 2026-11-16 |
 | [12 Reviewed marks](outline/12-reviewed-marks.md) | implemented, 2026-11-16 |
 | [13 Moved-code markers](outline/13-moved-code-markers.md) | implemented, 2026-11-16 |
+| [14 Expand to declaration](outline/14-expand-to-declaration.md) | proposed, 2026-11-16 |
 
 ## Changes tree
 

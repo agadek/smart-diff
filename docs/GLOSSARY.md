@@ -21,6 +21,11 @@ _Avoid_: right, target, after
 The IDE's own line and word diff for the same comparison.
 _Avoid_: text diff, default diff, raw diff
 
+### Collapsed unchanged fragment
+
+A run of unchanged lines that the native diff hides behind a separator when its "Collapse unchanged fragments" option is on; clicking the separator shows the lines again.
+_Avoid_: fold, hidden lines, folded block
+
 ### One-sided diff
 
 A diff of an added or deleted file that shows only the side where the file exists, the [new side](#new-side) for an added file and the [old side](#old-side) for a deleted file.
