@@ -1,6 +1,6 @@
 # Markdown: details
 
-Status: accepted, 2026-11-16
+Status: implemented, 2026-11-16
 
 **Feature:** [Markdown](14-markdown.md)
 
@@ -13,11 +13,11 @@ Status: accepted, 2026-11-16
 
 ## 2. Language id and file types
 
-The Markdown plugin provides the `Markdown` language for `.md` and `.markdown` files, and for the other extensions the IDE maps to it (R2). The provider's `supports` covers that language id. Spike S10 (Markdown part) confirms the id and that text-built files give correct ranges, including ATX and setext headings, closing `#` runs, skipped levels, headings in code blocks, block quotes and lists, YAML and TOML front matter, and CRLF line ends.
+The Markdown plugin provides the `Markdown` language for `.md` and `.markdown` files, and for the other extensions the IDE maps to it (R2). The provider's `supports` covers that language id. Spike S10 (Markdown part) confirmed the id and that text-built files give correct ranges for ATX and setext headings, closing `#` runs, skipped levels, headings in code blocks, block quotes and lists, YAML and TOML front matter, and CRLF line ends.
 
 ## 3. PSI mapping
 
-The provider reads the headings that are direct children of the `MarkdownFile`, or of the section wrapper elements the plugin may build around them, and never descends into code blocks, block quotes, lists or HTML blocks (R9). The spike records which of the two shapes the plugin builds on 2025.1.3, and the provider handles both.
+On 2025.1.3 the spike found no section wrappers: `MarkdownHeader`s are direct children of the `MarkdownFile`. The provider reads those children and also walks into a non-container wrapper, so the other shape is handled too, but it never descends into code blocks, block quotes, lists, tables or HTML blocks (R9). A heading below such a container is not a section.
 
 | PSI element | Declaration | Kind | Name | Members |
 | --- | --- | --- | --- | --- |
@@ -25,11 +25,11 @@ The provider reads the headings that are direct children of the `MarkdownFile`, 
 | `MarkdownHeader` (ATX or setext) | one declaration | `SECTION` | heading text (R4, R5) | the sections nested under it (R7, R8) |
 | Front matter header element | one declaration | `SECTION` | `front matter` (R11) | none |
 
-- **Heading text (R4, R5):** the text of the heading's content, trimmed of spaces and tabs at both ends. For an ATX heading the leading `#` run and a closing run of `#` preceded by a space are dropped; for a setext heading the underline line is dropped. Inline markup such as `` `code` ``, `**bold**` and links is kept as written. An empty result is `(empty heading)`. The `nameRange` is the heading content's text range, or the marker's range for an empty heading, so matching masks the name token.
+- **Heading text (R4, R5):** the text of `MarkdownHeader.contentElement`, trimmed at both ends. On 2025.1.3 that element already excludes the ATX `#` markers, a closing run of `#` and the setext underline, while keeping inline markup such as `` `code` ``, `**bold**` and links as written; unlike `MarkdownHeader.name`, it does not strip that markup. An empty result is `(empty heading)`. The `nameRange` is the content element's text range, or the heading's range for an empty heading, so matching masks the name token. The spike recorded that a bare `#` has no content element and that a run of spaces before a closing `#` trims to empty.
 - **Level:** 1 to 6 from the `#` count; setext `=` is level 1 and `-` is level 2.
 - **Ranges (R6):** a section's range starts at its heading's first character and ends at the end of the last line before the next top-level heading with the same number of `#` or fewer, or at the end of the file. Trailing blank lines before that next heading belong to the section. Offsets equal the request text sliced by the range, including with CRLF line ends.
 - **Nesting (R7, R8):** the headings are walked in document order with a stack of open sections. A heading closes every open section of the same or a deeper level, then becomes a member of the section left on top of the stack, or a top-level declaration if the stack is empty. So a skipped level nests under the nearest higher heading, and a member's range always lies inside its container's range.
-- **Front matter (R11):** when the IDE's Markdown plugin parses a front matter block at offset 0 (its front matter element type, present on 2025.1.3), that element's text range is one `SECTION` named `front matter`, with no members. When the IDE does not parse it as front matter, the block is ordinary text in the file region, or a setext heading if the parser reads it that way; the spike records which.
+- **Front matter (R11):** the spike found `MarkdownFrontMatterHeader` (element type `Markdown:FRONT_MATTER_HEADER`) at offset 0 for both `---` and `+++` fences on 2025.1.3. Its element text range is one `SECTION` named `front matter`, with no members, and the following heading never nests under it. If an IDE does not parse a block as front matter, the block stays ordinary text in the file region, or a setext heading if the parser reads it that way.
 - **No body, no signature:** `DeclarationInfo.body` is null and `DeclarationInfo.signature` is null (R18).
 
 ## 4. Whitespace, comments and parse errors (R12, R17)
@@ -54,7 +54,7 @@ The merge outline and the Changes tree use the engine's result and need no Markd
 
 - `DeclarationEngine.VERSION` is raised, since a new provider can change results.
 - `CorpusValidationTest` accepts `.md` files (language id `Markdown`), so a later corpus run can include them; no corpus run is required now.
-- The structure-view fallback ([languages/06](06-structure-view-fallback.md)) no longer applies to Markdown files, since the provider registry picks the dedicated provider first. Tests that used Markdown as a fallback example switch to another language the fallback still covers, or assert that the dedicated provider now handles it.
+- The structure-view fallback ([languages/06](06-structure-view-fallback.md)) no longer applies to Markdown files, since the provider registry picks the dedicated provider first. The S9 recorded case list drops its Markdown example and the Markdown provider test asserts that the same text now gives one `SECTION` with a nested section instead of the fallback's two `ITEM`s. The structure-view Markdown golden fixtures stay by masking the dedicated provider, as for JSON and YAML.
 
 ## 8. Phases
 
@@ -64,11 +64,11 @@ The merge outline and the Changes tree use the engine's result and need no Markd
 
 ## 9. Tests
 
-- **Spike S10 (Markdown part):** a platform test builds Markdown files from text and checks that for every declaration the request text sliced by its range starts with its heading, and that member ranges lie inside container ranges, with the cases of section 2.
-- **`MarkdownDeclarationProviderTest`:** one test per mapping rule (R3 to R11, R16); offsets equal the request text for every declaration.
+- **Spike S10 (Markdown part):** `MarkdownSpikeTest` builds files from text, prints and asserts the PSI shape recorded in sections 2 and 3, and checks that for every declaration the request text sliced by its range starts with its heading, and that member ranges lie inside container ranges, with the cases of section 2.
+- **`MarkdownDeclarationProviderTest`:** one test per mapping rule (R3 to R11, R16); offsets equal the request text for every declaration. Its `assertS10` repeats the range and nesting checks through the registered provider.
 - **Golden fixtures** in `src/test/testData/markdown/`: paragraph changed in a section, section added, section removed, sections reordered (moved), subsection moved to another parent, heading level changed (moved by container), heading reworded with the same text (rename candidate), setext heading, closing `#` run, skipped level, heading inside a fenced code block, heading inside a block quote and a list, front matter changed, text before the first heading changed (file region), duplicate heading names in one container and in different containers, trailing spaces added (changed, not formatting-only), empty heading, empty and identical files.
 - **Merge fixtures** in `src/test/testData/markdown/merge/`, as in section 6.
-- **Relationship benchmark:** rename cases only, as for JSON.
+- **Relationship benchmark:** rename cases only, as for JSON. The Markdown lexer emits paragraph-sized tokens, so the reworded-heading fixture keeps eight paragraphs of unchanged text: the matcher's rename rule needs at least six content tokens (§5).
 - **Requirement names:** every test names its requirement, such as `// languages/14-markdown R8`.
 
 ## 10. Open questions

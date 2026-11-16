@@ -1,0 +1,4 @@
+left: ANALYZED  right: ANALYZED
+section A  UNCHANGED  base 1-9  left 1-9  right 1-9
+  section One  CHANGED_ON_BOTH_SIDES  left: changed  right: changed  base 3-6  left 7-9  right 3-6
+  section Two  LEFT_ONLY  left: moved, changed  base 7-9  left 3-6  right 7-9

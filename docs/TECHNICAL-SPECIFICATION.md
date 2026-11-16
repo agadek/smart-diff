@@ -404,7 +404,7 @@ Implemented, 2026-11-16 ([languages/13](specs/languages/13-xml.md)). Tags are `T
 
 ### 6.20 Markdown provider
 
-Accepted, 2026-11-16 ([languages/14](specs/languages/14-markdown.md)). Top-level ATX and setext headings are `SECTION`s nested by level, front matter is one `SECTION`, and whitespace is `SIGNIFICANT`; the PSI mapping, nesting rule, packaging and tests are in its [details file](specs/languages/14-markdown-details.md).
+Implemented, 2026-11-16 ([languages/14](specs/languages/14-markdown.md)). Top-level ATX and setext headings are `SECTION`s nested by level, front matter is one `SECTION`, and whitespace is `SIGNIFICANT`; the PSI mapping, nesting rule, packaging and tests are in its [details file](specs/languages/14-markdown-details.md).
 
 ## 7. Declaration engine: matching
 

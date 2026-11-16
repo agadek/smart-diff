@@ -1,6 +1,6 @@
 # Markdown
 
-Status: accepted, 2026-11-16
+Status: implemented, 2026-11-16
 
 **Description:** The [declaration engine](../../GLOSSARY.md#declaration-engine) supports Markdown files through the IDE's Markdown parser, when the IDE has Markdown support. Headings are [sections](../../GLOSSARY.md#section), nested by level.
 
