@@ -29,6 +29,7 @@ Status: implemented, 2026-11-15
 - **R19** Renames are grouped with their usages in the same file, as in [relationships/04](../relationships/04-rename-grouping.md).
 - **R20** The merge outline and the Changes tree show Python files as they show Java files.
 - **R21** Python has golden fixtures, merge fixtures and relationship benchmark fixtures, as the other languages do.
+- **R22** Zero-length structural tokens, such as `INDENT`, `DEDENT` and `STATEMENT_BREAK`, at a [declaration](../../GLOSSARY.md#declaration) boundary are not part of any declaration's content or of the [file region](../../GLOSSARY.md#file-region); indentation is still compared through the line-break whitespace.
 
 ## Out of scope
 
