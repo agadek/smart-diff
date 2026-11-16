@@ -112,6 +112,7 @@ Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.
 | [Python](#python) | [languages/04](specs/languages/04-python.md) |
 | [Rust](#rust) | [languages/05](specs/languages/05-rust.md) |
 | [Hide comment-only changes](#hide-comment-only-changes) | [outline/11](specs/outline/11-comment-only-changes.md) |
+| [Formatting-only recall in Kotlin and Scala](#formatting-only-recall-in-kotlin-and-scala) | [declarations/07](specs/declarations/07-kotlin-scala-formatting.md) |
 | [More languages](#more-languages) | [Format coverage plan](FORMAT-COVERAGE.md); feature specs with each phase |
 | Every other item below | Not specified yet |
 
@@ -245,7 +246,7 @@ Give added and deleted files in the Changes tree a summary and declaration rows,
 
 ### Formatting-only recall in Kotlin and Scala
 
-*(weak-point review)* The 0.3.0 manual check labelled an intended formatting-only change to `price()` as `changed` in Kotlin and Scala 2, and the benchmark's formatting-only recall is below 1. Find which whitespace and line-break cases the Kotlin and Scala policies treat as content, add fixtures for them, and classify them as formatting-only where the language allows it, keeping Scala 3 indentation significant.
+*(weak-point review)* The 0.3.0 manual check labelled an intended formatting-only change to `price()` as `changed` in Kotlin and Scala 2, and the benchmark's formatting-only recall is below 1. Find which whitespace and line-break cases the Kotlin and Scala policies treat as content, add fixtures for them, and classify them as formatting-only where the language allows it, keeping Scala 3 indentation significant. Specified in [declarations/07](specs/declarations/07-kotlin-scala-formatting.md) (accepted, 2026-11-16): line breaks inside brackets and next to tokens that continue or close an expression become formatting, and a whole Scala 3 declaration re-indented by the same amount is formatting-only.
 
 ### Close the open manual checks
 

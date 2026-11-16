@@ -445,6 +445,7 @@ The steps are applied in order, and the first that applies decides the content:
    - `LINE_BREAKS_SIGNIFICANT`: replace each `WHITESPACE` token with `⏎` if it contains a line break, otherwise drop it.
    - `SEPARATION_SIGNIFICANT`: replace each `WHITESPACE` token with `⏎` if it contains a line break, otherwise with a single space, so the presence of a separator is compared but not its amount or the indentation.
    - `INDENTATION_SIGNIFICANT`: replace each `WHITESPACE` token that contains a line break with `⏎` followed by the indentation after its last line break, as written; drop the others. Indentation is compared as written, not relative to the container, so re-indenting a whole block, or a tab for spaces, is `CHANGED`; that is strict but never hides a change of structure. Blank lines and spaces within a line still count as formatting.
+   - Kotlin and Scala use variants of the last two that also ignore line breaks inside brackets and next to tokens that continue or close an expression, and let a whole Scala 3 declaration shift by one amount ([declarations/07](specs/declarations/07-kotlin-scala-formatting-details.md)).
    - `SIGNIFICANT`: no normalization (step 4 can never produce formatting-only).
    Equal → `FORMATTING_ONLY`; otherwise → `CHANGED`.
 
