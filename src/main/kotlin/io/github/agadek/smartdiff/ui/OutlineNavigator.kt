@@ -76,19 +76,19 @@ internal class OutlineNavigator(
         frameSync = null
     }
 
-    /** Moves the caret into the new side's editor, or the old side's when the item is only there (Enter or double-click). */
+    /**
+     * Moves the caret into the new side's editor, or the old side's when the item is only there (Enter or double-click).
+     * Does nothing when that side has no editor; it never moves the caret using a range from the other document.
+     */
     fun navigate(item: OutlineItem) {
         val (editor, range) = when {
             item.newRange != null && newEditor != null -> newEditor to item.newRange
             item.oldRange != null && oldEditor != null -> oldEditor to item.oldRange
-            item.newRange != null -> oldEditor to item.newRange
-            item.oldRange != null -> newEditor to item.oldRange
             else -> return
         }
-        val target = editor ?: return
-        target.caretModel.moveToOffset(clamp(target, range.start))
-        target.scrollingModel.scrollToCaret(ScrollType.MAKE_VISIBLE)
-        IdeFocusManager.getGlobalInstance().requestFocus(target.contentComponent, true)
+        editor.caretModel.moveToOffset(clamp(editor, range.start))
+        editor.scrollingModel.scrollToCaret(ScrollType.MAKE_VISIBLE)
+        IdeFocusManager.getGlobalInstance().requestFocus(editor.contentComponent, true)
     }
 
     /** The highlighters of the selected item, for tests. */

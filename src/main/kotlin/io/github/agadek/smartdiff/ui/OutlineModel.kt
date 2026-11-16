@@ -162,6 +162,30 @@ object OutlineModel {
         newText: CharSequence = "",
         whitespacePolicy: WhitespacePolicy = WhitespacePolicy.INSIGNIFICANT,
     ): String {
+        val parts = summaryParts(result, hidden, oldText, newText, whitespacePolicy)
+        return if (parts.isEmpty()) "No structural changes" else parts.joinToString(" · ")
+    }
+
+    /**
+     * Whether [result] reports any structural change, counting exactly what [summary] shows. It decides on the result,
+     * not on the summary's wording, so a caller can tell an analyzed file with no changes from one with changes.
+     */
+    fun hasChanges(
+        result: ComparisonResult,
+        hidden: Set<ChangeType> = emptySet(),
+        oldText: CharSequence = "",
+        newText: CharSequence = "",
+        whitespacePolicy: WhitespacePolicy = WhitespacePolicy.INSIGNIFICANT,
+    ): Boolean = summaryParts(result, hidden, oldText, newText, whitespacePolicy).isNotEmpty()
+
+    /** The counted parts of [summary], empty when the result reports no structural change. */
+    private fun summaryParts(
+        result: ComparisonResult,
+        hidden: Set<ChangeType>,
+        oldText: CharSequence,
+        newText: CharSequence,
+        whitespacePolicy: WhitespacePolicy,
+    ): List<String> {
         val usages = Usages(result, oldText, newText, whitespacePolicy)
         val counts = LinkedHashMap<String, Int>()
         listOf(Tag.CHANGED.text, EXTRACTED, Tag.ADDED.text, INLINED, Tag.REMOVED.text, Tag.MOVED.text, Tag.FORMATTING_ONLY.text,
@@ -181,11 +205,10 @@ object OutlineModel {
         result.fileRegion?.let(::count)
         result.changes.forEach(::count)
         counts[Tag.UNANALYZED.text] = counts.getValue(Tag.UNANALYZED.text) + result.unanalyzed.size
-        val parts = counts.filterValues { it > 0 }.map { (label, n) -> "$n $label" } +
+        return counts.filterValues { it > 0 }.map { (label, n) -> "$n $label" } +
             listOfNotNull(hiddenCount(result, hidden).takeIf { it > 0 }?.let { "$it hidden" }) +
             if (result.status == Status.ANALYZED || result.status == Status.PARTIAL)
                 listOfNotNull(result.analysisNote) else emptyList()
-        return if (parts.isEmpty()) "No structural changes" else parts.joinToString(" · ")
     }
 
     /** How many changes [build] leaves out, or shows only as containers, because their types are [hidden]. */

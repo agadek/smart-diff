@@ -319,40 +319,28 @@ class ChangesSummaryService(private val project: Project) {
     private fun request(change: Change, stamp: AnalysisStamp): Request? {
         val old = change.beforeRevision
         val new = change.afterRevision
-        val missingSide = when {
-            old != null && new != null -> MissingSide.NONE
-            old == null && new != null -> MissingSide.OLD
-            old != null && new == null -> MissingSide.NEW
+        val (missingSide, existing) = when {
+            old != null && new != null -> MissingSide.NONE to new
+            old == null && new != null -> MissingSide.OLD to new
+            old != null && new == null -> MissingSide.NEW to old
             else -> return null
-        }
-        val existing = when (missingSide) {
-            MissingSide.NONE -> new!!
-            MissingSide.OLD -> new!!
-            MissingSide.NEW -> old!!
         }
         val fileName = existing.file.name
         val languageId =
             (FileTypeRegistry.getInstance().getFileTypeByFileName(fileName) as? LanguageFileType)?.language?.id
                 ?: return null
         val engine = EngineRegistry.getInstance(project).select(languageId).selected ?: return null
-        val (oldPath, newPath, oldVersion, newVersion) = when (missingSide) {
-            MissingSide.NONE -> Quadruple(old!!.file.path, new!!.file.path, version(old), version(new))
-            MissingSide.OLD -> {
-                val path = new!!.file.path
-                Quadruple(path, path, MISSING_VERSION, version(new))
-            }
-            MissingSide.NEW -> {
-                val path = old!!.file.path
-                Quadruple(path, path, version(old), MISSING_VERSION)
-            }
+        val key = when {
+            old != null && new != null ->
+                Key(old.file.path, new.file.path, version(old), version(new), missingSide, engine.id.value, stamp.confidence, stamp)
+            new != null ->
+                Key(new.file.path, new.file.path, MISSING_VERSION, version(new), missingSide, engine.id.value, stamp.confidence, stamp)
+            old != null ->
+                Key(old.file.path, old.file.path, version(old), MISSING_VERSION, missingSide, engine.id.value, stamp.confidence, stamp)
+            else -> return null
         }
-        val key = Key(oldPath, newPath, oldVersion, newVersion, missingSide, engine.id.value, stamp.confidence, stamp)
         return Request(key, change, languageId, fileName, missingSide)
     }
-
-    private data class Quadruple(val a: String, val b: String, val c: String, val d: String)
-
-    private val MISSING_VERSION get() = Companion.MISSING_VERSION
 
     private fun compute(request: Request, retry: Boolean = false) {
         if (project.isDisposed) return
@@ -416,7 +404,12 @@ class ChangesSummaryService(private val project: Project) {
             timedOut(engine, deadline, limits) ?: throw e
         }
         val text = summary(result) ?: return null
-        if (request.missingSide != MissingSide.NONE && text == "no structural changes") return null
+        // An added or deleted file whose analyzed result reports no changes keeps the platform row (changes-tree/06 R10).
+        // Decide on the result, not the summary's wording; a failed or too-large file keeps its reason instead.
+        if (request.missingSide != MissingSide.NONE &&
+            (result.status == Status.ANALYZED || result.status == Status.PARTIAL) &&
+            !OutlineModel.hasChanges(result)
+        ) return null
         val items = when (result.status) {
             Status.ANALYZED, Status.PARTIAL ->
                 OutlineModel.build(result, oldText, newText, SmartDiffSettings.getInstance().formattingOnlyInline)

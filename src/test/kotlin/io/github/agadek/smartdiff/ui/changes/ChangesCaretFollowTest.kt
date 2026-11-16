@@ -488,6 +488,7 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
 
         val selected = tree.selectionPath?.lastPathComponent as? DeclarationNode
         assertNotNull("a declaration row is selected in the one-sided diff of an added file", selected)
+        assertEquals("the declaration under the caret is selected", "method total()", selected!!.item.title)
     }
 
     fun `test a one-sided diff of a deleted file selects the declaration under the caret`() {
@@ -510,7 +511,32 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
         follower.followNow(oneside.editor, OLD_TEXT.indexOf("return 1"))
 
         val selected = tree.selectionPath?.lastPathComponent as? DeclarationNode
-        assertNotNull(selected)
+        assertNotNull("a declaration row is selected in the one-sided diff of a deleted file", selected)
+        assertEquals("the declaration under the caret is selected", "method total()", selected!!.item.title)
+    }
+
+    fun `test a one-sided diff of an added file with the caret outside every declaration selects the file row`() {
+        // changes-tree/06 R8
+        val (_, addedFile) = configuredFile("AddedOnesideOutside.java", NEW_TEXT)
+        val added = Change(null, SimpleContentRevision(NEW_TEXT, VcsUtil.getFilePath(addedFile), "2"))
+        val tree = summarizedTree(added)
+        val fileRow = summaryRow(tree, added)
+        val request = SimpleDiffRequest(
+            "AddedOnesideOutside.java",
+            DiffContentFactory.getInstance().createEmpty(),
+            contentWithoutHighlight(addedFile),
+            "old",
+            "new",
+        )
+        val viewer = openViewer(request)
+        assertTrue("the platform shows an added file one-sided", viewer is SimpleOnesideDiffViewer)
+        val oneside = viewer as SimpleOnesideDiffViewer
+        val follower = follower(tree, viewer = viewer)
+
+        follower.followNow(oneside.editor, NEW_TEXT.indexOf("// header") + 2)
+
+        assertSame("the file row is selected when the caret is outside every declaration", fileRow, tree.selectionPath?.lastPathComponent)
+        assertFalse("no declaration row is selected", tree.selectionPath?.lastPathComponent is DeclarationNode)
     }
 
     fun `test the platform preview of an added file selects the file row`() {

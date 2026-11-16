@@ -137,8 +137,8 @@ class OutlineCaretFollowTest : BasePlatformTestCase() {
         // outline/07 R4
         val shown = open(history(SCROLL_OLD, SCROLL_NEW, "LongFile.java"))
         val outline = shown.awaitResult()
-        val old = (outline.viewer as com.intellij.diff.tools.util.side.TwosideTextDiffViewer).editor1
-        val new = (outline.viewer as com.intellij.diff.tools.util.side.TwosideTextDiffViewer).editor2
+        val old = twoside(outline).editor1
+        val new = twoside(outline).editor2
         showEditor(old)
         showEditor(new)
         old.scrollingModel.scrollVertically(0)
@@ -268,7 +268,7 @@ class OutlineCaretFollowTest : BasePlatformTestCase() {
 
         // Make the result stale; the comparison is pending while the debounce runs.
         com.intellij.openapi.command.WriteCommandAction.runWriteCommandAction(project) {
-            (outline.viewer as com.intellij.diff.tools.util.side.TwosideTextDiffViewer).editor2.document.insertString(0, "// edit\n")
+            twoside(outline).editor2.document.insertString(0, "// edit\n")
         }
         val edited = "// edit\n" + JAVA_NEW
         moveCaret(outline, OutlineController.CaretSide.NEW, edited.indexOf("void bye()") + 2)
@@ -463,8 +463,10 @@ class OutlineCaretFollowTest : BasePlatformTestCase() {
     private fun allItems(items: List<OutlineItem>): List<OutlineItem> =
         items.flatMap { listOf(it) + allItems(it.children) }
 
+    private fun twoside(outline: OutlineController): TwosideTextDiffViewer = outline.viewer as TwosideTextDiffViewer
+
     private fun moveCaret(outline: OutlineController, side: OutlineController.CaretSide, offset: Int) {
-        val editor = if (side == OutlineController.CaretSide.OLD) (outline.viewer as com.intellij.diff.tools.util.side.TwosideTextDiffViewer).editor1 else (outline.viewer as com.intellij.diff.tools.util.side.TwosideTextDiffViewer).editor2
+        val editor = if (side == OutlineController.CaretSide.OLD) twoside(outline).editor1 else twoside(outline).editor2
         ApplicationManager.getApplication().invokeAndWait {
             editor.caretModel.moveToOffset(offset.coerceIn(0, editor.document.textLength))
         }
