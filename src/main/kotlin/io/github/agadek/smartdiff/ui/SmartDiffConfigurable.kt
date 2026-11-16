@@ -6,11 +6,14 @@ import com.intellij.openapi.options.BoundConfigurable
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.ui.DialogPanel
 import com.intellij.ui.SimpleListCellRenderer
+import com.intellij.ui.components.JBCheckBox
+import com.intellij.ui.dsl.builder.Cell
 import com.intellij.ui.dsl.builder.bind
 import com.intellij.ui.dsl.builder.bindIntText
 import com.intellij.ui.dsl.builder.bindItem
 import com.intellij.ui.dsl.builder.bindSelected
 import com.intellij.ui.dsl.builder.panel
+import com.intellij.ui.dsl.builder.selected
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.api.RelationshipKind
@@ -55,6 +58,12 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                 row { radioButton("Collapsed in a group", false) }
                 row { radioButton("Inline", true) }
             }.bind(settings::formattingOnlyInline)
+            lateinit var markCommentOnly: Cell<JBCheckBox>
+            row {
+                markCommentOnly = checkBox("Mark comment-only changes")
+                    .bindSelected(settings::markCommentOnly)
+                    .comment("Label changed declarations whose only difference is in comments as comment-only in the outline, so the filter can hide them.")
+            }
             buttonsGroup("Outline view:") {
                 row { radioButton("Container tree", OutlineView.CONTAINER_TREE) }
                 row { radioButton("Refactorings", OutlineView.REFACTORINGS) }
@@ -62,10 +71,12 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
             buttonsGroup("Hide from the outline:") {
                 for (type in ChangeType.entries) {
                     row {
-                        checkBox(type.text).bindSelected(
+                        val box = checkBox(type.text).bindSelected(
                             { type in settings.hiddenChangeTypes },
                             { hide -> settings.hiddenChangeTypes = if (hide) settings.hiddenChangeTypes + type else settings.hiddenChangeTypes - type },
                         )
+                        // settings/01 R19: comment-only can be hidden only while it is marked.
+                        if (type == ChangeType.COMMENT_ONLY) box.enabledIf(markCommentOnly.selected)
                     }
                 }
                 row {
@@ -86,7 +97,7 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                 }
             }
             buttonsGroup("Hide from the Changes tree:") {
-                for (type in ChangeType.entries) {
+                for (type in ChangeType.withoutCommentOnly) {
                     row {
                         checkBox(type.text).bindSelected(
                             { type in settings.hiddenChangesTreeChangeTypes },

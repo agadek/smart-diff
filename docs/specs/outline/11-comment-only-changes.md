@@ -1,6 +1,6 @@
 # Comment-only changes
 
-Status: accepted, 2026-11-16
+Status: implemented, 2026-11-16
 
 **Description:** An opt-in option marks [changed](../../GLOSSARY.md#changed) [declarations](../../GLOSSARY.md#declaration) whose only difference is in comments as [comment-only](../../GLOSSARY.md#comment-only), and the [change type filter](../../GLOSSARY.md#change-type-filter) can then hide them from the [structural outline](../../GLOSSARY.md#structural-outline).
 

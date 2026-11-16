@@ -1,6 +1,6 @@
 # Comment-only changes: details
 
-Status: accepted, 2026-11-16
+Status: implemented, 2026-11-16
 
 **Feature:** [Comment-only changes](11-comment-only-changes.md)
 
@@ -50,12 +50,11 @@ Comment-only rows are shown inline, never in the formatting-only group (out of s
 
 | Test | Checks |
 | --- | --- |
-| `ContentClassifierTest`: comment reworded, comment added, comment removed, comment and indentation changed, comment and code changed, string changed, signature changed, parse error, no comments, one case per `WhitespacePolicy` | R3, R4, R5 |
-| Golden fixtures in Java, Kotlin, Python and Rust: a Javadoc/KDoc/`///` rewrite and a line-comment removal, checked for `commentOnly` on the node and on the file region | R3, R7 |
-| `OutlineModelTest`: option off shows `changed` and the same rows as before; option on shows `comment-only`; `moved` kept; summary order; hidden type with option on and off | R1, R3, R6, R8, R9, R10 |
-| `RefactoringsModelTest`: other-changes row shows `comment-only` | R11 |
-| `SmartDiffSettingsTest`: default off, persisted, counted as a display setting | R1, R2, R12 |
-| `OutlineIntegrationTest`: toggling the filter-menu checkbox redraws without a new comparison and keeps the selection | R2, R12 |
-| `ChangesTreeActions` and merge filter tests: no comment-only entry | Out of scope |
+| `CommentOnlyClassifierTest`: comment reworded, added and removed under every `WhitespacePolicy`, a block comment between tokens, comment and formatting together, comment and code changed, string changed, signature changed, parse error, identical and comment-free sources, whitespace the policy counts, significant indentation after a removed comment, a multi-line block comment | R3, R4, R5 |
+| `CommentOnlyEngineTest`: a Javadoc rewrite and a removed line comment in Java, a code change next to a comment change, a KDoc rewrite in Kotlin, a line comment and a docstring in Python, a header comment in the file region | R3, R4, R7 |
+| `CommentOnlyOutlineTest`: option off shows `changed` and the same rows and summary as before; option on shows `comment-only` with `moved` kept; summary order; hiding with the option on and off; only the outline offers the type; the refactorings view's other changes | R1, R3, R6, R7, R8, R9, R10, R11 |
+| `SmartDiffSettingsTest`: off by default, persisted, counted as a display setting, and round-tripped on the settings page | R1, R2, R12 |
+| `OutlineIntegrationTest` outline 11 R2 R12: the toggle redraws without a new comparison, keeps the selection, and the filter hides comment-only rows only while it is on | R2, R8, R9, R12 |
+| `ChangesTreeFilterTest` and `MergeOutlineIntegrationTest`: no comment-only entry | Out of scope |
 
 The relationship benchmark and the corpus validation must give the same output as before, since classification does not change.

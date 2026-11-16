@@ -213,7 +213,7 @@ Give added and deleted files in the Changes tree a summary and declaration rows,
 
 ### Hide comment-only changes
 
-*(gap review)* An opt-in toggle in the diff that hides declarations whose only change is in comments, or marks them as comment-only. Comments count as changes by default ([change classification](specs/declarations/02-change-classification.md)), and the shipped engine has no global ignore rule, so this stays off unless the user turns it on. Specified in [outline/11](specs/outline/11-comment-only-changes.md) (accepted, 2026-11-16) as an opt-in `comment-only` label in the outline that the change type filter can hide.
+*(gap review)* An opt-in toggle in the diff that hides declarations whose only change is in comments, or marks them as comment-only. Comments count as changes by default ([change classification](specs/declarations/02-change-classification.md)), and the shipped engine has no global ignore rule, so this stays off unless the user turns it on. Specified in [outline/11](specs/outline/11-comment-only-changes.md) (implemented, 2026-11-16) as an opt-in `comment-only` label in the outline that the change type filter can hide.
 
 ### Opt-in equivalence rules
 

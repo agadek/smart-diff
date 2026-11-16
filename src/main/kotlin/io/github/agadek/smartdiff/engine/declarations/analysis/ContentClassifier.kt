@@ -46,6 +46,89 @@ object ContentClassifier {
     }
 
     /**
+     * Whether a declaration's own source is the same on both sides once comments are left out and whitespace is
+     * compared under [policy], as for formatting-only (outline/11 R3, R5). Never with a parse error or a changed
+     * signature (R4), never for identical sources, and only when either side has a comment. A removed comment leaves
+     * its line breaks, so a block comment spanning lines still separates what was around it. Strings are never left
+     * out, so a change inside a string, a docstring included, keeps the declaration changed.
+     */
+    fun isCommentOnly(
+        old: List<Token>,
+        new: List<Token>,
+        policy: WhitespacePolicy,
+        parseError: Boolean,
+        signatureChanged: Boolean = false,
+    ): Boolean {
+        return try {
+            if (parseError || signatureChanged) return false
+            val oldContent = old.filterNot { it.kind == TokenKind.SEPARATOR }
+            val newContent = new.filterNot { it.kind == TokenKind.SEPARATOR }
+            if (oldContent.map { it.text } == newContent.map { it.text }) return false
+            if (oldContent.none { it.kind == TokenKind.COMMENT } && newContent.none { it.kind == TokenKind.COMMENT }) return false
+            if (policy == WhitespacePolicy.SIGNIFICANT) {
+                sameWithoutComments(withoutComments(oldContent), withoutComments(newContent))
+            } else {
+                val without = { tokens: List<Token> -> normalize(tokens.filterNot { it.kind == TokenKind.COMMENT }, policy) }
+                without(oldContent) == without(newContent)
+            }
+        } catch (e: Exception) {
+            // A pure comparison must never turn a changed node into a claim about its source (outline/11, failure).
+            false
+        }
+    }
+
+    /** The line breaks of [text], so two whitespace runs can be compared by line breaks only. */
+    private fun lineBreaks(text: String): String = text.replace("\r\n", "\n").filter { it == '\n' || it == '\r' }
+
+    /** A whitespace run, or another token, with comments left out under [WhitespacePolicy.SIGNIFICANT]. */
+    private sealed interface Part {
+        data class Run(val text: String, val touchedComment: Boolean) : Part
+        data class Other(val type: String, val text: String) : Part
+    }
+
+    /** Adjacent whitespace and the comments between it become one run, marked when it touched a removed comment. */
+    private fun withoutComments(tokens: List<Token>): List<Part> {
+        val parts = mutableListOf<Part>()
+        val run = StringBuilder()
+        var touched = false
+        var inRun = false
+        fun endRun() {
+            if (inRun) parts += Part.Run(run.toString(), touched)
+            run.setLength(0)
+            touched = false
+            inRun = false
+        }
+        for (token in tokens) {
+            when (token.kind) {
+                TokenKind.WHITESPACE -> { run.append(token.text); inRun = true }
+                TokenKind.COMMENT -> { touched = true; inRun = true }
+                else -> { endRun(); parts += Part.Other(token.type, token.text) }
+            }
+        }
+        endRun()
+        return parts.filterNot { it is Part.Run && it.text.isEmpty() && !it.touchedComment }
+    }
+
+    /**
+     * Whether two part lists are the same, where a run that touched a removed comment on either side is compared only
+     * by whether it has a line break, and every other run exactly (outline/11 details, step 4).
+     */
+    private fun sameWithoutComments(old: List<Part>, new: List<Part>): Boolean {
+        // A run that is only a removed comment, with no whitespace or line break left, is no run at all.
+        fun List<Part>.clean() = filterNot { it is Part.Run && it.text.isEmpty() }
+        val a = old.clean()
+        val b = new.clean()
+        if (a.size != b.size) return false
+        return a.zip(b).all { (x, y) ->
+            when {
+                x is Part.Run && y is Part.Run ->
+                    if (x.touchedComment || y.touchedComment) lineBreaks(x.text).isNotEmpty() == lineBreaks(y.text).isNotEmpty() else x.text == y.text
+                else -> x == y
+            }
+        }
+    }
+
+    /**
      * The `(type, text)` pairs that count under [policy]. A run of adjacent whitespace tokens counts as one: own tokens
      * skip the children's ranges, so the whitespace before and after a child can end up next to each other, and an
      * added or removed child must not change the count of line breaks around it.
