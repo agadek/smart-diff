@@ -111,6 +111,7 @@ Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.
 | [Summaries for added and deleted files](#summaries-for-added-and-deleted-files) | [changes-tree/06](specs/changes-tree/06-added-deleted-file-summaries.md) |
 | [Python](#python) | [languages/04](specs/languages/04-python.md) |
 | [Rust](#rust) | [languages/05](specs/languages/05-rust.md) |
+| [Hide comment-only changes](#hide-comment-only-changes) | [outline/11](specs/outline/11-comment-only-changes.md) |
 | [More languages](#more-languages) | [Format coverage plan](FORMAT-COVERAGE.md); feature specs with each phase |
 | Every other item below | Not specified yet |
 
@@ -212,7 +213,7 @@ Give added and deleted files in the Changes tree a summary and declaration rows,
 
 ### Hide comment-only changes
 
-*(gap review)* An opt-in toggle in the diff that hides declarations whose only change is in comments, or marks them as comment-only. Comments count as changes by default ([change classification](specs/declarations/02-change-classification.md)), and the shipped engine has no global ignore rule, so this stays off unless the user turns it on.
+*(gap review)* An opt-in toggle in the diff that hides declarations whose only change is in comments, or marks them as comment-only. Comments count as changes by default ([change classification](specs/declarations/02-change-classification.md)), and the shipped engine has no global ignore rule, so this stays off unless the user turns it on. Specified in [outline/11](specs/outline/11-comment-only-changes.md) (accepted, 2026-11-16) as an opt-in `comment-only` label in the outline that the change type filter can hide.
 
 ### Opt-in equivalence rules
 
