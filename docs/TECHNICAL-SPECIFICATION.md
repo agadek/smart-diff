@@ -398,6 +398,10 @@ Implemented, 2026-11-15 ([languages/11](specs/languages/11-properties.md)). Each
 
 Implemented, 2026-11-15 ([languages/12](specs/languages/12-toml.md)). Pairs are `KEY`s, tables and array-of-tables entries are flat `SECTION`s; the PSI mapping, the array identity and array-of-tables naming rules, whitespace policy, packaging and tests are in its [details file](specs/languages/12-toml-details.md).
 
+### 6.20 Markdown provider
+
+Accepted, 2026-11-16 ([languages/14](specs/languages/14-markdown.md)). Top-level ATX and setext headings are `SECTION`s nested by level, front matter is one `SECTION`, and whitespace is `SIGNIFICANT`; the PSI mapping, nesting rule, packaging and tests are in its [details file](specs/languages/14-markdown-details.md). Section 6.19 is reserved for the XML provider.
+
 ## 7. Declaration engine: matching
 
 Inputs: the old and new `DeclarationTree`. Matching is global over all declarations in the file, so a declaration can be matched across containers. Each rule runs over the declarations still unmatched after the previous rule. Within a rule, declarations are processed in source order of the old side, which makes the result deterministic.
