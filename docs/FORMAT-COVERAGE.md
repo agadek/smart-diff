@@ -122,7 +122,7 @@ Each phase is one pull request, or a spec pull request and a code pull request, 
 | B0 | Build pattern for paid IDEs, as an amendment to the S8 ADR; verifier jobs for WebStorm and GoLand | R0 | Not started |
 | B1 | JavaScript and TypeScript provider | B0 | Not started |
 | B2 | Go provider | B0 | Not started |
-| M1 | Markdown provider | D0 (the `SECTION` kind) | Spec accepted 2026-11-16 in [languages/14](specs/languages/14-markdown.md) |
+| M1 | Markdown provider | D0 (the `SECTION` kind) | Implemented 2026-11-16 in [languages/14](specs/languages/14-markdown.md) |
 | M2 | Groovy provider and build-script sections, Groovy and Kotlin | Nothing | Part 1 (Groovy declarations) implemented 2026-11-14; part 2 (build-script sections, M2b) implemented 2026-11-15 |
 | M3 | Shell provider | Nothing | Implemented 2026-11-14 |
 | B3 | CSS, SCSS and Less provider | B1 | Not started |
