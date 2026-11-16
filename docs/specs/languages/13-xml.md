@@ -9,7 +9,7 @@ Status: accepted, 2026-11-16
 ## Requirements
 
 - **R1** XML support works through the platform's XML module (`com.intellij.modules.xml`), and the plugin loads without it.
-- **R2** `.xml` files, `pom.xml`, Spring configuration and Android XML, and every file the IDE treats as XML on IntelliJ Platform 2025.1.3, are [supported languages](../../GLOSSARY.md#supported-language).
+- **R2** `.xml` files, `pom.xml`, Spring configuration and Android XML, and every file the IDE treats as XML on IntelliJ Platform 2025.1.3, are [supported languages](../../GLOSSARY.md#supported-language); HTML and XHTML files are not.
 - **R3** Each tag is a [declaration](../../GLOSSARY.md#declaration) of [kind](../../GLOSSARY.md#kind) `TAG`, named by its tag name as written, prefix included.
 - **R4** A tag with an `id` or `name` attribute is named by its tag name and that attribute, `id` first, such as `bean id=dataSource`.
 - **R5** A Maven POM `dependency` or `plugin` tag with `groupId` and `artifactId` child tags is named by its tag name and `groupId:artifactId`, so a version bump is one changed dependency.
