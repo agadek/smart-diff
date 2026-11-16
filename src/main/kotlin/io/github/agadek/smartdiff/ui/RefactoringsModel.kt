@@ -173,6 +173,7 @@ object RefactoringsModel {
             frames = frames,
             colour = colour,
             endpoints = ReviewedMarks.endpointsOf(relationship, result),
+            moved = RelationshipKind.MOVE in relationship.kinds,
         )
     }
 
@@ -289,7 +290,8 @@ object RefactoringsModel {
         }
         // A container with no labels of its own disappears when every child is covered, as with the change type filter.
         if (item.tags.isEmpty() && item.children.isNotEmpty() && allChildren.isEmpty()) return null
-        return if (allChildren == item.children) item else item.withChildren(allChildren)
+        // Only a relationship row is a move in this view: a container tree row keeps its label but gets no marker.
+        return (if (allChildren == item.children) item else item.withChildren(allChildren)).withoutMoved()
     }
 
     /**

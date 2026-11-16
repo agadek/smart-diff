@@ -96,6 +96,7 @@ class OutlineController internal constructor(
     )
     internal val strip = OutlineStrip { setMinimised(false) }
     internal val usageHighlights = RelationshipHighlights(viewer)
+    internal val movedMarkers = MovedCodeMarkers(viewer, ::revealFromMarker)
 
     var state: OutlineState = OutlineState.Hidden
         private set
@@ -145,6 +146,7 @@ class OutlineController internal constructor(
         val formattingOnlyInline: Boolean,
         val markCommentOnly: Boolean,
         val hideReviewed: Boolean,
+        val markMovedCode: Boolean,
         val outlineView: OutlineView,
         val hiddenRelationshipKinds: Set<RelationshipKind>,
     )
@@ -215,6 +217,7 @@ class OutlineController internal constructor(
         settings.formattingOnlyInline,
         settings.markCommentOnly,
         settings.hideReviewed,
+        settings.markMovedCode,
         settings.outlineView,
         settings.hiddenRelationshipKinds,
     )
@@ -273,6 +276,13 @@ class OutlineController internal constructor(
         applyVisibility()
     }
 
+    /** Selects the row of a clicked moved marker, restoring the panel first when it is minimised (outline/13 R7, R8). */
+    private fun revealFromMarker(path: OutlinePath) {
+        if (disposed || state !is OutlineState.Shown) return
+        if (isMinimised) setMinimised(false)
+        panel.reveal(path)
+    }
+
     private fun applyVisibility() {
         if (!isOutlineVisible) {
             hideOutline()
@@ -294,6 +304,7 @@ class OutlineController internal constructor(
         cancel()
         navigator.clear()
         usageHighlights.clear()
+        movedMarkers.clear()
         (viewer as? FilteringDiffViewer)?.hide(HiddenLines.NONE)
         removeStrip()
         splitter.secondComponent = null
@@ -573,6 +584,11 @@ class OutlineController internal constructor(
             ),
         )
         if (fileKey != null && dropStale && reviewed.stale.isNotEmpty()) marks.publish(fileKey)
+        if (settings.markMovedCode) {
+            movedMarkers.show(MovedCodeMarkers.targets(items))
+        } else {
+            movedMarkers.clear()
+        }
         if (view == OutlineView.REFACTORINGS) {
             usageHighlights.show(result, settings.hiddenRelationshipKinds)
         } else {
@@ -593,6 +609,7 @@ class OutlineController internal constructor(
         cancel()
         navigator.releaseScrollSync()
         usageHighlights.clear()
+        movedMarkers.clear()
         (viewer as? FilteringDiffViewer)?.forgetHidden()
         debounce.restart()
     }
@@ -607,6 +624,7 @@ class OutlineController internal constructor(
         if (state !is OutlineState.Shown) {
             shownRequest = null
             usageHighlights.clear()
+            movedMarkers.clear()
         }
         this.state = state
         panel.show(state)
@@ -746,6 +764,7 @@ class OutlineController internal constructor(
         cancel()
         navigator.clear()
         usageHighlights.clear()
+        movedMarkers.clear()
         removeStrip()
         state = OutlineState.Hidden
         panel.show(OutlineState.Hidden)

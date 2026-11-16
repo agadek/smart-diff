@@ -64,6 +64,11 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                     .bindSelected(settings::markCommentOnly)
                     .comment("Label changed declarations whose only difference is in comments as comment-only in the outline, so the filter can hide them.")
             }
+            row {
+                checkBox("Mark moved code in the editors")
+                    .bindSelected(settings::markMovedCode)
+                    .comment("Mark each moved declaration in the gutter and on the scrollbar of both editors while the outline shows the result.")
+            }
             buttonsGroup("Outline view:") {
                 row { radioButton("Container tree", OutlineView.CONTAINER_TREE) }
                 row { radioButton("Refactorings", OutlineView.REFACTORINGS) }

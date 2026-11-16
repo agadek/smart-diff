@@ -21,6 +21,10 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-16: moved-code markers manual check
+
+[outline/13](specs/outline/13-moved-code-markers.md) adds a gutter icon and a thin scrollbar mark for each moved declaration on both sides. `MovedCodeMarkersTest`, the outline/13 rows of `OutlineIntegrationTest` and the settings-page row of `SmartDiffSettingsTest` cover the behaviour automatically. **Manual check: outstanding.** Open a reordered Java file and a reordered Kotlin file in IntelliJ IDEA Community 2025.1 and the latest release: confirm the icons sit in the gutter on both sides in light and dark themes, the scrollbar marks are visible beside the diff's own change marks, the tooltip reads `<declaration>: Moved from line N` on the new side and `<declaration>: Moved to line N` on the old side with N counted from 1, and a click selects the declaration's row and frames both positions. Repeat with the outline minimised, with moved changes hidden by the change type filter and by the relationship kind filter, and with *Mark moved code in the editors* off.
+
 ## 2026-11-16: Kotlin and Scala formatting-only line breaks
 
 [declarations/07](specs/declarations/07-kotlin-scala-formatting.md) was measured with the full relationship corpus,
