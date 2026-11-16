@@ -12,6 +12,13 @@ import io.github.agadek.smartdiff.engine.api.compareSafely
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationEngine
 
 /**
+ * A generous test-only pass budget: these tests check resolution (relationships/04 R5, R10, R14, R19), not time. On a
+ * cold JVM the first Kotlin K2 resolve pays a one-time warm-up that can exceed the production 1 s budget on a slow
+ * runner. R17's budget is checked separately by ReferencePassTest's deterministic slow-resolver test.
+ */
+private const val TEST_BUDGET_MILLIS = 60_000L
+
+/**
  * The Java, Kotlin K2, Scala 2 and Scala 3 resolvers resolve same-file usages from a light copy
  * (relationships/04 R5, R14). A language that cannot resolve keeps the engine result.
  */
@@ -157,7 +164,7 @@ class ReferenceResolutionTest : BasePlatformTestCase() {
         val new = "class C:\n    def helper2(self):\n        return 1 + 2\n\no = C()\nprint(o.helper2())\nprint(missing())\n"
         val request = ComparisonRequest(old, new, "Python", "m.py")
         val result = compareSafely(DeclarationEngine(project), request, Cancellation.NONE)
-        val outcome = ReferencePass.runForBenchmark(project, request, result, Cancellation.NONE)
+        val outcome = ReferencePass.runWith(project, request, result, Cancellation.NONE, ReferenceResolvers.all, TEST_BUDGET_MILLIS)
         // rename should be detected but obj.helper/missing() not grouped
         val renameRels = outcome.result.relationships.filter { RelationshipKind.RENAME in it.kinds }
         assertTrue("rename helper->helper2 should be detected", renameRels.isNotEmpty())
@@ -201,7 +208,7 @@ class ReferenceResolutionTest : BasePlatformTestCase() {
         """.trimIndent() + "\n"
         val request = ComparisonRequest(old, new, "Python", "m.py")
         val result = compareSafely(DeclarationEngine(project), request, Cancellation.NONE)
-        val outcome = ReferencePass.runForBenchmark(project, request, result, Cancellation.NONE)
+        val outcome = ReferencePass.runWith(project, request, result, Cancellation.NONE, ReferenceResolvers.all, TEST_BUDGET_MILLIS)
         val renameRels = outcome.result.relationships.filter { RelationshipKind.RENAME in it.kinds }
         val xToY = renameRels.filter { rel ->
             val oldSub = rel.old.singleOrNull()?.subject as? Subject.Declaration
@@ -220,7 +227,7 @@ class ReferenceResolutionTest : BasePlatformTestCase() {
         val request = ComparisonRequest(old, new, "UNKNOWN", "Order.txt")
         val result = compareSafely(DeclarationEngine(project), request, Cancellation.NONE)
 
-        val outcome = ReferencePass.runForBenchmark(project, request, result, Cancellation.NONE)
+        val outcome = ReferencePass.runWith(project, request, result, Cancellation.NONE, ReferenceResolvers.all, TEST_BUDGET_MILLIS)
 
         assertEquals(ReferencePass.Status.NOT_GROUPED, outcome.status)
         assertSame(result, outcome.result)
@@ -243,13 +250,13 @@ class ReferenceResolutionTest : BasePlatformTestCase() {
     private fun outcome(language: String, fileName: String, old: String, new: String): ReferencePass.Outcome {
         val request = ComparisonRequest(old, new, language, fileName)
         val result = compareSafely(DeclarationEngine(project), request, Cancellation.NONE)
-        return ReferencePass.runForBenchmark(project, request, result, Cancellation.NONE)
+        return ReferencePass.runWith(project, request, result, Cancellation.NONE, ReferenceResolvers.all, TEST_BUDGET_MILLIS)
     }
 
     private fun usages(language: String, fileName: String, old: String, new: String): List<Evidence.Reference> {
         val request = ComparisonRequest(old, new, language, fileName)
         val result = compareSafely(DeclarationEngine(project), request, Cancellation.NONE)
-        val outcome = ReferencePass.runForBenchmark(project, request, result, Cancellation.NONE)
+        val outcome = ReferencePass.runWith(project, request, result, Cancellation.NONE, ReferenceResolvers.all, TEST_BUDGET_MILLIS)
 
         assertEquals(ReferencePass.Status.GROUPED, outcome.status)
         return outcome.result.relationships

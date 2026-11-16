@@ -27,6 +27,12 @@ import java.nio.file.Files
 import java.util.concurrent.Callable
 import java.util.concurrent.TimeUnit
 
+/**
+ * A generous test-only pass budget: the grouping tests check resolution (relationships/04 R5 to R8, R12, R13), not
+ * time. R17's budget is checked by the deterministic slow-resolver test below with its own short budget.
+ */
+private const val TEST_BUDGET_MILLIS = 60_000L
+
 /** The reference pass over the Java fixtures: grouping, purity, pairing, confidence, cancellation and the time budget. */
 class ReferencePassTest : BasePlatformTestCase() {
 
@@ -253,7 +259,7 @@ class ReferencePassTest : BasePlatformTestCase() {
     private fun run(old: String, new: String): Pair<ComparisonResult, ReferencePass.Outcome> {
         val request = ComparisonRequest(old, new, "JAVA", "Order.java")
         val result = compare(request)
-        return result to ReferencePass.runForBenchmark(project, request, result, Cancellation.NONE)
+        return result to ReferencePass.runWith(project, request, result, Cancellation.NONE, ReferenceResolvers.all, TEST_BUDGET_MILLIS)
     }
 
     private fun compare(request: ComparisonRequest): ComparisonResult =

@@ -1,0 +1,4 @@
+status: ANALYZED
+section A  old 1-7  new 1-7
+  section B  changed  old 3-7  new 3-4
+  section C  moved  changed  old 5-7  new 5-7
