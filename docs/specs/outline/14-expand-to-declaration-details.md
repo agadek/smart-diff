@@ -1,6 +1,6 @@
 # Expand to declaration: details
 
-Status: proposed, 2026-11-16
+Status: implemented, 2026-11-16
 
 **Feature:** [Expand to declaration](14-expand-to-declaration.md)
 
@@ -38,7 +38,7 @@ After expanding, each editor that has a range scrolls to the first line of its f
 
 ### The editor's context menu (R2, R8)
 
-`ExpandDeclarationAction` is registered in `plugin.xml` with id `SmartDiff.ExpandDeclaration`, text "Expand Declaration", added to `Diff.EditorPopupMenu` and with no default shortcut, so a user can assign one in the keymap.
+`ExpandDeclarationAction` is registered in `plugin.xml` with id `SmartDiff.ExpandDeclaration`, text "Expand Declaration", added to `Diff.EditorPopupMenu` and with no default shortcut, so a user can assign one in the keymap. The group id exists in 2025.1 (`IdeActions.GROUP_DIFF_EDITOR_POPUP`), where the two-sided text viewers build their editor context menu from it, so it is the right group and no substitution is needed.
 
 - **Finding the outline:** the controller puts itself in the user data of `oldEditor` and `newEditor` under `OutlineController.EDITOR_KEY` in `start()`, and removes it on dispose. The action reads `CommonDataKeys.EDITOR` and then that key; with no controller, for example in a one-sided or three-sided diff or a diff the outline did not attach to, the action is hidden.
 - **Finding the row:** with the state `OutlineState.Shown`, the controller's `matchingItem(items, side, offset)` from caret follow (outline/07) gives the innermost shown row for the caret offset on that editor's side. The controller exposes it as `rowAt(side, offset)`. A row hidden by the filter is not shown and is not found. With no match, or a match that has no region to expand, the action is hidden (R8).

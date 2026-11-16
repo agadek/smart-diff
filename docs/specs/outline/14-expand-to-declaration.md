@@ -1,6 +1,6 @@
 # Expand to declaration
 
-Status: proposed, 2026-11-16
+Status: implemented, 2026-11-16
 
 **Description:** "Expand Declaration" opens every [collapsed unchanged fragment](../../GLOSSARY.md#collapsed-unchanged-fragment) of the [native diff](../../GLOSSARY.md#native-diff) that lies in a changed [declaration](../../GLOSSARY.md#declaration), on both sides, so the reviewer reads the whole declaration without opening each fragment by hand. Fragments outside the declaration stay collapsed.
 
