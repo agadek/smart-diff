@@ -167,6 +167,11 @@ _Avoid_: doc change, cosmetic change, equivalent
 A matched declaration whose container or order among its siblings differs. It may also be changed or formatting-only.
 _Avoid_: relocated, refactored
 
+### Moved-code marker
+
+A gutter icon and a scrollbar mark that the structural outline adds in each editor at a moved declaration, linking its old and new positions.
+_Avoid_: move arrow, move link
+
 ### Extraction
 
 An added method or function whose body is mostly code that a changed declaration on the old side had and no longer has. It stays added and is linked to that declaration, its extraction source. Specified in [extraction detection](specs/declarations/05-extraction-detection.md).
