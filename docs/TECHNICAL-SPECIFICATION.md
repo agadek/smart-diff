@@ -404,7 +404,7 @@ Implemented, 2026-11-16 ([languages/13](specs/languages/13-xml.md)). Tags are `T
 
 ### 6.21 HTML provider
 
-Accepted, 2026-11-16 ([languages/15](specs/languages/15-html.md)). Elements with an `id`, and `head`, `body`, `template`, `script` and `style` elements, are `TAG`s named by lower-case tag name and id (or `src` for a script); every other element is content of the nearest enclosing declaration. Embedded JavaScript and CSS, and `pre` and `textarea` content, compare exactly. The PSI mapping, naming rules, whitespace ranges, packaging and tests are in its [details file](specs/languages/15-html-details.md).
+Implemented, 2026-11-16 ([languages/15](specs/languages/15-html.md)). Elements with an `id`, and `head`, `body`, `template`, `script` and `style` elements, are `TAG`s named by lower-case tag name and id (or `src` for a script); every other element is content of the nearest enclosing declaration. Embedded JavaScript and CSS, and `pre` and `textarea` content, compare exactly. The PSI mapping, naming rules, whitespace ranges, packaging and tests are in its [details file](specs/languages/15-html-details.md).
 
 ## 7. Declaration engine: matching
 

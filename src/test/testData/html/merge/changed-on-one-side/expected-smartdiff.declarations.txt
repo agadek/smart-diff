@@ -1,0 +1,3 @@
+left: ANALYZED  right: ANALYZED
+tag body  UNCHANGED  base 6-9  left 6-9  right 6-9
+  tag div id=a  LEFT_ONLY  left: changed  base 7  left 7  right 7

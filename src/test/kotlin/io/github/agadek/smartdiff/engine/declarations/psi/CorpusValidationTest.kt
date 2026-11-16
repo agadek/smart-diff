@@ -69,13 +69,13 @@ class CorpusValidationTest : BasePlatformTestCase() {
         for (line in File(list).readLines().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("#") }) {
             val words = line.split(Regex("\\s+"))
             val repository = File(words.first())
-            val commits = git(repository, listOf("rev-list") + words.drop(1) + listOf("--", "*.java", "*.kt", "*.scala", "*.json", "*.yaml", "*.yml", "*.groovy", "*.gradle", "*.gvy", "*.sh", "*.py", "*.rs", "*.properties", "*.toml", "*.xml")).lines().filter { it.isNotBlank() }
+            val commits = git(repository, listOf("rev-list") + words.drop(1) + listOf("--", "*.java", "*.kt", "*.scala", "*.json", "*.yaml", "*.yml", "*.groovy", "*.gradle", "*.gvy", "*.sh", "*.py", "*.rs", "*.properties", "*.toml", "*.xml", "*.html", "*.htm", "*.xhtml")).lines().filter { it.isNotBlank() }
             for ((index, commit) in commits.withIndex()) {
                 println("VALIDATION ${repository.name} commit ${index + 1} of ${commits.size}: ${commit.take(10)}")
                 val parent = git(repository, listOf("rev-parse", "--verify", "--quiet", "$commit^"), allowFailure = true).trim()
                 if (parent.isEmpty()) continue
                 // --no-renames: a rename is a delete plus an add, so it is skipped here instead of vanishing from the run.
-                val paths = git(repository, listOf("diff", "--no-renames", "--name-only", "--diff-filter=M", parent, commit, "--", "*.java", "*.kt", "*.scala", "*.json", "*.yaml", "*.yml", "*.groovy", "*.gradle", "*.gvy", "*.sh", "*.py", "*.rs", "*.properties", "*.toml", "*.xml"))
+                val paths = git(repository, listOf("diff", "--no-renames", "--name-only", "--diff-filter=M", parent, commit, "--", "*.java", "*.kt", "*.scala", "*.json", "*.yaml", "*.yml", "*.groovy", "*.gradle", "*.gvy", "*.sh", "*.py", "*.rs", "*.properties", "*.toml", "*.xml", "*.html", "*.htm", "*.xhtml"))
                     .lines().filter { it.isNotBlank() }
                 for (path in paths) {
                     val old = git(repository, listOf("show", "$parent:$path")).replace("\r\n", "\n")
@@ -93,6 +93,8 @@ class CorpusValidationTest : BasePlatformTestCase() {
                         path.endsWith(".properties") -> "Properties"
                         path.endsWith(".toml") -> "TOML"
                         path.endsWith(".xml") -> "XML"
+                        path.endsWith(".xhtml") -> "XHTML"
+                        path.endsWith(".html") || path.endsWith(".htm") -> "HTML"
                         else -> "JAVA"
                     }
                     val request = ComparisonRequest(old, new, languageId, File(path).name)

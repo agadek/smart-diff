@@ -1,6 +1,6 @@
 # HTML: details
 
-Status: accepted, 2026-11-16
+Status: implemented, 2026-11-16
 
 **Feature:** [HTML](15-html.md)
 
@@ -13,7 +13,7 @@ Status: accepted, 2026-11-16
 
 ## 2. Language ids and file types
 
-The platform provides the `HTML` language (`HTMLLanguage`) for `.html` and `.htm` files and the `XHTML` language (`XHTMLLanguage`) for `.xhtml` files (R2). The provider's `supports` covers exactly these two ids. `XHTMLLanguage` extends `XMLLanguage`, but its id is `XHTML`, so the XML provider, which supports exactly `XML`, keeps ignoring it (R21). Languages that extend `HTMLLanguage` with their own id, such as Vue or JSP, are left out, since their PSI adds template constructs this mapping does not cover. Spike S10 (HTML part) confirms both ids on IntelliJ Platform 2025.1.3 and that text-built files give correct element ranges, including a DOCTYPE, void elements (`<br>`, `<img>`), omitted end tags (`<li>`, `<p>`), unquoted and valueless attributes, upper-case tag names, `script` and `style` content, comments and CRLF line ends.
+The platform provides the `HTML` language (`HTMLLanguage`) for `.html` and `.htm` files and the `XHTML` language (`XHTMLLanguage`) for `.xhtml` files (R2). The provider's `supports` covers exactly these two ids. `XHTMLLanguage` extends `XMLLanguage`, but its id is `XHTML`, so the XML provider, which supports exactly `XML`, keeps ignoring it (R21). Languages that extend `HTMLLanguage` with their own id, such as Vue or JSP, are left out, since their PSI adds template constructs this mapping does not cover. Spike S10 (HTML part) confirms both ids on IntelliJ Platform 2025.1.3 and that text-built files give correct element ranges, including a DOCTYPE, void elements (`<br>`, `<img>`), omitted end tags (`<li>`, `<p>`), unquoted and valueless attributes, upper-case tag names, `script` and `style` content, comments and CRLF line ends. XHTML uses the XML parser, so its attribute values need quotes to become `XmlAttribute`s and identify elements.
 
 ## 3. PSI mapping
 
@@ -59,7 +59,7 @@ A declaration element is named by the first rule that applies:
 - **Whitespace token types:** as for XML ([languages/13 details §6](13-xml-details.md#6-whitespace-and-text-r7-r9-r10-r14-r15)), only the XML lexer's whitespace types and the platform's generic `WHITE_SPACE` are layout; a blank attribute value or the characters of a comment compare exactly (R8, R15). S10 records the types the HTML lexer emits, including inside `script` and `style`.
 - **Exact ranges:** `significantWhitespace(file)` returns:
   - The XML provider's ranges: each non-blank `XmlText` with its line-break-free edge whitespace (R10), each CDATA section, processing instruction and DOCTYPE, whole (R16).
-  - The content of each `script` and `style` element, from the end of its start tag to the start of its end tag, without leading and trailing whitespace that holds a line break (R9). Embedded JavaScript and CSS can depend on line breaks and spacing, so they compare exactly whatever PSI the IDE builds for them: plain text in IntelliJ IDEA without JavaScript support, or JavaScript and CSS PSI in IDEs with it (ADR 0003).
+  - The content of each `script` and `style` element, from the end of its start tag to the start of its end tag, without leading and trailing whitespace that holds a line break (R9). Embedded JavaScript and CSS can depend on line breaks and spacing, so they compare exactly whatever PSI the IDE builds for them: plain text in IntelliJ IDEA without JavaScript support, or JavaScript and CSS PSI in IDEs with it (ADR 0003). The platform's HTML lexer emits the whole content as one token, so its edge whitespace compares exactly too; trimming the range only matters when the lexer emits edge whitespace as separate tokens.
   - The content of each `pre` and `textarea` element, whole, from the end of its start tag to the start of its end tag (R10), since whitespace there is rendered.
 - **Consequences:** re-indenting markup is formatting-only, as is spacing between tags and between attributes. Re-indenting a `script` or `style` block is a change of that script or style, since its inner lines move; the outline shows it as changed and the native diff shows the indentation. Reflowing a paragraph's text over different line breaks is a change, as for XML text (R10).
 

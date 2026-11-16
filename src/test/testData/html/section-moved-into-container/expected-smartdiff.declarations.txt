@@ -1,0 +1,5 @@
+status: ANALYZED
+tag body  old 6-13  new 6-13
+  tag section id=a  changed  old 7-9  new 7-9
+  tag section id=b  changed  old 10-12  new 10-12
+    tag div id=inner  moved  old 8  new 11

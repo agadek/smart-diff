@@ -1,6 +1,7 @@
-<!-- Loaded when the platform XML module is present. The XML declaration provider registers here. -->
+<!-- Loaded when the platform XML module is present. The XML and HTML declaration providers register here. -->
 <idea-plugin>
     <extensions defaultExtensionNs="io.github.agadek.smartdiff">
         <declarationProvider implementation="io.github.agadek.smartdiff.engine.declarations.psi.xml.XmlDeclarationProvider"/>
+        <declarationProvider implementation="io.github.agadek.smartdiff.engine.declarations.psi.xml.HtmlDeclarationProvider"/>
     </extensions>
 </idea-plugin>
