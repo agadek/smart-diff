@@ -1,6 +1,6 @@
 # Reviewed marks: details
 
-Status: proposed, 2026-11-16
+Status: implemented, 2026-11-16
 
 **Feature:** [Reviewed marks](12-reviewed-marks.md)
 

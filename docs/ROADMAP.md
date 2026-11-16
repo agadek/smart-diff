@@ -113,7 +113,7 @@ Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.
 | [Rust](#rust) | [languages/05](specs/languages/05-rust.md) |
 | [Hide comment-only changes](#hide-comment-only-changes) | [outline/11](specs/outline/11-comment-only-changes.md) |
 | [Formatting-only recall in Kotlin and Scala](#formatting-only-recall-in-kotlin-and-scala) | [declarations/07](specs/declarations/07-kotlin-scala-formatting.md) |
-| [Reviewed marks in the outline](#reviewed-marks-in-the-outline) | [outline/12](specs/outline/12-reviewed-marks.md) |
+| [Reviewed marks in the outline](#reviewed-marks-in-the-outline) | [outline/12](specs/outline/12-reviewed-marks.md) (implemented 2026-11-16) |
 | [More languages](#more-languages) | [Format coverage plan](FORMAT-COVERAGE.md); feature specs with each phase |
 | Every other item below | Not specified yet |
 
@@ -227,7 +227,7 @@ Give added and deleted files in the Changes tree a summary and declaration rows,
 
 ### Reviewed marks in the outline
 
-*(gap review)* Let the reviewer mark a declaration in the outline as reviewed and show progress in the summary line, for example `5 of 8 reviewed`. A mark resets when that declaration changes again. SemanticDiff's pull request viewer tracks reviewed files the same way. Specified in [outline/12](specs/outline/12-reviewed-marks.md) (proposed, 2026-11-16).
+Let the reviewer mark a change in the outline as reviewed and show progress in the summary line, for example `5 of 8 reviewed`. A mark resets when that declaration changes again. SemanticDiff's pull request viewer tracks reviewed files the same way. Implemented 2026-11-16 in [outline/12](specs/outline/12-reviewed-marks.md): the context menu and Space mark and unmark change rows and the file region, marks persist per project in the workspace file and are dropped when the declaration's text changes, the summary ends with `N of M reviewed`, and an off-by-default "Hide Reviewed" filter leaves reviewed changes out. Marks are local to the diff when its file has no path in the project.
 
 ### Expand context to the enclosing declaration
 

@@ -1,6 +1,6 @@
 # Reviewed marks
 
-Status: proposed, 2026-11-16
+Status: implemented, 2026-11-16
 
 **Description:** The reviewer can mark a change in the [structural outline](../../GLOSSARY.md#structural-outline) as [reviewed](../../GLOSSARY.md#reviewed-mark), and the [summary line](../../GLOSSARY.md#summary-line) shows how many of the file's changes are reviewed. A mark is dropped when that [declaration](../../GLOSSARY.md#declaration) changes again.
 

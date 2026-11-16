@@ -419,6 +419,29 @@ class ChangesTreeFilterTest : BasePlatformTestCase() {
         assertTrue(delNode!!.summary.contains("removed"))
     }
 
+    fun `test outline 12 the Changes tree draws no reviewed label or filter`() {
+        // outline/12-reviewed-marks, out of scope
+        maskEngines(ScriptedEngine(cartResult()))
+        val change = modified("Cart.java")
+        summaryNode(change)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        settings.hideReviewed = true
+
+        val node = summaryNode(change)!!
+        val rows = node.preorderEnumeration().toList().filterIsInstance<DeclarationNode>()
+        assertTrue("the tree draws declaration rows", rows.isNotEmpty())
+        assertTrue(rows.none { it.item.reviewed || it.item.label.contains("reviewed") })
+        assertFalse("the summary has no reviewed count", node.summary.contains("reviewed"))
+        val renderer = ChangesBrowserNodeRenderer(project, BooleanGetter { false }, false)
+        rows.first().render(renderer, false, false, false)
+        assertFalse("the rendered row has no reviewed label", renderer.getCharSequence(false).toString().contains("reviewed"))
+
+        ChangesTreeActions.installNow()
+        val manager = ActionManager.getInstance()
+        val filter = manager.getAction("SmartDiff.ChangesTree.HideChangeTypes") as DefaultActionGroup
+        assertFalse("the tree has no Hide Reviewed entry", filter.getChildren(manager).any { it.templatePresentation.text == "Hide Reviewed" })
+    }
+
     private fun maskEngines(vararg engines: ComparisonEngine) {
         ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, engines.map(::factory), testRootDisposable)
     }
