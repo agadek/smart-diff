@@ -323,6 +323,11 @@ _Avoid_: hide filter, outline filter
 The menu of relationship kinds to hide in the refactorings view: rename, move, kind change, extraction and inlining.
 _Avoid_: refactoring filter, relationship filter
 
+### Reviewed mark
+
+A mark the reviewer puts on a change in the structural outline to say they have read it, kept until that declaration's text changes again.
+_Avoid_: approved, checked, done
+
 ### Outline toggle
 
 The Structural Outline toolbar button or the outline's Hide button that shows or hides the structural outline in one diff window.

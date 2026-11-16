@@ -1,5 +1,6 @@
 package io.github.agadek.smartdiff.ui
 
+import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.Confidence
 import io.github.agadek.smartdiff.engine.api.Evidence
@@ -25,7 +26,8 @@ object RefactoringsModel {
      * The rows of the refactorings view. A relationship whose every kind is [hiddenKinds] is left out and its
      * declarations fall back to [OTHER_CHANGES]; a low-confidence relationship is shown as a possible row and also
      * under each of its declarations. [hidden] is the change type filter, applied to the same rows as the container
-     * tree.
+     * tree. [reviewed] marks the same rows as the container tree, and [hideReviewed] hides them as a change type is
+     * (outline/12 R12, R13).
      */
     fun build(
         result: ComparisonResult,
@@ -36,18 +38,24 @@ object RefactoringsModel {
         hiddenKinds: Set<RelationshipKind> = emptySet(),
         whitespacePolicy: WhitespacePolicy = WhitespacePolicy.INSIGNIFICANT,
         markCommentOnly: Boolean = false,
+        reviewed: Set<ChangeNode> = emptySet(),
+        hideReviewed: Boolean = false,
     ): List<OutlineItem> {
         val relationships = visibleRelationships(result, hiddenKinds)
         val colours = renameColours(result, hiddenKinds)
-        val rows = relationships.map { link -> relationship(link, colours[link], newText) }
+        val state = Reviewed(identitySetOf(reviewed), ReviewedMarks.markable(result, oldText, newText, whitespacePolicy), emptyMap(), emptyMap())
+        fun mark(item: OutlineItem): OutlineItem = item.also { it.reviewed = state.isReviewed(it) }
+        val rows = relationships.map { link -> mark(relationship(link, colours[link], newText, result)) }
         val coverage = Coverage.of(relationships)
         val lowLinks = lowLinks(relationships)
-        val containerTree = OutlineModel.build(result, oldText, newText, formattingInline, hidden, whitespacePolicy, markCommentOnly)
+        val containerTree = OutlineModel.build(
+            result, oldText, newText, formattingInline, hidden, whitespacePolicy, markCommentOnly, reviewed, hideReviewed,
+        )
         val other = containerTree.mapNotNull { otherChanges(it, coverage, lowLinks) }
         val refactorings = rows.ifEmpty { listOf(OutlineItem(ItemKind.EVIDENCE, NO_REFACTORINGS)) }
         return listOf(
-            OutlineItem(ItemKind.SECTION, REFACTORINGS, children = refactorings),
-            OutlineItem(ItemKind.SECTION, OTHER_CHANGES, children = other),
+            mark(OutlineItem(ItemKind.SECTION, REFACTORINGS, children = refactorings)),
+            mark(OutlineItem(ItemKind.SECTION, OTHER_CHANGES, children = other)),
         )
     }
 
@@ -136,7 +144,7 @@ object RefactoringsModel {
         is Subject.Region -> subject.description
     }
 
-    private fun relationship(relationship: Relationship, colour: Int?, newText: CharSequence): OutlineItem {
+    private fun relationship(relationship: Relationship, colour: Int?, newText: CharSequence, result: ComparisonResult): OutlineItem {
         val references = relationship.evidence.filterIsInstance<Evidence.Reference>()
         val content = relationship.evidence.filterIsInstance<Evidence.Content>()
         val primaryOld = relationship.old.first().range
@@ -164,6 +172,7 @@ object RefactoringsModel {
             confidence = relationship.confidence,
             frames = frames,
             colour = colour,
+            endpoints = ReviewedMarks.endpointsOf(relationship, result),
         )
     }
 

@@ -42,6 +42,9 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         /** Label changed declarations whose only difference is in comments as comment-only in the outline (outline/11 R1). */
         var markCommentOnly: Boolean = false
 
+        /** Leave reviewed changes out of the outline (outline/12 R12). Off by default. */
+        var hideReviewed: Boolean = false
+
         /** List merge rows grouped by side instead of as the base's container tree. */
         var mergeGroupedBySide: Boolean = true
 
@@ -124,6 +127,11 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         get() = current.markCommentOnly
         set(value) = update { markCommentOnly = value }
 
+    /** Whether the outline leaves reviewed changes out; a display setting for outline/10 R5 (outline/12 R12). */
+    var hideReviewed: Boolean
+        get() = current.hideReviewed
+        set(value) = update { hideReviewed = value }
+
     var mergeGroupedBySide: Boolean
         get() = current.mergeGroupedBySide
         set(value) = update { mergeGroupedBySide = value }
@@ -205,6 +213,7 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
             it.followChangesTreeCaret = old.followChangesTreeCaret
             it.formattingOnlyInline = old.formattingOnlyInline
             it.markCommentOnly = old.markCommentOnly
+            it.hideReviewed = old.hideReviewed
             it.mergeGroupedBySide = old.mergeGroupedBySide
             it.mergeHideBothSides = old.mergeHideBothSides
             it.hiddenChangeTypes = old.hiddenChangeTypes
