@@ -9,8 +9,8 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.api.contract.ComparisonEngineContract
-import io.github.agadek.smartdiff.engine.lines.LineEngine
-import io.github.agadek.smartdiff.engine.lines.LineEngineFactory
+import io.github.agadek.smartdiff.engine.lines.TestLineEngine
+import io.github.agadek.smartdiff.engine.lines.TestLineEngineFactory
 
 /** The registry over the real extension point (technical specification §3.2, §4, §12 abstraction test). */
 class EngineRegistryTest : BasePlatformTestCase() {
@@ -43,9 +43,9 @@ class EngineRegistryTest : BasePlatformTestCase() {
     }
 
     fun `test engines come from the extension point in order`() {
-        register(LineEngineFactory(), FakeEngineFactory { FakeEngine("smartdiff.declarations", "JAVA") })
+        register(TestLineEngineFactory(), FakeEngineFactory { FakeEngine("smartdiff.declarations", "JAVA") })
 
-        assertEquals(listOf(LineEngine.ID, EngineId("smartdiff.declarations")), registry.engines().map { it.id })
+        assertEquals(listOf(TestLineEngine.ID, EngineId("smartdiff.declarations")), registry.engines().map { it.id })
         assertEquals(EngineId("smartdiff.declarations"), registry.findEngine(EngineId("smartdiff.declarations"))?.id)
         assertNull(registry.findEngine(EngineId("smartdiff.missing")))
     }
@@ -91,28 +91,28 @@ class EngineRegistryTest : BasePlatformTestCase() {
     }
 
     fun `test a test-only engine is selectable next to another engine`() {
-        register(FakeEngineFactory { FakeEngine("smartdiff.declarations", "JAVA", "kotlin") }, LineEngineFactory())
+        register(FakeEngineFactory { FakeEngine("smartdiff.declarations", "JAVA", "kotlin") }, TestLineEngineFactory())
 
         val java = registry.select("JAVA")
         assertEquals(EngineId("smartdiff.declarations"), java.selected?.id)
         assertTrue(java.offersChoice)
 
-        registry.choose("JAVA", LineEngine.ID)
+        registry.choose("JAVA", TestLineEngine.ID)
 
-        assertEquals(LineEngine.ID, registry.select("JAVA").selected?.id)
+        assertEquals(TestLineEngine.ID, registry.select("JAVA").selected?.id)
         assertEquals("the choice applies to its language only", EngineId("smartdiff.declarations"), registry.select("kotlin").selected?.id)
     }
 
     fun `test a stored default survives while its engine is not registered`() {
-        register(FakeEngineFactory { FakeEngine("smartdiff.declarations", "JAVA") }, LineEngineFactory())
-        registry.choose("JAVA", LineEngine.ID)
+        register(FakeEngineFactory { FakeEngine("smartdiff.declarations", "JAVA") }, TestLineEngineFactory())
+        registry.choose("JAVA", TestLineEngine.ID)
 
         register(FakeEngineFactory { FakeEngine("smartdiff.declarations", "JAVA") })
         assertEquals(EngineId("smartdiff.declarations"), registry.select("JAVA").selected?.id)
-        assertEquals(LineEngine.ID, EngineDefaults.getInstance().get("JAVA"))
+        assertEquals(TestLineEngine.ID, EngineDefaults.getInstance().get("JAVA"))
 
-        register(FakeEngineFactory { FakeEngine("smartdiff.declarations", "JAVA") }, LineEngineFactory())
-        assertEquals(LineEngine.ID, registry.select("JAVA").selected?.id)
+        register(FakeEngineFactory { FakeEngine("smartdiff.declarations", "JAVA") }, TestLineEngineFactory())
+        assertEquals(TestLineEngine.ID, registry.select("JAVA").selected?.id)
     }
 
     fun `test no supporting engine gives no selection`() {
@@ -122,8 +122,8 @@ class EngineRegistryTest : BasePlatformTestCase() {
     }
 
     fun `test the registered line engine passes the contract suite`() {
-        register(LineEngineFactory())
+        register(TestLineEngineFactory())
 
-        ComparisonEngineContract { EngineRegistry.getInstance(project).findEngine(LineEngine.ID)!! }.checkAll()
+        ComparisonEngineContract { EngineRegistry.getInstance(project).findEngine(TestLineEngine.ID)!! }.checkAll()
     }
 }

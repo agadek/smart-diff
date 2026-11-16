@@ -54,6 +54,11 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                     .bindSelected(settings::useStructureViewFallback)
                     .comment("Analyze languages without a dedicated provider through the IDE's structure view.")
             }
+            row {
+                checkBox("Show moved lines in files without an engine")
+                    .bindSelected(settings::compareLinesWithoutEngine)
+                    .comment("In a two-sided diff of a file no comparison engine supports, list moved blocks of lines in the structural outline; the native diff always shows every change.")
+            }
             buttonsGroup("Formatting-only changes:") {
                 row { radioButton("Collapsed in a group", false) }
                 row { radioButton("Inline", true) }

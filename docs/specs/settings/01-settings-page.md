@@ -28,6 +28,7 @@ Status: implemented, 2026-10-22; the outline view and relationship kind settings
 - **R18** "Use the IDE's structure view for other languages" is on by default.
 - **R19** "Mark comment-only changes" is off by default, is the same setting as the outline filter menu's checkbox, and adds a comment-only checkbox to "Hide from the outline" while it is on.
 - **R20** "Mark moved code in the editors" is on by default.
+- **R21** "Show moved lines in files without an engine" is on by default.
 
 ## References
 
@@ -36,4 +37,5 @@ Status: implemented, 2026-10-22; the outline view and relationship kind settings
 - [Structure-view fallback](../languages/06-structure-view-fallback.md)
 - [Comment-only changes](../outline/11-comment-only-changes.md) (R19)
 - [Moved-code markers](../outline/13-moved-code-markers.md) (R20)
+- [Moved lines in unsupported files](../engines/04-moved-lines.md) (R21)
 - [Technical specification §11](../../TECHNICAL-SPECIFICATION.md#11-settings)

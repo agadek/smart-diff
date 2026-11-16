@@ -56,6 +56,11 @@ _Avoid_: thresholds, caps
 The generic declaration provider that builds a declaration tree from the IDE's structure view for a language without a dedicated provider.
 _Avoid_: generic engine, fallback engine
 
+### Line comparison
+
+The comparison that the structural outline uses for a file no comparison engine supports, which reads each line as one unit and reports moved blocks of lines.
+_Avoid_: line engine, text engine, fallback diff
+
 ## Structure
 
 ### Declaration
@@ -176,6 +181,11 @@ _Avoid_: relocated, refactored
 
 A gutter icon and a scrollbar mark that the structural outline adds in each editor at a moved declaration, linking its old and new positions.
 _Avoid_: move arrow, move link
+
+### Moved block
+
+A run of lines that the line comparison found removed in one place and added in another, with the same text apart from whitespace at the start and end of each line.
+_Avoid_: moved hunk, moved chunk
 
 ### Extraction
 

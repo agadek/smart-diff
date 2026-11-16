@@ -390,6 +390,20 @@ class ChangesSummaryTest : BasePlatformTestCase() {
         assertNull("an unsupported language gets no summary", summaryNode(text, listOf(added, deleted, text)))
     }
 
+    fun `test engines 04 R19 the Changes tree never uses the line comparison`() {
+        // engines/04-moved-lines R19: no engine, no Changes tree summary, whatever the line setting is.
+        ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, emptyList(), testRootDisposable)
+        ChangesSummaryService.getInstance(project).clear()
+        val text = modified("notes.txt", "a\n", "b\n")
+        val java = modified("Greeter.java", OLD_CART, NEW_CART)
+        val changes = listOf(text, java)
+        changes.forEach { summaryNode(it, changes) }
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+
+        assertNull("a plain-text file gets no summary", summaryNode(text, changes))
+        assertNull("a file in a language without an engine gets no summary", summaryNode(java, changes))
+    }
+
     fun `test no summary is shown when the setting is off`() {
         // changes-tree/01-changes-tree-summary R12; changes-tree/04-hide-and-filter R3
         val change = modified("Cart.java", OLD_CART, NEW_CART)

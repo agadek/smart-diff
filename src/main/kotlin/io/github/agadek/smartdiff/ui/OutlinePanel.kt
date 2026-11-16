@@ -291,6 +291,7 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
             }
             OutlineState.Loading -> showMessage("", "Comparing…")
             is OutlineState.NoEngine -> showMessage("", "No comparison engine supports ${state.languageName} files. The native diff shows every change.")
+            OutlineState.NoMovedLines -> showMessage("", "No moved lines found. The native diff shows every change.")
             is OutlineState.Shown -> when (state.result.status) {
                 Status.UNSUPPORTED -> showFallback("Not supported", state)
                 Status.TOO_LARGE -> showFallback("Too large to analyze", state)

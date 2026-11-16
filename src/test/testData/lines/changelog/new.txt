@@ -1,0 +1,9 @@
+# Changelog for releases
+## 1.1.0
+Prevented a duplicate row in the outline.
+Improved the wording of the summary line.
+Removed an obsolete setting from the page.
+## 1.2.0
+Fixed the parser crash on empty files.
+Added a faster index for large projects.
+Updated the documentation for reviewers.

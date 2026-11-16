@@ -41,8 +41,8 @@ import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.api.Limits
-import io.github.agadek.smartdiff.engine.lines.LineEngine
-import io.github.agadek.smartdiff.engine.lines.LineEngineFactory
+import io.github.agadek.smartdiff.engine.lines.TestLineEngine
+import io.github.agadek.smartdiff.engine.lines.TestLineEngineFactory
 import io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory
 import io.github.agadek.smartdiff.ui.ChangeType
 import io.github.agadek.smartdiff.ui.DiffContents
@@ -230,7 +230,7 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
 
     fun `test the engine dropdown and refresh work in the merge outline`() {
         // merge/02-merge-outline R18
-        ExtensionTestUtil.addExtensions(ComparisonEngineFactory.EP_NAME, listOf(LineEngineFactory()), testRootDisposable)
+        ExtensionTestUtil.addExtensions(ComparisonEngineFactory.EP_NAME, listOf(TestLineEngineFactory()), testRootDisposable)
         val outline = open().awaitShown()
 
         assertTrue("the dropdown is shown with two engines", outline.panel.engines.isVisible)
@@ -728,7 +728,7 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
         override fun supports(languageId: String) = true
         override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult {
             calls++
-            return LineEngine().compare(request, cancellation).copy(engineId = id, engineVersion = version)
+            return TestLineEngine().compare(request, cancellation).copy(engineId = id, engineVersion = version)
         }
     }
 
@@ -744,7 +744,7 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
             if (request.newText.toString() == LEFT) {
                 ComparisonResult.failed(this, "left parse failed")
             } else {
-                LineEngine().compare(request, cancellation)
+                TestLineEngine().compare(request, cancellation)
             }
     }
 
@@ -765,10 +765,10 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
             if (call <= 2) {
                 started.countDown()
                 release.await(10, TimeUnit.SECONDS)
-                return LineEngine().compare(request, cancellation).copy(engineVersion = "stale-$call")
+                return TestLineEngine().compare(request, cancellation).copy(engineVersion = "stale-$call")
             }
             cancellation.checkCanceled()
-            return LineEngine().compare(request, cancellation)
+            return TestLineEngine().compare(request, cancellation)
         }
     }
 

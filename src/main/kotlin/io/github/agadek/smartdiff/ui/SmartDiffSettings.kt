@@ -66,6 +66,9 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         var hiddenChangesTreeChangeTypes: String = ""
         /** Analyze languages without a dedicated provider through the IDE's structure view (languages/06 R10). */
         var useStructureViewFallback: Boolean = true
+
+        /** Compare two-sided diffs of files no engine supports by lines, showing moved blocks (engines/04 R1, R21). */
+        var compareLinesWithoutEngine: Boolean = true
         var maxChars: Int = Limits.DEFAULT.maxChars
         var maxDeclarations: Int = Limits.DEFAULT.maxDeclarations
         var timeoutMillis: Long = Limits.DEFAULT.timeoutMillis
@@ -173,6 +176,11 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         get() = current.useStructureViewFallback
         set(value) = update { useStructureViewFallback = value }
 
+    /** Compare two-sided diffs of files no engine supports by lines, showing moved blocks (engines/04 R1, R21). */
+    var compareLinesWithoutEngine: Boolean
+        get() = current.compareLinesWithoutEngine
+        set(value) = update { compareLinesWithoutEngine = value }
+
     /** The limits passed to engines; a stored value that is out of range falls back to its default. */
     var limits: Limits
         get() = Limits(
@@ -228,6 +236,7 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
             it.outlineView = old.outlineView
             it.hiddenRelationshipKinds = old.hiddenRelationshipKinds
             it.useStructureViewFallback = old.useStructureViewFallback
+            it.compareLinesWithoutEngine = old.compareLinesWithoutEngine
             it.maxChars = old.maxChars
             it.maxDeclarations = old.maxDeclarations
             it.timeoutMillis = old.timeoutMillis
