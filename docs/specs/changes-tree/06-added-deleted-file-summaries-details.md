@@ -1,6 +1,6 @@
 # Summaries for added and deleted files: details
 
-Status: accepted, 2026-11-10
+Status: implemented, 2026-11-15
 
 **Feature:** [Summaries for added and deleted files](06-added-deleted-file-summaries.md)
 

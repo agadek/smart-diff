@@ -6,8 +6,11 @@ import com.intellij.diff.FrameDiffTool
 import com.intellij.diff.contents.DocumentContent
 import com.intellij.diff.requests.ContentDiffRequest
 import com.intellij.diff.requests.DiffRequest
+import com.intellij.diff.tools.util.side.OnesideTextDiffViewer
 import com.intellij.diff.tools.util.side.ThreesideTextDiffViewer
 import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
+import com.intellij.diff.util.Side
+import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.fileTypes.LanguageFileType
 import com.intellij.openapi.fileTypes.PlainTextLanguage
 import com.intellij.openapi.project.ProjectManager
@@ -16,17 +19,18 @@ import io.github.agadek.smartdiff.engine.registry.EngineRegistry
 import io.github.agadek.smartdiff.ui.merge.MergeOutlineController
 
 /**
- * Attaches the structural outline beside the editors of IntelliJ's own side-by-side viewer (technical specification
+ * Attaches the structural outline beside the editors of IntelliJ's own diff viewers (technical specification
  * §9.1, ADR 0005).
  *
  * The viewer's component is a `DiffPanelBase` whose `BorderLayout` centre holds the editors. That centre moves into a
  * splitter with the outline as the second component. A request opened from a declaration in the Changes tree (§9.4)
  * carries an [OutlinePath], and the outline selects that row once it is shown. Anything else, such as another viewer or
- * contents that are not two documents of one language, is left alone and shows the native diff only. A language no engine
- * supports still gets the outline, which says so in place of the tree (§10), except plain text: without an engine it is
- * left alone so a mixed change list does not show the message on every text file.
+ * contents that are not supported, is left alone and shows the native diff only. A language no engine supports still
+ * gets the outline, which says so in place of the tree (§10), except plain text: without an engine it is left alone so a
+ * mixed change list does not show the message on every text file.
  *
- * A three-sided viewer gets the merge outline (merge outline spec 03), with the middle pane as the base.
+ * A one-sided viewer (an added or deleted file) gets a one-sided outline on the shown side (changes-tree/06). A
+ * three-sided viewer gets the merge outline (merge outline spec 03), with the middle pane as the base.
  */
 class OutlineDiffExtension : DiffExtension() {
 
@@ -34,6 +38,7 @@ class OutlineDiffExtension : DiffExtension() {
         when (viewer) {
             is TwosideTextDiffViewer -> attachTwoSided(viewer, context, request)
             is ThreesideTextDiffViewer -> attachThreeSided(viewer, context, request)
+            is OnesideTextDiffViewer -> attachOneSided(viewer, context, request)
         }
     }
 
@@ -57,7 +62,37 @@ class OutlineDiffExtension : DiffExtension() {
         val file = new.highlightFile ?: old.highlightFile
         // Taken off the request, so showing it again later does not select the row again.
         val reveal = request.getUserData(OutlinePath.KEY)?.also { request.putUserData(OutlinePath.KEY, null) }
-        val controller = OutlineController(project, viewer, context, splitter, languageId, fileName, file, old.document, new.document, reveal)
+        val controller = OutlineController(
+            project, viewer, context, splitter, languageId, fileName, file,
+            old.document, new.document, viewer.editor1, viewer.editor2, reveal,
+        )
+        Disposer.register(viewer, controller)
+        controller.start()
+    }
+
+    private fun attachOneSided(viewer: OnesideTextDiffViewer, context: DiffContext, request: DiffRequest) {
+        val contentRequest = request as? ContentDiffRequest ?: return
+        val shown = viewer.side.select(contentRequest.contents) as? DocumentContent ?: return
+        val languageId = shown.languageId() ?: return
+        val project = context.project ?: ProjectManager.getInstance().defaultProject
+        if (languageId == PlainTextLanguage.INSTANCE.id &&
+            EngineRegistry.getInstance(project).select(languageId).selected == null
+        ) return
+
+        val splitter = insertOutlineSplitter(viewer.component, "smartdiff.outline.proportion") ?: return
+
+        val fileName = shown.highlightFile?.name
+        val file = shown.highlightFile
+        val reveal = request.getUserData(OutlinePath.KEY)?.also { request.putUserData(OutlinePath.KEY, null) }
+        val empty = EditorFactory.getInstance().createDocument("")
+        val oldDocument = if (viewer.side == Side.LEFT) shown.document else empty
+        val newDocument = if (viewer.side == Side.RIGHT) shown.document else empty
+        val oldEditor = if (viewer.side == Side.LEFT) viewer.editor else null
+        val newEditor = if (viewer.side == Side.RIGHT) viewer.editor else null
+        val controller = OutlineController(
+            project, viewer, context, splitter, languageId, fileName, file,
+            oldDocument, newDocument, oldEditor, newEditor, reveal,
+        )
         Disposer.register(viewer, controller)
         controller.start()
     }
