@@ -117,7 +117,7 @@ Each phase is one pull request, or a spec pull request and a code pull request, 
 | D0 | Spike S10, ADR 0009 accepted, the `KEY`, `TAG` and `SECTION` kinds | Nothing; can run beside G0 | Not started |
 | D1 | JSON provider | D0 | Not started |
 | D2 | YAML provider, with the indentation rule as its own requirement | D1 | Implemented 2026-11-14 |
-| D3 | Properties and TOML providers | D1 | Specified 2026-11-15 in [languages/11](specs/languages/11-properties.md) and [languages/12](specs/languages/12-toml.md) |
+| D3 | Properties and TOML providers | D1 | Implemented 2026-11-15 in [languages/11](specs/languages/11-properties.md) and [languages/12](specs/languages/12-toml.md) |
 | D4 | XML provider, with POM and Spring naming; HTML on the same provider | D1 | Not started |
 | B0 | Build pattern for paid IDEs, as an amendment to the S8 ADR; verifier jobs for WebStorm and GoLand | R0 | Not started |
 | B1 | JavaScript and TypeScript provider | B0 | Not started |

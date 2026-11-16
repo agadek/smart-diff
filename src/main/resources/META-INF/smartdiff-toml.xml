@@ -1,0 +1,6 @@
+<!-- Loaded when the TOML plugin is present. The TOML declaration provider registers here. -->
+<idea-plugin>
+    <extensions defaultExtensionNs="io.github.agadek.smartdiff">
+        <declarationProvider implementation="io.github.agadek.smartdiff.engine.declarations.psi.toml.TomlDeclarationProvider"/>
+    </extensions>
+</idea-plugin>

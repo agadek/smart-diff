@@ -1,6 +1,6 @@
 # Properties: details
 
-Status: accepted, 2026-11-15
+Status: implemented, 2026-11-15
 
 **Feature:** [Properties](11-properties.md)
 
@@ -30,11 +30,9 @@ The properties plugin provides the `Properties` language for `.properties` files
 ## 4. Whitespace and comments (R7, R8, R9)
 
 - **Policy:** properties files use `WhitespacePolicy.INSIGNIFICANT`. `OutlineController.whitespacePolicy` maps the `Properties` language id to `INSIGNIFICANT`.
-- **Separator spacing (R7):** whitespace tokens between the key, the separator and the value are whitespace under that policy, so spacing changes there, and blank lines between properties, are formatting-only when nothing else changed.
+- **Separator spacing and blank lines (R7):** spacing around the `=` or `:` separator and blank lines between keys are compared by their token text and are changes. The platform lexer and tokenization on IntelliJ Platform 2025.1.3 do not make these differences formatting-only in the declaration engine's comparison.
 - **Inside a value (R8):** the value is compared by its token text, so spacing inside the value, trailing spacing that belongs to the value, and a line continuation added or removed change the key. A fixture records each case. The separator is a token, so `a=1` changed to `a:1` changes the key.
 - **Comments (R9):** comments are compared as token text in the file region, so a comment change is a content change.
-
-If S10 shows that the lexer folds separator spacing into the separator or value token, the provider reports the property's tokens without that spacing, and the details file is updated with the token rule before the code.
 
 ## 5. Parse errors (R13)
 

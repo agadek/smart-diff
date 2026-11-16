@@ -1,0 +1,3 @@
+status: ANALYZED
+section bin[name=srv]  moved  formatting-only  old 5-7  new 1-3
+section bin[name=cli]  formatting-only  old 1-3  new 5-7

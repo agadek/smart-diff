@@ -1,0 +1,4 @@
+left: ANALYZED  right: ANALYZED
+key a  CHANGED_ON_BOTH_SIDES  left: changed  right: changed  base 1  left 2  right 1
+key b  CHANGED_ON_BOTH_SIDES  left: moved, changed  right: changed  note: same change on both sides  base 2  left 1  right 2
+key c  CHANGED_ON_BOTH_SIDES  left: changed  right: changed  note: same change on both sides  base 3  left 3  right 3

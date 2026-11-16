@@ -1,6 +1,6 @@
 # TOML
 
-Status: accepted, 2026-11-15
+Status: implemented, 2026-11-15
 
 **Description:** The [declaration engine](../../GLOSSARY.md#declaration-engine) supports TOML files through the IDE's TOML parser, when the IDE has TOML support.
 

@@ -1,6 +1,6 @@
 # TOML: details
 
-Status: accepted, 2026-11-15
+Status: implemented, 2026-11-15
 
 **Feature:** [TOML](12-toml.md)
 

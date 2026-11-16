@@ -8,6 +8,8 @@ import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.contract.NothingHidden
 import io.github.agadek.smartdiff.engine.declarations.psi.groovy.GroovyDeclarationProvider
 import io.github.agadek.smartdiff.engine.declarations.psi.json.JsonDeclarationProvider
+import io.github.agadek.smartdiff.engine.declarations.psi.properties.PropertiesDeclarationProvider
+import io.github.agadek.smartdiff.engine.declarations.psi.toml.TomlDeclarationProvider
 import io.github.agadek.smartdiff.engine.declarations.psi.yaml.YamlDeclarationProvider
 import java.io.File
 
@@ -48,6 +50,12 @@ class GoldenFixturesTest : BasePlatformTestCase() {
     // languages/10-yaml R16
     fun `test YAML fixtures`() = checkFixtures("yaml", "yaml", "yaml")
 
+    // languages/11-properties R15
+    fun `test Properties fixtures`() = checkFixtures("properties", "Properties", "properties")
+
+    // languages/12-toml R19
+    fun `test TOML fixtures`() = checkFixtures("toml", "TOML", "toml")
+
     // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11; languages/06 R2 / languages/07
     // JSON now has a dedicated provider, so these fallback fixtures mask it and run through the real engine path.
     fun `test structure-view JSON fixtures`() =
@@ -61,8 +69,10 @@ class GoldenFixturesTest : BasePlatformTestCase() {
     // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
     fun `test structure-view Markdown fixtures`() = checkFixtures("structure-view/md", "Markdown", "md")
 
-    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11
-    fun `test structure-view properties fixtures`() = checkFixtures("structure-view/properties", "Properties", "properties")
+    // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11; languages/06 R2 / languages/11
+    // Properties now has a dedicated provider, so these fallback fixtures mask it and run through the structure view.
+    fun `test structure-view properties fixtures`() =
+        checkFixtures("structure-view/properties", "Properties", "properties", maskDedicatedPropertiesProvider = true)
 
     // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11; Groovy now has a dedicated provider, so mask it.
     fun `test structure-view Groovy fixtures`() =
@@ -78,14 +88,18 @@ class GoldenFixturesTest : BasePlatformTestCase() {
         maskDedicatedJsonProvider: Boolean = false,
         maskDedicatedYamlProvider: Boolean = false,
         maskDedicatedGroovyProvider: Boolean = false,
+        maskDedicatedPropertiesProvider: Boolean = false,
+        maskDedicatedTomlProvider: Boolean = false,
     ) {
-        if (maskDedicatedJsonProvider || maskDedicatedYamlProvider || maskDedicatedGroovyProvider) {
+        if (maskDedicatedJsonProvider || maskDedicatedYamlProvider || maskDedicatedGroovyProvider || maskDedicatedPropertiesProvider || maskDedicatedTomlProvider) {
             ExtensionTestUtil.maskExtensions(
                 DeclarationProvider.EP_NAME,
                 DeclarationProvider.EP_NAME.extensionList.filterNot {
                     (maskDedicatedJsonProvider && it is JsonDeclarationProvider) ||
                         (maskDedicatedYamlProvider && it is YamlDeclarationProvider) ||
-                        (maskDedicatedGroovyProvider && it is GroovyDeclarationProvider)
+                        (maskDedicatedGroovyProvider && it is GroovyDeclarationProvider) ||
+                        (maskDedicatedPropertiesProvider && it is PropertiesDeclarationProvider) ||
+                        (maskDedicatedTomlProvider && it is TomlDeclarationProvider)
                 },
                 testRootDisposable,
             )

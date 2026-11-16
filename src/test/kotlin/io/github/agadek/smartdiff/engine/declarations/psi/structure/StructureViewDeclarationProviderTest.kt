@@ -30,6 +30,7 @@ import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationProvider
 import io.github.agadek.smartdiff.engine.declarations.psi.Rendering
 import io.github.agadek.smartdiff.engine.declarations.psi.java.JavaDeclarationProvider
 import io.github.agadek.smartdiff.engine.declarations.psi.json.JsonDeclarationProvider
+import io.github.agadek.smartdiff.engine.declarations.psi.properties.PropertiesDeclarationProvider
 import io.github.agadek.smartdiff.ui.SmartDiffSettings
 import java.io.File
 
@@ -174,6 +175,11 @@ class StructureViewDeclarationProviderTest : BasePlatformTestCase() {
 
     // languages/06-structure-view-fallback R1, R10
     fun `test R1 R10 the setting is on by default and turning it off makes fallback languages unsupported`() {
+        ExtensionTestUtil.maskExtensions(
+            DeclarationProvider.EP_NAME,
+            DeclarationProvider.EP_NAME.extensionList.filterNot { it is PropertiesDeclarationProvider },
+            testRootDisposable,
+        )
         assertTrue("fallback is on by default", settings.useStructureViewFallback)
         assertTrue(DeclarationEngine(project).supports("Properties"))
 
@@ -268,6 +274,11 @@ class StructureViewDeclarationProviderTest : BasePlatformTestCase() {
 
     // languages/06-structure-view-fallback R8
     fun `test R8 fallback results carry the structure-view note`() {
+        ExtensionTestUtil.maskExtensions(
+            DeclarationProvider.EP_NAME,
+            DeclarationProvider.EP_NAME.extensionList.filterNot { it is PropertiesDeclarationProvider },
+            testRootDisposable,
+        )
         val engine = DeclarationEngine(project)
         val fallback = engine.compare(ComparisonRequest("a=1\n", "a=2\n", "Properties", "a.properties"), Cancellation.NONE)
 
@@ -302,6 +313,11 @@ class StructureViewDeclarationProviderTest : BasePlatformTestCase() {
 
     // languages/06-structure-view-fallback R9
     fun `test R9 a fallback file over the declaration limit is TOO_LARGE`() {
+        ExtensionTestUtil.maskExtensions(
+            DeclarationProvider.EP_NAME,
+            DeclarationProvider.EP_NAME.extensionList.filterNot { it is PropertiesDeclarationProvider },
+            testRootDisposable,
+        )
         val request = ComparisonRequest(
             "a=1\nb=2\nc=3\n",
             "a=1\nb=2\nc=4\n",

@@ -1,0 +1,4 @@
+status: ANALYZED
+section a  removed  old 1-2
+section b  added  new 1-2
+  key x  moved  old 2  new 2

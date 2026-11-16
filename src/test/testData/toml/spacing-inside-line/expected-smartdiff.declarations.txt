@@ -1,0 +1,2 @@
+status: ANALYZED
+key a  formatting-only  old 1  new 1

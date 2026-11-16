@@ -1,0 +1,6 @@
+<!-- Loaded when the properties plugin is present. The properties declaration provider registers here. -->
+<idea-plugin>
+    <extensions defaultExtensionNs="io.github.agadek.smartdiff">
+        <declarationProvider implementation="io.github.agadek.smartdiff.engine.declarations.psi.properties.PropertiesDeclarationProvider"/>
+    </extensions>
+</idea-plugin>

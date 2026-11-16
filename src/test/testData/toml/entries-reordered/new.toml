@@ -1,0 +1,7 @@
+[[bin]]
+name = "srv"
+path = "b"
+
+[[bin]]
+name = "cli"
+path = "a"

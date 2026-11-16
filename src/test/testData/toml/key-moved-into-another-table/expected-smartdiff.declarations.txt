@@ -1,0 +1,3 @@
+status: ANALYZED
+section b  old 3-4  new 2-4
+  key x  moved  old 2  new 3
