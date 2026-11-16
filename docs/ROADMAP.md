@@ -116,6 +116,8 @@ Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.
 | [Reviewed marks in the outline](#reviewed-marks-in-the-outline) | [outline/12](specs/outline/12-reviewed-marks.md) (implemented 2026-11-16) |
 | [Visual links for moved code](#visual-links-for-moved-code) | [outline/13](specs/outline/13-moved-code-markers.md) |
 | [Moved lines in unsupported files](#moved-lines-in-unsupported-files) | [engines/04](specs/engines/04-moved-lines.md) (implemented 2026-11-16) |
+| [Expand context to the enclosing declaration](#expand-context-to-the-enclosing-declaration) | [outline/14](specs/outline/14-expand-to-declaration.md) (implemented 2026-11-16) |
+| [Summary in pull request reviews and the Git log](#summary-in-pull-request-reviews-and-the-git-log) | [changes-tree/07](specs/changes-tree/07-review-tree-summaries.md) (proposed 2026-11-16) |
 | [More languages](#more-languages) | [Format coverage plan](FORMAT-COVERAGE.md); feature specs with each phase |
 | Every other item below | Not specified yet |
 
@@ -158,7 +160,7 @@ Proposed 2026-11-13: the [format coverage plan](FORMAT-COVERAGE.md) covers every
 
 - **Free PSI on the current build target:** Groovy and Gradle build scripts, Kotlin build scripts, Markdown, shell scripts and HTML. Groovy declarations and build-script sections for `.gradle` and `.gradle.kts` files are implemented (M2, 2026-11-14/2026-11-15).
 - **Paid or closed plugins, tied to another IDE:** JavaScript and TypeScript, Go, CSS, PHP, Ruby and SQL, built with the pattern spike S8 chooses for Rust.
-- **Structured data:** JSON, YAML, TOML, properties and XML, with keys as declarations ([ADR 0009](adr/0009-structured-data-keys-are-declarations.md), accepted). JSON (including JSON with comments and JSON5) is implemented (D0, D1, 2026-11-13). YAML is implemented (D2, 2026-11-14). Properties and TOML are implemented (D3, 2026-11-15) in [languages/11](specs/languages/11-properties.md) and [languages/12](specs/languages/12-toml.md). XML is implemented (D4, 2026-11-16) in [languages/13](specs/languages/13-xml.md); HTML on the same provider is D4b.
+- **Structured data:** JSON, YAML, TOML, properties and XML, with keys as declarations ([ADR 0009](adr/0009-structured-data-keys-are-declarations.md), accepted). JSON (including JSON with comments and JSON5) is implemented (D0, D1, 2026-11-13). YAML is implemented (D2, 2026-11-14). Properties and TOML are implemented (D3, 2026-11-15) in [languages/11](specs/languages/11-properties.md) and [languages/12](specs/languages/12-toml.md). XML is implemented (D4, 2026-11-16) in [languages/13](specs/languages/13-xml.md); HTML on the same provider is D4b, specified (2026-11-16) in [languages/15](specs/languages/15-html.md).
 - **Every other language:** a provider built on the IDE's structure view, used when no dedicated provider exists ([ADR 0010](adr/0010-structure-view-provider-for-languages-without-their-own.md), accepted).
 - **Not supported through PSI:** C# and the other Rider languages, C and C++ in CLion Nova, and Swift, whose language support is not in IntelliJ PSI; they wait for [Tree-sitter support](#tree-sitter-support).
 - **Phases:** G0 and G1 (structure view, spike S9), D0 to D4b (data formats, spike S10), B0 to B6 (paid IDEs), M1 to M3 (Markdown, Groovy and build scripts, shell; M2 implemented 2026-11-14/2026-11-15, M3 implemented 2026-11-14). The structure-view track and the dedicated providers run in parallel (decided 2026-11-13), starting with G0, D0 and JSON and YAML, then TypeScript and Go ([plan §5](FORMAT-COVERAGE.md#5-phases)).
@@ -225,7 +227,7 @@ Give added and deleted files in the Changes tree a summary and declaration rows,
 
 ### Summary in pull request reviews and the Git log
 
-*(gap review)* SemanticDiff has a full pull request review UI. The IDE equivalent is showing the changed-declarations summary in the GitHub and GitLab pull request changes trees, in the Git log's commit details and in the modal commit dialog. `changesViewModifier` does not reach these ([ADR 0006](adr/0006-changes-tree-summary-through-changes-view-modifier.md)), so this starts with a spike for another hook.
+*(gap review)* SemanticDiff has a full pull request review UI. The IDE equivalent is showing the changed-declarations summary in the GitHub and GitLab pull request changes trees, in the Git log's commit details and in the modal commit dialog. `changesViewModifier` does not reach these ([ADR 0006](adr/0006-changes-tree-summary-through-changes-view-modifier.md)), so this starts with a spike for another hook. Specified in [changes-tree/07](specs/changes-tree/07-review-tree-summaries.md) (proposed, 2026-11-16) for the Git log's commit details and GitHub and GitLab pull request changes: the same summary line and declaration rows as the Changes tree, with spike S11 choosing the hook for each tree and a context menu popup where a tree has none. The modal commit dialog stays out of scope until S11 shows whether it takes the same hook.
 
 ### Reviewed marks in the outline
 
@@ -233,7 +235,7 @@ Let the reviewer mark a change in the outline as reviewed and show progress in t
 
 ### Expand context to the enclosing declaration
 
-*(gap review)* When the native diff collapses unchanged fragments, offer to expand a fragment to the whole surrounding declaration instead of a fixed number of lines. SemanticDiff expands context by complete blocks.
+*(gap review)* When the native diff collapses unchanged fragments, offer to expand a fragment to the whole surrounding declaration instead of a fixed number of lines. SemanticDiff expands context by complete blocks. Implemented 2026-11-16 in [outline/14](specs/outline/14-expand-to-declaration.md): an "Expand Declaration" action in the outline's and the editors' context menus expands every collapsed unchanged fragment in a changed declaration, on both sides, and leaves the rest collapsed, without comparing again or changing the diff's collapse setting. A relationship row expands the fragments of every declaration it frames.
 
 ### Visual links for moved code (implemented, 2026-11-16)
 

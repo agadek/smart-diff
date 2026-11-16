@@ -101,8 +101,8 @@ internal class OutlineNavigator(
         frames.clear()
     }
 
-    /** Runs [action] with synchronized scrolling paused, for this selection's own scrolls. */
-    private fun withSyncDisabled(action: () -> Unit) {
+    /** Runs [action] with synchronized scrolling paused, for this selection's own scrolls and for expanding (outline/14). */
+    internal fun withSyncDisabled(action: () -> Unit) {
         val support = scrollSupport()
         support?.enterDisableScrollSection()
         try {

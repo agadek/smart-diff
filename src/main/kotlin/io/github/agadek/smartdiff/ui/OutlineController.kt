@@ -4,6 +4,7 @@ import com.intellij.diff.DiffContext
 import com.intellij.diff.FrameDiffTool
 import com.intellij.diff.tools.util.side.OnesideTextDiffViewer
 import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
+import com.intellij.diff.util.DiffUtil
 import com.intellij.lang.Language
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -16,6 +17,7 @@ import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.OnePixelSplitter
 import io.github.agadek.smartdiff.engine.api.AnalysisNote
@@ -28,6 +30,7 @@ import io.github.agadek.smartdiff.engine.api.Limits
 import io.github.agadek.smartdiff.engine.api.LineEngineProvider
 import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.Status
+import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 import io.github.agadek.smartdiff.engine.api.compareSafely
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
@@ -196,8 +199,37 @@ class OutlineController internal constructor(
         }
     }
 
+    /**
+     * Expands the collapsed unchanged fragments of [item] on both sides and scrolls each editor to the declaration's first
+     * line on its side, keeping the outline's selection (outline/14 R3 to R10). It never compares again and never rebuilds
+     * the rows; the scroll runs with caret follow suppressed and synchronized scrolling paused, as a selection's scroll does.
+     */
+    fun expandDeclaration(item: OutlineItem) {
+        if (item.isGroup || item.kind == ItemKind.FILE_REGION) return
+        val oldRanges = ExpandDeclaration.oldRanges(item)
+        val newRanges = ExpandDeclaration.newRanges(item)
+        // Expanding changes the frames' size, so the selection's scroll hold is stale; the frames and selection stay.
+        navigator.releaseScrollSync()
+        withSuppressedCaretFollow {
+            navigator.withSyncDisabled {
+                ExpandDeclaration.expand(oldEditor, newEditor, item)
+                scrollToFirst(oldEditor, oldRanges.firstOrNull())
+                scrollToFirst(newEditor, newRanges.firstOrNull())
+            }
+        }
+    }
+
+    private fun scrollToFirst(editor: Editor?, range: TextRange?) {
+        if (editor == null || range == null) return
+        val line = editor.document.getLineNumber(range.start.coerceIn(0, editor.document.textLength))
+        DiffUtil.scrollEditor(editor, line, false)
+    }
+
     internal fun start() {
         viewer.component.putClientProperty(CONTROLLER, this)
+        // The editors' Expand Declaration action finds this controller through its user data (outline/14 R2).
+        oldEditor?.putUserData(EDITOR_KEY, this)
+        newEditor?.putUserData(EDITOR_KEY, this)
         if (!settingsSubscribed) {
             settingsSubscribed = true
             val settings = SmartDiffSettings.getInstance()
@@ -732,6 +764,12 @@ class OutlineController internal constructor(
         return find(items, emptyList()) ?: listOf(target)
     }
 
+    /** The innermost shown row for [offset] on [side], or null; the editor's Expand Declaration action uses it (outline/14 R2). */
+    internal fun rowAt(side: CaretSide, offset: Int): OutlineItem? {
+        val shown = state as? OutlineState.Shown ?: return null
+        return matchingItem(shown.items, side, offset)
+    }
+
     /** The innermost shown row for [offset] on [side], or null (outline/07 R1-R3, R6, R7). */
     private fun matchingItem(items: List<OutlineItem>, side: CaretSide, offset: Int): OutlineItem? {
         val matches = mutableListOf<Match>()
@@ -799,6 +837,8 @@ class OutlineController internal constructor(
         state = OutlineState.Hidden
         panel.show(OutlineState.Hidden)
         viewer.component.putClientProperty(CONTROLLER, null)
+        oldEditor?.putUserData(EDITOR_KEY, null)
+        newEditor?.putUserData(EDITOR_KEY, null)
     }
 
     /** One comparison: its engine, the document stamps it was made from, and its cancellation with the time limit (§9.2 step 5). */
@@ -852,6 +892,9 @@ class OutlineController internal constructor(
 
         /** The outline toggle's state for one diff window, shared by the viewers it shows one after another. */
         private const val CONTROLLER = "smartdiff.outline.controller"
+
+        /** The outline controller attached to a diff editor, for its Expand Declaration action (outline/14 R2). */
+        val EDITOR_KEY = Key.create<OutlineController>("smartdiff.outline.controller.editor")
 
         /** The outline attached to [viewer], or null if it has none. */
         fun of(viewer: FrameDiffTool.DiffViewer?): OutlineController? =

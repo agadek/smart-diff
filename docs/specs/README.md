@@ -79,6 +79,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [12 TOML](languages/12-toml.md) | implemented, 2026-11-15 |
 | [13 XML](languages/13-xml.md) | implemented, 2026-11-16 |
 | [14 Markdown](languages/14-markdown.md) | implemented, 2026-11-16 |
+| [15 HTML](languages/15-html.md) | accepted, 2026-11-16 |
 
 ## Outline
 
@@ -97,6 +98,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [11 Comment-only changes](outline/11-comment-only-changes.md) | implemented, 2026-11-16 |
 | [12 Reviewed marks](outline/12-reviewed-marks.md) | implemented, 2026-11-16 |
 | [13 Moved-code markers](outline/13-moved-code-markers.md) | implemented, 2026-11-16 |
+| [14 Expand to declaration](outline/14-expand-to-declaration.md) | implemented, 2026-11-16 |
 
 ## Changes tree
 
@@ -108,6 +110,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [04 Hide and filter](changes-tree/04-hide-and-filter.md) | implemented, 2026-11-06 |
 | [05 Changes tree caret follow](changes-tree/05-changes-tree-caret-follow.md) | implemented, 2026-11-07 |
 | [06 Summaries for added and deleted files](changes-tree/06-added-deleted-file-summaries.md) | implemented, 2026-11-15 |
+| [07 Summaries in the Git log and pull requests](changes-tree/07-review-tree-summaries.md) | proposed, 2026-11-16 |
 
 ## Settings
 

@@ -93,6 +93,20 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
     internal lateinit var kindsAction: DefaultActionGroup
         private set
 
+    /** The context menu's first entry: expand the selected row's collapsed unchanged fragments (outline/14 R1, R3, R8). */
+    internal val expandDeclarationAction = object : DumbAwareAction(
+        "Expand Declaration", "Show the whole declaration by expanding its collapsed unchanged fragments", null,
+    ) {
+        override fun actionPerformed(e: AnActionEvent) {
+            selectedItem()?.let(controller::expandDeclaration)
+        }
+        override fun update(e: AnActionEvent) {
+            val item = selectedItem()
+            e.presentation.isEnabledAndVisible = item != null && ExpandDeclaration.wouldExpand(controller.oldEditor, controller.newEditor, item)
+        }
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+    }
+
     /** The context menu's mark actions; enabled from the selected row's markable nodes (outline/12 R2, R11, R14). */
     internal val markReviewedAction = object : DumbAwareAction("Mark as Reviewed", "Mark the selected change as reviewed", null) {
         override fun actionPerformed(e: AnActionEvent) = controller.markSelected(true)
@@ -120,7 +134,9 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
     }
 
+    /** The tree's context menu: Expand Declaration first, then a separator and the reviewed-mark actions (outline/14 R1). */
     internal val reviewedActionGroup = DefaultActionGroup(
+        expandDeclarationAction, Separator.getInstance(),
         markReviewedAction, unmarkReviewedAction, Separator.getInstance(), clearReviewedAction,
     ).apply { isPopup = true }
 
