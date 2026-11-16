@@ -1770,6 +1770,81 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertSame("the second outline does not compare again", before, (second.state as OutlineState.Shown).result)
     }
 
+    fun `test outline 12 R8 another outline with different text does not drop the mark on rebuild`() {
+        // outline/12-reviewed-marks R8
+        val localText = "class Two {\n    int shared() { return 2; }\n}\n"
+        val firstOld = "class Two {\n    int shared() { return 1; }\n}\n"
+        val secondOld = "class Two {\n    int shared() { return 0; }\n}\n"
+        val file = projectFile("local/Two.java", localText)
+        val first = open(
+            SimpleDiffRequest(
+                "Two.java", DiffContents.vcsRevision(project, firstOld, "/repo/Two.java"),
+                DiffContents.localFile(project, file), "HEAD", "Current",
+            ),
+        ).awaitResult()
+        val second = open(
+            SimpleDiffRequest(
+                "Two.java", DiffContents.vcsRevision(project, secondOld, "/repo/Two.java"),
+                DiffContents.localFile(project, file), "abc123", "Current",
+            ),
+        ).awaitResult()
+        assertNotNull("the local file has a project key", first.fileKey)
+        assertEquals(first.fileKey, second.fileKey)
+
+        val firstItem = selectItem(first) { it.label == "method shared()  changed" }
+        val secondItem = selectItem(second) { it.label == "method shared()  changed" }
+        check(firstItem.node != null && secondItem.node != null) { "both outlines show the declaration" }
+        val firstFingerprint = first.reviewed.fingerprints[firstItem.node]
+        val secondFingerprint = second.reviewed.fingerprints[secondItem.node]
+        assertTrue("the outlines show the declaration with different text", firstFingerprint != null && firstFingerprint != secondFingerprint)
+
+        var events = 0
+        project.messageBus.connect(testRootDisposable).subscribe(
+            ReviewedMarks.CHANGED, ReviewedMarks.Listener { events++ },
+        )
+        select(first, "method shared()  changed")
+        first.panel.markReviewedAction.actionPerformed(TestActionEvent.createTestEvent(first.panel.markReviewedAction))
+
+        assertTrue("the first outline shows the mark: ${rows(first)}", rows(first).any { it == "  method shared()  changed, reviewed" })
+        assertFalse("the second outline shows other text, so no mark: ${rows(second)}", rows(second).any { it.contains("reviewed") })
+        assertEquals("the mark is still stored", 1, ReviewedMarks.getInstance(project).marksFor(first.fileKey!!).size)
+        assertEquals("marking publishes once and the rebuilds publish nothing", 1, events)
+    }
+
+    fun `test outline 12 R8 a fresh comparison with changed text still drops the mark`() {
+        // outline/12-reviewed-marks R8
+        val localText = "class Two {\n    int shared() { return 2; }\n}\n"
+        val firstOld = "class Two {\n    int shared() { return 1; }\n}\n"
+        val secondOld = "class Two {\n    int shared() { return 0; }\n}\n"
+        val file = projectFile("local/Two.java", localText)
+        val key = ReviewedMarks.keyOf(file.path, project.basePath)!!
+        val first = open(
+            SimpleDiffRequest(
+                "Two.java", DiffContents.vcsRevision(project, firstOld, "/repo/Two.java"),
+                DiffContents.localFile(project, file), "HEAD", "Current",
+            ),
+        ).awaitResult()
+        val second = open(
+            SimpleDiffRequest(
+                "Two.java", DiffContents.vcsRevision(project, secondOld, "/repo/Two.java"),
+                DiffContents.localFile(project, file), "abc123", "Current",
+            ),
+        ).awaitResult()
+        select(first, "method shared()  changed")
+        first.panel.markReviewedAction.actionPerformed(TestActionEvent.createTestEvent(first.panel.markReviewedAction))
+        assertTrue("the mark is stored", ReviewedMarks.getInstance(project).marksFor(key).isNotEmpty())
+        assertFalse("a rebuild alone keeps the mark", rows(second).any { it.contains("reviewed") })
+
+        second.refresh()
+
+        PlatformTestUtil.waitWithEventsDispatching(
+            "a fresh comparison drops the mark", { ReviewedMarks.getInstance(project).marksFor(key).isEmpty() }, 10,
+        )
+        awaitResult(first) { !it.summary.contains("reviewed") }
+        assertFalse("the first outline loses the mark too: ${rows(first)}", rows(first).any { it.contains("reviewed") })
+        assertFalse("the second outline has no mark: ${rows(second)}", rows(second).any { it.contains("reviewed") })
+    }
+
     fun `test outline 12 R8 an edit to one declaration drops only its mark`() {
         // outline/12-reviewed-marks R8, R9
         val old = "class Edit {\n    int a() { return 1; }\n    int b() { return 2; }\n}\n"
