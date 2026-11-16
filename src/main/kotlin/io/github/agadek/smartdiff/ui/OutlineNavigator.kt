@@ -1,5 +1,6 @@
 package io.github.agadek.smartdiff.ui
 
+import com.intellij.diff.tools.util.side.OnesideTextDiffViewer
 import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
 import com.intellij.diff.util.DiffUtil
 import com.intellij.openapi.editor.Editor
@@ -29,7 +30,13 @@ import java.awt.RenderingHints
  * The frame is drawn over the diff's own colors rather than replacing them, so the change stays readable inside it,
  * and it is marked on the editor's scrollbar.
  */
-internal class OutlineNavigator(private val viewer: TwosideTextDiffViewer) {
+internal class OutlineNavigator(
+    private val controller: OutlineController,
+    private val oldEditor: Editor?,
+    private val newEditor: Editor?,
+    private val scrollSupport: () -> com.intellij.diff.tools.util.SyncScrollSupport.Support?,
+    private val syncScrollEnabled: () -> Boolean,
+) {
 
     private val highlighters = mutableListOf<RangeHighlighter>()
     private val frames = mutableListOf<RangeHighlighter>()
@@ -45,19 +52,20 @@ internal class OutlineNavigator(private val viewer: TwosideTextDiffViewer) {
         if (item == null || item.isGroup) return
         val oldRanges = listOfNotNull(item.oldRange) + item.frames.mapNotNull { it.old }
         val newRanges = listOfNotNull(item.newRange) + item.frames.mapNotNull { it.new }
-        val follows = scroll && oldRanges.size == 1 && newRanges.size == 1 && followsSynchronizedScrolling()
+        val follows = scroll && oldRanges.size == 1 && newRanges.size == 1 && oldEditor != null && newEditor != null &&
+            followsSynchronizedScrolling()
         val showEditors = {
             withSyncDisabled {
-                show(viewer.editor1, oldRanges, item.details.mapNotNull { it.old }, scroll)
-                show(viewer.editor2, newRanges, item.details.mapNotNull { it.new }, scroll)
+                oldEditor?.let { show(it, oldRanges, item.details.mapNotNull { it.old }, scroll) }
+                newEditor?.let { show(it, newRanges, item.details.mapNotNull { it.new }, scroll) }
             }
         }
-        if (scroll) OutlineController.of(viewer)?.withSuppressedCaretFollow(showEditors) ?: showEditors() else showEditors()
+        if (scroll) controller.withSuppressedCaretFollow(showEditors) else showEditors()
         if (follows && frames.size == 2) {
             frameSync = FrameScrollSync(
-                listOf(viewer.editor1, viewer.editor2),
+                listOf(oldEditor!!, newEditor!!),
                 frames.toList(),
-                viewer.syncScrollSupport?.asScrollPause(),
+                scrollSupport()?.asScrollPause(),
             ).also { it.start() }
         }
     }
@@ -68,11 +76,14 @@ internal class OutlineNavigator(private val viewer: TwosideTextDiffViewer) {
         frameSync = null
     }
 
-    /** Moves the caret into the new side's editor, or the old side's when the item is only there (Enter or double-click). */
+    /**
+     * Moves the caret into the new side's editor, or the old side's when the item is only there (Enter or double-click).
+     * Does nothing when that side has no editor; it never moves the caret using a range from the other document.
+     */
     fun navigate(item: OutlineItem) {
         val (editor, range) = when {
-            item.newRange != null -> viewer.editor2 to item.newRange
-            item.oldRange != null -> viewer.editor1 to item.oldRange
+            item.newRange != null && newEditor != null -> newEditor to item.newRange
+            item.oldRange != null && oldEditor != null -> oldEditor to item.oldRange
             else -> return
         }
         editor.caretModel.moveToOffset(clamp(editor, range.start))
@@ -92,20 +103,17 @@ internal class OutlineNavigator(private val viewer: TwosideTextDiffViewer) {
 
     /** Runs [action] with synchronized scrolling paused, for this selection's own scrolls. */
     private fun withSyncDisabled(action: () -> Unit) {
-        val sync = viewer.syncScrollSupport
-        sync?.enterDisableScrollSection()
+        val support = scrollSupport()
+        support?.enterDisableScrollSection()
         try {
             action()
         } finally {
-            sync?.exitDisableScrollSection()
+            support?.exitDisableScrollSection()
         }
     }
 
     /** Whether the platform is currently synchronizing this viewer's scrolling for the user. */
-    private fun followsSynchronizedScrolling(): Boolean {
-        val sync = viewer.syncScrollSupport ?: return false
-        return sync.scrollable.isSyncScrollEnabled
-    }
+    private fun followsSynchronizedScrolling(): Boolean = syncScrollEnabled()
 
     private fun show(editor: Editor, ranges: List<TextRange>, details: List<TextRange>, scroll: Boolean) {
         ranges.forEachIndexed { index, range ->
