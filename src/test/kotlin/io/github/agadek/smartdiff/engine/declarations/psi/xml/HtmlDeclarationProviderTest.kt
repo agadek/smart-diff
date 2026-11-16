@@ -1,6 +1,7 @@
 package io.github.agadek.smartdiff.engine.declarations.psi.xml
 
 import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ChangeNode
@@ -175,6 +176,26 @@ class HtmlDeclarationProviderTest : ProviderTestCase() {
             "<body>\n  <script>\n      var x = 1;\n  </script>\n</body>\n",
         )
         assertTrue("script re-indent is a change: ${nodes(reindented)}", changed(reindented).isNotEmpty())
+    }
+
+    // languages/15-html R9, R10
+    fun `test significantWhitespace includes the exact content of pre and script`() {
+        ReadAction.run<RuntimeException> {
+            val project = ProjectManager.getInstance().defaultProject
+            val provider = HtmlDeclarationProvider()
+            val pre = "<pre>\n  a\n</pre>\n"
+            val preRanges = significantTexts(provider, project, pre)
+            assertTrue("pre content range: $preRanges", "\n  a\n" in preRanges)
+            val script = "<script>\n  a\n</script>\n"
+            val scriptRanges = significantTexts(provider, project, script)
+            assertTrue("script content range: $scriptRanges", "a" in scriptRanges)
+        }
+    }
+
+    /** The text of every range [provider] marks as comparing exactly in [text]. */
+    private fun significantTexts(provider: HtmlDeclarationProvider, project: Project, text: String): List<String> {
+        val file = provider.parse(project, text, "page.html", null)
+        return provider.significantWhitespace(file).map { text.substring(it.start, it.end) }
     }
 
     // languages/15-html R12

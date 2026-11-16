@@ -56,17 +56,18 @@ internal object XmlWhitespaceSupport {
         }
     }
 
-    /** The content of [tag], from the end of its start tag to the start of its end tag. */
+    /** The content of [tag], from the end of its start tag's closing bracket to its end tag's start. */
     fun contentRange(tag: XmlTag): TextRange {
-        val whole = tag.textRange
-        var start = whole.endOffset
-        var end = whole.endOffset
-        for (child in tag.children) {
-            when (child.node.elementType) {
-                XmlTokenType.XML_TAG_END -> start = child.textRange.endOffset
-                XmlTokenType.XML_END_TAG_START -> end = child.textRange.startOffset
-            }
-        }
-        return TextRange(start, maxOf(end, start))
+        val empty = tag.textRange.endOffset.let { TextRange(it, it) }
+        val children = tag.children
+        // Only the first XML_TAG_END is the start tag's closing bracket; the end tag has its own XML_TAG_END child,
+        // which the old loop overwrote start with, leaving an empty range for every tag with an end tag (R9, R10).
+        val start = children.firstOrNull { it.node.elementType == XmlTokenType.XML_TAG_END }?.textRange?.endOffset
+            ?: return empty
+        val end = children.firstOrNull { it.node.elementType == XmlTokenType.XML_END_TAG_START }?.textRange?.startOffset
+            ?: return empty
+        // No end tag, or an empty element: there is no content to compare exactly (R9, R10).
+        if (start >= end) return empty
+        return TextRange(start, end)
     }
 }
