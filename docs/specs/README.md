@@ -47,6 +47,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [01 Comparison engines](engines/01-comparison-engines.md) | implemented, 2026-10-21 |
 | [02 Engine contract](engines/02-engine-contract.md) | implemented, 2026-10-21 |
 | [03 Analysis limits](engines/03-analysis-limits.md) | implemented, 2026-10-21 |
+| [04 Moved lines in unsupported files](engines/04-moved-lines.md) | accepted, 2026-11-16 |
 
 ## Declaration engine
 

@@ -115,6 +115,7 @@ Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.
 | [Formatting-only recall in Kotlin and Scala](#formatting-only-recall-in-kotlin-and-scala) | [declarations/07](specs/declarations/07-kotlin-scala-formatting.md) |
 | [Reviewed marks in the outline](#reviewed-marks-in-the-outline) | [outline/12](specs/outline/12-reviewed-marks.md) (implemented 2026-11-16) |
 | [Visual links for moved code](#visual-links-for-moved-code) | [outline/13](specs/outline/13-moved-code-markers.md) |
+| [Moved lines in unsupported files](#moved-lines-in-unsupported-files) | [engines/04](specs/engines/04-moved-lines.md) |
 | [More languages](#more-languages) | [Format coverage plan](FORMAT-COVERAGE.md); feature specs with each phase |
 | Every other item below | Not specified yet |
 
@@ -240,7 +241,7 @@ Let the reviewer mark a change in the outline as reviewed and show progress in t
 
 ### Moved lines in unsupported files
 
-*(gap review)* For files no engine can analyze, a fallback that treats each line as one token and still reports moved lines, as SemanticDiff's fallback diff does. These files currently get only the plain native diff.
+*(gap review)* For files no engine can analyze, a fallback that treats each line as one token and still reports moved lines, as SemanticDiff's fallback diff does. These files currently get only the plain native diff. Specified in [engines/04](specs/engines/04-moved-lines.md) (accepted, 2026-11-16): two-sided diffs of plain text and of languages without an engine are compared by lines, and the outline lists each moved block of at least 3 lines, framed on both sides with moved-code markers, and one file region row for the rest, behind an on-by-default setting.
 
 ### Relationship recall
 
