@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans>
+  <bean id="mainDataSource" class="x.DataSource">
+    <property name="url" value="jdbc:h2:mem"/>
+  </bean>
+</beans>

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<s:beans xmlns:s="urn:beans">
+  <s:bean id="a"/>
+</s:beans>

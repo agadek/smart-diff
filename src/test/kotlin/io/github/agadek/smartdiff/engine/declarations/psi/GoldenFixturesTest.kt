@@ -56,6 +56,9 @@ class GoldenFixturesTest : BasePlatformTestCase() {
     // languages/12-toml R19
     fun `test TOML fixtures`() = checkFixtures("toml", "TOML", "toml")
 
+    // languages/13-xml R21
+    fun `test XML fixtures`() = checkFixtures("xml", "XML", "xml")
+
     // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11; languages/06 R2 / languages/07
     // JSON now has a dedicated provider, so these fallback fixtures mask it and run through the real engine path.
     fun `test structure-view JSON fixtures`() =
