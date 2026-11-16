@@ -517,6 +517,24 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
 
     fun `test a one-sided diff of an added file with the caret outside every declaration selects the file row`() {
         // changes-tree/06 R8
+        // A stub result whose only declaration starts at the class, so the header comment is outside every declaration.
+        maskEngines(
+            RangeEngine { request ->
+                ComparisonResult(
+                    ENGINE_ID,
+                    "1",
+                    Status.ANALYZED,
+                    changes = listOf(
+                        ChangeNode(
+                            Subject.Declaration(DeclarationKind.CLASS, "Cart", null),
+                            null,
+                            classRange(request.newText.toString()),
+                            Presence.ADDED,
+                        ),
+                    ),
+                )
+            },
+        )
         val (_, addedFile) = configuredFile("AddedOnesideOutside.java", NEW_TEXT)
         val added = Change(null, SimpleContentRevision(NEW_TEXT, VcsUtil.getFilePath(addedFile), "2"))
         val tree = summarizedTree(added)
@@ -532,6 +550,13 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
         assertTrue("the platform shows an added file one-sided", viewer is SimpleOnesideDiffViewer)
         val oneside = viewer as SimpleOnesideDiffViewer
         val follower = follower(tree, viewer = viewer)
+
+        follower.followNow(oneside.editor, NEW_TEXT.indexOf("class Cart") + 2)
+        assertEquals(
+            "the class row is selected while the caret is inside it",
+            "class Cart",
+            (tree.selectionPath?.lastPathComponent as? DeclarationNode)?.item?.title,
+        )
 
         follower.followNow(oneside.editor, NEW_TEXT.indexOf("// header") + 2)
 
