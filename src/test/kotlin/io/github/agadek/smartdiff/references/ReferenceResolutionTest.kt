@@ -236,8 +236,8 @@ class ReferenceResolutionTest : BasePlatformTestCase() {
         val two = outcome("Scala", "Order.scala", scala2, scala2New)
         val three = outcome("Scala", "Order.scala", scala3, scala3New)
 
-        assertEquals(WhitespacePolicy.LINE_BREAKS_SIGNIFICANT, two.whitespacePolicy)
-        assertEquals(WhitespacePolicy.INDENTATION_SIGNIFICANT, three.whitespacePolicy)
+        assertEquals(WhitespacePolicy.SCALA2_LINE_BREAKS, two.whitespacePolicy)
+        assertEquals(WhitespacePolicy.SCALA3_INDENTATION, three.whitespacePolicy)
     }
 
     private fun outcome(language: String, fileName: String, old: String, new: String): ReferencePass.Outcome {

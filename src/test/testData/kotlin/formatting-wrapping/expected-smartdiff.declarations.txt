@@ -1,0 +1,5 @@
+status: ANALYZED
+class Order  old 3-9  new 3-14
+  function wrapped(Int,Int)  formatting-only  old 4  new 4-7
+  function chain()  formatting-only  old 6  new 9-11
+  function real()  changed  old 8  new 13

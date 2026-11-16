@@ -16,7 +16,7 @@ expected:
       content: CHANGED
     - subject: { path: "", kind: FUNCTION, name: "formatterForDateTimeString", signature: "String" }
       presence: MATCHED
-      content: CHANGED
+      content: FORMATTING_ONLY
     - subject: { path: "class DateColumnType", kind: FUNCTION, name: "valueFromDB", signature: "Any" }
       presence: MATCHED
       content: CHANGED
@@ -42,4 +42,4 @@ expected:
       presence: REMOVED
       content: UNCHANGED
   ambiguous: []
-notes: "Hand-checked against the commit's first parent."
+notes: "Hand-checked against the commit's first parent. formatterForDateTimeString only wrapped its single argument across lines, so declarations/07 R1-R3 make it formatting-only; the other changes are unchanged."
