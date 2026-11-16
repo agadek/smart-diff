@@ -29,9 +29,9 @@ the tree. This is the reverse of opening a declaration from the tree.
   row from the old summary; if the rebuilt tree shows only a plain pending file row, it selects that file row and keeps
   retrying, and it selects the row under the caret when the new summary arrives.
 - **R8** A file without a summary, because it is pending, not analyzed, in an
-  [unsupported language](../../GLOSSARY.md#supported-language), added, deleted or after the 500-file limit, gets only its
-  file row selected. *(changes-tree/06, once implemented, changes this: an added or deleted file with a summary follows its
-  declaration rows in a one-sided diff, while the platform preview still selects the file row.)*
+  [unsupported language](../../GLOSSARY.md#supported-language) or after the 500-file limit, gets only its file row selected.
+  An added or deleted file with a summary follows its declaration rows in a one-sided diff, while the platform's
+  selection-following preview still selects the file row ([changes-tree/06](06-added-deleted-file-summaries.md)).
 - **R9** Following reads no revision content on the UI thread and uses no internal, experimental or deprecated platform
   API.
 - **R10** When the tree's filter or its Declarations toggle hides the declaration under the caret, the tree selects the

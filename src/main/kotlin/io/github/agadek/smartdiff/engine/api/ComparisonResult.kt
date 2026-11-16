@@ -140,6 +140,12 @@ data class ChangeNode(
      */
     @get:Deprecated(RELATIONSHIP_FIELD, ReplaceWith("relationships"))
     val inlinedFrom: List<Inlined> = emptyList(),
+    /**
+     * Only for [Presence.MATCHED] with [Content.CHANGED]: the own source is the same on both sides once comments are
+     * left out and whitespace is compared as for [Content.FORMATTING_ONLY]. The outline shows it as `comment-only` only
+     * when the user turns that option on (outline/11 R3); the content stays [Content.CHANGED] (declarations/02 R6).
+     */
+    val commentOnly: Boolean = false,
 ) {
     /** Whether this node is a change by itself, not only because of its children. */
     val isChangedItself: Boolean

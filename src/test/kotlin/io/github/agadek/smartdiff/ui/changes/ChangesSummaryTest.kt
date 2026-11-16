@@ -372,7 +372,8 @@ class ChangesSummaryTest : BasePlatformTestCase() {
     }
 
     fun `test added and deleted files and other languages get no summary`() {
-        // changes-tree/03-coverage-and-scale R6; outline/05-analysis-fallback R8
+        // changes-tree/03-coverage-and-scale R6 (changes-tree/06, implemented 2026-11-15: added/deleted files get summaries);
+        // outline/05-analysis-fallback R8
         val added = Change(null, SimpleContentRevision(NEW_CART, VcsUtil.getFilePath("/src/New.java", false), "2"))
         val deleted = Change(SimpleContentRevision(OLD_CART, VcsUtil.getFilePath("/src/Old.java", false), "1"), null)
         val text = modified("notes.txt", "a\n", "b\n")
@@ -380,7 +381,13 @@ class ChangesSummaryTest : BasePlatformTestCase() {
         listOf(added, deleted, text).forEach { summaryNode(it, listOf(added, deleted, text)) }
         ChangesSummaryService.getInstance(project).waitForSummaries()
 
-        listOf(added, deleted, text).forEach { assertNull(summaryNode(it, listOf(added, deleted, text))) }
+        val addedNode = summaryNode(added, listOf(added, deleted, text))
+        assertNotNull("an added file gets a summary", addedNode)
+        assertTrue(addedNode!!.summary.contains("added"))
+        val deletedNode = summaryNode(deleted, listOf(added, deleted, text))
+        assertNotNull("a deleted file gets a summary", deletedNode)
+        assertTrue(deletedNode!!.summary.contains("removed"))
+        assertNull("an unsupported language gets no summary", summaryNode(text, listOf(added, deleted, text)))
     }
 
     fun `test no summary is shown when the setting is off`() {
@@ -451,6 +458,206 @@ class ChangesSummaryTest : BasePlatformTestCase() {
         assertFalse("the platform's own action opens it, not the declaration action", DeclarationNodeAction(project).handleDoubleClick(last))
     }
 
+
+    fun `test an added file gets a summary of its added declarations`() {
+        // changes-tree/06 R1
+        // changes-tree/06 R3
+        // changes-tree/06 R4
+        val addedText = """
+            // header
+            class Cart {
+                void total() {
+                }
+
+                void isEmpty() {
+                }
+            }
+        """.trimIndent()
+        val added = Change(null, SimpleContentRevision(addedText, VcsUtil.getFilePath("/repo/AddedCart.java", false), "2"))
+        summaryNode(added)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        val node = summaryNode(added)!!
+        assertTrue("summary counts added declarations: ${node.summary}", node.summary.contains("added"))
+        assertEquals(
+            listOf("class Cart  added", "  method total()  added", "  method isEmpty()  added"),
+            rows(node),
+        )
+        val declarations = node.preorderEnumeration().toList().filterIsInstance<DeclarationNode>()
+        assertTrue(declarations.all { io.github.agadek.smartdiff.ui.Tag.ADDED in it.item.tags })
+
+        // A second case asserts that a reported file region is counted.
+        val regionAdded = """
+            package p;
+            class Only {
+            }
+        """.trimIndent()
+        val regionChange = Change(null, SimpleContentRevision(regionAdded, VcsUtil.getFilePath("/repo/Region.java", false), "2"))
+        summaryNode(regionChange)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        val regionNode = summaryNode(regionChange)
+        assertNotNull(regionNode)
+        assertTrue(regionNode!!.summary.contains("added"))
+    }
+
+    fun `test a deleted file gets a summary of its removed declarations`() {
+        // changes-tree/06 R2
+        // changes-tree/06 R3
+        // changes-tree/06 R4
+        val deletedText = """
+            // header
+            class Cart {
+                void total() {
+                }
+
+                void isEmpty() {
+                }
+            }
+        """.trimIndent()
+        val deleted = Change(SimpleContentRevision(deletedText, VcsUtil.getFilePath("/repo/DeletedCart.java", false), "1"), null)
+        summaryNode(deleted)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        val node = summaryNode(deleted)!!
+        assertTrue("summary counts removed declarations: ${node.summary}", node.summary.contains("removed"))
+        assertEquals(
+            listOf("class Cart  removed", "  method total()  removed", "  method isEmpty()  removed"),
+            rows(node),
+        )
+        val declarations = node.preorderEnumeration().toList().filterIsInstance<DeclarationNode>()
+        assertTrue(declarations.all { io.github.agadek.smartdiff.ui.Tag.REMOVED in it.item.tags })
+    }
+
+    fun `test an empty added file keeps the platform row`() {
+        // changes-tree/06 R1
+        // changes-tree/06 R2
+        val added = Change(null, SimpleContentRevision("", VcsUtil.getFilePath("/repo/Empty.java", false), "2"))
+        summaryNode(added)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        assertNull("an empty added file has no summary", summaryNode(added))
+    }
+
+    fun `test a declaration row of an added or deleted file falls back to the file diff`() {
+        // changes-tree/06 R7
+        val addedText = """
+            class Cart {
+                void total() {
+                }
+            }
+        """.trimIndent()
+        val change = Change(null, SimpleContentRevision(addedText, VcsUtil.getFilePath("/repo/Fallback.java", false), "2"))
+        summaryNode(change)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        val added = summaryNode(change)!!.preorderEnumeration().toList().filterIsInstance<DeclarationNode>().first()
+        val chains = mutableListOf<DiffRequestChain>()
+        val recording = Disposer.newDisposable(testRootDisposable)
+        ApplicationManager.getApplication().replaceService(DiffManager::class.java, RecordingDiffManager(shownChains = chains), recording)
+        val action = DeclarationNodeAction(project) { p, changes, index, key, value ->
+            ChangesDiff.show(p, changes, index, key, value, "smartdiff.test.MissingAction", "smartdiff.test.MissingContext")
+        }
+
+        assertTrue("the fallback opens the file's diff", action.handleDoubleClick(added))
+        Disposer.dispose(recording)
+
+        val request = process(chains.single())
+        assertNull("the fallback has no declaration context", request.getUserData(OutlinePath.KEY))
+    }
+
+    fun `test a renamed file keeps the modified-file summary`() {
+        // changes-tree/06 R9
+        val path1 = VcsUtil.getFilePath("/repo/OldName.java", false)
+        val path2 = VcsUtil.getFilePath("/repo/NewName.java", false)
+        val change = Change(SimpleContentRevision(OLD_CART, path1, "1"), SimpleContentRevision(NEW_CART, path2, "2"))
+        summaryNode(change)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        val node = summaryNode(change)
+        assertNotNull(node)
+        assertTrue(node!!.summary.contains("changed") || node.summary.contains("added"))
+    }
+
+    fun `test a moved file keeps the modified-file summary`() {
+        // changes-tree/06 R9
+        val path1 = VcsUtil.getFilePath("/old/Cart.java", false)
+        val path2 = VcsUtil.getFilePath("/new/Cart.java", false)
+        val change = Change(SimpleContentRevision(OLD_CART, path1, "1"), SimpleContentRevision(NEW_CART, path2, "2"))
+        summaryNode(change)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        val node = summaryNode(change)
+        assertNotNull(node)
+        assertTrue(node!!.summary.contains("changed") || node.summary.contains("added"))
+    }
+
+    fun `test a binary or unsupported added file has no summary`() {
+        // changes-tree/06 R10
+        val added = Change(null, SimpleContentRevision("hello", VcsUtil.getFilePath("/repo/image.png", false), "2"))
+        summaryNode(added)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        assertNull(summaryNode(added))
+    }
+
+    fun `test a too-large added file shows the reason`() {
+        // changes-tree/06 R11
+        settings.limits = Limits.DEFAULT.copy(maxChars = 10)
+        val added = Change(null, SimpleContentRevision(NEW_CART, VcsUtil.getFilePath("/repo/Large.java", false), "2"))
+        summaryNode(added)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        val node = summaryNode(added)!!
+        assertEquals("not analyzed: too large", node.summary)
+        assertEquals(0, node.childCount)
+    }
+
+    fun `test added and deleted files count toward the 500-file limit`() {
+        // changes-tree/06 R12
+        maskEngines(InstantEngine())
+        val first = (1..ChangesSummaryModifier.MAX_FILES).map { i ->
+            val name = "File$i.java"
+            if (i % 2 == 0) Change(null, SimpleContentRevision(NEW_CART, VcsUtil.getFilePath("/repo/$name", false), "2"))
+            else Change(SimpleContentRevision(OLD_CART, VcsUtil.getFilePath("/repo/$name", false), "1"), null)
+        }
+        val after = Change(null, SimpleContentRevision(NEW_CART, VcsUtil.getFilePath("/repo/After.java", false), "2"))
+        val changes = first + after
+
+        tree(changes)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        val (_, nodes) = tree(changes)
+
+        assertTrue(nodes.take(ChangesSummaryModifier.MAX_FILES).all { it is SummaryChangeNode })
+        assertTrue(nodes.last() !is SummaryChangeNode)
+    }
+
+    fun `test an added file's summary is computed off the EDT`() {
+        // changes-tree/06 R13
+        val path = VcsUtil.getFilePath("/repo/CheckedAdded.java", false)
+        val added = Change(null, CheckedRevision(NEW_CART, path))
+        summaryNode(added)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        assertNotNull(summaryNode(added))
+
+        val deletedPath = VcsUtil.getFilePath("/repo/CheckedDeleted.java", false)
+        val deleted = Change(CheckedRevision(OLD_CART, deletedPath), null)
+        summaryNode(deleted)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        assertNotNull(summaryNode(deleted))
+    }
+
+    fun `test an edit to an added file gives it a new summary`() {
+        // changes-tree/06 R14
+        val path = VcsUtil.getFilePath("/repo/Edited.java", false)
+        val v1 = Change(null, SimpleContentRevision("class A {}", path, "2"))
+        summaryNode(v1)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        val s1 = summaryNode(v1)!!.summary
+        val v2 = Change(null, SimpleContentRevision("class A { void m() {} }", path, "3"))
+        summaryNode(v2)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        val s2 = summaryNode(v2)!!.summary
+        assertTrue("a changed new-side version is a new cache key", s1 != s2)
+
+        val deleted = Change(SimpleContentRevision("class A {}", path, "1"), null)
+        summaryNode(deleted)
+        ChangesSummaryService.getInstance(project).waitForSummaries()
+        assertNotNull("an added and a deleted file at the same path do not share an entry", summaryNode(deleted))
+    }
+
+
     private fun maskEngines(vararg engines: ComparisonEngine) {
         ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, engines.map(::factory), testRootDisposable)
     }
@@ -490,7 +697,31 @@ class ChangesSummaryTest : BasePlatformTestCase() {
         override fun supports(languageId: String) = true
 
         override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult =
-            ComparisonResult(id, version, Status.ANALYZED)
+            ComparisonResult(
+                id,
+                version,
+                Status.ANALYZED,
+                changes = listOf(
+                    io.github.agadek.smartdiff.engine.api.ChangeNode(
+                        io.github.agadek.smartdiff.engine.api.Subject.Declaration(
+                            io.github.agadek.smartdiff.engine.api.DeclarationKind.CLASS,
+                            "X",
+                            null,
+                        ),
+                        io.github.agadek.smartdiff.engine.api.TextRange(0, 1).takeIf { request.oldText.isNotEmpty() },
+                        io.github.agadek.smartdiff.engine.api.TextRange(0, 1).takeIf { request.newText.isNotEmpty() },
+                        when {
+                            request.oldText.isEmpty() -> io.github.agadek.smartdiff.engine.api.Presence.ADDED
+                            request.newText.isEmpty() -> io.github.agadek.smartdiff.engine.api.Presence.REMOVED
+                            else -> io.github.agadek.smartdiff.engine.api.Presence.MATCHED
+                        },
+                        content = when {
+                            request.oldText.isEmpty() || request.newText.isEmpty() -> io.github.agadek.smartdiff.engine.api.Content.CHANGED
+                            else -> io.github.agadek.smartdiff.engine.api.Content.CHANGED
+                        },
+                    ),
+                ),
+            )
     }
 
     private fun modified(fileName: String, oldText: String, newText: String): Change {

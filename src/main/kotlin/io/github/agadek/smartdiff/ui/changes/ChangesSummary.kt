@@ -196,6 +196,9 @@ class ChangesSummaryService(private val project: Project) {
         ) : Entry
     }
 
+    /** Which revision is absent in an added or deleted file. */
+    private enum class MissingSide { NONE, OLD, NEW }
+
     /**
      * What a summary was computed from: the file's paths, a version of each side, the engine, the confidence policy and
      * the analysis stamp. The stamp makes a result computed under older limits or an older engine layout land under an
@@ -206,6 +209,7 @@ class ChangesSummaryService(private val project: Project) {
         val newPath: String,
         val oldVersion: String,
         val newVersion: String,
+        val missingSide: MissingSide,
         val engineId: String,
         val confidence: String,
         val analysis: AnalysisStamp,
@@ -217,11 +221,11 @@ class ChangesSummaryService(private val project: Project) {
     private val refreshScheduled = AtomicBoolean()
 
     /**
-     * The summary of each of [changes], or null where it is not known yet or there is none: an added or deleted file, or
-     * a language without an engine. A file the engine could not analyze (`FAILED` or `TOO_LARGE`) gets a summary that says
-     * why, with no declaration rows. Unknown summaries are computed in the background, and the tree is refreshed when
-     * they are ready. A timed-out summary stays visible while one retry is queued; a second timeout is kept. Files that
-     * are no longer in [changes] are forgotten.
+     * The summary of each of [changes], or null where it is not known yet or there is none: a file without an engine, a
+     * binary or unsupported file, or an added or deleted file with no reported changes. A file the engine could not analyze
+     * (`FAILED` or `TOO_LARGE`) gets a summary that says why, with no declaration rows. Unknown summaries are computed in
+     * the background, and the tree is refreshed when they are ready. A timed-out summary stays visible while one retry is
+     * queued; a second timeout is kept. Files that are no longer in [changes] are forgotten.
      */
     fun summaries(changes: List<Change>): List<FileSummary?> {
         val stamp = currentAnalysisStamp()
@@ -304,24 +308,38 @@ class ChangesSummaryService(private val project: Project) {
         executor.submit {}.get(30, TimeUnit.SECONDS)
     }
 
-    private class Request(val key: Key, val change: Change, val languageId: String, val fileName: String)
+    private class Request(
+        val key: Key,
+        val change: Change,
+        val languageId: String,
+        val fileName: String,
+        val missingSide: MissingSide,
+    )
 
     private fun request(change: Change, stamp: AnalysisStamp): Request? {
-        val old = change.beforeRevision ?: return null
-        val new = change.afterRevision ?: return null
-        val fileName = new.file.name
-        val languageId = (FileTypeRegistry.getInstance().getFileTypeByFileName(fileName) as? LanguageFileType)?.language?.id ?: return null
+        val old = change.beforeRevision
+        val new = change.afterRevision
+        val (missingSide, existing) = when {
+            old != null && new != null -> MissingSide.NONE to new
+            old == null && new != null -> MissingSide.OLD to new
+            old != null && new == null -> MissingSide.NEW to old
+            else -> return null
+        }
+        val fileName = existing.file.name
+        val languageId =
+            (FileTypeRegistry.getInstance().getFileTypeByFileName(fileName) as? LanguageFileType)?.language?.id
+                ?: return null
         val engine = EngineRegistry.getInstance(project).select(languageId).selected ?: return null
-        val key = Key(
-            old.file.path,
-            new.file.path,
-            version(old),
-            version(new),
-            engine.id.value,
-            stamp.confidence,
-            stamp,
-        )
-        return Request(key, change, languageId, fileName)
+        val key = when {
+            old != null && new != null ->
+                Key(old.file.path, new.file.path, version(old), version(new), missingSide, engine.id.value, stamp.confidence, stamp)
+            new != null ->
+                Key(new.file.path, new.file.path, MISSING_VERSION, version(new), missingSide, engine.id.value, stamp.confidence, stamp)
+            old != null ->
+                Key(old.file.path, old.file.path, version(old), MISSING_VERSION, missingSide, engine.id.value, stamp.confidence, stamp)
+            else -> return null
+        }
+        return Request(key, change, languageId, fileName, missingSide)
     }
 
     private fun compute(request: Request, retry: Boolean = false) {
@@ -351,12 +369,26 @@ class ChangesSummaryService(private val project: Project) {
 
     /**
      * The summary of [request], or null when a side cannot be read. A comparison over the time limit becomes a failed
-     * result; a file over a limit or not analyzed gets a reason and no declaration rows.
+     * result; a file over a limit or not analyzed gets a reason and no declaration rows. An added or deleted file
+     * compares the existing side with an empty missing side (changes-tree/06).
      */
     private fun summarize(request: Request): FileSummary? {
         val engine = EngineRegistry.getInstance(project).findEngine(EngineId(request.key.engineId)) ?: return null
-        val oldText = content(request.change.beforeRevision) ?: return null
-        val newText = content(request.change.afterRevision) ?: return null
+        val (oldText, newText) = when (request.missingSide) {
+            MissingSide.NONE -> {
+                val old = content(request.change.beforeRevision) ?: return null
+                val new = content(request.change.afterRevision) ?: return null
+                old to new
+            }
+            MissingSide.OLD -> {
+                val new = content(request.change.afterRevision) ?: return null
+                "" to new
+            }
+            MissingSide.NEW -> {
+                val old = content(request.change.beforeRevision) ?: return null
+                old to ""
+            }
+        }
         val settings = SmartDiffSettings.getInstance()
         val limits = settings.limits
         val comparison = ComparisonRequest(
@@ -372,6 +404,12 @@ class ChangesSummaryService(private val project: Project) {
             timedOut(engine, deadline, limits) ?: throw e
         }
         val text = summary(result) ?: return null
+        // An added or deleted file whose analyzed result reports no changes keeps the platform row (changes-tree/06 R10).
+        // Decide on the result, not the summary's wording; a failed or too-large file keeps its reason instead.
+        if (request.missingSide != MissingSide.NONE &&
+            (result.status == Status.ANALYZED || result.status == Status.PARTIAL) &&
+            !OutlineModel.hasChanges(result)
+        ) return null
         val items = when (result.status) {
             Status.ANALYZED, Status.PARTIAL ->
                 OutlineModel.build(result, oldText, newText, SmartDiffSettings.getInstance().formattingOnlyInline)
@@ -421,6 +459,9 @@ class ChangesSummaryService(private val project: Project) {
 
         /** How long a timed-out summary stays visible before its one retry is queued. */
         internal const val RETRY_DELAY_MILLIS = 1_000L
+
+        /** Version placeholder for the side that does not exist in an added or deleted file. */
+        private const val MISSING_VERSION = "missing"
 
         fun getInstance(project: Project): ChangesSummaryService = project.service()
 

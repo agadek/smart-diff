@@ -17,9 +17,11 @@ Status: implemented, 2026-10-22
 - **R7** When every change is hidden, the outline says "All changes are hidden by the filter".
 - **R8** The outline's filter is remembered and applies to every outline.
 - **R9** Changing the outline's filter updates the outline without comparing the file again.
+- **R10** While "Mark comment-only changes" is on, the filter can also hide [comment-only](../../GLOSSARY.md#comment-only) changes.
 
 ## References
 
+- [Comment-only changes](11-comment-only-changes.md) (R10)
 - [Hide and filter in the Changes tree](../changes-tree/04-hide-and-filter.md)
 - [ADR 0003](../../adr/0003-conservative-classification.md)
 - [Technical specification §10](../../TECHNICAL-SPECIFICATION.md#10-structural-outline)

@@ -403,6 +403,18 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
         assertTrue("the entry is missing from the container tree", event.presentation.isEnabledAndVisible)
     }
 
+    fun `test the merge filter has no comment-only entry`() {
+        // outline/11-comment-only-changes, out of scope: the merge outline never gains the comment-only entry
+        val outline = open().awaitShown()
+        val toolbar = findToolbar(outline.panel) ?: error("no merge outline toolbar")
+        fun labels(group: ActionGroup): List<String?> = group.getChildren(null).flatMap { child ->
+            listOf(child.templatePresentation.text) + (child as? ActionGroup)?.let(::labels).orEmpty()
+        }
+        val entries = labels(toolbar.actionGroup)
+        assertTrue("the merge filter has change types: $entries", "Changed" in entries)
+        assertFalse("the merge filter has no comment-only entry: $entries", ChangeType.COMMENT_ONLY.text in entries)
+    }
+
     fun `test the native three-sided diff keeps its three panes`() {
         // merge/03-three-sided-diffs R3
         val outline = open().awaitShown()

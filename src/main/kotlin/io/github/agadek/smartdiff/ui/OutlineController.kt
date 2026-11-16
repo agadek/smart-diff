@@ -2,12 +2,14 @@ package io.github.agadek.smartdiff.ui
 
 import com.intellij.diff.DiffContext
 import com.intellij.diff.FrameDiffTool
+import com.intellij.diff.tools.util.side.OnesideTextDiffViewer
 import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
 import com.intellij.lang.Language
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.editor.Document
+import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.CaretListener
 import com.intellij.openapi.editor.event.DocumentEvent
@@ -61,28 +63,37 @@ sealed interface OutlineState {
 }
 
 /**
- * The outline of one two-sided diff viewer and its lifecycle (technical specification §9.2): it compares document
- * snapshots on a pooled thread, discards stale results, reruns after edits and engine changes, enforces the time limit
- * and lets go of every text and result when the viewer is disposed. All methods except the comparison itself run on the
- * event dispatch thread.
+ * The outline of one diff viewer and its lifecycle (technical specification §9.2): it compares document snapshots on a
+ * pooled thread, discards stale results, reruns after edits and engine changes, enforces the time limit and lets go of
+ * every text and result when the viewer is disposed. All methods except the comparison itself run on the event dispatch
+ * thread.
  */
 class OutlineController internal constructor(
     private val project: Project,
-    val viewer: TwosideTextDiffViewer,
+    val viewer: FrameDiffTool.DiffViewer,
     private val context: DiffContext,
     internal val splitter: OnePixelSplitter,
     private val languageId: String,
     private val fileName: String?,
     /** The diff's new-side file, or its old-side file when the new side has none; null keeps the engine's result (R3). */
     private val file: VirtualFile?,
-    private val oldDocument: Document,
-    private val newDocument: Document,
+    internal val oldDocument: Document,
+    internal val newDocument: Document,
+    internal val oldEditor: Editor?,
+    internal val newEditor: Editor?,
     /** A row to select in the first result shown, when the diff was opened from the Changes tree (§9.4). */
     private var reveal: OutlinePath? = null,
 ) : Disposable, OutlineToggleTarget {
 
     val panel = OutlinePanel(this)
-    internal val navigator = OutlineNavigator(viewer)
+    private val twosideViewer = viewer as? TwosideTextDiffViewer
+    internal val navigator = OutlineNavigator(
+        this,
+        oldEditor,
+        newEditor,
+        { twosideViewer?.syncScrollSupport },
+        { twosideViewer?.syncScrollSupport?.scrollable?.isSyncScrollEnabled == true },
+    )
     internal val strip = OutlineStrip { setMinimised(false) }
     internal val usageHighlights = RelationshipHighlights(viewer)
 
@@ -120,6 +131,7 @@ class OutlineController internal constructor(
     private data class DisplaySnapshot(
         val hiddenChangeTypes: Set<ChangeType>,
         val formattingOnlyInline: Boolean,
+        val markCommentOnly: Boolean,
         val outlineView: OutlineView,
         val hiddenRelationshipKinds: Set<RelationshipKind>,
     )
@@ -176,8 +188,8 @@ class OutlineController internal constructor(
         }
         oldDocument.addDocumentListener(listener, this)
         if (newDocument !== oldDocument) newDocument.addDocumentListener(listener, this)
-        viewer.editor1.caretModel.addCaretListener(caretListener(CaretSide.OLD), this)
-        viewer.editor2.caretModel.addCaretListener(caretListener(CaretSide.NEW), this)
+        oldEditor?.caretModel?.addCaretListener(caretListener(CaretSide.OLD), this)
+        newEditor?.caretModel?.addCaretListener(caretListener(CaretSide.NEW), this)
         applyVisibility()
         if (isOutlineVisible) refresh()
     }
@@ -185,6 +197,7 @@ class OutlineController internal constructor(
     private fun displaySnapshot(settings: SmartDiffSettings): DisplaySnapshot = DisplaySnapshot(
         settings.hiddenChangeTypes,
         settings.formattingOnlyInline,
+        settings.markCommentOnly,
         settings.outlineView,
         settings.hiddenRelationshipKinds,
     )
@@ -399,6 +412,14 @@ class OutlineController internal constructor(
         rebuild()
     }
 
+    /** Turns comment-only labels on or off in every outline, and rebuilds this one's rows without comparing again (outline/11 R2, R12). */
+    fun setMarkCommentOnly(mark: Boolean) {
+        val settings = SmartDiffSettings.getInstance()
+        if (settings.markCommentOnly == mark) return
+        settings.markCommentOnly = mark
+        rebuild()
+    }
+
     /** Switches this outline and every later one to [view], without comparing the file again (relationships/06 R1, R2). */
     fun setOutlineView(view: OutlineView) {
         val settings = SmartDiffSettings.getInstance()
@@ -430,25 +451,28 @@ class OutlineController internal constructor(
     ) {
         val settings = SmartDiffSettings.getInstance()
         val hidden = settings.hiddenChangeTypes
+        val markCommentOnly = settings.markCommentOnly
         val whitespacePolicy = policy ?: whitespacePolicy(languageId)
         val selection = if (keepSelection) panel.selectedPath() else null
         val view = settings.outlineView
         val items = if (view == OutlineView.REFACTORINGS) {
             RefactoringsModel.build(
                 result, request.oldText, request.newText, settings.formattingOnlyInline, hidden,
-                settings.hiddenRelationshipKinds, whitespacePolicy,
+                settings.hiddenRelationshipKinds, whitespacePolicy, markCommentOnly,
             )
         } else {
-            OutlineModel.build(result, request.oldText, request.newText, settings.formattingOnlyInline, hidden, whitespacePolicy)
+            OutlineModel.build(
+                result, request.oldText, request.newText, settings.formattingOnlyInline, hidden, whitespacePolicy, markCommentOnly,
+            )
         }
         val revealApplied = !keepSelection && reveal != null
         shownRequest = request
         show(
             OutlineState.Shown(
                 result,
-                OutlineModel.summary(result, hidden, request.oldText, request.newText, whitespacePolicy),
+                OutlineModel.summary(result, hidden, request.oldText, request.newText, whitespacePolicy, markCommentOnly),
                 items,
-                OutlineModel.hiddenCount(result, hidden),
+                OutlineModel.hiddenCount(result, hidden, markCommentOnly),
                 note,
                 whitespacePolicy,
             ),
@@ -463,7 +487,7 @@ class OutlineController internal constructor(
             !keepSelection -> reveal?.let(panel::reveal)
         }
         if (!keepSelection) reveal = null
-        (viewer as? FilteringDiffViewer)?.hide(HiddenLines.of(result, hidden, request.oldText, request.newText))
+        (viewer as? FilteringDiffViewer)?.hide(HiddenLines.of(result, hidden, request.oldText, request.newText, markCommentOnly))
         // Follow once after a result shown when a caret move was skipped while a comparison was pending (R8); ranges stay valid during the reference pass.
         if (!revealApplied && caretFollowPending) followLastCaret(afterResult = true)
     }
@@ -521,8 +545,8 @@ class OutlineController internal constructor(
     private fun isEditorFocused(side: CaretSide): Boolean =
         editorFocusedOverride ?: run {
             val focus = KeyboardFocusManager.getCurrentKeyboardFocusManager().focusOwner ?: return false
-            val editor = if (side == CaretSide.OLD) viewer.editor1 else viewer.editor2
-            SwingUtilities.isDescendingFrom(focus, editor.contentComponent)
+            val editor = if (side == CaretSide.OLD) oldEditor else newEditor
+            editor != null && SwingUtilities.isDescendingFrom(focus, editor.contentComponent)
         }
 
     /** Selects the row of the last caret position when conditions allow (outline/07 R1-R8, R10). */
@@ -594,7 +618,10 @@ class OutlineController internal constructor(
         if (offset < range.start || offset > range.end) return false
         if (offset < range.end) return true
         // offset == range.end: only the last character of the document.
-        val length = if (side == CaretSide.OLD) oldDocument.textLength else newDocument.textLength
+        val length = when (side) {
+            CaretSide.OLD -> oldDocument.textLength
+            CaretSide.NEW -> newDocument.textLength
+        }
         return offset == length
     }
 
@@ -682,6 +709,6 @@ class OutlineController internal constructor(
 
         /** The outline attached to [viewer], or null if it has none. */
         fun of(viewer: FrameDiffTool.DiffViewer?): OutlineController? =
-            (viewer as? TwosideTextDiffViewer)?.component?.getClientProperty(CONTROLLER) as? OutlineController
+            viewer?.component?.getClientProperty(CONTROLLER) as? OutlineController
     }
 }

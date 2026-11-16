@@ -11,6 +11,9 @@ import com.intellij.diff.impl.DiffSettingsHolder.DiffSettings
 import com.intellij.diff.requests.DiffRequest
 import com.intellij.diff.requests.SimpleDiffRequest
 import com.intellij.diff.tools.simple.SimpleDiffChange
+import com.intellij.diff.tools.simple.SimpleOnesideDiffViewer
+import com.intellij.diff.contents.DiffContent
+import com.intellij.diff.DiffContentFactory
 import com.intellij.diff.tools.util.DiffDataKeys
 import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
 import com.intellij.diff.util.Side
@@ -23,6 +26,7 @@ import com.intellij.openapi.actionSystem.ActionToolbar
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.actionSystem.KeyboardShortcut
+import com.intellij.openapi.actionSystem.ToggleAction
 import com.intellij.openapi.actionSystem.impl.ActionToolbarImpl
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.application.ApplicationManager
@@ -351,6 +355,30 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         outline.setHidden(ChangeType.ADDED, false)
         outline.setHidden(ChangeType.CHANGED, false)
         assertEquals(listOf("class Greeter", "  method hello()  changed", "  method bye()  added"), rows(outline))
+    }
+
+    fun `test outline 11 R2 R12 marking comment-only changes redraws without comparing again`() {
+        val old = "class Notes {\n    // old words\n    int a() { return 1; }\n    int b() { return 2; }\n}\n"
+        val new = "class Notes {\n    // new words\n    int a() { return 1; }\n    int b() { return 3; }\n}\n"
+        val outline = open(history(old, new, "Notes.java")).awaitResult()
+        val before = (outline.state as OutlineState.Shown).result
+        assertEquals(listOf("class Notes", "  method a()  changed", "  method b()  changed"), rows(outline))
+        val selected = selectItem(outline) { it.title == "method b()" }
+
+        outline.setMarkCommentOnly(true)
+
+        assertTrue("the same setting as the settings page", settings.markCommentOnly)
+        assertEquals(listOf("class Notes", "  method a()  comment-only", "  method b()  changed"), rows(outline))
+        assertSame("no new comparison", before, (outline.state as OutlineState.Shown).result)
+        assertEquals("1 changed · 1 comment-only", outline.panel.summary.text)
+        assertEquals(selected.label, outline.panel.selectedItem()?.label)
+
+        outline.setHidden(ChangeType.COMMENT_ONLY, true)
+        assertEquals(listOf("class Notes", "  method b()  changed"), rows(outline))
+
+        outline.setMarkCommentOnly(false)
+        assertEquals(listOf("class Notes", "  method a()  changed", "  method b()  changed"), rows(outline))
+        assertSame("no new comparison", before, (outline.state as OutlineState.Shown).result)
     }
 
     fun `test the SMART Diff viewer fades the changes the filter hides`() {
@@ -1559,6 +1587,96 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertTrue(outline.isOutlineVisible)
         assertEquals(OutlineState.Hidden.javaClass != outline.state.javaClass, true)
         assertTrue(UIUtil.isAncestor(shown.viewer.component, outline.panel))
+    }
+
+    fun `test outline 11 R2 R12 toggling the filter menu redraws without comparing and keeps the selection`() {
+        // outline/11-comment-only-changes R2, R12
+        val documented = ChangeNode(
+            Subject.Declaration(DeclarationKind.METHOD, "documented", ""),
+            TextRange(0, 5), TextRange(0, 5), Presence.MATCHED,
+            content = Content.CHANGED, commentOnly = true,
+        )
+        val engine = CountingEngine(resultFactory = { _, _ ->
+            ComparisonResult(EngineId("smartdiff.test.counting"), "1", Status.ANALYZED, changes = listOf(documented))
+        })
+        maskEngines(engine)
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+        val calls = engine.calls
+        assertEquals("method documented()  changed", rows(outline).single())
+
+        val filter = findAction(outline.panel, "Hide Change Types") as DefaultActionGroup
+        val mark = filter.getChildren(null).single { it.templatePresentation.text == OutlinePanel.MARK_COMMENT_ONLY }
+        val commentOnly = filter.getChildren(null).single { it.templatePresentation.text == ChangeType.COMMENT_ONLY.text }
+        val offEvent = TestActionEvent.createTestEvent(commentOnly)
+        commentOnly.update(offEvent)
+        assertFalse("the filter has no comment-only entry while the option is off", offEvent.presentation.isVisible)
+
+        select(outline, "method documented()  changed")
+        (mark as ToggleAction).setSelected(TestActionEvent.createTestEvent(mark), true)
+
+        assertEquals("method documented()  comment-only", rows(outline).single())
+        assertEquals("1 comment-only", outline.panel.summary.text)
+        assertEquals("marking does not compare again", calls, engine.calls)
+        assertEquals("the selection is kept", "method documented()  comment-only", outline.panel.selectedItem()?.label)
+        val onEvent = TestActionEvent.createTestEvent(commentOnly)
+        commentOnly.update(onEvent)
+        assertTrue("the filter gains the entry while the option is on", onEvent.presentation.isVisible)
+
+        (mark as ToggleAction).setSelected(TestActionEvent.createTestEvent(mark), false)
+        assertEquals("method documented()  changed", rows(outline).single())
+        assertEquals(calls, engine.calls)
+    }
+
+    fun `test a one-sided diff of an added file shows the outline and frames the shown side`() {
+        // changes-tree/06 R6
+        val added = """
+            class Added {
+                void hello() {
+                }
+            }
+        """.trimIndent()
+        val file = myFixture.addFileToProject("oneside/Added.java", added).virtualFile
+        val request = SimpleDiffRequest(
+            "Added.java",
+            DiffContentFactory.getInstance().createEmpty(),
+            DiffContentFactory.getInstance().create(project, file),
+            "old",
+            "new",
+        )
+        val viewer = openAny(request)
+        assertTrue(viewer is SimpleOnesideDiffViewer)
+        val outline = OutlineController.of(viewer)!!
+        awaitResult(outline) { true }
+        assertTrue(outline.panel.summary.text.contains("added"))
+        val methodRow = rows(outline).firstOrNull { it.contains("method hello()") } ?: error("no method row: ${rows(outline)}")
+        select(outline, methodRow.trim())
+        assertTrue("the shown side is framed", outline.navigator.shown.isNotEmpty())
+    }
+
+    fun `test a one-sided diff of a deleted file frames the old side`() {
+        // changes-tree/06 R6
+        val deleted = """
+            class Deleted {
+                void hello() {
+                }
+            }
+        """.trimIndent()
+        val file = myFixture.addFileToProject("oneside/Deleted.java", deleted).virtualFile
+        val request = SimpleDiffRequest(
+            "Deleted.java",
+            DiffContentFactory.getInstance().create(project, file),
+            DiffContentFactory.getInstance().createEmpty(),
+            "old",
+            "new",
+        )
+        val viewer = openAny(request)
+        assertTrue(viewer is SimpleOnesideDiffViewer)
+        val outline = OutlineController.of(viewer)!!
+        awaitResult(outline) { true }
+        assertTrue(outline.panel.summary.text.contains("removed"))
+        val methodRow = rows(outline).firstOrNull { it.contains("method hello()") } ?: error("no method row: ${rows(outline)}")
+        select(outline, methodRow.trim())
+        assertTrue("the shown side is framed", outline.navigator.shown.isNotEmpty())
     }
 
     private fun method(name: String) = Subject.Declaration(DeclarationKind.METHOD, name, "")

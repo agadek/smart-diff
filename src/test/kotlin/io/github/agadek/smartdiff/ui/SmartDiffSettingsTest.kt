@@ -38,12 +38,49 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
         assertTrue("the Changes tree shows summaries by default", settings.showChangesSummary)
         assertTrue("the Changes tree shows declarations by default", settings.showChangesDeclarations)
         assertTrue("the Changes tree follows the caret by default", settings.followChangesTreeCaret)
+        // outline/11-comment-only-changes R1
+        assertFalse("comment-only changes are not marked by default", settings.markCommentOnly)
         assertFalse("formatting-only changes are grouped by default", settings.formattingOnlyInline)
+        // outline/11-comment-only-changes R1
+        assertFalse("comment-only changes are not marked by default", settings.markCommentOnly)
         assertEquals(Limits.DEFAULT, settings.limits)
         assertEquals("nothing is hidden by default", emptySet<ChangeType>(), settings.hiddenChangeTypes)
         assertEquals("the tree filter starts with nothing hidden", emptySet<ChangeType>(), settings.hiddenChangesTreeChangeTypes)
         assertEquals("the container tree is the default outline view", OutlineView.CONTAINER_TREE, settings.outlineView)
         assertEquals("no relationship kind is hidden by default", emptySet<RelationshipKind>(), settings.hiddenRelationshipKinds)
+    }
+
+    // outline/11-comment-only-changes R1, R2, R12
+    fun `test comment-only marking is persisted and is a display setting`() {
+        settings.loadState(SmartDiffSettings.SettingsState())
+        val analysis = settings.analysisRevision
+        val tree = settings.treeRevision
+
+        settings.markCommentOnly = true
+
+        assertTrue(settings.state.markCommentOnly)
+        assertTrue(settings.markCommentOnly)
+        assertEquals("marking does not compare files again", analysis, settings.analysisRevision)
+        assertEquals("marking does not rebuild the Changes tree", tree, settings.treeRevision)
+
+        settings.loadState(SmartDiffSettings.SettingsState().apply { markCommentOnly = true })
+        assertTrue("a stored true value is read back", settings.markCommentOnly)
+    }
+
+    // outline/11-comment-only-changes R2; settings/01-settings-page R19
+    fun `test the settings page round-trips comment-only marking`() {
+        settings.loadState(SmartDiffSettings.SettingsState())
+        settings.markCommentOnly = true
+        val configurable = SmartDiffConfigurable()
+        try {
+            assertNotNull(configurable.createComponent())
+            configurable.reset()
+            assertFalse(configurable.isModified)
+            configurable.apply()
+        } finally {
+            configurable.disposeUIResources()
+        }
+        assertTrue("applying the page keeps the option", settings.markCommentOnly)
     }
 
     fun `test R2 the outline view is stored and the container tree is the default`() {

@@ -30,6 +30,7 @@ The outline and the Changes tree use one set of [labels](../GLOSSARY.md#label). 
 | kind change | The kind differs, shown as `trait → class Shape`; also signature changed | changed | yes |
 | moved | The container or order among siblings differs | moved | yes |
 | formatting-only | Only whitespace the language treats as insignificant differs | formatting-only | yes |
+| comment-only | Opt-in, outline only: only comments, and possibly formatting, differ; otherwise the declaration is changed ([outline/11](outline/11-comment-only-changes.md)) | comment-only | yes, while the option is on |
 | extraction | An added declaration linked to code removed from a changed declaration | extracted, not added | as added |
 | rename candidate | A removed and an added declaration paired by similar content; with grouped usages, `rename total → sum  rename candidate, 12 usages` | rename candidate | never |
 | usages renamed | A declaration whose only changes are usages renamed with it | usages renamed | never; a declaration with grouped usages is also never hidden |
@@ -90,6 +91,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [08 Wheel steps through rows](outline/08-wheel-steps-through-rows.md) | implemented, 2026-11-14 |
 | [09 Outline minimum width](outline/09-outline-minimum-width.md) | implemented, 2026-11-14 |
 | [10 Outline settings button](outline/10-outline-settings-button.md) | implemented, 2026-11-15 |
+| [11 Comment-only changes](outline/11-comment-only-changes.md) | implemented, 2026-11-16 |
 
 ## Changes tree
 
@@ -100,7 +102,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [03 Coverage and scale](changes-tree/03-coverage-and-scale.md) | implemented, 2026-11-04 |
 | [04 Hide and filter](changes-tree/04-hide-and-filter.md) | implemented, 2026-11-06 |
 | [05 Changes tree caret follow](changes-tree/05-changes-tree-caret-follow.md) | implemented, 2026-11-07 |
-| [06 Summaries for added and deleted files](changes-tree/06-added-deleted-file-summaries.md) | accepted, 2026-11-10 |
+| [06 Summaries for added and deleted files](changes-tree/06-added-deleted-file-summaries.md) | implemented, 2026-11-15 |
 
 ## Settings
 

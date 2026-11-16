@@ -1,6 +1,6 @@
 # Summaries for added and deleted files
 
-Status: accepted, 2026-11-10
+Status: implemented, 2026-11-15
 
 **Description:** The [Changes tree](../../GLOSSARY.md#changes-tree) gives an added file a [summary line](../../GLOSSARY.md#summary-line) for its added [declarations](../../GLOSSARY.md#declaration) and a deleted file for its [removed](../../GLOSSARY.md#removed) declarations, with the same declaration rows as a modified file.
 

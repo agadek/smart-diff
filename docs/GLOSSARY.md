@@ -157,6 +157,11 @@ _Avoid_: type change, converted
 A matched declaration whose own source differs only in whitespace the language treats as insignificant. It says nothing about runtime behaviour.
 _Avoid_: whitespace change, cosmetic change, equivalent, semantically equal
 
+### Comment-only
+
+A changed declaration whose own source differs only in comments, and possibly in formatting, shown with this label in the structural outline when the user turns the option on. It says nothing about runtime behaviour.
+_Avoid_: doc change, cosmetic change, equivalent
+
 ### Moved
 
 A matched declaration whose container or order among its siblings differs. It may also be changed or formatting-only.
@@ -305,7 +310,7 @@ _Avoid_: tag, badge, status
 
 ### Change type
 
-A label the user can hide with the change type filter: changed, added, removed, moved or formatting-only.
+A label the user can hide with the change type filter: changed, added, removed, moved or formatting-only, and in the structural outline also comment-only when that option is on.
 _Avoid_: change category
 
 ### Change type filter

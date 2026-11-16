@@ -1,5 +1,6 @@
 package io.github.agadek.smartdiff.ui
 
+import com.intellij.diff.FrameDiffTool
 import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.markup.HighlighterLayer
@@ -15,17 +16,18 @@ import io.github.agadek.smartdiff.engine.api.TextRange
  * are exact-range highlights at the selection layer, above the navigator's usage detail, so a selected usage keeps its
  * rename colour without replacing the diff's own colours or the navigator's frame.
  */
-internal class RelationshipHighlights(private val viewer: TwosideTextDiffViewer) {
+internal class RelationshipHighlights(private val viewer: FrameDiffTool.DiffViewer) {
 
     private val highlighters = mutableListOf<RangeHighlighter>()
 
     /** Replaces the highlights with those of [result]'s shown renames; a hidden kind adds none. */
     fun show(result: ComparisonResult, hiddenKinds: Set<RelationshipKind>) {
         clear()
+        val two = viewer as? TwosideTextDiffViewer ?: return
         for (usage in RefactoringsModel.usageHighlights(result, hiddenKinds)) {
             val attributes = TextAttributes().apply { backgroundColor = RelationshipPalette.colour(usage.colour) }
-            add(viewer.editor1, usage.oldRange, attributes)
-            add(viewer.editor2, usage.newRange, attributes)
+            add(two.editor1, usage.oldRange, attributes)
+            add(two.editor2, usage.newRange, attributes)
         }
     }
 
