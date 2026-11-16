@@ -44,6 +44,8 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
 
         /** Leave reviewed changes out of the outline (outline/12 R12). Off by default. */
         var hideReviewed: Boolean = false
+        /** Mark moved declarations in both editors while the outline shows a result (outline/13 R1). */
+        var markMovedCode: Boolean = true
 
         /** List merge rows grouped by side instead of as the base's container tree. */
         var mergeGroupedBySide: Boolean = true
@@ -131,6 +133,10 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
     var hideReviewed: Boolean
         get() = current.hideReviewed
         set(value) = update { hideReviewed = value }
+    /** Whether the editors show moved-code markers (outline/13 R1). Display-only: no new comparison (R12). */
+    var markMovedCode: Boolean
+        get() = current.markMovedCode
+        set(value) = update { markMovedCode = value }
 
     var mergeGroupedBySide: Boolean
         get() = current.mergeGroupedBySide
@@ -214,6 +220,7 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
             it.formattingOnlyInline = old.formattingOnlyInline
             it.markCommentOnly = old.markCommentOnly
             it.hideReviewed = old.hideReviewed
+            it.markMovedCode = old.markMovedCode
             it.mergeGroupedBySide = old.mergeGroupedBySide
             it.mergeHideBothSides = old.mergeHideBothSides
             it.hiddenChangeTypes = old.hiddenChangeTypes

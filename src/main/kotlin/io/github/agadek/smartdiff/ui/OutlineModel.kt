@@ -106,6 +106,8 @@ class OutlineItem(
     val endpoints: List<ChangeNode> = emptyList(),
     /** Whether every markable node of this row and its children is reviewed (outline/12 R4, R5). */
     var reviewed: Boolean = false,
+    /** Whether this row is a move, so it gets a marker in both editors (outline/13 R2). */
+    val moved: Boolean = false,
 ) {
     val isGroup: Boolean
         get() = kind == ItemKind.FORMATTING_GROUP || kind == ItemKind.UNCERTAIN_GROUP ||
@@ -120,6 +122,10 @@ class OutlineItem(
 
     /** A copy of this row with new children, which keeps every other field. */
     internal fun withChildren(children: List<OutlineItem>): OutlineItem =
+        OutlineItem(kind, title, tags, oldRange, newRange, details, children, note, confidence, frames, colour, node, endpoints, reviewed, moved)
+
+    /** A copy without the move marker, for a container tree row shown under the refactorings view's Other changes. */
+    internal fun withoutMoved(): OutlineItem =
         OutlineItem(kind, title, tags, oldRange, newRange, details, children, note, confidence, frames, colour, node, endpoints, reviewed)
 
     /** A copy of this row without its own labels or details, as a container of the rows that remain. */
@@ -581,11 +587,13 @@ object OutlineModel {
                 val count = usages.renameReferences(node).size
                 if (count == 0) null else if (count == 1) "1 usage" else "$count usages"
             }
+            val tags = tags(node, usages.isRenameOnly(node), markCommentOnly)
             return marked(
                 OutlineItem(
-                    ItemKind.CHANGE, title(node), tags(node, usages.isRenameOnly(node), markCommentOnly), oldRange, newRange,
+                    ItemKind.CHANGE, title(node), tags, oldRange, newRange,
                     details.distinct(), children, listOfNotNull(usageNote, links.note(node)).joinToString(", ").ifEmpty { null },
                     node = node,
+                    moved = Tag.MOVED in tags,
                 ),
             )
         }

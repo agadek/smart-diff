@@ -234,9 +234,9 @@ Let the reviewer mark a change in the outline as reviewed and show progress in t
 
 *(gap review)* When the native diff collapses unchanged fragments, offer to expand a fragment to the whole surrounding declaration instead of a fixed number of lines. SemanticDiff expands context by complete blocks.
 
-### Visual links for moved code
+### Visual links for moved code (implemented, 2026-11-16)
 
-*(gap review)* Show where moved code came from without selecting it first: mark moved declarations in both editors and link the old and new positions, for example in the gutter or the scrollbar. SemanticDiff boxes moved blocks and shows them on a minimap. Today the outline frames a moved declaration on both sides only when it is selected. Specified in [outline/13](specs/outline/13-moved-code-markers.md) (proposed, 2026-11-16) as gutter icons and scrollbar marks on both sides that select the moved declaration's row when clicked.
+*(gap review)* Show where moved code came from without selecting it first: mark moved declarations in both editors and link the old and new positions, for example in the gutter or the scrollbar. SemanticDiff boxes moved blocks and shows them on a minimap. Today the outline frames a moved declaration on both sides only when it is selected. Implemented in [outline/13](specs/outline/13-moved-code-markers.md): gutter icons and thin scrollbar marks on both sides name the other side's line, follow the outline's filters and setting, and select the moved declaration's row when clicked.
 
 ### Moved lines in unsupported files
 

@@ -1,6 +1,6 @@
 # Moved-code markers
 
-Status: proposed, 2026-11-16
+Status: implemented, 2026-11-16
 
 **Description:** While the [structural outline](../../GLOSSARY.md#structural-outline) shows a result, each [moved](../../GLOSSARY.md#moved) [declaration](../../GLOSSARY.md#declaration) it lists gets a [moved-code marker](../../GLOSSARY.md#moved-code-marker) in both editors: a gutter icon on its first line that names the line on the other side, and a mark on the scrollbar. Clicking the icon selects the declaration in the outline, so both positions are framed without searching for the row first.
 

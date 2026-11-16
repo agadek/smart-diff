@@ -1,6 +1,6 @@
 # Moved-code markers: details
 
-Status: proposed, 2026-11-16
+Status: implemented, 2026-11-16
 
 Feature: [Moved-code markers](13-moved-code-markers.md)
 

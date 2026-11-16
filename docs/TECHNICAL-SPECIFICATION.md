@@ -548,6 +548,8 @@ Application-level, under *Settings → Tools → SMART Diff*:
 | Show declarations in the Changes tree | On. Each summarized file can be expanded to show its declaration rows (§9.4); also set from the tree's "Declarations" toggle |
 | Follow the caret in the Changes tree | On. The tree selects the declaration under the caret in the editor or a two-sided diff of the file (§9.4); changing it does not clear summaries or rebuild the tree |
 | Formatting-only changes | Collapsed group / inline |
+| Mark comment-only changes | Off. Labels declarations whose only difference is in comments as comment-only in the outline ([outline/11](specs/outline/11-comment-only-changes.md)) |
+| Mark moved code in the editors | On. Marks moved declarations in the gutter and on the scrollbar of both editors while the outline shows a result ([outline/13](specs/outline/13-moved-code-markers.md)) |
 | Hide from the outline | None. One checkbox per change type of the outline's filter (§10); also set from the outline toolbar |
 | Outline view | Container tree (the default) or the refactorings view (§10); also set from the outline toolbar |
 | Hide from the refactorings view | None. One checkbox per relationship kind: rename, move, kind change, extraction and inlining (§10); also set from the outline toolbar |
