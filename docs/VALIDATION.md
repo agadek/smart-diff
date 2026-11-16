@@ -21,6 +21,29 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-16: Kotlin and Scala formatting-only line breaks
+
+[declarations/07](specs/declarations/07-kotlin-scala-formatting.md) was measured with the full relationship corpus,
+before and after the change, with `./gradlew test --tests '*RelationshipBenchmarkTest*'
+-Psmartdiff.relationships.corpus=src/test/testData/relationships-corpus-full.txt
+-Psmartdiff.relationships.baseline=src/test/testData/relationships-baseline/report.json`. The corpus lists and local
+clone revisions were the same in both runs.
+
+**Formatting-only accuracy** (labelled formatting-only cases reported as formatting-only) was **1.000 in every
+language — Java, Kotlin, Scala 2, Scala 3 and Python — both before and after**. No case labelled formatting-only fell
+to changed, and no language's recall fell: overall recall 0.9329 → 0.9335, with Kotlin 0.9516 → 0.9524, Scala 2
+0.9545 → 0.9552, Scala 3 1.000 → 1.000, Java 0.9136 → 0.9136 and Python 0.8475 → 0.8475.
+
+**CHANGED-labelled cases becoming FORMATTING_ONLY (R12):** one, the Kotlin real-commit case
+`Exposed-a9e6456-DateColumnType/formatterForDateTimeString`. Its only edit wraps a single argument across lines of a
+call (`f(arg)` → `f(\n    arg\n)`), which R1 to R3 now classify as formatting-only; the remaining changes in that file
+are still changed. Its label was updated to `FORMATTING_ONLY` with that reason recorded in the label. After that
+update the benchmark has no CHANGED-labelled case reported as formatting-only.
+
+The `no-new-wrong-pairs` gate against the checked-in 2026-11-02 baseline fails identically before and after this
+change (the same nine pairs, from matcher changes made since the baseline), so no new wrong pair is introduced here.
+The full report is in `build/reports/smartdiff-relationships/` of the after run.
+
 ## 2026-11-15: Rust R2 merge fixtures, benchmark cases and corpus validation
 
 [Rust](specs/languages/05-rust.md) R15 to R17 are implemented: extraction detection, inlining detection, rename
