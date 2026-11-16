@@ -359,13 +359,29 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
             // (declarations/02 R14). If the source from the first token on is the same, only that layout differs.
             val oldLeading = leadingTokens(match.old)
             val newLeading = leadingTokens(match.new)
-            val sameSource =
-                ContentClassifier.normalize(oldTokens.drop(oldLeading.size), policy) ==
-                    ContentClassifier.normalize(newTokens.drop(newLeading.size), policy)
-            // Scala 3 indentation is significant, the indentation on the declaration's first line included.
-            val sameIndentation =
-                policy != WhitespacePolicy.INDENTATION_SIGNIFICANT ||
-                    indentation(oldLeading) == indentation(newLeading)
+            val sameSource: Boolean
+            val sameIndentation: Boolean
+            if (policy == WhitespacePolicy.SCALA3_INDENTATION) {
+                // Scala 3 keeps indentation significant, but a whole declaration re-indented by one amount is
+                // formatting-only (declarations/07 R8). Use the shift of the whole declaration, leading run included,
+                // for both the body and the leading run so the relaxed check agrees with the main classification.
+                val oldShift = ContentClassifier.indentationShift(ContentClassifier.normalize(oldTokens, policy))
+                val newShift = ContentClassifier.indentationShift(ContentClassifier.normalize(newTokens, policy))
+                sameSource =
+                    ContentClassifier.applyIndentShift(ContentClassifier.normalize(oldTokens.drop(oldLeading.size), policy), oldShift) ==
+                        ContentClassifier.applyIndentShift(ContentClassifier.normalize(newTokens.drop(newLeading.size), policy), newShift)
+                sameIndentation =
+                    indentation(oldLeading).removePrefix(oldShift ?: "") == indentation(newLeading).removePrefix(newShift ?: "")
+            } else {
+                sameSource =
+                    ContentClassifier.normalize(oldTokens.drop(oldLeading.size), policy) ==
+                        ContentClassifier.normalize(newTokens.drop(newLeading.size), policy)
+                // Scala 3's plain sibling compares the first line's indentation as written; the new Scala 3 policy
+                // applies the whole-declaration shift above instead.
+                sameIndentation =
+                    policy != WhitespacePolicy.INDENTATION_SIGNIFICANT ||
+                        indentation(oldLeading) == indentation(newLeading)
+            }
             if (sameSource && sameIndentation) Content.FORMATTING_ONLY else Content.CHANGED
         }
 

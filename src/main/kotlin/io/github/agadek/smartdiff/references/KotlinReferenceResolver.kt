@@ -112,7 +112,7 @@ class KotlinReferenceResolver : ReferenceResolver {
         return (chain ?: smallest ?: type ?: member)?.textRange?.let { TextRange(it.startOffset, it.endOffset) }
     }
 
-    override fun whitespacePolicy(file: PsiFile): WhitespacePolicy = WhitespacePolicy.LINE_BREAKS_SIGNIFICANT
+    override fun whitespacePolicy(file: PsiFile): WhitespacePolicy = WhitespacePolicy.KOTLIN_LINE_BREAKS
 
     private fun nameMatches(element: PsiNamedElement, subject: Subject.Declaration): Boolean {
         if (subject.name.isEmpty()) return true
