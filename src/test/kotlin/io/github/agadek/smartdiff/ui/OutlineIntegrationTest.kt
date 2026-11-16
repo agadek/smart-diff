@@ -65,8 +65,8 @@ import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
-import io.github.agadek.smartdiff.engine.lines.LineEngine
-import io.github.agadek.smartdiff.engine.lines.LineEngineFactory
+import io.github.agadek.smartdiff.engine.lines.TestLineEngine
+import io.github.agadek.smartdiff.engine.lines.TestLineEngineFactory
 import io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory
 import io.github.agadek.smartdiff.engine.registry.EngineDefaults
 import io.github.agadek.smartdiff.references.ReferencePass
@@ -411,17 +411,19 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test losing the engine clears faded changes and shows NoEngine`() {
+        // engines/04 R1: with the line comparison off, losing the engine keeps the NoEngine fallback.
+        settings.compareLinesWithoutEngine = false
         val diffSettings = DiffSettings.getSettings()
         val savedOrder = diffSettings.diffToolsOrder
         val registration = Disposer.newDisposable(testRootDisposable)
         try {
-            ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(LineEngineFactory()), registration)
+            ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(TestLineEngineFactory()), registration)
             diffSettings.diffToolsOrder = listOf(FilteringDiffTool::class.java.canonicalName) + savedOrder
 
             // LineEngine supports TEXT, so the plain-text skip does not apply and the result can be shown first.
             val viewer = openAny(history("one\n", "two\n", "notes.txt")) as FilteringDiffViewer
             val outline = OutlineController.of(viewer)!!
-            awaitResult(outline) { it.result.engineId == LineEngine.ID }
+            awaitResult(outline) { it.result.engineId == TestLineEngine.ID }
             outline.setHidden(ChangeType.CHANGED, true)
             awaitChanges(viewer) { changes -> changes.any { it.isSkipped } }
 
@@ -767,7 +769,7 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test a test-only engine appears in the dropdown and can be selected`() {
-        ExtensionTestUtil.addExtensions(ComparisonEngineFactory.EP_NAME, listOf(LineEngineFactory()), testRootDisposable)
+        ExtensionTestUtil.addExtensions(ComparisonEngineFactory.EP_NAME, listOf(TestLineEngineFactory()), testRootDisposable)
 
         val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
         val engines = outline.panel.engines
@@ -775,12 +777,12 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertEquals(listOf("Declarations", "Lines (test)"), (0 until engines.itemCount).map { engines.getItemAt(it).displayName })
         assertEquals("Declarations", (engines.selectedItem as ComparisonEngine).displayName)
 
-        engines.selectedItem = (0 until engines.itemCount).map { engines.getItemAt(it) }.single { it.id == LineEngine.ID }
+        engines.selectedItem = (0 until engines.itemCount).map { engines.getItemAt(it) }.single { it.id == TestLineEngine.ID }
 
-        val result = awaitResult(outline) { it.result.engineId == LineEngine.ID }
-        assertEquals(LineEngine.ID, result.result.engineId)
+        val result = awaitResult(outline) { it.result.engineId == TestLineEngine.ID }
+        assertEquals(TestLineEngine.ID, result.result.engineId)
         assertEquals(listOf("lines 2 changed to 2-4  changed"), rows(outline))
-        assertEquals("the choice is stored for the language", LineEngine.ID, EngineDefaults.getInstance().get("JAVA"))
+        assertEquals("the choice is stored for the language", TestLineEngine.ID, EngineDefaults.getInstance().get("JAVA"))
     }
 
     fun `test the dropdown is hidden with a single engine`() {
@@ -927,6 +929,8 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test a language without an engine shows the outline with an unsupported message`() {
+        // engines/04 R1: the NoEngine fallback is what this state is tested with.
+        settings.compareLinesWithoutEngine = false
         // outline/05-analysis-fallback R1, R2, R11
         // The light test IDE loads neither properties nor YAML; mask the engines so Kotlin, which is loaded, has none.
         ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(JavaOnlyEngine())), testRootDisposable)
@@ -963,6 +967,8 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test the setting keeps the outline hidden in a fallback state`() {
+        // engines/04 R1: keep the fallback path under test.
+        settings.compareLinesWithoutEngine = false
         // outline/05-analysis-fallback R11
         ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(JavaOnlyEngine())), testRootDisposable)
         settings.showOutline = false
@@ -975,6 +981,8 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test a plain-text diff gets no outline`() {
+        // engines/04 R1: this is the behaviour with the line comparison switched off.
+        settings.compareLinesWithoutEngine = false
         val viewer = openAny(history("one\n", "two\n", "notes.txt"))
 
         assertNull(OutlineController.of(viewer))
@@ -1423,6 +1431,8 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test outline 10 R4 the button is enabled in every state`() {
+        // engines/04 R1: keep the NoEngine state under test.
+        settings.compareLinesWithoutEngine = false
         // outline/10-outline-settings-button R4
         val action = OpenSmartDiffSettingsAction()
         fun assertEnabled(contextOutline: OutlineController) {
@@ -1974,6 +1984,8 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test outline 13 R11 fallback states show no markers`() {
+        // engines/04 R1: keep the NoEngine state under test.
+        settings.compareLinesWithoutEngine = false
         // outline/13 R11
         val slowRegistration = Disposer.newDisposable(testRootDisposable)
         try {
@@ -2254,7 +2266,7 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         override fun supports(languageId: String) = languageId == "JAVA"
         override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult {
             calls++
-            val result = resultFactory?.invoke(request, cancellation) ?: LineEngine().compare(request, cancellation)
+            val result = resultFactory?.invoke(request, cancellation) ?: TestLineEngine().compare(request, cancellation)
             return result.copy(engineId = id, engineVersion = version)
         }
     }

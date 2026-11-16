@@ -23,7 +23,7 @@ import com.intellij.testFramework.ExtensionTestUtil
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.TestActionEvent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import io.github.agadek.smartdiff.engine.lines.LineEngineFactory
+import io.github.agadek.smartdiff.engine.lines.TestLineEngineFactory
 import io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory
 import io.github.agadek.smartdiff.merge.MergeGroup
 import io.github.agadek.smartdiff.ui.ChangeType
@@ -367,7 +367,7 @@ class MergeWindowIntegrationTest : BasePlatformTestCase() {
 
     fun `test the merge window keeps the engine dropdown`() {
         // merge/04-merge-window R25; merge/02-merge-outline R18
-        ExtensionTestUtil.addExtensions(ComparisonEngineFactory.EP_NAME, listOf(LineEngineFactory()), testRootDisposable)
+        ExtensionTestUtil.addExtensions(ComparisonEngineFactory.EP_NAME, listOf(TestLineEngineFactory()), testRootDisposable)
         val (viewer, outline) = open()
         try {
             assertTrue("the engine dropdown is shown", outline.panel.engines.isVisible)

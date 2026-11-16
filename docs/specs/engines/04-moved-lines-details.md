@@ -1,6 +1,6 @@
 # Moved lines in unsupported files: details
 
-Status: accepted, 2026-11-16
+Status: implemented, 2026-11-16
 
 **Feature:** [Moved lines in unsupported files](04-moved-lines.md)
 
@@ -10,7 +10,7 @@ Status: accepted, 2026-11-16
 
 The [line comparison](../../GLOSSARY.md#line-comparison) is a `ComparisonEngine`, `LineEngine` in a new package `io.github.agadek.smartdiff.engine.lines`, with id `smartdiff.lines`, display name `Lines` and its own version string. It is **not** registered on the `comparisonEngine` extension point. `EngineRegistry`, `EngineSelection`, the engine dropdown, the settings page's "Default Comparison Engine" table, `ChangesSummary`, `MergeWindowSupport` and the merge outline therefore never see it (R4, R17, R19), and no stored default can name it.
 
-`LineEngine.supports(languageId)` returns true for every language id; the UI decides when to use it.
+`LineEngine.supports(languageId)` returns true for every language id; the UI decides when to use it. The outline cannot construct the engine directly, because the architecture rule in [TECHNICAL-SPECIFICATION §2](../../TECHNICAL-SPECIFICATION.md#2-architecture) forbids `ui` to depend on a concrete engine package. It therefore asks the `LineEngineProvider` application service in `engine.api`, implemented by `LineEngine`, which keeps the engine off the extension point and out of the registry.
 
 The UI uses it in one place, `OutlineController`, through a new method `engineFor(selection: EngineSelection): ComparisonEngine?`:
 

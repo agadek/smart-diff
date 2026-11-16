@@ -17,7 +17,7 @@ Out of scope:
 - Directory diffs, binary content, and patch previews without full file content.
 - Comparisons where the old side and new side are different languages.
 - A change-list-level overview across files (Q3, decided: per-file only). The per-file summary in the Changes tree is in §9.4.
-- Engines other than the declaration engine (except a test-only engine used to verify the abstraction).
+- Engines other than the declaration engine, except the test-only abstraction engine and the line comparison of files no engine supports ([engines/04](specs/engines/04-moved-lines.md)), which is not a registered comparison engine.
 
 Three-way merges use the same engine twice and are specified in [THREE-WAY-MERGE.md](THREE-WAY-MERGE.md) and [docs/specs/merge/](specs/README.md#merges).
 
@@ -37,12 +37,16 @@ Three-way merges use the same engine twice and are specified in [THREE-WAY-MERGE
                  └─────────┬──────────┘
           ┌────────────────┼──────────────────────┐
 ┌─────────▼──────────┐  ┌──▼───────────────┐  ┌───▼──────────────┐
-│ engine/declarations│  │ (future)         │  │ (future)         │
-│  psi providers →   │  │ Tree-sitter      │  │ Difftastic CLI   │
-│  declaration model │  │ engine           │  │ engine           │
+│ engine/declarations│  │ engine/lines     │  │ (future)         │
+│  psi providers →   │  │ native line diff │  │ Difftastic CLI   │
+│  declaration model │  │ → moved blocks   │  │ engine           │
 │  → matching →      │  └──────────────────┘  └──────────────────┘
 │  classification    │
 └────────────────────┘
+
+The line comparison is built for the outline only: it is not on the `comparisonEngine` extension point, so the registry,
+dropdown, settings table and stored defaults never see it. The outline asks the `LineEngineProvider` application service
+in `engine.api` for it, which keeps `ui` independent of the concrete `engine.lines` package (§2 rules).
 ```
 
 Packages (under the plugin's root package, `io.github.agadek.smartdiff`):
@@ -54,6 +58,7 @@ Packages (under the plugin's root package, `io.github.agadek.smartdiff`):
 | `engine.declarations.model` | No | Declaration tree and tokens (internal to the declaration engine) |
 | `engine.declarations.analysis` | No | Matching (§7) and classification (§8) |
 | `engine.declarations.psi` | Yes | Declaration engine factory and PSI providers (§6) |
+| `engine.lines` | Yes | Line comparison of files no engine supports (engines/04); uses the platform's line diff |
 | `merge` | No | The join of a merge's base → left and base → right results ([THREE-WAY-MERGE.md §5](THREE-WAY-MERGE.md#5-the-join)) |
 | `ui` | Yes | Diff integration, outline, engine dropdown, navigation, settings |
 
@@ -129,7 +134,7 @@ interface ComparisonEngineFactory {          // extension point implementation
 </extensions>
 ```
 
-The extension point is interface-based: each extension is a `ComparisonEngineFactory`, and the engine id comes from the engine it creates, so it is written in one place. A keyed bean such as `KeyedLazyInstanceEP` would duplicate the id in `plugin.xml` and serves lookup by key, which the registry does not need: selection (§4) walks all engines in extension order. `order` is available on every extension. The extension point is dynamic, so SMART Diff's own add-on engines can be installed or removed without restarting. The extension point is internal (Q5): it is not documented or supported for other plugins, so the engine interface and result model can change without a compatibility policy.
+The extension point is interface-based: each extension is a `ComparisonEngineFactory`, and the engine id comes from the engine it creates, so it is written in one place. A keyed bean such as `KeyedLazyInstanceEP` would duplicate the id in `plugin.xml` and serves lookup by key, which the registry does not need: selection (§4) walks all engines in extension order. `order` is available on every extension. The extension point is dynamic, so SMART Diff's own add-on engines can be installed or removed without restarting. The extension point is internal (Q5): it is not documented or supported for other plugins, so the engine interface and result model can change without a compatibility policy. `engine.lines.LineEngine` is the one engine that is deliberately **not** registered here: the outline uses it only for two-sided diffs of files no registered engine supports, through the `LineEngineProvider` service in `engine.api` ([engines/04](specs/engines/04-moved-lines.md)).
 
 ## 4. Engine selection
 
@@ -550,6 +555,7 @@ Application-level, under *Settings → Tools → SMART Diff*:
 | Formatting-only changes | Collapsed group / inline |
 | Mark comment-only changes | Off. Labels declarations whose only difference is in comments as comment-only in the outline ([outline/11](specs/outline/11-comment-only-changes.md)) |
 | Mark moved code in the editors | On. Marks moved declarations in the gutter and on the scrollbar of both editors while the outline shows a result ([outline/13](specs/outline/13-moved-code-markers.md)) |
+| Show moved lines in files without an engine | On. Compares two-sided diffs of files no engine supports, plain text included, by lines and lists their moved blocks ([engines/04](specs/engines/04-moved-lines.md)); applying the change refreshes open outlines |
 | Hide from the outline | None. One checkbox per change type of the outline's filter (§10); also set from the outline toolbar |
 | Outline view | Container tree (the default) or the refactorings view (§10); also set from the outline toolbar |
 | Hide from the refactorings view | None. One checkbox per relationship kind: rename, move, kind change, extraction and inlining (§10); also set from the outline toolbar |

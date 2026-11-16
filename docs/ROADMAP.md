@@ -115,7 +115,7 @@ Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.
 | [Formatting-only recall in Kotlin and Scala](#formatting-only-recall-in-kotlin-and-scala) | [declarations/07](specs/declarations/07-kotlin-scala-formatting.md) |
 | [Reviewed marks in the outline](#reviewed-marks-in-the-outline) | [outline/12](specs/outline/12-reviewed-marks.md) (implemented 2026-11-16) |
 | [Visual links for moved code](#visual-links-for-moved-code) | [outline/13](specs/outline/13-moved-code-markers.md) |
-| [Moved lines in unsupported files](#moved-lines-in-unsupported-files) | [engines/04](specs/engines/04-moved-lines.md) |
+| [Moved lines in unsupported files](#moved-lines-in-unsupported-files) | [engines/04](specs/engines/04-moved-lines.md) (implemented 2026-11-16) |
 | [More languages](#more-languages) | [Format coverage plan](FORMAT-COVERAGE.md); feature specs with each phase |
 | Every other item below | Not specified yet |
 
@@ -239,9 +239,9 @@ Let the reviewer mark a change in the outline as reviewed and show progress in t
 
 *(gap review)* Show where moved code came from without selecting it first: mark moved declarations in both editors and link the old and new positions, for example in the gutter or the scrollbar. SemanticDiff boxes moved blocks and shows them on a minimap. Today the outline frames a moved declaration on both sides only when it is selected. Implemented in [outline/13](specs/outline/13-moved-code-markers.md): gutter icons and thin scrollbar marks on both sides name the other side's line, follow the outline's filters and setting, and select the moved declaration's row when clicked.
 
-### Moved lines in unsupported files
+### Moved lines in unsupported files (implemented, 2026-11-16)
 
-*(gap review)* For files no engine can analyze, a fallback that treats each line as one token and still reports moved lines, as SemanticDiff's fallback diff does. These files currently get only the plain native diff. Specified in [engines/04](specs/engines/04-moved-lines.md) (accepted, 2026-11-16): two-sided diffs of plain text and of languages without an engine are compared by lines, and the outline lists each moved block of at least 3 lines, framed on both sides with moved-code markers, and one file region row for the rest, behind an on-by-default setting.
+*(gap review)* For files no engine can analyze, a fallback that treats each line as one token and still reports moved lines, as SemanticDiff's fallback diff does. These files currently get only the plain native diff. Implemented in [engines/04](specs/engines/04-moved-lines.md): two-sided diffs of plain text and of languages without an engine are compared by lines, and the outline lists each moved block of at least 3 lines, framed on both sides with moved-code markers, and one file region row for the rest, behind an on-by-default setting.
 
 ### Relationship recall
 

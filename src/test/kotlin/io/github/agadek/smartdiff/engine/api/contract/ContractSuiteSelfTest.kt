@@ -19,7 +19,7 @@ import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
-import io.github.agadek.smartdiff.engine.lines.LineEngine
+import io.github.agadek.smartdiff.engine.lines.TestLineEngine
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
@@ -342,7 +342,7 @@ class ContractSuiteSelfTest {
         val CASE = ContractCase("tiny", ContractCorpus.TEXT, "abc", "abd")
     }
 
-    private open class Delegating(private val delegate: ComparisonEngine = LineEngine()) : ComparisonEngine by delegate
+    private open class Delegating(private val delegate: ComparisonEngine = TestLineEngine()) : ComparisonEngine by delegate
 
     /** Reports nothing, whatever changed. */
     private class HidingEngine : Delegating() {

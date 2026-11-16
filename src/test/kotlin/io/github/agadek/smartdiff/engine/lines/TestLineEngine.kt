@@ -16,7 +16,7 @@ import io.github.agadek.smartdiff.engine.api.TextRange
  * Test-only engine that reports each run of changed lines as a [Subject.Region] (technical specification §12,
  * abstraction test). It supports every language and knows nothing about declarations.
  */
-class LineEngine : ComparisonEngine {
+class TestLineEngine : ComparisonEngine {
     override val id = ID
     override val displayName = "Lines (test)"
     override val version = "1"

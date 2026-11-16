@@ -1,6 +1,6 @@
 # Moved lines in unsupported files
 
-Status: accepted, 2026-11-16
+Status: implemented, 2026-11-16
 
 **Description:** A two-sided diff of a file that no [comparison engine](../../GLOSSARY.md#comparison-engine) supports, plain text included, is compared by the [line comparison](../../GLOSSARY.md#line-comparison). The [structural outline](../../GLOSSARY.md#structural-outline) then lists each [moved block](../../GLOSSARY.md#moved-block) of lines, framed on both sides, and one row for every other change.
 
