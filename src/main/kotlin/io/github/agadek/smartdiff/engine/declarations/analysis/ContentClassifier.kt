@@ -38,14 +38,13 @@ object ContentClassifier {
     ): Content {
         val oldContent = old.filterNot { it.kind == TokenKind.SEPARATOR }
         val newContent = new.filterNot { it.kind == TokenKind.SEPARATOR }
-        if (!signatureChanged && oldContent.map { it.text } == newContent.map { it.text }) return Content.UNCHANGED
-        if (parseError) return Content.UNANALYZED
-        if (signatureChanged) return Content.CHANGED
-        val oldNormalized = normalize(oldContent, policy)
-        val newNormalized = normalize(newContent, policy)
-        val oldComparable = comparable(oldNormalized, policy)
-        val newComparable = comparable(newNormalized, policy)
-        return if (oldComparable == newComparable) Content.FORMATTING_ONLY else Content.CHANGED
+        return when {
+            !signatureChanged && oldContent.map { it.text } == newContent.map { it.text } -> Content.UNCHANGED
+            parseError -> Content.UNANALYZED
+            signatureChanged -> Content.CHANGED
+            runCatching { comparable(normalize(oldContent, policy), policy) == comparable(normalize(newContent, policy), policy) }.getOrDefault(false) -> Content.FORMATTING_ONLY
+            else -> Content.CHANGED
+        }
     }
 
     /**
