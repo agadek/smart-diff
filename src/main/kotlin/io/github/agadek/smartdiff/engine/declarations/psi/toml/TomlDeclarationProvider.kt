@@ -32,8 +32,6 @@ import org.toml.lang.psi.TomlValue
  */
 class TomlDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_BREAKS_SIGNIFICANT) {
 
-    private var arrayTableNames: Map<TomlArrayTable, String>? = null
-
     override fun supports(languageId: String): Boolean = languageId == "TOML"
 
     override fun parse(project: Project, text: CharSequence, fileName: String?, dialect: Language?): PsiFile {
@@ -43,11 +41,12 @@ class TomlDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_BRE
     }
 
     override fun build(file: PsiFile, cancellation: Cancellation): DeclarationTree {
-        arrayTableNames = computeArrayTableNames(file)
+        val previous = activeArrayTableNames.get()
+        activeArrayTableNames.set(computeArrayTableNames(file))
         return try {
             super.build(file, cancellation)
         } finally {
-            arrayTableNames = null
+            if (previous == null) activeArrayTableNames.remove() else activeArrayTableNames.set(previous)
         }
     }
 
@@ -161,7 +160,7 @@ class TomlDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_BRE
 
     /** Name of an array-of-tables entry: `bin[name=web]` when identified, else the header name. */
     private fun arrayTableName(entry: TomlArrayTable, headerName: String): String =
-        arrayTableNames?.get(entry) ?: headerName
+        activeArrayTableNames.get()?.get(entry) ?: headerName
 
     private fun computeArrayTableNames(file: PsiFile): Map<TomlArrayTable, String> {
         val toml = file as? TomlFile ?: return emptyMap()
@@ -235,6 +234,7 @@ class TomlDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_BRE
     }
 
     private companion object {
+        private val activeArrayTableNames = ThreadLocal<Map<TomlArrayTable, String>>()
         const val DEFAULT_NAME = "SmartDiff.toml"
         val IDENTIFIERS = listOf("name", "id", "key")
         val NUMBER_LITERAL = Regex("""[+-]?(?:0x[0-9A-Fa-f_]+|0o[0-7_]+|0b[01_]+|(?:\d[\d_]*(?:\.\d[\d_]*)?|\.\d[\d_]*)(?:[eE][+-]?\d[\d_]*)?|(?:inf|nan))""")
