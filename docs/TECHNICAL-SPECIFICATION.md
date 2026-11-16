@@ -400,11 +400,15 @@ Implemented, 2026-11-15 ([languages/12](specs/languages/12-toml.md)). Pairs are 
 
 ### 6.19 XML provider
 
-Implemented, 2026-11-16 ([languages/13](specs/languages/13-xml.md)). Tags are `TAG`s named by tag name and an `id` or `name` attribute, Maven POM `dependency` and `plugin` tags by `groupId:artifactId`; attributes are content, so a reorder changes the tag (F4). The PSI mapping, naming rules, exact text comparison, prolog and DOCTYPE handling, packaging and tests are in its [details file](specs/languages/13-xml-details.md). HTML on the same provider is D4b, not specified here.
+Implemented, 2026-11-16 ([languages/13](specs/languages/13-xml.md)). Tags are `TAG`s named by tag name and an `id` or `name` attribute, Maven POM `dependency` and `plugin` tags by `groupId:artifactId`; attributes are content, so a reorder changes the tag (F4). The PSI mapping, naming rules, exact text comparison, prolog and DOCTYPE handling, packaging and tests are in its [details file](specs/languages/13-xml-details.md). HTML on the same provider is D4b, in §6.21.
 
 ### 6.20 Markdown provider
 
 Implemented, 2026-11-16 ([languages/14](specs/languages/14-markdown.md)). Top-level ATX and setext headings are `SECTION`s nested by level, front matter is one `SECTION`, and whitespace is `SIGNIFICANT`; the PSI mapping, nesting rule, packaging and tests are in its [details file](specs/languages/14-markdown-details.md).
+
+### 6.21 HTML provider
+
+Accepted, 2026-11-16 ([languages/15](specs/languages/15-html.md)). Elements with an `id`, and `head`, `body`, `template`, `script` and `style` elements, are `TAG`s named by lower-case tag name and id (or `src` for a script); every other element is content of the nearest enclosing declaration. Embedded JavaScript and CSS, and `pre` and `textarea` content, compare exactly. The PSI mapping, naming rules, whitespace ranges, packaging and tests are in its [details file](specs/languages/15-html-details.md).
 
 ## 7. Declaration engine: matching
 
