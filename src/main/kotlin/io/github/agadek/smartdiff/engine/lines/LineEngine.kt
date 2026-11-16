@@ -144,11 +144,15 @@ class LineEngine : ComparisonEngine, LineEngineProvider {
         for (j in added.indices) if (added[j]) addedByKey.getOrPut(new[j].key) { mutableListOf() } += j
         val result = mutableListOf<Candidate>()
         for (i in removed.indices) {
-            if (!removed[i]) continue
+            // A blank line never starts a run: pairing every removed blank line with every added one is quadratic in
+            // files with many blank lines, and a block that starts with one is found from its first non-blank line.
+            if (!removed[i] || old[i].key.isEmpty()) continue
             cancellation.checkCanceled()
             for (j in addedByKey[old[i].key].orEmpty()) {
-                // Only maximal runs: a run with a matching pair before it is found from that earlier pair.
-                if (i > 0 && j > 0 && removed[i - 1] && added[j - 1] && old[i - 1].key == new[j - 1].key) continue
+                // Only maximal runs: a run with a non-blank matching pair before it is found from that earlier pair.
+                if (i > 0 && j > 0 && removed[i - 1] && added[j - 1] && old[i - 1].key.isNotEmpty() &&
+                    old[i - 1].key == new[j - 1].key
+                ) continue
                 var length = 1
                 while (i + length < old.size && j + length < new.size &&
                     removed[i + length] && added[j + length] && old[i + length].key == new[j + length].key

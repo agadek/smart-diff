@@ -56,6 +56,18 @@ class LineEngineTest : BasePlatformTestCase() {
         assertEquals(Presence.MATCHED, moved.presence)
     }
 
+    fun `test engines 04 R5 R8 a blank line before a moved block is left in the file region`() {
+        // engines/04-moved-lines R5, R8: a blank line never starts a run, so the block starts at the first non-blank line.
+        val long = second + third.lines().take(2).joinToString("\n") + "\n"
+        val old = header + "\n" + first + long + footer
+        val new = header + long + "\n" + first + footer
+        val result = compare(old, new)
+
+        val moved = result.changes.single()
+        assertEquals(TextRange(header.length + 1, header.length + 1 + first.length), moved.oldRange)
+        assertTrue(moved.moved)
+    }
+
     fun `test engines 04 R5 a two-line block and a three-line block of braces give no block`() {
         // engines/04-moved-lines R5: below 3 lines, and below 30 non-whitespace characters.
         val two = "}\n}\n"
