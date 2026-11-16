@@ -35,13 +35,14 @@ object RefactoringsModel {
         hidden: Set<ChangeType> = emptySet(),
         hiddenKinds: Set<RelationshipKind> = emptySet(),
         whitespacePolicy: WhitespacePolicy = WhitespacePolicy.INSIGNIFICANT,
+        markCommentOnly: Boolean = false,
     ): List<OutlineItem> {
         val relationships = visibleRelationships(result, hiddenKinds)
         val colours = renameColours(result, hiddenKinds)
         val rows = relationships.map { link -> relationship(link, colours[link], newText) }
         val coverage = Coverage.of(relationships)
         val lowLinks = lowLinks(relationships)
-        val containerTree = OutlineModel.build(result, oldText, newText, formattingInline, hidden, whitespacePolicy)
+        val containerTree = OutlineModel.build(result, oldText, newText, formattingInline, hidden, whitespacePolicy, markCommentOnly)
         val other = containerTree.mapNotNull { otherChanges(it, coverage, lowLinks) }
         val refactorings = rows.ifEmpty { listOf(OutlineItem(ItemKind.EVIDENCE, NO_REFACTORINGS)) }
         return listOf(

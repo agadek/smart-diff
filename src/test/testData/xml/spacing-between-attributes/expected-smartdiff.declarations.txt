@@ -1,0 +1,3 @@
+status: ANALYZED
+tag beans  old 2-4  new 2-4
+  tag bean id=a  formatting-only  old 3  new 3

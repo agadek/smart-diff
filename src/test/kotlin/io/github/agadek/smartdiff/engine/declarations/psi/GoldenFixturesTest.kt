@@ -60,6 +60,9 @@ class GoldenFixturesTest : BasePlatformTestCase() {
     // languages/14-markdown R20
     fun `test Markdown fixtures`() = checkFixtures("markdown", "Markdown", "md")
 
+    // languages/13-xml R21
+    fun `test XML fixtures`() = checkFixtures("xml", "XML", "xml")
+
     // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11; languages/06 R2 / languages/07
     // JSON now has a dedicated provider, so these fallback fixtures mask it and run through the real engine path.
     fun `test structure-view JSON fixtures`() =

@@ -262,7 +262,9 @@ class ChangesTreeFilterTest : BasePlatformTestCase() {
         val filter = manager.getAction("SmartDiff.ChangesTree.HideChangeTypes") as DefaultActionGroup
         val labels = filter.getChildren(manager).map { it.templatePresentation.text }
 
-        assertEquals("one toggle per change type", ChangeType.entries.map { it.text }, labels)
+        // outline/11-comment-only-changes, out of scope: the Changes tree never gains the comment-only entry
+        assertEquals("one toggle per change type", ChangeType.withoutCommentOnly.map { it.text }, labels)
+        assertFalse("the tree has no comment-only filter", ChangeType.COMMENT_ONLY.text in labels)
         assertTrue("the filter shares the toggles' group", actions.getChildren(manager).toList().contains(filter))
         val viewOptions = manager.getAction(ChangesTreeActions.VIEW_OPTIONS_GROUP_ID) as? DefaultActionGroup
         if (viewOptions != null && viewOptions.containsAction(actions)) {

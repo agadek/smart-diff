@@ -1,6 +1,6 @@
 # Settings page
 
-Status: implemented, 2026-10-22; the outline view and relationship kind settings (R16 and R17) arrive with the [refactorings view](../relationships/06-refactorings-view.md), 2026-11-09; the structure-view fallback setting (R18) arrives with the [structure-view fallback](../languages/06-structure-view-fallback.md), 2026-11-13; the comment-only setting (R19) is accepted with [comment-only changes](../outline/11-comment-only-changes.md), 2026-11-16.
+Status: implemented, 2026-10-22; the outline view and relationship kind settings (R16 and R17) arrive with the [refactorings view](../relationships/06-refactorings-view.md), 2026-11-09; the structure-view fallback setting (R18) arrives with the [structure-view fallback](../languages/06-structure-view-fallback.md), 2026-11-13; the comment-only setting (R19) is implemented with [comment-only changes](../outline/11-comment-only-changes.md), 2026-11-16.
 
 **Description:** A settings page under Settings | Tools | SMART Diff holds the plugin's options, for all projects.
 

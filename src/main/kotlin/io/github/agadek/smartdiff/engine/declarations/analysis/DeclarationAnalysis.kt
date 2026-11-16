@@ -113,6 +113,13 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
             presence = Presence.MATCHED,
             content = content,
             details = old.fileRegion.ranges.map { RangePair(it, null) } + new.fileRegion.ranges.map { RangePair(null, it) },
+            // outline/11 R7: the file region is comment-only under the same rule.
+            commentOnly = content == Content.CHANGED && ContentClassifier.isCommentOnly(
+                old.fileRegion.tokens,
+                new.fileRegion.tokens,
+                new.whitespacePolicy,
+                parseError = old.fileRegion.hasParseError || new.fileRegion.hasParseError,
+            ),
         )
     }
 
@@ -301,7 +308,7 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
                 kindChangedFrom = link?.takeIf { RelationshipKind.KIND_CHANGE in it.kinds }
                     ?.old?.first()?.subject?.let { (it as? Subject.Declaration)?.kind },
                 content = content(match),
-            )
+            ).let { if (it.content == Content.CHANGED && commentOnly(match)) it.copy(commentOnly = true) else it }
             // The extracted code is highlighted on the old side, apart from the lines that really changed.
             val withExtractions = if (extracted.isEmpty()) node else node.copy(
                 extractedTo = extracted.map { it.new.first().subject },
@@ -367,6 +374,27 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
                 policy != WhitespacePolicy.INDENTATION_SIGNIFICANT ||
                     indentation(oldLeading) == indentation(newLeading)
             if (sameSource && sameIndentation) Content.FORMATTING_ONLY else Content.CHANGED
+        }
+
+        /**
+         * Whether a changed match differs only in comments and formatting (outline/11 R3 to R5). As for formatting-only,
+         * the whitespace before the first token is layout (declarations/02 R14), except for significant indentation.
+         */
+        private fun commentOnly(match: Match): Boolean {
+            val oldTokens = renamed(match)
+            val newTokens = match.new.ownTokens
+            val policy = new.whitespacePolicy
+            val parseError = match.old.hasParseError || match.new.hasParseError
+            val changedSignature = signatureChanged(match)
+            if (ContentClassifier.isCommentOnly(oldTokens, newTokens, policy, parseError, changedSignature)) return true
+            if (policy == WhitespacePolicy.SIGNIFICANT) return false
+            val oldLeading = leadingTokens(match.old)
+            val newLeading = leadingTokens(match.new)
+            val sameIndentation =
+                policy != WhitespacePolicy.INDENTATION_SIGNIFICANT || indentation(oldLeading) == indentation(newLeading)
+            return sameIndentation && ContentClassifier.isCommentOnly(
+                oldTokens.drop(oldLeading.size), newTokens.drop(newLeading.size), policy, parseError, changedSignature,
+            )
         }
 
         /** The whitespace tokens at the start of [declaration]'s own tokens, its leading whitespace (§6.1). */

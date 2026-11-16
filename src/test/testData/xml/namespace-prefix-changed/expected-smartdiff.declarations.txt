@@ -1,0 +1,3 @@
+status: ANALYZED
+tag s:beans  rename candidate from tag b:beans  changed  old 2-4  new 2-4
+  tag s:bean id=a  rename candidate from tag b:bean id=a  changed  old 3  new 3

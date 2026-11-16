@@ -68,6 +68,9 @@ class MergeFixturesTest : BasePlatformTestCase() {
     // languages/14-markdown R19, R20 (merge fixtures)
     fun `test Markdown merge fixtures`() = checkFixtures("markdown", "Markdown", "md")
 
+    // languages/13-xml R19, R21
+    fun `test XML merge fixtures`() = checkFixtures("xml", "XML", "xml")
+
     // languages/04-python R20 (merge fixtures)
     fun `test Python merge fixtures`() = checkFixtures("python", "Python", "py")
 
@@ -123,6 +126,11 @@ class MergeFixturesTest : BasePlatformTestCase() {
             "a section changed on both sides",
             joined.nodes.any { it.subject is Subject.Declaration && it.group == MergeGroup.CHANGED_ON_BOTH_SIDES },
         )
+    }
+
+    fun `test XML merge fixtures cover a tag changed on both sides`() {
+        // languages/13-xml R21
+        assertTrue(File(TEST_DATA, "xml/merge/tag-changed-on-both-sides").isDirectory)
     }
 
     fun `test Scala 3 covers braces to indentation and a given on both sides`() {
@@ -378,6 +386,7 @@ class MergeFixturesTest : BasePlatformTestCase() {
             "properties" to "properties",
             "toml" to "toml",
             "markdown" to "md",
+            "xml" to "xml",
             "python" to "py",
         )
         val REQUIRED_SCENARIOS = listOf(

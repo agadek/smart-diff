@@ -1,0 +1,3 @@
+status: ANALYZED
+tag beans  old 2-5  new 2-4
+  tag bean id=b  removed  old 4

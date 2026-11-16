@@ -1,0 +1,4 @@
+status: ANALYZED
+tag config  old 2-6  new 2-6
+  tag a  formatting-only  old 3-5  new 3-5
+    tag b  formatting-only  old 4  new 4
