@@ -1,6 +1,6 @@
 # Format Coverage Plan
 
-Status: proposal, 2026-11-13, with open question F1 decided the same day (§6); G0/G1 and D0/D1 implemented 2026-11-13; D2 (YAML) and M2 implemented 2026-11-14/2026-11-15. It expands the roadmap's [more languages](ROADMAP.md#more-languages) entry into a programme: which languages and file formats of the JetBrains platform SMART Diff covers, what each one needs, and in which order. Section numbers (§) refer to the [technical specification](TECHNICAL-SPECIFICATION.md), and terms follow the [glossary](GLOSSARY.md). [Python](specs/languages/04-python.md) and [Rust](specs/languages/05-rust.md) are specified separately and are not repeated here; this plan builds on their pattern and their build-target decision (spike S8). Each phase below gets its own feature spec and details file, written as the [specification guide](SPEC-GUIDE.md) asks, in the first pull request of that phase.
+Status: proposal, 2026-11-13, with open question F1 decided the same day and F4 decided 2026-11-16 (§6); G0/G1 and D0/D1 implemented 2026-11-13; D2 (YAML) and M2 implemented 2026-11-14/2026-11-15; D3 (properties, TOML) implemented 2026-11-15; D4 (XML) specified 2026-11-16. It expands the roadmap's [more languages](ROADMAP.md#more-languages) entry into a programme: which languages and file formats of the JetBrains platform SMART Diff covers, what each one needs, and in which order. Section numbers (§) refer to the [technical specification](TECHNICAL-SPECIFICATION.md), and terms follow the [glossary](GLOSSARY.md). [Python](specs/languages/04-python.md) and [Rust](specs/languages/05-rust.md) are specified separately and are not repeated here; this plan builds on their pattern and their build-target decision (spike S8). Each phase below gets its own feature spec and details file, written as the [specification guide](SPEC-GUIDE.md) asks, in the first pull request of that phase.
 
 ## 1. Problem
 
@@ -52,7 +52,7 @@ Plugin ids and licensing are as known on 2026-11-13. The first phase of each gro
 | YAML | `org.jetbrains.plugins.yaml`, bundled | Free, open source | Current target | Mapping keys, nested; each document of a multi-document file as a section | Indentation significant; formatting-only only after a tested rule ([ADR 0003](adr/0003-conservative-classification.md)) |
 | TOML | `org.toml.lang`, bundled | Free, open source | Current target | Tables and array-of-tables entries as sections, keys as members, dotted keys one key each ([languages/12](specs/languages/12-toml.md)) | Line breaks significant |
 | Properties | `com.intellij.properties`, bundled | Free, open source | Current target | Each key; no nesting ([languages/11](specs/languages/11-properties.md)) | Insignificant around the separator; line continuations are content |
-| XML (Maven, Spring, Android, any) | `com.intellij.modules.xml`, platform | Free, open source | Current target | Tags, named by tag and an identifying attribute or child (§4) | Insignificant inside a tag; text content compared exactly |
+| XML (Maven, Spring, Android, any) | `com.intellij.modules.xml`, platform | Free, open source | Current target | Tags, named by tag and an identifying attribute or child (§4; [languages/13](specs/languages/13-xml.md)) | Insignificant inside a tag; text content compared exactly |
 
 - **Common noise.** Reordered keys, reformatted files and re-indented blocks are the usual noise in configuration reviews, and a renamed key is otherwise shown as a removed and an added line far apart.
 - **No new engine.** ADR 0009 proposes that keys are declarations of the existing engine, so the outline, the Changes tree, the merge outline and the filter work for these files without UI changes.
@@ -98,8 +98,8 @@ S9 is done when the provider gives correct ranges and names on text-built files 
 - **Names.** The key as written, without quotes; the outline's tree shows the path. A properties file's dotted keys stay one key each (`spring.datasource.url`), since the format has no nesting.
 - **Values.** A scalar value is the key's content: changing it changes the key.
 - **Arrays.** An array is content of its key, except an array whose items are all objects or mappings with one shared identifying key (`name`, `id` or `key`, in that order): each item is then a declaration named `[name=web]`, so a reordered list of services or jobs shows as moved items instead of a changed array. Positional items are never matched by index.
-- **XML names.** A tag is named by its tag name and, when present, its `id` or `name` attribute (`bean id=dataSource`). Maven POMs name `dependency` and `plugin` tags by `groupId:artifactId`, so a version bump is one changed dependency. Attributes are content of their tag.
-- **Order.** Keys whose order carries no meaning (JSON objects, YAML mappings, TOML tables, properties, XML attributes) still report a reorder as moved, the existing label; the filter can hide moved changes. Array items and XML child tags keep their order as content.
+- **XML names.** A tag is named by its tag name and, when present, its `id` or `name` attribute (`bean id=dataSource`). Maven POMs name `dependency` and `plugin` tags by `groupId:artifactId`, so a version bump is one changed dependency. Attributes are content of their tag, so a reordered attribute is a changed tag (F4, decided 2026-11-16; [languages/13](specs/languages/13-xml.md)).
+- **Order.** Keys whose order carries no meaning (JSON objects, YAML mappings, TOML tables, properties) still report a reorder as moved, the existing label; the filter can hide moved changes. Array items and XML child tags keep their order: a reorder of them is reported as moved, never as formatting-only.
 - **Repeated keys.** A key that appears twice in one container, which most formats allow syntactically, follows the matcher's rules for repeated keys.
 - **Relationships.** Rename candidates apply: a key renamed with its value unchanged pairs as a rename candidate. Extraction and inlining detection need declaration bodies and do not apply; the relationship benchmark gets rename cases only.
 - **Whitespace.** As in the table in §2.3. YAML starts as `SIGNIFICANT` and moves to `INDENTATION_SIGNIFICANT` only with fixtures that show re-indenting a block is never called formatting-only when it changes nesting.
@@ -114,11 +114,12 @@ Each phase is one pull request, or a spec pull request and a code pull request, 
 | --- | --- | --- | --- |
 | G0 | Spike S9, ADR 0010 accepted | Nothing | Implemented 2026-11-13 |
 | G1 | Structure-view provider: `languages/06`, the `ITEM` kind, the setting, the summary-line note | G0 | Implemented 2026-11-13 |
-| D0 | Spike S10, ADR 0009 accepted, the `KEY`, `TAG` and `SECTION` kinds | Nothing; can run beside G0 | Not started |
-| D1 | JSON provider | D0 | Not started |
+| D0 | Spike S10, ADR 0009 accepted, the `KEY`, `TAG` and `SECTION` kinds | Nothing; can run beside G0 | Implemented 2026-11-13 |
+| D1 | JSON provider | D0 | Implemented 2026-11-13 |
 | D2 | YAML provider, with the indentation rule as its own requirement | D1 | Implemented 2026-11-14 |
 | D3 | Properties and TOML providers | D1 | Implemented 2026-11-15 in [languages/11](specs/languages/11-properties.md) and [languages/12](specs/languages/12-toml.md) |
-| D4 | XML provider, with POM and Spring naming; HTML on the same provider | D1 | Not started |
+| D4 | XML provider, with POM and Spring naming | D1 | Specified 2026-11-16 in [languages/13](specs/languages/13-xml.md) |
+| D4b | HTML on the XML provider | D4 | Not started |
 | B0 | Build pattern for paid IDEs, as an amendment to the S8 ADR; verifier jobs for WebStorm and GoLand | R0 | Not started |
 | B1 | JavaScript and TypeScript provider | B0 | Not started |
 | B2 | Go provider | B0 | Not started |
@@ -142,5 +143,5 @@ The two tracks share only the new kinds in `DeclarationKind` (`ITEM` from G1; `K
 - **F1 Fallback first or dedicated providers first (decided 2026-11-13).** Both in parallel, as two tracks (§5).
 - **F2 Fallback default.** Whether the structure-view setting is on by default. The proposal is on, with the summary-line note, since the alternative is the plain native diff and the provider never claims formatting-only.
 - **F3 Build target for SQL.** SQL is in IntelliJ IDEA's free tier from 2025.3, but not in the 2025.1.3 Community target. Either SQL waits for the minimum platform to reach 2025.3, which changes P6, or it uses the paid-IDE pattern of B0.
-- **F4 XML attribute order.** Attribute order carries no meaning in XML. The proposal reports a reordered attribute as a changed tag, since attributes are content; reporting it as moved needs attribute-level declarations, which would crowd the outline.
+- **F4 XML attribute order (decided 2026-11-16).** A reordered attribute is reported as a changed tag, since attributes are content ([languages/13](specs/languages/13-xml.md)); reporting it as moved would need attribute-level declarations, which would crowd the outline.
 - **F5 Ruby and PHP licensing.** Whether RubyMine and PhpStorm now have a free noncommercial licence, which affects who can use those providers but not how they are built. Re-checked in B0.

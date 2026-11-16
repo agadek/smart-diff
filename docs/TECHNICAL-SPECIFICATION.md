@@ -398,6 +398,10 @@ Implemented, 2026-11-15 ([languages/11](specs/languages/11-properties.md)). Each
 
 Implemented, 2026-11-15 ([languages/12](specs/languages/12-toml.md)). Pairs are `KEY`s, tables and array-of-tables entries are flat `SECTION`s; the PSI mapping, the array identity and array-of-tables naming rules, whitespace policy, packaging and tests are in its [details file](specs/languages/12-toml-details.md).
 
+### 6.19 XML provider
+
+Accepted, 2026-11-16 ([languages/13](specs/languages/13-xml.md)). Tags are `TAG`s named by tag name and an `id` or `name` attribute, Maven POM `dependency` and `plugin` tags by `groupId:artifactId`; attributes are content, so a reorder changes the tag (F4). The PSI mapping, naming rules, exact text comparison, prolog and DOCTYPE handling, packaging and tests are in its [details file](specs/languages/13-xml-details.md). HTML on the same provider is D4b, not specified here.
+
 ## 7. Declaration engine: matching
 
 Inputs: the old and new `DeclarationTree`. Matching is global over all declarations in the file, so a declaration can be matched across containers. Each rule runs over the declarations still unmatched after the previous rule. Within a rule, declarations are processed in source order of the old side, which makes the result deterministic.
