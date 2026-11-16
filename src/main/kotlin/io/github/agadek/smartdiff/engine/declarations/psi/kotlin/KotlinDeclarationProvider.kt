@@ -37,7 +37,7 @@ import org.jetbrains.kotlin.psi.KtTypeReference
  * the primary constructor and its parameters are part of the class. In Gradle Kotlin build scripts, top-level calls
  * with a trailing lambda are section declarations.
  */
-class KotlinDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_BREAKS_SIGNIFICANT) {
+class KotlinDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.KOTLIN_LINE_BREAKS) {
 
     override fun supports(languageId: String): Boolean = languageId == KotlinLanguage.INSTANCE.id
 

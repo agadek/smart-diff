@@ -1,0 +1,2 @@
+left: ANALYZED  right: ANALYZED
+section A  CHANGED_ON_BOTH_SIDES  left: changed  right: changed  note: same change on both sides  base 1-4  left 1-4  right 1-4

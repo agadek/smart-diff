@@ -366,10 +366,28 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
             // (declarations/02 R14). If the source from the first token on is the same, only that layout differs.
             val oldLeading = leadingTokens(match.old)
             val newLeading = leadingTokens(match.new)
+            if (policy == WhitespacePolicy.SCALA3_INDENTATION) {
+                // Scala 3 keeps indentation significant, but a whole declaration re-indented by one amount is
+                // formatting-only (declarations/07 R8). Use the shift of the whole declaration, leading run included,
+                // for both the body and the leading run so the relaxed check agrees with the main classification.
+                // A failure in the rule is conservative: CHANGED (declarations/07 details, Failure).
+                val shifted = runCatching {
+                    val oldShift = ContentClassifier.indentationShift(ContentClassifier.normalize(oldTokens, policy))
+                    val newShift = ContentClassifier.indentationShift(ContentClassifier.normalize(newTokens, policy))
+                    val sameSource =
+                        ContentClassifier.applyIndentShift(ContentClassifier.normalize(oldTokens.drop(oldLeading.size), policy), oldShift) ==
+                            ContentClassifier.applyIndentShift(ContentClassifier.normalize(newTokens.drop(newLeading.size), policy), newShift)
+                    val sameIndentation =
+                        indentation(oldLeading).removePrefix(oldShift ?: "") == indentation(newLeading).removePrefix(newShift ?: "")
+                    sameSource && sameIndentation
+                }.getOrDefault(false)
+                return@getOrPut if (shifted) Content.FORMATTING_ONLY else Content.CHANGED
+            }
             val sameSource =
                 ContentClassifier.normalize(oldTokens.drop(oldLeading.size), policy) ==
                     ContentClassifier.normalize(newTokens.drop(newLeading.size), policy)
-            // Scala 3 indentation is significant, the indentation on the declaration's first line included.
+            // Scala 3's plain sibling compares the first line's indentation as written; the new Scala 3 policy
+            // applies the whole-declaration shift instead.
             val sameIndentation =
                 policy != WhitespacePolicy.INDENTATION_SIGNIFICANT ||
                     indentation(oldLeading) == indentation(newLeading)
@@ -390,8 +408,19 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
             if (policy == WhitespacePolicy.SIGNIFICANT) return false
             val oldLeading = leadingTokens(match.old)
             val newLeading = leadingTokens(match.new)
-            val sameIndentation =
-                policy != WhitespacePolicy.INDENTATION_SIGNIFICANT || indentation(oldLeading) == indentation(newLeading)
+            // Like formatting-only, Scala 3 keeps indentation significant but allows a whole declaration to shift
+            // by one amount (declarations/07 R8). Kotlin and Scala 2 never compare indentation here.
+            val sameIndentation = runCatching {
+                when (policy) {
+                    WhitespacePolicy.SCALA3_INDENTATION -> {
+                        val oldShift = ContentClassifier.indentationShift(ContentClassifier.normalize(oldTokens, policy))
+                        val newShift = ContentClassifier.indentationShift(ContentClassifier.normalize(newTokens, policy))
+                        indentation(oldLeading).removePrefix(oldShift ?: "") == indentation(newLeading).removePrefix(newShift ?: "")
+                    }
+                    else -> policy != WhitespacePolicy.INDENTATION_SIGNIFICANT ||
+                        indentation(oldLeading) == indentation(newLeading)
+                }
+            }.getOrDefault(false)
             return sameIndentation && ContentClassifier.isCommentOnly(
                 oldTokens.drop(oldLeading.size), newTokens.drop(newLeading.size), policy, parseError, changedSignature,
             )

@@ -162,6 +162,7 @@ src/test/testData/kotlin/relationships/usage-grouping-1
 src/test/testData/kotlin/relationships/usage-grouping-2
 src/test/testData/kotlin/relationships/usage-grouping-3
 src/test/testData/kotlin/relationships/usage-grouping-4
+src/test/testData/kotlin/relationships/usage-grouping-rewrapped
 src/test/testData/scala2/relationships/ambiguous-rename-group-1
 src/test/testData/scala2/relationships/ambiguous-rename-group-2
 src/test/testData/scala2/relationships/ambiguous-rename-group-3
@@ -244,6 +245,7 @@ src/test/testData/scala2/relationships/usage-grouping-1
 src/test/testData/scala2/relationships/usage-grouping-2
 src/test/testData/scala2/relationships/usage-grouping-3
 src/test/testData/scala2/relationships/usage-grouping-4
+src/test/testData/scala2/relationships/usage-grouping-rewrapped
 src/test/testData/scala3/relationships/ambiguous-rename-group-1
 src/test/testData/scala3/relationships/ambiguous-rename-group-2
 src/test/testData/scala3/relationships/ambiguous-rename-group-3
@@ -326,6 +328,7 @@ src/test/testData/scala3/relationships/usage-grouping-1
 src/test/testData/scala3/relationships/usage-grouping-2
 src/test/testData/scala3/relationships/usage-grouping-3
 src/test/testData/scala3/relationships/usage-grouping-4
+src/test/testData/scala3/relationships/usage-grouping-rewrapped
 src/test/testData/python/relationships/class-rename-1
 src/test/testData/python/relationships/extraction-1
 src/test/testData/python/relationships/extraction-2

@@ -12,6 +12,7 @@ import com.intellij.openapi.project.DumbAwareToggleAction
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.util.IconLoader
 import com.intellij.ui.ColoredTreeCellRenderer
+import com.intellij.ui.PopupHandler
 import com.intellij.ui.DoubleClickListener
 import com.intellij.ui.ScrollPaneFactory
 import com.intellij.ui.SimpleColoredComponent
@@ -92,6 +93,37 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
     internal lateinit var kindsAction: DefaultActionGroup
         private set
 
+    /** The context menu's mark actions; enabled from the selected row's markable nodes (outline/12 R2, R11, R14). */
+    internal val markReviewedAction = object : DumbAwareAction("Mark as Reviewed", "Mark the selected change as reviewed", null) {
+        override fun actionPerformed(e: AnActionEvent) = controller.markSelected(true)
+        override fun update(e: AnActionEvent) {
+            val nodes = selectedItem()?.let(controller.reviewed::nodesOf).orEmpty()
+            e.presentation.isEnabledAndVisible = nodes.any { it !in controller.reviewed.reviewed }
+        }
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+    }
+
+    internal val unmarkReviewedAction = object : DumbAwareAction("Unmark Reviewed", "Remove the selected change's reviewed mark", null) {
+        override fun actionPerformed(e: AnActionEvent) = controller.markSelected(false)
+        override fun update(e: AnActionEvent) {
+            val nodes = selectedItem()?.let(controller.reviewed::nodesOf).orEmpty()
+            e.presentation.isEnabledAndVisible = nodes.any { it in controller.reviewed.reviewed }
+        }
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+    }
+
+    internal val clearReviewedAction = object : DumbAwareAction("Clear Reviewed Marks", "Remove every reviewed mark of this file", null) {
+        override fun actionPerformed(e: AnActionEvent) = controller.clearReviewedMarks()
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabledAndVisible = controller.hasReviewedMarks()
+        }
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+    }
+
+    internal val reviewedActionGroup = DefaultActionGroup(
+        markReviewedAction, unmarkReviewedAction, Separator.getInstance(), clearReviewedAction,
+    ).apply { isPopup = true }
+
     private val body = JPanel(CardLayout())
     private var updatingEngines = false
     /** Whether a selection made by this panel's own tree change scrolls the editors (outline/07). */
@@ -108,8 +140,9 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
             override fun getActionUpdateThread() = ActionUpdateThread.BGT
         }
         // The comment-only entry shows only while comment-only changes are marked (outline/11 R8, R9); the option itself
-        // ends the menu (R2).
-        val filterActions = ChangeType.entries.map(::HideAction) + Separator.getInstance() + MarkCommentOnlyAction()
+        // ends the menu (R2). "Hide Reviewed" comes last, after a separator (outline/12 R12).
+        val filterActions = ChangeType.entries.map(::HideAction) + Separator.getInstance() + MarkCommentOnlyAction() +
+            Separator.getInstance() + HideReviewedAction()
         val filter = DefaultActionGroup("Hide Change Types", filterActions).apply {
             templatePresentation.description = "Hide types of changes from the outline"
             templatePresentation.icon = AllIcons.General.Filter
@@ -179,8 +212,14 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         tree.addKeyListener(object : KeyAdapter() {
             override fun keyPressed(e: KeyEvent) {
                 if (e.keyCode == KeyEvent.VK_ENTER) selectedItem()?.let { controller.navigator.navigate(it); e.consume() }
+                // The outline tree has no speed search, so Space only toggles the mark (outline/12 R2).
+                if (e.keyCode == KeyEvent.VK_SPACE) {
+                    selectedItem()?.let { controller.toggleReviewed(it) }
+                    e.consume()
+                }
             }
         })
+        PopupHandler.installPopupMenu(tree, reviewedActionGroup, "SmartDiffOutlineReviewed")
         object : DoubleClickListener() {
             override fun onDoubleClick(event: MouseEvent): Boolean {
                 val item = selectedItem() ?: return false
@@ -402,6 +441,13 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
     }
 
+    /** The filter menu's "Hide Reviewed" checkbox (outline/12 R12). */
+    private inner class HideReviewedAction : DumbAwareToggleAction(HIDE_REVIEWED) {
+        override fun isSelected(e: AnActionEvent): Boolean = SmartDiffSettings.getInstance().hideReviewed
+        override fun setSelected(e: AnActionEvent, state: Boolean) = controller.setHideReviewed(state)
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+    }
+
     /** One entry of the relationship menu: checked while relationships of [kind] are hidden (relationships/06 R14). */
     private inner class HideKindAction(private val kind: RelationshipKind) : DumbAwareToggleAction(relationshipKindText(kind)) {
         override fun isSelected(e: AnActionEvent): Boolean = kind in SmartDiffSettings.getInstance().hiddenRelationshipKinds
@@ -425,6 +471,9 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         /** The filter menu checkbox and settings page label for outline/11 R2. */
         const val MARK_COMMENT_ONLY = "Mark Comment-Only Changes"
 
+        /** The filter menu checkbox for outline/12 R12. */
+        const val HIDE_REVIEWED = "Hide Reviewed"
+
         fun escape(text: String) = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     }
 }
@@ -447,19 +496,29 @@ internal fun structureViewTooltip(result: ComparisonResult): String? =
  * carries the meaning (§10). The outline and the Changes tree (§9.4) draw their rows with it.
  */
 internal fun appendItem(component: SimpleColoredComponent, item: OutlineItem) {
-    component.append(item.title, if (item.isGroup) SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES else SimpleTextAttributes.REGULAR_ATTRIBUTES)
-    val hasLabels = item.tags.isNotEmpty() || item.note != null || item.confidence != null
+    val titleAttributes = when {
+        item.reviewed -> SimpleTextAttributes.GRAYED_ATTRIBUTES
+        item.isGroup -> SimpleTextAttributes.REGULAR_BOLD_ATTRIBUTES
+        else -> SimpleTextAttributes.REGULAR_ATTRIBUTES
+    }
+    component.append(item.title, titleAttributes)
+    val hasLabels = item.tags.isNotEmpty() || item.note != null || item.confidence != null || item.reviewed
     if (!hasLabels) return
     component.append("  ")
     item.tags.forEachIndexed { i, tag ->
         if (i > 0) component.append(", ", SimpleTextAttributes.GRAYED_ATTRIBUTES)
         component.append(tag.text, attributes(tag))
     }
-    item.note?.let { component.append((if (item.tags.isEmpty()) "" else ", ") + it, SimpleTextAttributes.GRAYED_ATTRIBUTES) }
-    item.confidence?.let {
-        val separator = if (item.tags.isEmpty() && item.note == null) "" else ", "
-        component.append(separator + it.name.lowercase(), SimpleTextAttributes.GRAYED_ATTRIBUTES)
+    var hasMore = item.tags.isNotEmpty()
+    item.note?.let {
+        component.append((if (hasMore) ", " else "") + it, SimpleTextAttributes.GRAYED_ATTRIBUTES)
+        hasMore = true
     }
+    item.confidence?.let {
+        component.append((if (hasMore) ", " else "") + it.name.lowercase(), SimpleTextAttributes.GRAYED_ATTRIBUTES)
+        hasMore = true
+    }
+    if (item.reviewed) component.append((if (hasMore) ", " else "") + "reviewed", SimpleTextAttributes.GRAYED_ATTRIBUTES)
 }
 
 private fun attributes(tag: Tag): SimpleTextAttributes {

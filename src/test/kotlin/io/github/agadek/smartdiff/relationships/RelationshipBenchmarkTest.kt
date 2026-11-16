@@ -221,10 +221,10 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test R18 the full corpus has 419 cases and every labelled rename has a usages list`() {
+    fun `test R18 the full corpus has 422 cases and every labelled rename has a usages list`() {
         // relationships/04-rename-grouping R18; relationships/01-relationship-benchmark R44
         val entries = RelationshipBenchmark.parseCorpus(File("src/test/testData/relationships-corpus-full.txt"))
-        assertEquals("410 checked-in cases", 410, entries.count { it.path != null })
+        assertEquals("413 checked-in cases", 413, entries.count { it.path != null })
         assertEquals(
             "150 real commits",
             150,
@@ -232,7 +232,8 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         )
         val labels = entries.mapNotNull { it.path }.map { RelationshipBenchmark.parseLabel(File(it, "label.yaml")) }
         for (corpus in RelationshipBenchmark.MATRIX_CORPORA) {
-            assertEquals("$corpus has four usage-grouping cases", 4, labels.count { it.corpus == corpus && it.category == "usage-grouping" })
+            val expected = if (corpus in setOf("kotlin", "scala2", "scala3")) 5 else 4
+            assertEquals("$corpus has $expected usage-grouping cases", expected, labels.count { it.corpus == corpus && it.category == "usage-grouping" })
         }
         val renames = labels.sumOf { label -> label.relationships.count { RelationshipBenchmark.Kind.RENAME in it.kinds } }
         assertTrue(
@@ -248,7 +249,7 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
                 .toList()
         }
         val commitRenames = commitLabels.flatMap { it.relationships }.filter { RelationshipBenchmark.Kind.RENAME in it.kinds }
-        assertEquals("133 labelled renames; gate reports may list misses", 133, renames + commitRenames.size)
+        assertEquals("136 labelled renames; gate reports may list misses", 136, renames + commitRenames.size)
         assertTrue("the real commits have renames to review", commitRenames.isNotEmpty())
         assertTrue("every real-commit rename has a usages list", commitRenames.all { it.usages != null })
     }

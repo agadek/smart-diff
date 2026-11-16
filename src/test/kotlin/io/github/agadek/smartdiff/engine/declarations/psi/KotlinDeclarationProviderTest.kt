@@ -120,7 +120,7 @@ class KotlinDeclarationProviderTest : ProviderTestCase() {
             """,
             tree, text,
         )
-        assertEquals(WhitespacePolicy.LINE_BREAKS_SIGNIFICANT, tree.whitespacePolicy)
+        assertEquals(WhitespacePolicy.KOTLIN_LINE_BREAKS, tree.whitespacePolicy)
     }
 
     fun `test tokens come from the Kotlin lexer`() {
@@ -270,7 +270,8 @@ class KotlinDeclarationProviderTest : ProviderTestCase() {
             ),
             Cancellation.NONE,
         )
-        assertEquals(Content.CHANGED, lineSplit.changes.single().content)
+        // declarations/07-kotlin-scala-formatting R3: the breaks after `{` and before `}` are ignorable.
+        assertEquals(Content.FORMATTING_ONLY, lineSplit.changes.single().content)
 
         val changed = engine.compare(
             ComparisonRequest(

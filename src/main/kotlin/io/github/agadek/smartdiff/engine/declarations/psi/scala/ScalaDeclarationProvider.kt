@@ -57,7 +57,7 @@ import org.jetbrains.plugins.scala.lang.scaladoc.psi.api.ScDocComment
  * The file's language alone decides the dialect: the Scala plugin hard-wires its parser and lexer to `ScalaLanguage` or
  * `Scala3Language`, and a file built from text has no module whose settings could change that.
  */
-class ScalaDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_BREAKS_SIGNIFICANT) {
+class ScalaDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.SCALA2_LINE_BREAKS) {
 
     // A .scala file's type gives `Scala` even in a Scala 3 module, so requests never carry the `Scala 3` id.
     override fun supports(languageId: String): Boolean = languageId == ScalaLanguage.INSTANCE.id
@@ -89,7 +89,7 @@ class ScalaDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_BR
         PsiTreeUtil.getParentOfType(error, ScDocComment::class.java) == null
 
     override fun whitespacePolicy(file: PsiFile): WhitespacePolicy =
-        if (file.language == Scala3Language.INSTANCE) WhitespacePolicy.INDENTATION_SIGNIFICANT else WhitespacePolicy.LINE_BREAKS_SIGNIFICANT
+        if (file.language == Scala3Language.INSTANCE) WhitespacePolicy.SCALA3_INDENTATION else WhitespacePolicy.SCALA2_LINE_BREAKS
 
     // Definitions in package clauses, braced or not, are top-level declarations, like Scala 3 top-level definitions.
     override fun topLevel(file: PsiFile): List<PsiElement> = members(file)

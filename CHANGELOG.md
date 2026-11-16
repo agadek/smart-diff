@@ -4,6 +4,7 @@
 
 ### Added
 
+- Reviewed marks in the structural outline: "Mark as Reviewed", "Unmark Reviewed" and "Clear Reviewed Marks" in the context menu, and Space to toggle the selected row. Marked rows are greyed and labelled `reviewed`, the summary ends with `N of M reviewed`, and the off-by-default "Hide Reviewed" filter leaves them out. Marks are kept per project in the workspace file and are dropped when that declaration's text changes again.
 - XML files (`.xml`, `pom.xml`, Spring and Android configuration): each tag is shown in the structural outline, nested by its child tags and named by its `id` or `name` attribute when it has one, such as `bean id=dataSource`. Maven `dependency` and `plugin` tags are named by `groupId:artifactId`, so a version bump is one changed dependency. Attributes are content of their tag, reordered child tags are moved, text and CDATA compare exactly while re-indenting is formatting-only, and a renamed tag with the same content is a rename candidate. The structural outline, Changes tree and merge outline work for XML files; HTML is not covered yet.
 - Added and deleted files in Local Changes and the Commit tool window show a structural summary and declaration rows for their existing side, such as `N added` or `N removed`. Opening a declaration row shows the one-sided diff with a one-sided structural outline, and the caret in that diff follows the declaration under it while the platform's selection-following preview still selects the file row.
 - Java properties files (`.properties`, when the IDE has properties support): each property is shown as a key in the structural outline, with dotted keys as flat top-level keys, reordered keys as moved, changes in spacing around the separator or in blank lines between keys reported as changes, and a renamed key with the same value as a rename candidate. The structural outline, Changes tree and merge outline work for properties files.
@@ -31,6 +32,7 @@
 - The outline panel keeps a minimum width of 200 px, scaled with the IDE font size, so dragging the splitter no longer squeezes the summary line and rows into a narrow column. A remembered width below the minimum opens the panel at the minimum, and the merge outline keeps the same floor.
 - The refactorings view attaches a low-confidence `possible …` link only to declarations on its own side, so equal old and new offsets no longer add the link to an unrelated row. The relationship-kind filter is hidden in the container tree, where it has no effect.
 - Scala 2 rename-only declarations are compared with the line-break whitespace policy the Scala 2 parser used, not the stricter Scala 3 indentation policy, and the shared rename tokenizer recognizes Kotlin and Scala backtick identifiers, Scala symbols and chars, and nested comments.
+- TOML outlines no longer mix up array-of-tables names when two files are analysed at the same time.
 
 ## [0.3.0] - 2026-11-08
 

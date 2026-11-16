@@ -39,12 +39,12 @@ dependencies {
         plugin("PythonCore", providers.gradleProperty("pythonPluginVersion").get())
         bundledPlugin("org.jetbrains.plugins.yaml")
         bundledPlugin("com.intellij.properties")
+        bundledPlugin("org.intellij.plugins.markdown")
         // The Rust provider compiles in :rust against the root's main classes and is packaged here; runtimeOnly keeps
         // it off the root compile classpath so :rust can compileOnly-depend on :root without a task cycle (05-rust-details §2).
         pluginModule(runtimeOnly(project(":rust")))
-        // S9 spike and structure-view fallback tests: bundled with IntelliJ IDEA, test-only (languages/06); JSON is already
-        // on the classpath above.
-        testBundledPlugin("org.intellij.plugins.markdown")
+        // S9 spike and structure-view fallback tests: bundled with IntelliJ IDEA, test-only (languages/06); JSON and
+        // Markdown are already on the classpath above.
         testBundledPlugin("com.intellij.properties")
         testFramework(TestFrameworkType.Platform)
         testFramework(TestFrameworkType.Plugin.Java)

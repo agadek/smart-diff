@@ -1,6 +1,8 @@
 package io.github.agadek.smartdiff.engine.declarations.analysis
 
+import io.github.agadek.smartdiff.engine.api.BracketDepth
 import io.github.agadek.smartdiff.engine.api.Content
+import io.github.agadek.smartdiff.engine.api.LineBreakRules
 import io.github.agadek.smartdiff.engine.declarations.model.Token
 import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
@@ -40,7 +42,7 @@ object ContentClassifier {
             !signatureChanged && oldContent.map { it.text } == newContent.map { it.text } -> Content.UNCHANGED
             parseError -> Content.UNANALYZED
             signatureChanged -> Content.CHANGED
-            normalize(oldContent, policy) == normalize(newContent, policy) -> Content.FORMATTING_ONLY
+            runCatching { comparable(normalize(oldContent, policy), policy) == comparable(normalize(newContent, policy), policy) }.getOrDefault(false) -> Content.FORMATTING_ONLY
             else -> Content.CHANGED
         }
     }
@@ -68,7 +70,10 @@ object ContentClassifier {
             if (policy == WhitespacePolicy.SIGNIFICANT) {
                 sameWithoutComments(withoutComments(oldContent), withoutComments(newContent))
             } else {
-                val without = { tokens: List<Token> -> normalize(tokens.filterNot { it.kind == TokenKind.COMMENT }, policy) }
+                // Whitespace is compared as for formatting-only (outline/11 R3), including the Scala 3 shift.
+                val without = { tokens: List<Token> ->
+                    comparable(normalize(tokens.filterNot { it.kind == TokenKind.COMMENT }, policy), policy)
+                }
                 without(oldContent) == without(newContent)
             }
         } catch (e: Exception) {
@@ -132,36 +137,38 @@ object ContentClassifier {
      * The `(type, text)` pairs that count under [policy]. A run of adjacent whitespace tokens counts as one: own tokens
      * skip the children's ranges, so the whitespace before and after a child can end up next to each other, and an
      * added or removed child must not change the count of line breaks around it.
+     *
+     * Under the Kotlin and Scala policies a run is dropped when [LineBreakRules.ignorable] says the language ignores
+     * its line break (declarations/07 R1–R7); bracket state is kept over the same declaration's own tokens (R4).
      */
     internal fun normalize(tokens: List<Token>, policy: WhitespacePolicy): List<Token> {
         if (policy == WhitespacePolicy.SIGNIFICANT) return tokens
         val normalized = mutableListOf<Token>()
         val run = StringBuilder() // the text of the current whitespace run
+        val depth = BracketDepth()
+        var previous: String? = null
         fun endsWithLineBreak(token: Token): Boolean =
             token.text.lastOrNull() == '\n' || token.text.lastOrNull() == '\r'
-        fun endRun() {
+        fun endRun(next: String?) {
             if (run.isEmpty()) return
             val text = run.toString()
             run.setLength(0)
             val lastBreak = maxOf(text.lastIndexOf('\n'), text.lastIndexOf('\r'))
-            when (policy) {
-                WhitespacePolicy.LINE_BREAKS_SIGNIFICANT ->
-                    if (lastBreak >= 0) normalized += LINE_BREAK
-                WhitespacePolicy.SEPARATION_SIGNIFICANT -> {
-                    if (lastBreak >= 0) {
-                        normalized += LINE_BREAK
-                    } else {
-                        // Indentation after a line break is not a token separator: drop it so the amount of indentation
-                        // does not matter. A line break may be a WHITESPACE token (emitted as LINE_BREAK) or a
-                        // non-whitespace token whose text ends with a line break.
-                        val afterLineBreak = normalized.lastOrNull()?.let { it == LINE_BREAK || endsWithLineBreak(it) } == true
-                        if (!afterLineBreak) normalized += SPACE
-                    }
+            if (lastBreak < 0) {
+                if (policy == WhitespacePolicy.SEPARATION_SIGNIFICANT) {
+                    // Indentation after a line break is not a token separator: drop it so the amount of indentation
+                    // does not matter. A line break may be a WHITESPACE token (emitted as LINE_BREAK) or a
+                    // non-whitespace token whose text ends with a line break.
+                    val afterLineBreak = normalized.lastOrNull()?.let { it == LINE_BREAK || endsWithLineBreak(it) } == true
+                    if (!afterLineBreak) normalized += SPACE
                 }
-                // The indentation of the next line: the run's text after its last line break.
-                WhitespacePolicy.INDENTATION_SIGNIFICANT ->
-                    if (lastBreak >= 0) normalized += lineBreak(text.substring(lastBreak + 1))
-                else -> {}
+                return
+            }
+            if (LineBreakRules.ignorable(policy, previous, next, depth)) return
+            when {
+                policy.countsLineBreaks -> normalized += LINE_BREAK
+                policy.countsIndentation -> normalized += lineBreak(text.substring(lastBreak + 1))
+                policy == WhitespacePolicy.SEPARATION_SIGNIFICANT -> normalized += LINE_BREAK
             }
         }
         for (token in tokens) {
@@ -169,12 +176,35 @@ object ContentClassifier {
                 TokenKind.WHITESPACE -> run.append(token.text)
                 TokenKind.SEPARATOR -> Unit
                 else -> {
-                    endRun()
+                    endRun(token.text)
                     normalized += token
+                    LineBreakRules.track(depth, token.text)
+                    previous = token.text
                 }
             }
         }
-        endRun()
+        endRun(null)
         return normalized
+    }
+
+    /** The normalized tokens as compared under [policy]: Scala 3 strips the whole declaration's common shift (R8). */
+    private fun comparable(normalized: List<Token>, policy: WhitespacePolicy): List<Token> =
+        if (policy == WhitespacePolicy.SCALA3_INDENTATION) applyIndentShift(normalized, indentationShift(normalized)) else normalized
+
+    /** The common indentation of every counted line-break run in [normalized], or null when it is not uniform (R8). */
+    internal fun indentationShift(normalized: List<Token>): String? =
+        LineBreakRules.commonIndent(normalized.filter { it.kind == TokenKind.WHITESPACE && it.text.startsWith("⏎") }
+            .map { it.text.drop(1) })
+
+    /** [normalized] with [shift] removed from the indentation of every counted line-break run (R8). */
+    internal fun applyIndentShift(normalized: List<Token>, shift: String?): List<Token> {
+        if (shift.isNullOrEmpty()) return normalized
+        return normalized.map { token ->
+            if (token.kind == TokenKind.WHITESPACE && token.text.startsWith("⏎")) {
+                token.copy(text = "⏎" + token.text.drop(1).removePrefix(shift))
+            } else {
+                token
+            }
+        }
     }
 }

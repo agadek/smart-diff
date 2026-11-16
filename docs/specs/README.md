@@ -58,6 +58,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [04 Kind changes](declarations/04-kind-changes.md) | implemented, 2026-10-23 |
 | [05 Extraction detection](declarations/05-extraction-detection.md) | implemented, 2026-10-23 |
 | [06 Change labels](declarations/06-change-labels.md) | implemented, 2026-11-04 (`usages renamed` with 04) |
+| [07 Kotlin and Scala formatting](declarations/07-kotlin-scala-formatting.md) | implemented, 2026-11-16 |
 
 ## Languages
 
@@ -76,6 +77,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [11 Properties](languages/11-properties.md) | implemented, 2026-11-15 |
 | [12 TOML](languages/12-toml.md) | implemented, 2026-11-15 |
 | [13 XML](languages/13-xml.md) | implemented, 2026-11-16 |
+| [14 Markdown](languages/14-markdown.md) | implemented, 2026-11-16 |
 | [15 HTML](languages/15-html.md) | accepted, 2026-11-16 |
 
 ## Outline
@@ -93,6 +95,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [09 Outline minimum width](outline/09-outline-minimum-width.md) | implemented, 2026-11-14 |
 | [10 Outline settings button](outline/10-outline-settings-button.md) | implemented, 2026-11-15 |
 | [11 Comment-only changes](outline/11-comment-only-changes.md) | implemented, 2026-11-16 |
+| [12 Reviewed marks](outline/12-reviewed-marks.md) | implemented, 2026-11-16 |
 
 ## Changes tree
 
