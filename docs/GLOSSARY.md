@@ -362,3 +362,8 @@ _Avoid_: filtering viewer, custom viewer
 
 The tree of changed files in the Local Changes view and the Commit tool window.
 _Avoid_: change list, commit tree
+
+### Review tree
+
+A tree of changed files outside the [Changes tree](#changes-tree): the Git log's commit details, or the changes of a GitHub pull request or a GitLab merge request.
+_Avoid_: change browser, commit tree, PR tree
