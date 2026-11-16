@@ -110,6 +110,14 @@ class XmlDeclarationProviderTest : ProviderTestCase() {
         assertTrue("reordered attributes are a change: ${nodes(reordered)}", changed(reordered).isNotEmpty())
     }
 
+    // languages/13-xml R7
+    fun `test a blank attribute value change is a change`() {
+        val emptied = compare("<a x=\" \" y=\"1\"/>\n", "<a x=\"\" y=\"1\"/>\n")
+        assertTrue("emptying a blank attribute value is a change: ${nodes(emptied)}", changed(emptied).isNotEmpty())
+        val resized = compare("<a x=\" \" y=\"1\"/>\n", "<a x=\"  \" y=\"1\"/>\n")
+        assertTrue("resizing a blank attribute value is a change: ${nodes(resized)}", changed(resized).isNotEmpty())
+    }
+
     // languages/13-xml R9, R10
     fun `test text compares exactly and layout between tags is formatting-only`() {
         val spacing = compare("<a><b>x y</b></a>\n", "<a><b>x  y</b></a>\n")
@@ -121,6 +129,47 @@ class XmlDeclarationProviderTest : ProviderTestCase() {
         val indentedText = compare("<a>\n  text\n</a>\n", "<a>\n      text\n</a>\n")
         assertTrue("indentation around text is formatting-only: ${nodes(indentedText)}", changed(indentedText).isEmpty())
         assertEquals(WhitespacePolicy.INSIGNIFICANT, build("XML", "<a/>\n").whitespacePolicy)
+    }
+
+    // languages/13-xml R9
+    fun `test text and CDATA spacing remain changes`() {
+        val text = compare("<a><b>x y</b></a>\n", "<a><b>x  y</b></a>\n")
+        assertTrue("text spacing is a change: ${nodes(text)}", changed(text).isNotEmpty())
+        val cdata = compare("<a><![CDATA[x y]]></a>\n", "<a><![CDATA[x  y]]></a>\n")
+        assertTrue("CDATA spacing is a change: ${nodes(cdata)}", changed(cdata).isNotEmpty())
+    }
+
+    // languages/13-xml R9
+    fun `test spaces beside an inline child tag compare exactly`() {
+        val result = compare("<p>a <b>x</b> c</p>\n", "<p>a<b>x</b>c</p>\n")
+        assertTrue("spaces beside an inline child tag are a change: ${nodes(result)}", changed(result).isNotEmpty())
+    }
+
+    // languages/13-xml R9
+    fun `test spaces beside an entity reference compare exactly`() {
+        val result = compare("<p>a &amp; b</p>\n", "<p>a&amp;b</p>\n")
+        assertTrue("spaces beside an entity reference are a change: ${nodes(result)}", changed(result).isNotEmpty())
+    }
+
+    // languages/13-xml R10
+    fun `test re-indenting and spacing between attributes remain formatting-only`() {
+        val result = compare(
+            "<a>\n  <b x=\"1\">t</b>\n</a>\n",
+            "<a>\n      <b   x=\"1\" >t</b>\n</a>\n",
+        )
+        assertTrue("re-indenting and attribute spacing are formatting-only: ${nodes(result)}", changed(result).isEmpty())
+        val spacing = compare("<a x=\"1\" y=\"2\"/>\n", "<a   x=\"1\"    y=\"2\"  />\n")
+        assertTrue("spacing between attributes is formatting-only: ${nodes(spacing)}", changed(spacing).isEmpty())
+    }
+
+    // languages/13-xml R10
+    fun `test re-indenting a whole file stays formatting-only`() {
+        val result = compare(
+            "<?xml version=\"1.0\"?>\n<a>\n  <b>x</b>\n  <c y=\"1\">t</c>\n</a>\n",
+            "<?xml version=\"1.0\"?>\n<a>\n    <b>x</b>\n    <c  y=\"1\" >t</c>\n</a>\n",
+        )
+        assertEquals(Status.ANALYZED, result.status)
+        assertTrue("re-indenting is formatting-only: ${nodes(result)}", changed(result).isEmpty())
     }
 
     // languages/13-xml R11
@@ -155,6 +204,35 @@ class XmlDeclarationProviderTest : ProviderTestCase() {
         assertEquals(Status.ANALYZED, prolog.status)
         assertTrue("the root tag is unchanged: ${nodes(prolog)}", changed(prolog).isEmpty())
         assertEquals("the file region changed", Content.CHANGED, prolog.fileRegion?.content)
+    }
+
+    // languages/13-xml R14
+    fun `test whitespace inside a comment is a change`() {
+        val result = compare("<a><!-- x  y --></a>\n", "<a><!-- x y --></a>\n")
+        assertTrue("comment spacing is a change: ${nodes(result)}", changed(result).isNotEmpty())
+        val blank = compare("<a><!--   --></a>\n", "<a><!-- --></a>\n")
+        assertTrue("blank comment spacing is a change: ${nodes(blank)}", changed(blank).isNotEmpty())
+    }
+
+    // languages/13-xml R15
+    fun `test whitespace inside a prolog processing instruction is a file region change`() {
+        val result = compare("<?xml   version=\"1.0\"?>\n<a/>\n", "<?xml version=\"1.0\"?>\n<a/>\n")
+        assertEquals(Status.ANALYZED, result.status)
+        assertTrue("the root tag is unchanged: ${nodes(result)}", changed(result).isEmpty())
+        assertEquals("the file region changed", Content.CHANGED, result.fileRegion?.content)
+        val trailing = compare("<?xml version=\"1.0\" ?>\n<a/>\n", "<?xml version=\"1.0\"?>\n<a/>\n")
+        assertEquals("the file region changed", Content.CHANGED, trailing.fileRegion?.content)
+    }
+
+    // languages/13-xml R15
+    fun `test whitespace inside a doctype is a file region change`() {
+        val result = compare(
+            "<!DOCTYPE   config SYSTEM \"config.dtd\">\n<a/>\n",
+            "<!DOCTYPE config SYSTEM \"config.dtd\">\n<a/>\n",
+        )
+        assertEquals(Status.ANALYZED, result.status)
+        assertTrue("the root tag is unchanged: ${nodes(result)}", changed(result).isEmpty())
+        assertEquals("the file region changed", Content.CHANGED, result.fileRegion?.content)
     }
 
     // languages/13-xml R17

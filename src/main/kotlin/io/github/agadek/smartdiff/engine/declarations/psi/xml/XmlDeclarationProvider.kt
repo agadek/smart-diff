@@ -6,11 +6,15 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
+import com.intellij.psi.TokenType
 import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.psi.xml.XmlDoctype
 import com.intellij.psi.xml.XmlElementType
 import com.intellij.psi.xml.XmlFile
+import com.intellij.psi.xml.XmlProcessingInstruction
 import com.intellij.psi.xml.XmlTag
 import com.intellij.psi.xml.XmlText
+import com.intellij.psi.xml.XmlTokenType
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
@@ -28,11 +32,13 @@ class XmlDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.INSIGNIFI
     override fun supports(languageId: String): Boolean = languageId == XMLLanguage.INSTANCE.id
 
     /**
-     * Whitespace in tag content is its own token type, which the parser definition does not list as whitespace: it is
-     * layout like any other whitespace, and [significantWhitespace] keeps it exact inside text (R9, R10).
+     * Only the XML lexer's whitespace token types are layout (R10). A blank token of another type is content: for
+     * example a blank attribute value or the characters of a comment (R7, R14). Processing instructions and DOCTYPEs
+     * use the same generic whitespace type as the layout between attributes, so [significantWhitespace] keeps their
+     * spacing exact (R15).
      */
     override fun tokenKind(type: String, text: String, kind: TokenKind): TokenKind =
-        if (kind == TokenKind.OTHER && text.isNotEmpty() && text.isBlank()) TokenKind.WHITESPACE else kind
+        if (kind == TokenKind.OTHER && text.isNotEmpty() && text.isBlank() && type in LAYOUT_TOKEN_TYPES) TokenKind.WHITESPACE else kind
 
     override fun parse(project: Project, text: CharSequence, fileName: String?, dialect: Language?): PsiFile =
         PsiFileFactory.getInstance(project).createFileFromText(fileName ?: DEFAULT_NAME, XMLLanguage.INSTANCE, text, false, false)
@@ -70,8 +76,9 @@ class XmlDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.INSIGNIFI
         tag.subTags.firstOrNull { it.name == name }?.value?.text?.trim()?.takeIf { it.isNotEmpty() }
 
     /**
-     * Text content compares exactly (R9): each text with a non-whitespace character, from its first to its last
-     * non-whitespace character, so indentation around it stays layout; and each CDATA section whole.
+     * Ranges whose spacing compares exactly: text content, CDATA, processing instructions and DOCTYPEs (R9, R14, R15).
+     * A text's range spans its non-whitespace core and any edge whitespace without a line break, so spaces beside an
+     * inline child tag or an entity reference stay exact while indentation around it stays layout (R10).
      */
     override fun significantWhitespace(file: PsiFile): List<TextRange> {
         val ranges = mutableListOf<TextRange>()
@@ -81,10 +88,14 @@ class XmlDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.INSIGNIFI
             if (first < 0) continue
             val last = content.indexOfLast { !it.isWhitespace() }
             val start = text.textRange.startOffset
-            ranges += TextRange(start + first, start + last + 1)
+            val from = if (content.substring(0, first).hasLineBreak()) first else 0
+            val to = if (content.substring(last + 1).hasLineBreak()) last + 1 else content.length
+            ranges += TextRange(start + from, start + to)
         }
         PsiTreeUtil.processElements(file) { element ->
-            if (element.node.elementType == XmlElementType.XML_CDATA) {
+            if (element.node.elementType == XmlElementType.XML_CDATA ||
+                element is XmlProcessingInstruction || element is XmlDoctype
+            ) {
                 ranges += TextRange(element.textRange.startOffset, element.textRange.endOffset)
             }
             true
@@ -92,8 +103,15 @@ class XmlDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.INSIGNIFI
         return ranges
     }
 
+    private fun String.hasLineBreak() = any { it == '\n' || it == '\r' }
+
     private companion object {
         const val DEFAULT_NAME = "SmartDiff.xml"
         val IDENTIFYING_ATTRIBUTES = listOf("id", "name")
+        val LAYOUT_TOKEN_TYPES = setOf(
+            XmlTokenType.XML_WHITE_SPACE.toString(),
+            XmlTokenType.XML_REAL_WHITE_SPACE.toString(),
+            TokenType.WHITE_SPACE.toString(),
+        )
     }
 }
