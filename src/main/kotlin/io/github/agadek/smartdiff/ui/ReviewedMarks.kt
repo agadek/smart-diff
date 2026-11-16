@@ -114,13 +114,21 @@ class ReviewedMarks(private val project: Project) : PersistentStateComponent<Rev
     fun hasMarks(fileKey: String): Boolean = current.marks.any { it.fileKey == fileKey }
 
     /**
-     * Reads the marks of [fileKey] against the shown [result], dropping a mark whose path matches a node with different
-     * text. A mark whose path is absent is kept, since another diff of the file may show it again (outline/12 R8).
+     * Reads the marks of [fileKey] against the shown [result]. A mark whose path matches a node with different text is
+     * dropped only for a newly compared result ([dropStale] true); a rebuild from the kept result passes false and only
+     * reads the marks, so another open outline of the same file with different text cannot drop it (outline/12 R8). A
+     * mark whose path is absent is kept, since another diff of the file may show it again (outline/12 R8).
      */
-    fun apply(fileKey: String, result: ComparisonResult, request: ComparisonRequest, whitespacePolicy: WhitespacePolicy): Reviewed {
+    fun apply(
+        fileKey: String,
+        result: ComparisonResult,
+        request: ComparisonRequest,
+        whitespacePolicy: WhitespacePolicy,
+        dropStale: Boolean = true,
+    ): Reviewed {
         val marks = marksFor(fileKey)
         val reviewed = applyMarks(marks, result, request, whitespacePolicy)
-        if (reviewed.stale.isNotEmpty()) {
+        if (dropStale && reviewed.stale.isNotEmpty()) {
             val keys = reviewed.stale.mapTo(HashSet()) { it.path to it.fingerprint }
             replace(current.marks.filterNot { mark -> mark.fileKey == fileKey && mark.path to mark.fingerprint in keys })
         }

@@ -512,19 +512,27 @@ class OutlineController internal constructor(
         rebuild()
     }
 
-    /** Rebuilds the shown rows from the kept result for a display-only setting change. */
+    /** Rebuilds the shown rows from the kept result, reading the marks without dropping stale ones (outline/12 R8). */
     private fun rebuild() {
         val shown = state as? OutlineState.Shown ?: return
         val request = shownRequest ?: return
-        showResult(request, shown.result, shown.usageNote, keepSelection = true, policy = shown.whitespacePolicy)
+        showResult(
+            request, shown.result, shown.usageNote, keepSelection = true,
+            policy = shown.whitespacePolicy, dropStale = false,
+        )
     }
 
+    /**
+     * Shows [result]. [dropStale] is false only for a rebuild from the kept result, which reads the marks without
+     * dropping those whose text no longer matches; a freshly compared result drops them (outline/12 R8).
+     */
     private fun showResult(
         request: ComparisonRequest,
         result: ComparisonResult,
         note: String? = null,
         keepSelection: Boolean = false,
         policy: WhitespacePolicy? = null,
+        dropStale: Boolean = true,
     ) {
         val settings = SmartDiffSettings.getInstance()
         val hidden = settings.hiddenChangeTypes
@@ -535,10 +543,10 @@ class OutlineController internal constructor(
         val view = settings.outlineView
         reviewed = if (fileKey == null) {
             val applied = ReviewedMarks.applyMarks(localMarks, result, request, whitespacePolicy)
-            if (applied.stale.isNotEmpty()) localMarks.removeAll(applied.stale)
+            if (dropStale && applied.stale.isNotEmpty()) localMarks.removeAll(applied.stale)
             applied
         } else {
-            marks.apply(fileKey, result, request, whitespacePolicy)
+            marks.apply(fileKey, result, request, whitespacePolicy, dropStale)
         }
         val reviewedNodes = reviewed.reviewed
         val items = if (view == OutlineView.REFACTORINGS) {
@@ -564,7 +572,7 @@ class OutlineController internal constructor(
                 whitespacePolicy,
             ),
         )
-        if (fileKey != null && reviewed.stale.isNotEmpty()) marks.publish(fileKey)
+        if (fileKey != null && dropStale && reviewed.stale.isNotEmpty()) marks.publish(fileKey)
         if (view == OutlineView.REFACTORINGS) {
             usageHighlights.show(result, settings.hiddenRelationshipKinds)
         } else {
