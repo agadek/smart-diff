@@ -26,8 +26,6 @@ import org.intellij.plugins.markdown.lang.psi.impl.MarkdownHeader
  */
 class MarkdownDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.SIGNIFICANT) {
 
-    private var sections: Map<PsiElement, Section>? = null
-
     override fun supports(languageId: String): Boolean = languageId == "Markdown"
 
     override fun parse(project: Project, text: CharSequence, fileName: String?, dialect: Language?): PsiFile {
@@ -37,18 +35,19 @@ class MarkdownDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.SIGN
     }
 
     override fun build(file: PsiFile, cancellation: Cancellation): DeclarationTree {
-        sections = computeSections(file, cancellation)
+        val previous = activeSections.get()
+        activeSections.set(computeSections(file, cancellation))
         return try {
             super.build(file, cancellation)
         } finally {
-            sections = null
+            if (previous == null) activeSections.remove() else activeSections.set(previous)
         }
     }
 
     override fun topLevel(file: PsiFile): List<PsiElement> =
-        sections?.values?.filter { it.parent == null }?.map { it.element }.orEmpty()
+        activeSections.get()?.values?.filter { it.parent == null }?.map { it.element }.orEmpty()
 
-    override fun describe(element: PsiElement): DeclarationInfo? = sections?.get(element)?.let { section ->
+    override fun describe(element: PsiElement): DeclarationInfo? = activeSections.get()?.get(element)?.let { section ->
         DeclarationInfo(
             kind = DeclarationKind.SECTION,
             name = section.name,
@@ -64,17 +63,11 @@ class MarkdownDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.SIGN
         val headings = sectionElements(file)
         val result = linkedMapOf<PsiElement, Section>()
         val open = ArrayDeque<Section>()
-        for ((index, element) in headings.withIndex()) {
+        for (element in headings) {
             cancellation.checkCanceled()
             val frontMatter = element is MarkdownFrontMatterHeader
             val header = element as? MarkdownHeader
-            val range = if (frontMatter) {
-                element.textRange.let { TextRange(it.startOffset, it.endOffset) }
-            } else {
-                val level = header?.level ?: error("a Markdown section is a header or front matter: $element")
-                val next = headings.drop(index + 1).filterIsInstance<MarkdownHeader>().firstOrNull { it.level <= level }
-                TextRange(element.textRange.startOffset, next?.textRange?.startOffset ?: textLength)
-            }
+            val start = element.textRange.startOffset
             val content = header?.contentElement
             val trimmed = content?.text?.trim().orEmpty()
             val name = when {
@@ -85,8 +78,22 @@ class MarkdownDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.SIGN
             val nameRange = if (frontMatter || trimmed.isEmpty()) element.textRange else content!!.textRange
             // Front matter is a standalone top-level section: any heading closes it rather than nesting under it.
             val level = if (frontMatter) Int.MAX_VALUE else header!!.level
+            // A heading ends every section still open at its level or deeper (R6). Closing sections here, in the same
+            // pass that builds the stack, avoids re-scanning all later headings for each section (quadratic).
+            while (open.isNotEmpty() && open.last().level >= level) {
+                val closed = open.removeLast()
+                if (closed.element !is MarkdownFrontMatterHeader) {
+                    closed.range = TextRange(closed.range.start, start)
+                }
+            }
+            // Front matter covers only its own text; a heading runs to the next one of its level or higher, or to the
+            // end of the file when no such heading appears (sections still open after the pass keep textLength).
+            val range = if (frontMatter) {
+                element.textRange.let { TextRange(it.startOffset, it.endOffset) }
+            } else {
+                TextRange(start, textLength)
+            }
             val section = Section(element, level, name, nameRange.let { TextRange(it.startOffset, it.endOffset) }, range)
-            while (open.isNotEmpty() && open.last().level >= level) open.removeLast()
             section.parent = open.lastOrNull()
             section.parent?.members?.add(section)
             open.addLast(section)
@@ -117,13 +124,14 @@ class MarkdownDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.SIGN
         val level: Int,
         val name: String,
         val nameRange: TextRange,
-        val range: TextRange,
+        var range: TextRange,
     ) {
         var parent: Section? = null
         val members = mutableListOf<Section>()
     }
 
     private companion object {
+        private val activeSections = ThreadLocal<Map<PsiElement, Section>>()
         const val DEFAULT_NAME = "SmartDiff.md"
         const val EMPTY_HEADING = "(empty heading)"
         const val FRONT_MATTER = "front matter"

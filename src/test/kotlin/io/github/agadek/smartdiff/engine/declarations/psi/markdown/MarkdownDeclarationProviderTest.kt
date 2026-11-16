@@ -1,8 +1,10 @@
 package io.github.agadek.smartdiff.engine.declarations.psi.markdown
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.ThrowableComputable
+import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
@@ -13,9 +15,12 @@ import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 import io.github.agadek.smartdiff.engine.declarations.model.Declaration
+import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationEngine
 import io.github.agadek.smartdiff.engine.declarations.psi.ProviderTestCase
 import java.io.File
+import java.util.concurrent.Callable
+import java.util.concurrent.TimeUnit
 
 class MarkdownDeclarationProviderTest : ProviderTestCase() {
 
@@ -60,6 +65,36 @@ class MarkdownDeclarationProviderTest : ProviderTestCase() {
         assertEquals(listOf("One", "Two"), tree.topLevel.map { it.name })
         assertEquals(listOf("Three"), tree.topLevel[1].children.map { it.name })
         assertTrue(tree.all.all { it.kind == DeclarationKind.SECTION })
+    }
+
+    // languages/14-markdown R3
+    fun `test concurrent builds of different files keep their own sections`() {
+        val provider = provider("Markdown")
+        val headingCount = 100
+        val leftText = (1..headingCount).joinToString("\n\n") { "# Left $it" } + "\n"
+        val rightText = (1..headingCount).joinToString("\n\n") { "## Right $it" } + "\n"
+        val (leftFile, rightFile) = ReadAction.compute(ThrowableComputable<Pair<PsiFile, PsiFile>, RuntimeException> {
+            val project = ProjectManager.getInstance().defaultProject
+            provider.parse(project, leftText, "left.md", null) to provider.parse(project, rightText, "right.md", null)
+        })
+
+        val futures = (0 until 8).map { thread ->
+            ApplicationManager.getApplication().executeOnPooledThread(Callable {
+                repeat(120) { iteration ->
+                    val useLeft = (thread + iteration) % 2 == 0
+                    val file = if (useLeft) leftFile else rightFile
+                    val prefix = if (useLeft) "Left" else "Right"
+                    val tree = ReadAction.compute(ThrowableComputable<DeclarationTree, RuntimeException> {
+                        provider.build(file, Cancellation.NONE)
+                    })
+                    assertTrue(
+                        "the tree of ${file.name} contains its own sections: $tree",
+                        tree.topLevel.size == headingCount && tree.topLevel.all { it.name.startsWith(prefix) },
+                    )
+                }
+            })
+        }
+        futures.forEach { it.get(2, TimeUnit.MINUTES) }
     }
 
     // languages/14-markdown R4
