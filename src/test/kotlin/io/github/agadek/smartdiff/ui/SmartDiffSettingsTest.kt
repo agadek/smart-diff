@@ -412,6 +412,22 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
         assertEquals("no rules apply while the option is off", emptySet<EquivalenceRule>(), settings.rewriteOnlyRules)
     }
 
+    // declarations/09-kotlin-scala-equivalence-rules R2, R3
+    fun `test the Kotlin and Scala rules are on for a user who turned a Java rule off`() {
+        settings.loadState(SmartDiffSettings.SettingsState().apply {
+            markRewriteOnly = true
+            disabledEquivalenceRules = EquivalenceRule.JAVA_STRING_ESCAPES.name
+        })
+        val added = EquivalenceRule.entries.filter { it.language == "Kotlin" || it.language == "Scala" }
+        assertEquals(7, added.size)
+        assertTrue(settings.rewriteOnlyRules.containsAll(added))
+        assertFalse(EquivalenceRule.JAVA_STRING_ESCAPES in settings.rewriteOnlyRules)
+
+        settings.disabledEquivalenceRules = setOf(EquivalenceRule.KOTLIN_STRING_ESCAPES.name)
+        assertTrue("turning a Kotlin rule off leaves Java's on", EquivalenceRule.JAVA_STRING_ESCAPES in settings.rewriteOnlyRules)
+        assertTrue("and Scala's", EquivalenceRule.SCALA_STRING_ESCAPES in settings.rewriteOnlyRules)
+    }
+
     // declarations/08-equivalence-rules R1, R2, R3, R17
     fun `test rewrite-only marking and the rules are persisted and are display settings`() {
         settings.loadState(SmartDiffSettings.SettingsState())
@@ -449,7 +465,15 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
             assertFalse(configurable.isModified)
             val boxes = UIUtil.findComponentsOfType(panel, JBCheckBox::class.java)
             val mark = boxes.single { it.text == "Mark rewrite-only changes" }
-            val rules = EquivalenceRule.entries.map { rule -> boxes.single { it.text == rule.displayName } }
+            // declarations/09 R2: the rule checkboxes appear in declaration order, so the Java, Kotlin and Scala groups
+            // follow each other and a display name shared by several languages is told apart by its position.
+            val names = EquivalenceRule.entries.map { it.displayName }.toSet()
+            val rules = boxes.filter { it.text in names }
+            assertEquals(EquivalenceRule.entries.map { it.displayName }, rules.map { it.text })
+            val labels = UIUtil.findComponentsOfType(panel, javax.swing.JLabel::class.java).map { it.text }
+            val groups = EquivalenceRule.entries.map { it.language }.distinct()
+            assertEquals(listOf("Java", "Kotlin", "Scala"), groups)
+            assertEquals(groups, labels.filter { it in groups })
             val hide = boxes.single { it.text == ChangeType.REWRITE_ONLY.text }
             assertFalse("the option starts off", mark.isSelected)
             assertTrue("every rule starts on", rules.all { it.isSelected })
@@ -459,7 +483,7 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
             mark.isSelected = true
             assertTrue("the rules follow the option", rules.all { it.isEnabled })
             assertTrue(hide.isEnabled)
-            boxes.single { it.text == EquivalenceRule.JAVA_REDUNDANT_PARENTHESES.displayName }.isSelected = false
+            rules[EquivalenceRule.JAVA_REDUNDANT_PARENTHESES.ordinal].isSelected = false
             assertTrue(configurable.isModified)
             configurable.apply()
             assertFalse(configurable.isModified)

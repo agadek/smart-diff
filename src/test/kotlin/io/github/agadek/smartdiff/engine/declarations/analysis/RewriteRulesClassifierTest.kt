@@ -9,6 +9,8 @@ import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 import io.github.agadek.smartdiff.engine.declarations.model.EquivalenceRuleImpl
 import io.github.agadek.smartdiff.engine.declarations.psi.java.JavaEquivalenceRules
 import io.github.agadek.smartdiff.engine.declarations.psi.java.javaTokens
+import io.github.agadek.smartdiff.engine.declarations.psi.kotlin.KotlinEquivalenceRules
+import io.github.agadek.smartdiff.engine.declarations.psi.kotlin.kotlinTokens
 
 /** The rule set of a node, [ContentClassifier.rewriteRules], on Java tokens (declarations/08 R4 to R7). */
 class RewriteRulesClassifierTest : BasePlatformTestCase() {
@@ -73,5 +75,25 @@ class RewriteRulesClassifierTest : BasePlatformTestCase() {
     // declarations/08-equivalence-rules R18
     fun `test a provider without rules never produces a rule set`() {
         assertEquals(emptySet<EquivalenceRule>(), rules("int f() { return 0x10; }", "int f() { return 16; }", rules = emptyList()))
+    }
+
+    private fun kotlinRules(old: String, new: String): Set<EquivalenceRule> = ContentClassifier.rewriteRules(
+        kotlinTokens(old), kotlinTokens(new), WhitespacePolicy.KOTLIN_LINE_BREAKS, parseError = false, rules = KotlinEquivalenceRules.ALL,
+    )
+
+    // declarations/09-kotlin-scala-equivalence-rules R1, R6
+    fun `test template braces and escapes together are the smallest set`() {
+        val d = "$"
+        assertEquals(
+            setOf(EquivalenceRule.KOTLIN_TEMPLATE_BRACES, EquivalenceRule.KOTLIN_STRING_ESCAPES),
+            kotlinRules("fun f() = \"$d{x}\\u0021\"", "fun f() = \"${d}x!\""),
+        )
+        assertEquals(setOf(EquivalenceRule.KOTLIN_TEMPLATE_BRACES), kotlinRules("fun f() = \"$d{x}!\"", "fun f() = \"${d}x!\""))
+    }
+
+    // declarations/09-kotlin-scala-equivalence-rules R1
+    fun `test a Kotlin rewrite with a comment change has no rules`() {
+        assertEquals(emptySet<EquivalenceRule>(), kotlinRules("fun f() = 0x10 // old", "fun f() = 16 // new"))
+        assertEquals(setOf(EquivalenceRule.KOTLIN_NUMERIC_LITERALS), kotlinRules("fun f() = 0x10 // same", "fun f() = 16 // same"))
     }
 }

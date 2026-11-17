@@ -12,6 +12,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
+import io.github.agadek.smartdiff.engine.declarations.model.EquivalenceRuleImpl
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationInfo
 import io.github.agadek.smartdiff.engine.declarations.psi.PsiDeclarationProvider
 import io.github.agadek.smartdiff.engine.declarations.psi.Signatures
@@ -59,6 +60,9 @@ import org.jetbrains.plugins.scala.lang.scaladoc.psi.api.ScDocComment
  * `Scala3Language`, and a file built from text has no module whose settings could change that.
  */
 class ScalaDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.SCALA2_LINE_BREAKS) {
+
+    // declarations/09 R15: Kotlin and Scala declarations use only their own language's rules.
+    override val equivalenceRules: List<EquivalenceRuleImpl> get() = ScalaEquivalenceRules.ALL
 
     override val guardedFeature: GuardedFeature get() = GuardedFeature.SCALA_PROVIDER
 

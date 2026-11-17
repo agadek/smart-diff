@@ -19,4 +19,25 @@ enum class EquivalenceRule(
 
     /** R12: parentheses around a whole expression where they cannot change how it is grouped. */
     JAVA_REDUNDANT_PARENTHESES("Java", "Redundant parentheses"),
+
+    /** declarations/09 R4: a Kotlin integer or floating-point literal in another base or format, same suffix and value. */
+    KOTLIN_NUMERIC_LITERALS("Kotlin", "Numeric literals in another base or format"),
+
+    /** declarations/09 R5: a Kotlin string or character literal with other escapes for the same characters. */
+    KOTLIN_STRING_ESCAPES("Kotlin", "Strings and characters with other escapes"),
+
+    /** declarations/09 R6: `${name}` written as `$name` in a string template where the braces are not needed. */
+    KOTLIN_TEMPLATE_BRACES("Kotlin", "Redundant braces in string templates"),
+
+    /** declarations/09 R7, R8: Kotlin parentheses around a whole expression where they cannot change its grouping. */
+    KOTLIN_REDUNDANT_PARENTHESES("Kotlin", "Redundant parentheses"),
+
+    /** declarations/09 R9: a Scala integer or floating-point literal in another base or format, same type and value. */
+    SCALA_NUMERIC_LITERALS("Scala", "Numeric literals in another base or format"),
+
+    /** declarations/09 R10: a plain Scala string or character literal with other escapes for the same characters. */
+    SCALA_STRING_ESCAPES("Scala", "Strings and characters with other escapes"),
+
+    /** declarations/09 R11, R12: Scala parentheses around a whole expression where they cannot change its grouping. */
+    SCALA_REDUNDANT_PARENTHESES("Scala", "Redundant parentheses"),
 }
