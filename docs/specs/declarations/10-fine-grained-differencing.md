@@ -9,18 +9,18 @@ Status: proposed, 2026-11-17
 ## Requirements
 
 - **R1** "Highlight changed tokens in the SMART Diff viewer" is on by default, and with it off the SMART Diff viewer is the same as without this feature.
-- **R2** For each changed declaration matched on both sides, and for a changed [file region](../../GLOSSARY.md#file-region), the declaration engine reports its changed runs.
+- **R2** For each changed or formatting-only declaration matched on both sides, and for a changed or formatting-only [file region](../../GLOSSARY.md#file-region), the declaration engine compares its tokens and reports its changed runs; a formatting-only one has none.
 - **R3** The engine compares a declaration's own source token by token, by token type and text, leaving out the source of its child declarations.
 - **R4** Whitespace takes part in the comparison only as far as the language's formatting rules make it significant.
 - **R5** A comment is compared by its exact text, and a changed comment is a changed run.
 - **R6** Changed tokens that are next to each other, or separated only by whitespace, form one changed run.
-- **R7** Tokens that keep their text but change their order are changed runs on both sides.
+- **R7** Tokens that keep their text but change their order give at least one changed run on each side.
 - **R8** Every token the comparison finds different lies in a changed run.
 - **R9** A declaration with a [parse error](../../GLOSSARY.md#parse-error) on either side, or [unanalyzed](../../GLOSSARY.md#unanalyzed) content, has no changed runs.
-- **R10** A declaration with more than 20 000 own tokens on either side, or more than 2 000 changed tokens, has no changed runs.
-- **R11** In the SMART Diff viewer, a native change whose lines on both sides lie inside declarations with changed runs highlights only those runs within its lines, in place of the native word highlights.
-- **R12** Such a native change whose lines hold no changed run keeps its line colour and shows no word highlights.
-- **R13** A native change with a line outside every declaration that has changed runs keeps the native word highlights.
+- **R10** A declaration with more than 20 000 own tokens on either side, or an edit distance of more than 2 000 removed and added tokens together, is not compared by tokens and has no changed runs.
+- **R11** In the SMART Diff viewer, a native change whose lines on both sides lie inside declarations or the file region compared by tokens highlights only those runs within its lines, in place of the native word highlights.
+- **R12** Such a native change whose lines hold no changed run, including a change with lines on one side only, keeps its line colour and shows no word highlights.
+- **R13** A native change with a line outside every declaration and file region compared by tokens keeps the native word highlights.
 - **R14** The SMART Diff viewer keeps the native changes' lines, their order, next and previous change, and their gutter actions.
 - **R15** With the viewer's highlighting set to anything other than words or characters, the SMART Diff viewer highlights as the native viewer does.
 - **R16** Nothing is highlighted from changed runs while an edit is compared again, or while the outline is off; the native word highlights show then.

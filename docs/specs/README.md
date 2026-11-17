@@ -62,7 +62,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [06 Change labels](declarations/06-change-labels.md) | implemented, 2026-11-04 (`usages renamed` with 04) |
 | [07 Kotlin and Scala formatting](declarations/07-kotlin-scala-formatting.md) | implemented, 2026-11-16 |
 | [08 Opt-in equivalence rules](declarations/08-equivalence-rules.md) | implemented, 2026-11-17 |
-| [09 Kotlin and Scala equivalence rules](declarations/09-kotlin-scala-equivalence-rules.md) | proposed, 2026-11-17 |
+| [09 Kotlin and Scala equivalence rules](declarations/09-kotlin-scala-equivalence-rules.md) | implemented, 2026-11-17 |
 | [10 Fine-grained differencing](declarations/10-fine-grained-differencing.md) | proposed, 2026-11-17 |
 
 ## Languages
