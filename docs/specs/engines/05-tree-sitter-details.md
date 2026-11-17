@@ -10,12 +10,12 @@ Status: proposed, 2026-11-17
 
 | Phase | Work | Done when |
 | --- | --- | --- |
-| T0 | Spike S12 (§2), ADR 0015 for the parser runtime, the language resolver of [ADR 0014](../../adr/0014-tree-sitter-languages-are-chosen-by-file-name.md) and the setting | S12's questions are answered in a test or a recorded manual run, and ADR 0015 is accepted |
+| T0 | Spike S12 (§2), ADR 0016 for the parser runtime, the language resolver of [ADR 0015](../../adr/0015-tree-sitter-languages-are-chosen-by-file-name.md) and the setting | S12's questions are answered in a test or a recorded manual run, and ADR 0016 is accepted |
 | T1 | The engine, the tree builder and Swift (§4 to §8) | The Swift golden fixtures and the engine contract suite pass on every platform of R22 |
 | T2 | C#, C and C++ | Their golden fixtures pass, and the archive size check holds (R28) |
 | T3 | Merge and benchmark fixtures, and a corpus validation | R30 holds, the benchmark's `no-new-wrong-pairs` gate passes, and the results are in [VALIDATION.md](../../VALIDATION.md) |
 
-T1 can start only after ADR 0015 is accepted. T2's three languages are independent of each other.
+T1 can start only after ADR 0016 is accepted. T2's three languages are independent of each other.
 
 ### 2. Spike S12
 
@@ -27,13 +27,13 @@ S12 is added to the [technical specification §13](../../TECHNICAL-SPECIFICATION
    - **C, the official Java binding `java-tree-sitter`**, which uses the Foreign Function and Memory API; S12 checks whether it runs on JetBrains Runtime 21 without preview flags, which the plugin cannot set.
    - **D, a child process** that parses and returns the trees over standard input and output: isolates crashes for option A, at the cost of starting and managing a process.
    
-   S12 measures, for each option it can run: the archive growth for the four grammars (R28), the time to parse a 1 MB C++ file and a 1 MB Swift file on both sides (within the 5 s [time limit](03-analysis-limits.md)), whether a deliberately failing grammar call ends the IDE (R24), and whether the plugin verifier accepts the result. It records the runtime and each grammar's licence (R27). The choice is ADR 0015.
-2. **Language ids.** Which file type and language id IntelliJ IDEA 2025.1 gives `.swift`, `.cs`, `.c`, `.h` and `.cpp` files with the bundled TextMate bundles on and off, and the same on the latest release. ADR 0014 assumes plain text, the TextMate language or no language; S12 confirms it or the ADR is changed.
+   S12 measures, for each option it can run: the archive growth for the four grammars (R28), the time to parse a 1 MB C++ file and a 1 MB Swift file on both sides (within the 5 s [time limit](03-analysis-limits.md)), whether a deliberately failing grammar call ends the IDE (R24), and whether the plugin verifier accepts the result. It records the runtime and each grammar's licence (R27). The choice is ADR 0016.
+2. **Language ids.** Which file type and language id IntelliJ IDEA 2025.1 gives `.swift`, `.cs`, `.c`, `.h` and `.cpp` files with the bundled TextMate bundles on and off, and the same on the latest release. ADR 0015 assumes plain text, the TextMate language or no language; S12 confirms it or the ADR is changed.
 3. **Rider and CLion Nova.** Which language id and PSI Rider gives `.cs` files and CLion Nova gives `.cpp` files, and whether the [structure-view fallback](../languages/06-structure-view-fallback.md) already shows their declarations. The result is recorded only; using Tree-sitter there is out of scope.
 
 ### 3. Choosing the language
 
-[ADR 0014](../../adr/0014-tree-sitter-languages-are-chosen-by-file-name.md) records the decision. A new object, `EngineLanguage` in `engine.registry`, has one function:
+[ADR 0015](../../adr/0015-tree-sitter-languages-are-chosen-by-file-name.md) records the decision. A new object, `EngineLanguage` in `engine.registry`, has one function:
 
 ```kotlin
 fun of(languageId: String?, fileName: String?, treeSitterEnabled: Boolean): String?
@@ -52,7 +52,7 @@ Because the resolved id has a supporting engine, the line comparison is not used
 `compare(request, cancellation)`:
 
 1. Find the language's `TreeSitterLanguage` (§5); a missing one is `UNSUPPORTED`.
-2. Parse both sides with the runtime of ADR 0015, calling `cancellation.checkCanceled()` between the sides and, through the runtime's progress callback where it has one, during parsing.
+2. Parse both sides with the runtime of ADR 0016, calling `cancellation.checkCanceled()` between the sides and, through the runtime's progress callback where it has one, during parsing.
 3. Build a `DeclarationTree` for each side with `TreeSitterTreeBuilder` (§6).
 4. Compare them with the declaration engine's `DeclarationAnalysis.compare`, with the request's limits and confidence policy, and set `analysisNote = AnalysisNote.TREE_SITTER` (`"tree-sitter"`, a new constant), which gives R7.
 
@@ -142,7 +142,7 @@ Two declarations with the same name and signature in the two branches of an `#if
 ### 8. Loading, failure and isolation
 
 - The runtime and grammars load once per IDE session, on the first comparison, in a background thread. A load failure, such as an unsupported OS or architecture, is recorded through the [API guard](../platform/01-platform-api-stability.md) as a new `GuardedFeature.TREE_SITTER`: the engine then supports no language, `EngineLanguage.of` returns the IntelliJ id, and the log has one warning (R23).
-- A runtime or grammar exception during a comparison becomes `FAILED` through `compareSafely`, and the outline shows `Analysis failed` (R24). If ADR 0015 picks a runtime that can crash the process, it must run in a child process (option D), so R24 holds for every option.
+- A runtime or grammar exception during a comparison becomes `FAILED` through `compareSafely`, and the outline shows `Analysis failed` (R24). If ADR 0016 picks a runtime that can crash the process, it must run in a child process (option D), so R24 holds for every option.
 - The host's size check and time limit apply as for every engine (R25).
 - Parsing never reads files, the network or the IDE's project; the grammars are resources in the plugin archive (R26), and no source leaves the IDE process (engine contract R10). A child process, if used, gets the text over a pipe and has no network access of its own.
 
@@ -165,10 +165,10 @@ Each test names its requirement, for example `// engines/05-tree-sitter R14`.
 - `TreeSitterOutlineTest` (platform test): a `.swift` file opened as plain text gets the outline from this engine and not the line comparison (R2, R5); the Changes tree shows a summary for a changed `.cpp` file, and a three-sided diff and the merge window show the merge outline (R6); a file over the size limit shows `Too large to analyze` (R25); changing the setting and applying it switches an open diff to the line comparison and back (R31).
 - `TreeSitterFailureTest`: a runtime that fails to load leaves the engine supporting nothing, falls back as with the setting off, and logs one warning (R23); a grammar call that throws gives `Analysis failed` (R24).
 - `TreeSitterPackagingCheck` (Gradle task in `check`): every grammar and the runtime have a notice entry (R27), the archive growth is at most 25 MB (R28), and the engine version names each grammar version (R29).
-- The CI workflow runs `TreeSitterEngineContractTest` and the golden fixtures on Linux, macOS and Windows runners, on x64 and, where the runner exists, arm64 (R22). If ADR 0015 picks a platform-neutral runtime, Linux x64 and macOS arm64 are enough.
+- The CI workflow runs `TreeSitterEngineContractTest` and the golden fixtures on Linux, macOS and Windows runners, on x64 and, where the runner exists, arm64 (R22). If ADR 0016 picks a platform-neutral runtime, Linux x64 and macOS arm64 are enough.
 - Merge fixtures and relationship benchmark fixtures for each language, added to the existing suites (R30).
 
 ## Open questions
 
 - **Default for `.h`.** C++ (the default above), or C when the same change has `.c` files and no C++ files. The second needs the Changes tree's other files and stays out of scope until a corpus run shows C headers failing.
-- **The setting's default.** On, as here, if ADR 0015 picks a runtime that cannot crash the IDE; off by default until the corpus validation of T3 if it can.
+- **The setting's default.** On, as here, if ADR 0016 picks a runtime that cannot crash the IDE; off by default until the corpus validation of T3 if it can.

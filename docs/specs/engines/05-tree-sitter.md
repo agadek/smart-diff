@@ -55,7 +55,7 @@ Status: proposed, 2026-11-17
 - [ADR 0002](../../adr/0002-parser-neutral-model-with-psi-first.md)
 - [ADR 0003](../../adr/0003-conservative-classification.md)
 - [ADR 0004](../../adr/0004-pluggable-comparison-engines.md)
-- [ADR 0014](../../adr/0014-tree-sitter-languages-are-chosen-by-file-name.md)
+- [ADR 0015](../../adr/0015-tree-sitter-languages-are-chosen-by-file-name.md)
 - [Comparison engines](01-comparison-engines.md)
 - [Moved lines in unsupported files](04-moved-lines.md) R4
 - [Kotlin and Scala formatting](../declarations/07-kotlin-scala-formatting.md)
