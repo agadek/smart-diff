@@ -1,6 +1,6 @@
 # Kotlin and Scala equivalence rules
 
-Status: proposed, 2026-11-17
+Status: implemented, 2026-11-17
 
 **Description:** Adds Kotlin and Scala [equivalence rules](../../GLOSSARY.md#equivalence-rule) to the opt-in "Mark rewrite-only changes" option of [declarations/08](08-equivalence-rules.md), so a [changed](../../GLOSSARY.md#changed) Kotlin or Scala [declaration](../../GLOSSARY.md#declaration) whose only differences are literal, string template or parenthesis rewrites can be [rewrite-only](../../GLOSSARY.md#rewrite-only), as Java ones can.
 

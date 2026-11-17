@@ -1,6 +1,6 @@
 # Kotlin and Scala equivalence rules: details
 
-Status: proposed, 2026-11-17
+Status: implemented, 2026-11-17
 
 **Feature:** [Kotlin and Scala equivalence rules](09-kotlin-scala-equivalence-rules.md)
 
@@ -68,6 +68,8 @@ A statement end is one of:
 
 The list after a line break is an allow list on purpose: Kotlin lets `.`, `?.`, `::`, `?:`, `&&`, `||`, `as` and `as?` continue an expression on the next line, and a `{` there may pass a lambda, so any of them keeps the pair (R8). An identifier cannot continue: Kotlin allows no line break before an infix function's name.
 
+The `COMMA` row also needs the pair to be directly inside `(` or `[`: a comma directly inside braces separates lambda parameters (`{ a, (b), c -> }`, where `(b)` destructures) or `when` conditions, never arguments.
+
 What the table never matches (R8): an operand (preceded or followed by an operator), a call's own parentheses (preceded by a name), an `if`, `when`, `while` or `for` header (preceded by its keyword), a destructuring declaration (`val (a, b)` has a comma and is preceded by `val`; `for ((x) in xs)` and `{ (x) -> }` are followed by `in` and `->`), a function type's parameter list (followed by `->`), a type in a declaration (preceded by `:`), and `return@label (x)` (the label sits between `return` and the pair). `if ((x))` and `foo((a + b))` match through the `LPAR` row.
 
 Pairs are removed from the inside out until none matches, as in Java. Line breaks that were inside a removed pair are then outside brackets for `normalize`, so a pair spread over several lines stays changed unless the line breaks are also ignorable where they now are, which is the conservative result.
@@ -86,7 +88,7 @@ Each `tSTRING` token, which holds the whole plain literal with its quotes, and e
 
 - `\uXXXX` with one or more `u`, and `\b \t \n \f \r \" \' \\`, are decoded. Octal escapes are an error since Scala 2.13 and keep the text.
 - A unicode escape that stands for `"`, `'`, `\`, `\n` or `\r` keeps the literal's text as written. Scala 2.12 and earlier translate unicode escapes before lexing, so such an escape means something else there, and the rule never assumes a Scala version.
-- The canonical text writes `"`, `'` and `\` as `\"`, `\'` and `\\`, every other non-printable character as `\uXXXX`, and every other character as itself.
+- The canonical text writes `"`, `'` and `\` as `\"`, `\'` and `\\`, a line feed and a carriage return as `\n` and `\r`, every other non-printable character as `\uXXXX`, and every other character as itself. Writing the line breaks as simple escapes keeps a decoded `\n` apart from a literal kept as written with `\u000A`.
 - `tMULTILINE_STRING` and every interpolated-string token (`tINTERPOLATED_STRING` and its parts) are never rewritten; an interpolator, such as `raw`, decides what an escape means.
 
 ### Scala redundant parentheses (R11, R12)
@@ -103,6 +105,8 @@ A statement end is one of:
 
 - `tSEMICOLON`, `tRBRACE`, `kELSE`, or the end of the declaration's own tokens;
 - a line break followed by one of `kVAL`, `kVAR`, `kDEF`, `kTYPE`, `kCLASS`, `kOBJECT`, `kTRAIT`, `kCASE`, `kIMPORT`, `kRETURN`, `kTHROW`, `kIF`, `kWHILE`, `kFOR`, `kTRY` and `kELSE`, only when the pair is not inside `(` or `[`.
+
+As for Kotlin, the `tCOMMA` row needs the pair to be directly inside `(` or `[`.
 
 Scala's rules differ from Kotlin's in these ways, each for a reason:
 
