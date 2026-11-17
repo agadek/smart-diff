@@ -7,6 +7,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiFileFactory
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
+import io.github.agadek.smartdiff.engine.declarations.model.EquivalenceRuleImpl
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationInfo
 import io.github.agadek.smartdiff.engine.declarations.psi.PsiDeclarationProvider
 import io.github.agadek.smartdiff.engine.declarations.psi.Signatures
@@ -38,6 +39,9 @@ import org.jetbrains.kotlin.psi.KtTypeReference
  * with a trailing lambda are section declarations.
  */
 class KotlinDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.KOTLIN_LINE_BREAKS) {
+
+    // declarations/09 R15: Kotlin and Scala declarations use only their own language's rules.
+    override val equivalenceRules: List<EquivalenceRuleImpl> get() = KotlinEquivalenceRules.ALL
 
     override fun supports(languageId: String): Boolean = languageId == KotlinLanguage.INSTANCE.id
 

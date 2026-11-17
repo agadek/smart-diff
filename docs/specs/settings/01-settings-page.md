@@ -1,6 +1,6 @@
 # Settings page
 
-Status: implemented, 2026-10-22; the outline view and relationship kind settings (R16 and R17) arrive with the [refactorings view](../relationships/06-refactorings-view.md), 2026-11-09; the structure-view fallback setting (R18) arrives with the [structure-view fallback](../languages/06-structure-view-fallback.md), 2026-11-13; the comment-only setting (R19) is implemented with [comment-only changes](../outline/11-comment-only-changes.md), 2026-11-16; the moved-code marker setting (R20) is implemented with [moved-code markers](../outline/13-moved-code-markers.md), 2026-11-16; the rewrite-only setting (R22) is implemented with [opt-in equivalence rules](../declarations/08-equivalence-rules.md), 2026-11-17.
+Status: implemented, 2026-10-22; the outline view and relationship kind settings (R16 and R17) arrive with the [refactorings view](../relationships/06-refactorings-view.md), 2026-11-09; the structure-view fallback setting (R18) arrives with the [structure-view fallback](../languages/06-structure-view-fallback.md), 2026-11-13; the comment-only setting (R19) is implemented with [comment-only changes](../outline/11-comment-only-changes.md), 2026-11-16; the moved-code marker setting (R20) is implemented with [moved-code markers](../outline/13-moved-code-markers.md), 2026-11-16; the rewrite-only setting (R22) is implemented with [opt-in equivalence rules](../declarations/08-equivalence-rules.md), 2026-11-17; the changed-token setting (R23) is proposed with [fine-grained differencing](../declarations/10-fine-grained-differencing.md), 2026-11-17.
 
 **Description:** A settings page under Settings | Tools | SMART Diff holds the plugin's options, for all projects.
 
@@ -30,7 +30,8 @@ Status: implemented, 2026-10-22; the outline view and relationship kind settings
 - **R20** "Mark moved code in the editors" is on by default.
 - **R21** "Show moved lines in files without an engine" is on by default.
 - **R22** "Mark rewrite-only changes" is off by default, is the same setting as the outline filter menu's checkbox, lists each language's equivalence rules with one checkbox each, all on by default and enabled only while it is on, and adds a rewrite-only checkbox to "Hide from the outline" while it is on.
-- **R23** "Compare languages the IDE cannot parse with Tree-sitter" is on by default.
+- **R23** "Highlight changed tokens in the SMART Diff viewer" is on by default.
+- **R25** "Compare languages the IDE cannot parse with Tree-sitter" is on by default.
 
 ## References
 
@@ -39,7 +40,8 @@ Status: implemented, 2026-10-22; the outline view and relationship kind settings
 - [Structure-view fallback](../languages/06-structure-view-fallback.md)
 - [Comment-only changes](../outline/11-comment-only-changes.md) (R19)
 - [Opt-in equivalence rules](../declarations/08-equivalence-rules.md) (R22)
-- [Tree-sitter engine](../engines/05-tree-sitter.md) (R23)
+- [Fine-grained differencing](../declarations/10-fine-grained-differencing.md) (R23)
+- [Tree-sitter engine](../engines/05-tree-sitter.md) (R25)
 - [Moved-code markers](../outline/13-moved-code-markers.md) (R20)
 - [Moved lines in unsupported files](../engines/04-moved-lines.md) (R21)
 - [Technical specification §11](../../TECHNICAL-SPECIFICATION.md#11-settings)

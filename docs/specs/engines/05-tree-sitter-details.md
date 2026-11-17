@@ -152,7 +152,7 @@ The grammars are pinned in `gradle/libs.versions.toml`, built or fetched at buil
 
 ### 10. The setting
 
-`SmartDiffSettings.treeSitterLanguages: Boolean = true`, shown on the settings page as "Compare languages the IDE cannot parse with Tree-sitter" ([settings/01](../settings/01-settings-page.md) R23). Applying a change refreshes open outlines through the existing settings listener (R31), which resolves the language again, so an open Swift diff switches between the Tree-sitter engine and the line comparison.
+`SmartDiffSettings.treeSitterLanguages: Boolean = true`, shown on the settings page as "Compare languages the IDE cannot parse with Tree-sitter" ([settings/01](../settings/01-settings-page.md) R25). Applying a change refreshes open outlines through the existing settings listener (R31), which resolves the language again, so an open Swift diff switches between the Tree-sitter engine and the line comparison.
 
 ## Tests
 

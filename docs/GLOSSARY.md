@@ -187,6 +187,11 @@ _Avoid_: invariance, normalization, equivalence
 A changed declaration whose own source differs only in rewrites that the user's enabled equivalence rules name, and possibly in formatting, shown with this label in the structural outline when the user turns the option on. It claims only what each rule names, never that the two versions behave the same.
 _Avoid_: equivalent, semantically equal, no-op change
 
+### Changed run
+
+A run of tokens inside a changed declaration that the declaration engine found different once whitespace is compared as for formatting-only changes, highlighted by the SMART Diff viewer ([declarations/10](specs/declarations/10-fine-grained-differencing.md)).
+_Avoid_: token diff, word diff, inner change, hunk
+
 ### Moved
 
 A matched declaration whose container or order among its siblings differs. It may also be changed or formatting-only.
@@ -380,7 +385,7 @@ _Avoid_: engine picker, engine menu
 
 ### SMART Diff viewer
 
-The side-by-side viewer "Side-by-side viewer (SMART Diff)": the native side-by-side viewer, with the changes the change type filter hides shown faded.
+The side-by-side viewer "Side-by-side viewer (SMART Diff)": the native side-by-side viewer, with the changes the change type filter hides shown faded and the changed runs highlighted inside changed declarations.
 _Avoid_: filtering viewer, custom viewer
 
 ### Changes tree
