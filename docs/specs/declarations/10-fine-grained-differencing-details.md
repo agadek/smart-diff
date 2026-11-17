@@ -1,6 +1,6 @@
 # Fine-grained differencing: details
 
-Status: proposed, 2026-11-17; the token comparison in the declaration engine (R2 to R10) is implemented, 2026-11-17
+Status: implemented, 2026-11-17, except the validation against Difftastic and GumTree (R21, R22), which is still proposed
 
 **Feature:** [Fine-grained differencing](10-fine-grained-differencing.md)
 
@@ -31,7 +31,7 @@ Every token that differs is in a run by construction of the edit script (R8). A 
 
 ### The SMART Diff viewer
 
-`FilteringDiffViewer` gets `@Volatile var changedRuns: ChangedRuns` next to `hiddenLines`, with `show(runs: ChangedRuns)` and `forgetRuns()`, the same pattern as `hide` and `forgetHidden`. `ChangedRuns` is a new class in `ui`, built by `ChangedRuns.of(result, oldText, newText)` from the nodes compared by tokens: for each side, the line ranges each such node owns (its range minus its reported children's, as `HiddenLines` computes extents) and the runs inside them. `OutlineController` calls `show` where it calls `hide` today with a result, `show(ChangedRuns.NONE)` where it calls `hide(HiddenLines.NONE)`, and `forgetRuns()` where it calls `forgetHidden()` (R16). With the setting off, `ChangedRuns.of` is not called and the viewer keeps `NONE` (R1, R18).
+`FilteringDiffViewer` gets `@Volatile var changedRuns: ChangedRuns` next to `hiddenLines`. `hide(lines, runs = ChangedRuns.NONE)` sets both and compares the lines again once, and `forgetHidden()` forgets both, so every place that clears the hidden lines clears the runs too. `ChangedRuns` is a new class in `ui`, built by `ChangedRuns.of(result, oldText, newText)` from the nodes compared by tokens: for each side, the line ranges each such node owns (its range minus its reported children's, as `HiddenLines` computes extents) and the runs inside them. `OutlineController` passes the runs where it calls `hide` with a result; the calls with `HiddenLines.NONE` and `forgetHidden()` clear them (R16). With the setting off, `ChangedRuns.of` is not called and the viewer keeps `NONE` (R1, R18).
 
 `FilteringDiffViewer.apply(changes, isContentsEqual)` already maps each `SimpleDiffChange` to fade hidden ones. It now also replaces the change's `LineFragment` when:
 

@@ -18,6 +18,7 @@ import com.intellij.diff.DiffContentFactory
 import com.intellij.diff.tools.util.DiffDataKeys
 import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
 import com.intellij.diff.util.Side
+import com.intellij.diff.tools.util.base.HighlightPolicy
 import com.intellij.icons.AllIcons
 import com.intellij.ide.util.PropertiesComponent
 import com.intellij.lang.Language
@@ -145,6 +146,24 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
 
         outline.navigator.navigate(outline.panel.selectedItem()!!)
         assertEquals(JAVA_NEW.indexOf("void bye()"), shown.viewer.editor2.caretModel.offset)
+    }
+
+    // declarations/10-fine-grained-differencing R17
+    fun `test selecting a changed row highlights its changed runs on both sides`() {
+        val shown = open(history(FORMATTED_OLD, FORMATTED_NEW, "Counter.java"))
+        val outline = shown.awaitResult()
+        select(outline, "method a()  changed")
+        val old = FORMATTED_OLD.indexOf("return 1") + "return ".length
+        val new = FORMATTED_NEW.indexOf("return 3") + "return ".length
+        fun runShown(editor: com.intellij.openapi.editor.Editor, offset: Int) = outline.navigator.shown.any {
+            it.document === editor.document && it.startOffset == offset && it.endOffset == offset + 1
+        }
+        assertTrue("old side", runShown(shown.viewer.editor1, old))
+        assertTrue("new side", runShown(shown.viewer.editor2, new))
+
+        settings.highlightChangedTokens = false
+        outline.navigator.select(outline.panel.selectedItem(), scroll = false)
+        assertFalse("not while the setting is off", runShown(shown.viewer.editor1, old))
     }
 
     fun `test an inlined helper shows both notes and frames the new side`() {
@@ -406,6 +425,57 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
 
             outline.setOutlineVisible(false)
             awaitChanges(viewer) { changes -> changes.size == 2 && changes.none { it.isSkipped } }
+        } finally {
+            diffSettings.diffToolsOrder = savedOrder
+        }
+    }
+
+    // declarations/10-fine-grained-differencing R11, R12, R14, R15, R16, R18
+    fun `test the SMART Diff viewer highlights changed runs in place of the native word highlights`() {
+        val diffSettings = DiffSettings.getSettings()
+        val savedOrder = diffSettings.diffToolsOrder
+        try {
+            diffSettings.diffToolsOrder = listOf(FilteringDiffTool::class.java.canonicalName) + savedOrder
+            val shown = open(history(FORMATTED_OLD, FORMATTED_NEW, "Counter.java"))
+            val viewer = shown.viewer as FilteringDiffViewer
+            val outline = shown.awaitResult()
+            awaitChanges(viewer) { it.size == 2 && !viewer.changedRuns.isEmpty }
+            fun inner(line: Int) = viewer.diffChanges.single { it.getStartLine(Side.RIGHT) == line }.fragment.innerFragments
+            // R12: the re-wrapped method keeps its line colour with no word highlights, once the viewer compared again.
+            awaitChanges(viewer) { inner(3)?.isEmpty() == true }
+            // R11: the edited method shows its run, `1` against `3`, on the line `    int a() { return 1; }`.
+            val run = inner(1)!!.single()
+            assertEquals("1", FORMATTED_OLD.substring(16 + run.startOffset1, 16 + run.endOffset1))
+            assertEquals("3", FORMATTED_NEW.substring(16 + run.startOffset2, 16 + run.endOffset2))
+            // R14: the same changes, in the same order.
+            assertEquals(listOf(1, 3), viewer.diffChanges.map { it.getStartLine(Side.RIGHT) })
+
+            // R18: turning the setting off restores the native highlights without comparing again.
+            val before = (outline.state as OutlineState.Shown).result
+            settings.highlightChangedTokens = false
+            ApplicationManager.getApplication().messageBus.syncPublisher(SmartDiffSettings.CHANGED).settingsChanged()
+            awaitChanges(viewer) { viewer.changedRuns.isEmpty && !inner(3).isNullOrEmpty() }
+            assertSame("no new comparison", before, (outline.state as OutlineState.Shown).result)
+
+            settings.highlightChangedTokens = true
+            ApplicationManager.getApplication().messageBus.syncPublisher(SmartDiffSettings.CHANGED).settingsChanged()
+            awaitChanges(viewer) { inner(3)?.isEmpty() == true }
+
+            // R15: highlighting by lines is left as the native viewer shows it.
+            val policy = viewer.textSettings.highlightPolicy
+            try {
+                viewer.textSettings.highlightPolicy = HighlightPolicy.BY_LINE
+                viewer.rediff()
+                awaitChanges(viewer) { inner(3).isNullOrEmpty() && inner(1).isNullOrEmpty() }
+            } finally {
+                viewer.textSettings.highlightPolicy = policy
+                viewer.rediff()
+            }
+            awaitChanges(viewer) { inner(3)?.isEmpty() == true }
+
+            // R16: with the outline off, the native highlights show.
+            outline.setOutlineVisible(false)
+            awaitChanges(viewer) { viewer.changedRuns.isEmpty && !inner(3).isNullOrEmpty() }
         } finally {
             diffSettings.diffToolsOrder = savedOrder
         }

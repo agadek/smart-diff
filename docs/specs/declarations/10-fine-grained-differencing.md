@@ -1,6 +1,6 @@
 # Fine-grained differencing
 
-Status: proposed, 2026-11-17; the token comparison in the declaration engine (R2 to R10) is implemented, 2026-11-17
+Status: implemented, 2026-11-17, except the validation against Difftastic and GumTree (R21, R22), which is still proposed
 
 **Description:** The [declaration engine](../../GLOSSARY.md#declaration-engine) compares the tokens of each [changed](../../GLOSSARY.md#changed) [declaration](../../GLOSSARY.md#declaration) and reports its [changed runs](../../GLOSSARY.md#changed-run): the tokens that differ once whitespace is compared as for [formatting-only](../../GLOSSARY.md#formatting-only) changes. The [SMART Diff viewer](../../GLOSSARY.md#smart-diff-viewer) highlights those runs inside changed lines instead of the [native diff](../../GLOSSARY.md#native-diff)'s word highlights, so reformatted code inside a changed declaration is not highlighted.
 

@@ -561,6 +561,7 @@ Application-level, under *Settings → Tools → SMART Diff*:
 | Formatting-only changes | Collapsed group / inline |
 | Mark comment-only changes | Off. Labels declarations whose only difference is in comments as comment-only in the outline ([outline/11](specs/outline/11-comment-only-changes.md)) |
 | Mark moved code in the editors | On. Marks moved declarations in the gutter and on the scrollbar of both editors while the outline shows a result ([outline/13](specs/outline/13-moved-code-markers.md)) |
+| Highlight changed tokens in the SMART Diff viewer | On. Inside declarations compared by tokens, the SMART Diff viewer highlights the changed runs in place of the native word highlights, and selecting a row highlights its runs ([declarations/10](specs/declarations/10-fine-grained-differencing.md)); applying it rebuilds open outlines without comparing again |
 | Show moved lines in files without an engine | On. Compares two-sided diffs of files no engine supports, plain text included, by lines and lists their moved blocks ([engines/04](specs/engines/04-moved-lines.md)); applying the change refreshes open outlines |
 | Hide from the outline | None. One checkbox per change type of the outline's filter (§10); also set from the outline toolbar |
 | Outline view | Container tree (the default) or the refactorings view (§10); also set from the outline toolbar |
