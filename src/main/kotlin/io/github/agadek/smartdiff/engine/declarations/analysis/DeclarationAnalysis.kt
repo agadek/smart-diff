@@ -500,14 +500,21 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
                 val kept = tokens.indices.filter { declaration.ownTokenStarts[it] >= start(declaration) }
                 return kept.map { tokens[it] } to kept.map { declaration.ownTokenStarts[it] }
             }
-            val (oldTokens, oldStarts) = own(match.old, renamed(match))
+            val renamedOld = renamed(match)
+            val (oldTokens, oldStarts) = own(match.old, renamedOld)
             val (newTokens, newStarts) = own(match.new, match.new.ownTokens)
+            // A renamed token's text is the new name; its range keeps the old token's length.
+            val (oldSource, _) = own(match.old, match.old.ownTokens)
             return tokenRuns(
                 content, oldTokens, oldStarts, newTokens, newStarts, new.whitespacePolicy,
                 parseError = match.old.hasParseError || match.new.hasParseError,
                 cancellation,
                 oldOwn = ownRanges(match.old),
                 newOwn = ownRanges(match.new),
+                oldLengths = oldSource.map { it.text.length },
+                // Scala 3 measures the shift with the leading whitespace, as classification does (declarations/07 R8).
+                oldShiftSource = renamedOld,
+                newShiftSource = match.new.ownTokens,
             )
         }
 
@@ -669,13 +676,19 @@ private fun tokenRuns(
     cancellation: Cancellation,
     oldOwn: List<TextRange>,
     newOwn: List<TextRange>,
+    oldLengths: List<Int>? = null,
+    oldShiftSource: List<Token>? = null,
+    newShiftSource: List<Token>? = null,
 ): List<RangePair>? {
     if (content != Content.CHANGED && content != Content.FORMATTING_ONLY) return null
     if (parseError) return null
     if ((old.isNotEmpty() && oldStarts.size != old.size) || (new.isNotEmpty() && newStarts.size != new.size)) return null
     if (content == Content.FORMATTING_ONLY) return emptyList()
     return try {
-        ContentClassifier.changedRuns(old, oldStarts, new, newStarts, policy, parseError, cancellation, oldOwn, newOwn)
+        ContentClassifier.changedRuns(
+            old, oldStarts, new, newStarts, policy, parseError, cancellation, oldOwn, newOwn,
+            oldLengths, oldShiftSource, newShiftSource,
+        )
     } catch (e: java.util.concurrent.CancellationException) {
         throw e
     } catch (e: Exception) {

@@ -140,6 +140,10 @@ object ContentClassifier {
      *
      * [oldOwn] and [newOwn], when given, are the source ranges the tokens own, such as a declaration's range minus its
      * children's: a run is cut to them, so no run covers a child, and a run cut in pieces gives one run per piece.
+     *
+     * [oldLengths], when given, are the source lengths of the old tokens, for a rename whose old tokens carry the new
+     * name. [oldShiftSource] and [newShiftSource], when given, are the tokens the Scala 3 shift is measured on, the
+     * leading whitespace included, as classification measures it (declarations/07 R8).
      */
     fun changedRuns(
         old: List<Token>,
@@ -151,14 +155,18 @@ object ContentClassifier {
         cancellation: Cancellation = Cancellation.NONE,
         oldOwn: List<TextRange>? = null,
         newOwn: List<TextRange>? = null,
+        oldLengths: List<Int>? = null,
+        oldShiftSource: List<Token>? = null,
+        newShiftSource: List<Token>? = null,
     ): List<RangePair>? {
         cancellation.checkCanceled()
         if (parseError) return null
         if (old.size != oldStarts.size || new.size != newStarts.size) return null
         if ((old.isNotEmpty() && oldStarts.isEmpty()) || (new.isNotEmpty() && newStarts.isEmpty())) return null
         if (old.size > MAX_RUN_TOKENS || new.size > MAX_RUN_TOKENS) return null
-        val a = comparableWithOffsets(normalizeWithOffsets(old, oldStarts, policy), policy)
-        val b = comparableWithOffsets(normalizeWithOffsets(new, newStarts, policy), policy)
+        if (oldLengths != null && oldLengths.size != old.size) return null
+        val a = comparableWithOffsets(normalizeWithOffsets(old, oldStarts, policy, oldLengths), policy, oldShiftSource)
+        val b = comparableWithOffsets(normalizeWithOffsets(new, newStarts, policy), policy, newShiftSource)
         val matches = TokenDiff(a, b, { x, y -> x.first.type == y.first.type && x.first.text == y.first.text }, cancellation)
             .matches(MAX_RUN_EDITS) ?: return null
         return cut(runs(a, b, matches), oldOwn, newOwn)
@@ -229,13 +237,21 @@ object ContentClassifier {
 
     /**
      * [normalize] with each token's source range (declarations/10 details, step 2). A whitespace run that becomes one
-     * token has the range from the first to the last whitespace token it replaces; a dropped run has no token. Unlike
-     * [normalize], a [TokenKind.SEPARATOR] token stays, as it is source.
+     * token has the range from the first to the last whitespace token it replaces; a dropped run has no token. As in
+     * classification, a [TokenKind.SEPARATOR] token is left out, so it never splits a whitespace run. [lengths], when
+     * given, are the tokens' source lengths, which differ from their text for a renamed old side.
      */
-    internal fun normalizeWithOffsets(tokens: List<Token>, starts: List<Int>, policy: WhitespacePolicy): List<Pair<Token, TextRange>> {
+    internal fun normalizeWithOffsets(
+        tokens: List<Token>,
+        starts: List<Int>,
+        policy: WhitespacePolicy,
+        lengths: List<Int>? = null,
+    ): List<Pair<Token, TextRange>> {
         require(tokens.size == starts.size) { "every token needs a start" }
-        fun range(index: Int) = TextRange(starts[index], starts[index] + tokens[index].text.length)
-        if (policy == WhitespacePolicy.SIGNIFICANT) return tokens.indices.map { tokens[it] to range(it) }
+        fun range(index: Int) = TextRange(starts[index], starts[index] + (lengths?.get(index) ?: tokens[index].text.length))
+        if (policy == WhitespacePolicy.SIGNIFICANT) {
+            return tokens.indices.filter { tokens[it].kind != TokenKind.SEPARATOR }.map { tokens[it] to range(it) }
+        }
         val normalized = mutableListOf<Pair<Token, TextRange>>()
         val run = StringBuilder()
         var runStart = -1
@@ -271,6 +287,7 @@ object ContentClassifier {
                     run.append(token.text)
                     runEnd = range(index).end
                 }
+                TokenKind.SEPARATOR -> Unit
                 else -> {
                     endRun(token.text)
                     normalized += token to range(index)
@@ -284,10 +301,15 @@ object ContentClassifier {
     }
 
     /** [normalized] as compared under [policy], keeping each token's range: Scala 3 strips the common shift (R8). */
-    private fun comparableWithOffsets(normalized: List<Pair<Token, TextRange>>, policy: WhitespacePolicy): List<Pair<Token, TextRange>> {
+    private fun comparableWithOffsets(
+        normalized: List<Pair<Token, TextRange>>,
+        policy: WhitespacePolicy,
+        shiftSource: List<Token>?,
+    ): List<Pair<Token, TextRange>> {
         if (policy != WhitespacePolicy.SCALA3_INDENTATION) return normalized
         val tokens = normalized.map { it.first }
-        return applyIndentShift(tokens, indentationShift(tokens)).zip(normalized) { token, (_, range) -> token to range }
+        val shift = indentationShift(shiftSource?.let { normalize(it.filterNot { t -> t.kind == TokenKind.SEPARATOR }, policy) } ?: tokens)
+        return applyIndentShift(tokens, shift).zip(normalized) { token, (_, range) -> token to range }
     }
 
     /** The line breaks of [text], so two whitespace runs can be compared by line breaks only. */

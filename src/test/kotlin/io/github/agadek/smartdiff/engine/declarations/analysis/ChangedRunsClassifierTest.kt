@@ -138,6 +138,47 @@ class ChangedRunsClassifierTest {
         assertNull(ContentClassifier.changedRuns(old, starts(old), over, starts(over), SIGNIFICANT, parseError = false))
     }
 
+    // declarations/10-fine-grained-differencing R8, details step 1
+    @Test
+    fun `a renamed old token keeps its source length`() {
+        // The old side `foo(x); bar();` carries the new name `fooBarBaz`; the removed call's run covers `foo(x);` only.
+        val source = tokens("foo(x); bar();")
+        val renamed = source.map { if (it.text == "foo") it.copy(text = "fooBarBaz") else it }
+        val new = tokens("bar();")
+        val runs = ContentClassifier.changedRuns(
+            renamed, starts(source), new, starts(new), INSIGNIFICANT, parseError = false,
+            oldLengths = source.map { it.text.length },
+        )!!
+        assertEquals(listOf(RangePair(TextRange(0, 7), null)), runs)
+    }
+
+    // declarations/10-fine-grained-differencing R4, details step 2; declarations/07 R8
+    @Test
+    fun `the Scala 3 shift is measured with the leading whitespace`() {
+        // Old: def at 2, body at 4. New: def at 4, body at 8. Classification measures the shift over both lines, so
+        // the shift is 2 on the old side and 4 on the new one, and the body's indentation still differs.
+        val oldBody = tokens("def f =\n    a")
+        val newBody = tokens("def f =\n        a")
+        val runs = ContentClassifier.changedRuns(
+            oldBody, starts(oldBody), newBody, starts(newBody), WhitespacePolicy.SCALA3_INDENTATION, parseError = false,
+            oldShiftSource = tokens("\n  def f =\n    a"),
+            newShiftSource = tokens("\n    def f =\n        a"),
+        )!!
+        assertEquals(1, runs.size)
+    }
+
+    // declarations/10-fine-grained-differencing details step 2
+    @Test
+    fun `a separator is left out of the comparison`() {
+        val separator = Token("COMMA", ",", TokenKind.SEPARATOR)
+        val old = listOf(token("a"), separator, token("\n"), token("b"))
+        val new = listOf(token("a"), token("\n"), token("b"))
+        assertEquals(
+            emptyList<RangePair>(),
+            ContentClassifier.changedRuns(old, starts(old), new, starts(new), WhitespacePolicy.LINE_BREAKS_SIGNIFICANT, parseError = false),
+        )
+    }
+
     @Test
     fun `equal inputs give equal results`() {
         val old = "a(1); b(2); c(3); d(4);"
