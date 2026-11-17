@@ -172,6 +172,16 @@ _Avoid_: whitespace change, cosmetic change, equivalent, semantically equal
 A changed declaration whose own source differs only in comments, and possibly in formatting, shown with this label in the structural outline when the user turns the option on. It says nothing about runtime behaviour.
 _Avoid_: doc change, cosmetic change, equivalent
 
+### Equivalence rule
+
+An opt-in, language-specific rule that names one kind of rewrite that keeps a value, such as an integer literal written in another base, used only to mark rewrite-only declarations ([declarations/08](specs/declarations/08-equivalence-rules.md)).
+_Avoid_: invariance, normalization, equivalence
+
+### Rewrite-only
+
+A changed declaration whose own source differs only in rewrites that the user's enabled equivalence rules name, and possibly in formatting, shown with this label in the structural outline when the user turns the option on. It claims only what each rule names, never that the two versions behave the same.
+_Avoid_: equivalent, semantically equal, no-op change
+
 ### Moved
 
 A matched declaration whose container or order among its siblings differs. It may also be changed or formatting-only.

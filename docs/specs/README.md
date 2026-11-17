@@ -7,7 +7,7 @@ One file per feature, in one folder per context, plus a details file for each ne
 SMART Diff adds a [structural outline](../GLOSSARY.md#structural-outline) to the IntelliJ diff. It shows which [declarations](../GLOSSARY.md#declaration) changed and how, and the [native diff](../GLOSSARY.md#native-diff) stays the detail view and the fallback. These rules hold for every feature below:
 
 - **P1** No source code leaves the IDE process, and the plugin sends no telemetry.
-- **P2** The plugin never claims that two versions behave the same.
+- **P2** The plugin never claims that two versions behave the same. An opt-in [equivalence rule](../GLOSSARY.md#equivalence-rule) claims only the rewrite it names ([ADR 0012](../adr/0012-opt-in-equivalence-rules.md)).
 - **P3** The plugin never hides a change by default, and every change stays reachable in the native diff.
 - **P4** The plugin never edits code, resolves merge conflicts or applies patches.
 - **P5** Unsupported, malformed or oversized files still open in the native diff.
@@ -31,6 +31,7 @@ The outline and the Changes tree use one set of [labels](../GLOSSARY.md#label). 
 | moved | The container or order among siblings differs | moved | yes |
 | formatting-only | Only whitespace the language treats as insignificant differs | formatting-only | yes |
 | comment-only | Opt-in, outline only: only comments, and possibly formatting, differ; otherwise the declaration is changed ([outline/11](outline/11-comment-only-changes.md)) | comment-only | yes, while the option is on |
+| rewrite-only | Opt-in, outline only: only rewrites an enabled equivalence rule names, and possibly formatting, differ; otherwise the declaration is changed ([declarations/08](declarations/08-equivalence-rules.md)) | rewrite-only | yes, while the option is on |
 | extraction | An added declaration linked to code removed from a changed declaration | extracted, not added | as added |
 | rename candidate | A removed and an added declaration paired by similar content; with grouped usages, `rename total → sum  rename candidate, 12 usages` | rename candidate | never |
 | usages renamed | A declaration whose only changes are usages renamed with it | usages renamed | never; a declaration with grouped usages is also never hidden |
@@ -60,6 +61,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [05 Extraction detection](declarations/05-extraction-detection.md) | implemented, 2026-10-23 |
 | [06 Change labels](declarations/06-change-labels.md) | implemented, 2026-11-04 (`usages renamed` with 04) |
 | [07 Kotlin and Scala formatting](declarations/07-kotlin-scala-formatting.md) | implemented, 2026-11-16 |
+| [08 Opt-in equivalence rules](declarations/08-equivalence-rules.md) | proposed, 2026-11-17 |
 
 ## Languages
 
