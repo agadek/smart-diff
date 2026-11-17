@@ -191,6 +191,8 @@ class ReviewTreeSummaryTest : BasePlatformTestCase() {
         val tree = summarized(listOf(change))
 
         assertNull(summaryRow(tree, change))
+        val revisions = listOf(change.beforeRevision, change.afterRevision).map { it as CountingRevision }
+        assertEquals("nothing is compared, as in the Changes tree", 0, revisions.sumOf { it.reads })
     }
 
     fun `test pull and merge request nodes are summarized from their change`() {

@@ -41,8 +41,8 @@ the build verifies against) on 2026-11-17 to choose a hook per tree.
 - **Opening a row.** A Git log node's `Change` opens through the same platform diff action as the Changes tree, with
   the `OutlinePath` in the change context. The pull request trees open their diff through the review's view model,
   which takes no context: the adapter selects the file row and calls the tree's own Enter handler (set by
-  `createIn`), after recording the `OutlinePath` for the file's name; the next outline shown for that file name within
-  5 s takes it. When the tree has no handler, the file's own diff opens without a selection (R11).
+  `createIn`), after recording the `OutlinePath` for the file's path; the next outline shown for that file within 5 s
+  takes it, matched by its path, or by its name when the diff content has no path. When the tree has no handler, the file's own diff opens without a selection (R11).
 - **Renderer wrapping** was not needed, and no tree falls back to the context menu action of R20.
 - **Modal commit dialog:** its tree is a `ChangesListView` that the Changes view modifier does not reach; it is left
   out of scope as the feature proposed.

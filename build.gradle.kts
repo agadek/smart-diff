@@ -40,7 +40,7 @@ dependencies {
         bundledPlugin("org.jetbrains.plugins.yaml")
         bundledPlugin("com.intellij.properties")
         bundledPlugin("org.intellij.plugins.markdown")
-        // Review tree summaries (changes-tree/07, ADR 0012): the Git log tree needs Git, the pull and merge request trees
+        // Review tree summaries (changes-tree/07, ADR 0013): the Git log tree needs Git, the pull and merge request trees
         // need the GitHub and GitLab plugins and the collaboration tools module their changes come from.
         bundledPlugin("Git4Idea")
         bundledPlugin("org.jetbrains.plugins.github")

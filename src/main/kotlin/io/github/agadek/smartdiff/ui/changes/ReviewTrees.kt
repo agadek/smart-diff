@@ -155,9 +155,10 @@ class ReviewTreeSummaries internal constructor(
         val settings = SmartDiffSettings.getInstance()
         val showSummary = settings.showChangesSummary
         val showDeclarations = settings.showChangesDeclarations
+        // As in the Changes tree: with both settings off nothing is compared and the platform's rows stay (R12).
+        if (!showSummary && !showDeclarations) return false
         val nodes = fileNodes(root)
         val summaries = ChangesSummaryService.getInstance(project).summaries(nodes.map { it.second }, scope)
-        if (!showSummary && !showDeclarations) return false
         var changed = false
         for ((pair, summary) in nodes.zip(summaries)) {
             if (summary == null) continue
@@ -325,17 +326,18 @@ internal fun openThroughTree(
     fallback: (Project, Change) -> Boolean = { project, change -> ChangesDiff.show(project, listOf(change), 0) },
 ): Boolean {
     val project = tree.project
-    val fileName = (node.change.afterRevision ?: node.change.beforeRevision)?.file?.name
+    val file = (node.change.afterRevision ?: node.change.beforeRevision)?.file
+    val fileName = file?.name
     tree.selectionPath = TreePath(node.path)
     val handler = tree.enterKeyHandler
-    if (handler != null && fileName != null) {
-        PendingOutlineReveal.getInstance(project).put(fileName, path)
+    if (handler != null && file != null && fileName != null) {
+        PendingOutlineReveal.getInstance(project).put(file.path, fileName, path)
         val enter = java.awt.event.KeyEvent(
             tree, java.awt.event.KeyEvent.KEY_PRESSED, System.currentTimeMillis(), 0,
             java.awt.event.KeyEvent.VK_ENTER, java.awt.event.KeyEvent.CHAR_UNDEFINED,
         )
         if (handler.process(enter)) return true
-        PendingOutlineReveal.getInstance(project).take(fileName)
+        PendingOutlineReveal.getInstance(project).take(file.path, fileName)
     }
     return fallback(project, node.change)
 }
