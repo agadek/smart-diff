@@ -13,8 +13,10 @@ import com.intellij.diff.util.Side
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.fileTypes.LanguageFileType
 import com.intellij.openapi.fileTypes.PlainTextLanguage
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.vfs.VirtualFile
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
 import io.github.agadek.smartdiff.ui.merge.MergeOutlineController
 
@@ -64,6 +66,7 @@ class OutlineDiffExtension : DiffExtension() {
         val file = new.highlightFile ?: old.highlightFile
         // Taken off the request, so showing it again later does not select the row again.
         val reveal = request.getUserData(OutlinePath.KEY)?.also { request.putUserData(OutlinePath.KEY, null) }
+            ?: pendingReveal(project, file, fileName)
         val controller = OutlineController(
             project, viewer, context, splitter, languageId, fileName, file,
             old.document, new.document, viewer.editor1, viewer.editor2, reveal,
@@ -87,6 +90,7 @@ class OutlineDiffExtension : DiffExtension() {
         val fileName = shown.highlightFile?.name
         val file = shown.highlightFile
         val reveal = request.getUserData(OutlinePath.KEY)?.also { request.putUserData(OutlinePath.KEY, null) }
+            ?: pendingReveal(project, file, fileName)
         val empty = EditorFactory.getInstance().createDocument("")
         val oldDocument = if (viewer.side == Side.LEFT) shown.document else empty
         val newDocument = if (viewer.side == Side.RIGHT) shown.document else empty
@@ -127,6 +131,13 @@ class OutlineDiffExtension : DiffExtension() {
         controller.start()
     }
 }
+
+/**
+ * The outline path a review tree left for the diff of [file], or of a file named [fileName] when the diff's content has
+ * no file (changes-tree/07 R10), taken once.
+ */
+private fun pendingReveal(project: Project, file: VirtualFile?, fileName: String?): OutlinePath? =
+    if (project.isDefault) null else PendingOutlineReveal.getInstance(project).take(file?.path, fileName)
 
 /** The language of a document content, from its content type or else its file. */
 internal fun DocumentContent.languageId(): String? {

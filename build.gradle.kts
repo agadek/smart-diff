@@ -40,6 +40,12 @@ dependencies {
         bundledPlugin("org.jetbrains.plugins.yaml")
         bundledPlugin("com.intellij.properties")
         bundledPlugin("org.intellij.plugins.markdown")
+        // Review tree summaries (changes-tree/07, ADR 0013): the Git log tree needs Git, the pull and merge request trees
+        // need the GitHub and GitLab plugins and the collaboration tools module their changes come from.
+        bundledPlugin("Git4Idea")
+        bundledPlugin("org.jetbrains.plugins.github")
+        bundledPlugin("org.jetbrains.plugins.gitlab")
+        bundledModule("intellij.platform.collaborationTools")
         // The Rust provider compiles in :rust against the root's main classes and is packaged here; runtimeOnly keeps
         // it off the root compile classpath so :rust can compileOnly-depend on :root without a task cycle (05-rust-details §2).
         pluginModule(runtimeOnly(project(":rust")))

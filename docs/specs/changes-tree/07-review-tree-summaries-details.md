@@ -1,6 +1,6 @@
 # Summaries in the Git log and pull requests: details
 
-Status: proposed, 2026-11-16
+Status: implemented, 2026-11-17
 
 **Feature:** [Summaries in the Git log and pull requests](07-review-tree-summaries.md)
 
@@ -33,7 +33,9 @@ Candidates, in order of preference:
 - **Renderer wrapper:** wrap the tree's cell renderer to append the summary text. Gives the summary line only; declaration rows then come from R20.
 - **Context menu action (R20):** a "Structural Summary" action added to the tree's context menu group, reading the selected changes from the tree's data context, which shows a popup with the outline's rows. Public action groups only; always possible.
 
-Public API is preferred. An experimental or internal API is accepted only when Plugin Verifier's report lists it, the use sits behind one adapter class per tree, and a failure falls back to the next candidate. The result and the chosen hook per tree are recorded in ADR 0012 and in §13 before any code depends on them. A tree for which only the context menu action works gets R20, and R1 to R3 for it are then marked *(not applicable, S11)* in the feature file.
+Public API is preferred. An experimental or internal API is accepted only when Plugin Verifier's report lists it, the use sits behind one adapter class per tree, and a failure falls back to the next candidate. The result and the chosen hook per tree are recorded in ADR 0013 and in §13 before any code depends on them. A tree for which only the context menu action works gets R20, and R1 to R3 for it are then marked *(not applicable, S11)* in the feature file.
+
+**Result (2026-11-17, [ADR 0013](../../adr/0013-review-tree-summaries-through-the-tree-model-property.md)):** all three trees take model post-processing, so no tree gets R20. `ChangesTree.updateTreeModel` saves the tree state, sets the model and then restores the state, on 2025.1.3 and 2026.3, and `JTree.setModel` fires the `model` property change in between. A property change listener on the tree replaces the file nodes there, before the platform restores selection and expansion. `ReviewTreeWatcher` finds the trees with one AWT hierarchy listener: a `ChangesTree` that is shown is offered to each adapter, and one that stops being displayable is detached and its scope disposed.
 
 ### Adapters
 
@@ -41,11 +43,11 @@ One `ReviewTreeAdapter` per review tree, each in its own optional descriptor so 
 
 | Adapter | Descriptor | Depends on |
 | --- | --- | --- |
-| `GitLogTreeAdapter` | `smartdiff-vcs-log.xml` | `com.intellij.modules.vcs` (the log is a platform module; the spike confirms which module id loads it) |
+| `GitLogTreeAdapter` | `smartdiff-vcs-log.xml` | `Git4Idea` (the adapter matches the log's `VcsLogChangesBrowser` by class name, so it needs no log module; Git's own plugin id keeps its descriptor apart from `smartdiff-vcs.xml`) |
 | `GitHubTreeAdapter` | `smartdiff-github.xml` | `org.jetbrains.plugins.github` |
 | `GitLabTreeAdapter` | `smartdiff-gitlab.xml` | `org.jetbrains.plugins.gitlab` |
 
-An adapter finds its trees, lists their file nodes with a `Change` for each (converting a `RefComparisonChange` with the revisions of step 3), applies summaries to the model, rebuilds the tree and opens a row. The build adds the GitHub and GitLab plugins as bundled plugins for compilation, and Plugin Verifier resolves them on both target IDEs.
+An adapter recognises its trees (`accepts`), gives the `Change` of each file node (`changeOf`, converting a `RefComparisonChange` with the revisions of step 3) and opens a row (`open`). `ReviewTreeSummaries` applies the summaries to each new model and rebuilds the tree. The adapters are registered through the internal `reviewTreeAdapter` extension point that `smartdiff-vcs.xml` declares. The Git log's tree is the one with a `VcsLogChangesBrowser` ancestor; a pull or merge request tree is one with `RefComparisonChange` nodes (or the collaboration tools factory's tree class) under the `Pull Requests` or `Merge Requests` tool window, or under a component of the GitHub or GitLab plugin. The build adds `Git4Idea`, the GitHub and GitLab plugins and the `intellij.platform.collaborationTools` module for compilation, and Plugin Verifier resolves them on IntelliJ IDEA, PyCharm and RustRover.
 
 ### Revisions
 
@@ -54,7 +56,7 @@ An adapter finds its trees, lists their file nodes with a `Change` for each (con
 - **A merge commit with "Show changes to parents":** each parent's node has its own `Change`, summarized on its own; a `MergedChange` node is summarized from the change it shows.
 - **A pull request:** the base and head revisions of the `RefComparisonChange`, the same pair its diff compares (R4). When the pull request's commits are not fetched yet, reading a revision fails and the row stays plain (R9) until the plugin fetches them and the tree rebuilds.
 
-Content is read with `ContentRevision.getContent` on the summary executor (R16). Revision numbers of committed revisions do not change, so they are the version part of the cache key.
+A `RefComparisonChange` becomes a `Change` of two `LazyGitRevision`s, which call `GitContentRevision.createRevision` only when the summary executor reads them; a missing path makes an added or deleted file (R7). Content is read with `ContentRevision.getContent` on the summary executor (R16). Revision numbers of committed revisions do not change, so they are the version part of the cache key.
 
 ### Summary, rows and filter
 
@@ -73,7 +75,8 @@ All scopes share the one-thread summary executor and the 500-file limit applies 
 ### Opening a row
 
 - **Git log:** the adapter takes the producer from `VcsLogChangesBrowser.getDiffRequestProducer`, or builds a `ChangeDiffRequestProducer` with the `OutlinePath` in its context, and shows it through `DiffManager`, with the tree's other changes next to it.
-- **Pull requests:** the diff opens through the pull request's own view model, which takes no context. Unless S11 finds a way to pass one, the adapter records the `OutlinePath` with the file's path in a project service and asks the tree to open the file's diff; the next outline shown for that path within 5 s takes the path and selects the row. 5 s covers loading both revisions of a large file. Otherwise the row opens the diff without a selection (R11).
+- **Pull requests:** the diff opens through the pull request's own view model, which takes no context. The adapter records the `OutlinePath` with the file's path and name in `PendingOutlineReveal`, selects the file row and calls the tree's own Enter handler, which the collaboration tools set to open the selected file's diff; the next outline shown for that file within 5 s takes the path and selects the row. The file is matched by the path of the diff content's file, so two files of the same name in one request, such as two `build.gradle.kts`, do not take each other's path; only content without a path is matched by the file name. 5 s covers loading both revisions of a large file. When the tree has no handler or it declines, the file's own diff opens without a selection (R11).
+- **Double-click and Enter:** a summarized row has children, so `ChangesTreeSetup` gives review trees the same press, double-click and Enter handling as the Changes tree, with the adapter as the declaration opener.
 
 ### Edge cases
 
@@ -88,17 +91,18 @@ All scopes share the one-thread summary executor and the 500-file limit applies 
 
 | Test | Checks |
 | --- | --- |
-| `ReviewTreeSummaryTest` (platform test with a `TreeModelBuilder` model of changes with fixed revisions, through each adapter's apply step) | R1 to R3, R5 to R9, R13, R14, R15 |
-| `ReviewTreeRevisionsTest` (a temporary Git repository with one commit, a range and a merge commit) | R4, R7 |
+| `ReviewTreeSummaryTest` (platform test with a real `ChangesTree` whose model is set through `updateTreeModel` from a `TreeModelBuilder` of changes with fixed revisions, through the Git log adapter and the GitHub and GitLab conversion) | R1 to R3, R5 to R9, R12 to R15, and the hook order of S11 |
+| `ReviewTreeRevisionsTest` | R4, R7 |
 | `SummaryScopeTest` | R16 to R19 |
 | `ReviewTreeOpenTest` | R10, R11 |
-| `ChangesSummarySettingsListenerTest` (extended) | R12 |
-| `ReviewTreeActionTest`, only for a tree that S11 gives R20 | R20 |
-| `OptionalDescriptorTest` (extended) and Plugin Verifier on both target IDEs | R21 |
+| `ChangesSummarySettingsListenerTest` | R12, R13 |
+| `OptionalDescriptorTest` and Plugin Verifier on IntelliJ IDEA, PyCharm and RustRover | R21 |
 
-Manual checks, one row per review tree on 2025.1 and the latest IDE, use a commit and a pull request or merge request that change a Java and a Kotlin file: the summary, expanding the rows, opening a row and the filter.
+`ReviewTreeRevisionsTest` checks the revisions each adapter hands to the summary, not a temporary Git repository: the Git log adapter passes the log's own `Change` through unchanged, and reading a pull request's Git revisions needs a project with a Git root mapping, which the light test project does not have. The manual checks below read real commits. No tree gets R20, so there is no `ReviewTreeActionTest`.
 
-## Open questions
+Manual checks, one row per review tree on 2025.1 and the latest IDE, use a commit and a pull request or merge request that change a Java and a Kotlin file: the summary, expanding the rows, opening a row and the filter. They are listed in [VALIDATION.md](../../VALIDATION.md).
 
-- **Modal commit dialog:** include it once S11 shows whether its tree takes the same hook as the log, or keep it out of scope.
-- **View Options in review trees:** keep the Changes tree's toggles as the only control (the proposal), or add the toggles to each review tree's toolbar.
+## Resolved questions
+
+- **Modal commit dialog:** kept out of scope (ADR 0013).
+- **View Options in review trees:** the Changes tree's toggles are the only control, as proposed (R12).

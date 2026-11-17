@@ -200,7 +200,7 @@ class DeclarationNodeAction @JvmOverloads constructor(
 @Service(Service.Level.PROJECT)
 class ChangesSummaryService(private val project: Project) {
 
-    private sealed interface Entry {
+    internal sealed interface Entry {
         data object Pending : Entry
 
         /**
@@ -216,14 +216,14 @@ class ChangesSummaryService(private val project: Project) {
     }
 
     /** Which revision is absent in an added or deleted file. */
-    private enum class MissingSide { NONE, OLD, NEW }
+    internal enum class MissingSide { NONE, OLD, NEW }
 
     /**
      * What a summary was computed from: the file's paths, a version of each side, the engine, the confidence policy and
      * the analysis stamp. The stamp makes a result computed under older limits or an older engine layout land under an
      * older key instead of the current cache.
      */
-    private data class Key(
+    internal data class Key(
         val oldPath: String,
         val newPath: String,
         val oldVersion: String,
@@ -235,9 +235,108 @@ class ChangesSummaryService(private val project: Project) {
     )
 
     private val executor = AppExecutorUtil.createBoundedApplicationPoolExecutor("SMART Diff Changes summary", 1)
-    private val cache = ConcurrentHashMap<Key, Entry>()
+    private val scopes: MutableSet<SummaryScope> = ConcurrentHashMap.newKeySet()
+    private val stampLock = Any()
     private var cacheStamp: AnalysisStamp? = null
-    private val refreshScheduled = AtomicBoolean()
+
+    /** The Local Changes and Commit tree's scope: it keeps only the files of the last tree it was asked for. */
+    private val changesScope = SummaryScope(maxExtraEntries = 0) { refreshChangesView(project) }
+
+    /**
+     * The summaries of one tree (changes-tree/07): its own cache, the files it currently shows, and the tree rebuild
+     * that arriving summaries ask for. The Changes tree has one, and each review tree instance gets one, so a tree never
+     * evicts the summaries of another (R19). Besides the current files, a scope keeps up to [maxExtraEntries] summaries
+     * of files it showed before, least recently shown first out, so a commit selected again is still cached (R18). Its
+     * [generation] moves on whenever the set of current files changes; a queued computation for a file that left the
+     * tree since is dropped before it reads any content (R17).
+     */
+    inner class SummaryScope internal constructor(
+        private val maxExtraEntries: Int,
+        private val refresh: () -> Unit,
+    ) : com.intellij.openapi.Disposable {
+        internal val cache = ConcurrentHashMap<Key, Entry>()
+        private val extra = LinkedHashMap<Key, Unit>(16, 0.75f, true)
+        private val refreshScheduled = AtomicBoolean()
+
+        @Volatile
+        internal var current: Set<Key> = emptySet()
+            private set
+
+        @Volatile
+        internal var generation = 0L
+            private set
+
+        @Volatile
+        var isDisposed = false
+            private set
+
+        init {
+            scopes += this
+        }
+
+        /** Makes [keys] the current files; a file that left the tree is kept as an extra entry if it has a summary. */
+        internal fun retain(keys: Set<Key>): Unit = synchronized(this) {
+            if (keys == current) return
+            generation++
+            for (key in current) {
+                if (key in keys) continue
+                if (maxExtraEntries > 0 && cache[key] is Entry.Done) extra[key] = Unit else cache.remove(key)
+            }
+            keys.forEach { extra.remove(it) }
+            current = keys
+            val iterator = extra.keys.iterator()
+            while (extra.size > maxExtraEntries && iterator.hasNext()) {
+                cache.remove(iterator.next())
+                iterator.remove()
+            }
+            // Entries of neither set, such as a computation that finished after its file left, are dropped.
+            cache.keys.retainAll { it in keys || it in extra }
+        }
+
+        /** Whether a queued computation of [key] that was queued at [queuedAt] must still run. */
+        internal fun wants(key: Key, queuedAt: Long): Boolean =
+            !isDisposed && (queuedAt == generation || key in current)
+
+        internal fun clear(): Unit = synchronized(this) {
+            cache.clear()
+            extra.clear()
+            current = emptySet()
+            generation++
+        }
+
+        /** Rebuilds this scope's tree once for the summaries that arrived within [REFRESH_DELAY_MILLIS]. */
+        internal fun scheduleRefresh() {
+            if (isDisposed || !refreshScheduled.compareAndSet(false, true)) return
+            AppExecutorUtil.getAppScheduledExecutorService().schedule({
+                refreshScheduled.set(false)
+                if (!project.isDisposed && !isDisposed) refresh()
+            }, REFRESH_DELAY_MILLIS, TimeUnit.MILLISECONDS)
+        }
+
+        override fun dispose() {
+            isDisposed = true
+            scopes -= this
+            synchronized(this) {
+                cache.clear()
+                extra.clear()
+                current = emptySet()
+            }
+        }
+
+        /** The number of summaries this scope holds, for tests. */
+        @TestOnly
+        internal fun size(): Int = cache.size
+    }
+
+    /**
+     * A new scope for one review tree, disposed with [parent]. [refresh] rebuilds that tree, at most once per
+     * [REFRESH_DELAY_MILLIS], when summaries arrive.
+     */
+    fun createScope(
+        parent: com.intellij.openapi.Disposable,
+        refresh: () -> Unit,
+        maxExtraEntries: Int = MAX_EXTRA_ENTRIES,
+    ): SummaryScope = SummaryScope(maxExtraEntries, refresh).also { com.intellij.openapi.util.Disposer.register(parent, it) }
 
     /**
      * The summary of each of [changes], or null where it is not known yet or there is none: a file without an engine, a
@@ -246,23 +345,29 @@ class ChangesSummaryService(private val project: Project) {
      * the background, and the tree is refreshed when they are ready. A timed-out summary stays visible while one retry is
      * queued; a second timeout is kept. Files that are no longer in [changes] are forgotten.
      */
-    fun summaries(changes: List<Change>): List<FileSummary?> {
+    fun summaries(changes: List<Change>): List<FileSummary?> = summaries(changes, changesScope)
+
+    /** [summaries] for the tree of [scope]; only that scope's files are kept or forgotten. */
+    fun summaries(changes: List<Change>, scope: SummaryScope): List<FileSummary?> {
+        if (scope.isDisposed) return changes.map { null }
         val stamp = currentAnalysisStamp()
         useStamp(stamp)
         val requests = changes.map { request(it, stamp) }
-        cache.keys.retainAll(requests.mapNotNullTo(HashSet()) { it?.key })
+        scope.retain(requests.mapNotNullTo(LinkedHashSet()) { it?.key })
+        val generation = scope.generation
+        val cache = scope.cache
         return requests.map { request ->
             if (request == null) return@map null
             when (val entry = cache.putIfAbsent(request.key, Entry.Pending)) {
                 null -> {
-                    executor.execute { compute(request) }
+                    executor.execute { compute(request, scope, generation) }
                     null
                 }
                 Entry.Pending -> null
                 is Entry.Done -> {
                     if (!entry.retrying && !entry.retried && entry.retryAt <= System.currentTimeMillis()) {
                         cache.replace(request.key, entry, entry.copy(retrying = true))
-                        executor.execute { compute(request, retry = true) }
+                        executor.execute { compute(request, scope, generation, retry = true) }
                     }
                     entry.summary
                 }
@@ -277,7 +382,7 @@ class ChangesSummaryService(private val project: Project) {
      */
     internal fun snapshot(change: Change): SummarySnapshot {
         val request = request(change, currentAnalysisStamp()) ?: return SummarySnapshot.None
-        return when (val entry = cache[request.key]) {
+        return when (val entry = changesScope.cache[request.key]) {
             is Entry.Done -> entry.summary?.let(SummarySnapshot::Fresh) ?: SummarySnapshot.None
             Entry.Pending -> if (hasOtherEntry(request.key)) SummarySnapshot.Stale else SummarySnapshot.Pending
             null -> if (hasOtherEntry(request.key)) SummarySnapshot.Stale else SummarySnapshot.None
@@ -286,23 +391,23 @@ class ChangesSummaryService(private val project: Project) {
 
     /** Whether the cache has an entry for the same paths under another key, such as the previous document version. */
     private fun hasOtherEntry(key: Key): Boolean =
-        cache.keys.any { it != key && it.oldPath == key.oldPath && it.newPath == key.newPath }
+        changesScope.cache.keys.any { it != key && it.oldPath == key.oldPath && it.newPath == key.newPath }
 
     /** Applies the current analysis stamp; the cache is dropped when it differs from the stamp it was computed under. */
     fun settingsChanged() = useStamp(currentAnalysisStamp())
 
     /** Forgets every summary, for example after the analysis limits changed. */
     fun clear() {
-        synchronized(cache) {
-            cache.clear()
+        synchronized(stampLock) {
+            scopes.forEach { it.clear() }
             cacheStamp = null
         }
     }
 
     private fun useStamp(stamp: AnalysisStamp) {
-        synchronized(cache) {
+        synchronized(stampLock) {
             if (cacheStamp != stamp) {
-                cache.clear()
+                scopes.forEach { it.clear() }
                 cacheStamp = stamp
             }
         }
@@ -361,8 +466,14 @@ class ChangesSummaryService(private val project: Project) {
         return Request(key, change, languageId, fileName, missingSide)
     }
 
-    private fun compute(request: Request, retry: Boolean = false) {
+    private fun compute(request: Request, scope: SummaryScope, queuedAt: Long, retry: Boolean = false) {
         if (project.isDisposed) return
+        val cache = scope.cache
+        // A file that left its tree since this was queued is not compared, and is asked for again if it comes back.
+        if (!scope.wants(request.key, queuedAt)) {
+            cache.remove(request.key, Entry.Pending)
+            return
+        }
         val summary = try {
             summarize(request)
         } catch (e: ProcessCanceledException) {
@@ -383,7 +494,7 @@ class ChangesSummaryService(private val project: Project) {
             retryAt = if (retryable) System.currentTimeMillis() + RETRY_DELAY_MILLIS else Long.MAX_VALUE,
             retried = retry || !retryable,
         )
-        if (cache.replace(request.key, current, next)) scheduleRefresh()
+        if (cache.replace(request.key, current, next)) scope.scheduleRefresh()
     }
 
     /**
@@ -447,15 +558,6 @@ class ChangesSummaryService(private val project: Project) {
         null
     }
 
-    /** Rebuilds the Changes tree once for the summaries that arrived within a short interval. */
-    private fun scheduleRefresh() {
-        if (!refreshScheduled.compareAndSet(false, true)) return
-        AppExecutorUtil.getAppScheduledExecutorService().schedule({
-            refreshScheduled.set(false)
-            if (!project.isDisposed) refreshChangesView(project)
-        }, REFRESH_DELAY_MILLIS, TimeUnit.MILLISECONDS)
-    }
-
     /** Cancels a comparison that takes longer than the analysis time limit. */
     private class Deadline(timeoutMillis: Long) : Cancellation {
         private val deadline = System.nanoTime() + timeoutMillis * 1_000_000
@@ -475,6 +577,9 @@ class ChangesSummaryService(private val project: Project) {
 
     companion object {
         const val REFRESH_DELAY_MILLIS = 300L
+
+        /** Summaries a review tree's scope keeps for files it no longer shows: four full trees of [ChangesSummaryModifier.MAX_FILES]. */
+        const val MAX_EXTRA_ENTRIES = 2000
 
         /** How long a timed-out summary stays visible before its one retry is queued. */
         internal const val RETRY_DELAY_MILLIS = 1_000L
@@ -541,6 +646,10 @@ internal sealed interface SummarySnapshot {
     data object None : SummarySnapshot
 }
 
+/** The review tree watcher, if it was started. */
+private fun serviceIfCreatedApp(): ReviewTreeWatcher? =
+    com.intellij.openapi.application.ApplicationManager.getApplication().serviceIfCreated<ReviewTreeWatcher>()
+
 /** Rebuilds the Local Changes and Commit tree, which asks [ChangesSummaryModifier] again. */
 internal fun refreshChangesView(project: Project) {
     project.messageBus.syncPublisher(ChangesViewModifier.TOPIC).updated()
@@ -572,5 +681,7 @@ class ChangesSummarySettingsListener : SmartDiffSettings.Listener {
         lastConfidence = confidence
         if (!treeChanged && !analysisChanged) return
         for (project in projects) refreshChangesView(project)
+        // The review trees follow the same settings and filter (changes-tree/07 R12, R13).
+        serviceIfCreatedApp()?.let { watcher -> projects.forEach(watcher::rebuildAll) }
     }
 }

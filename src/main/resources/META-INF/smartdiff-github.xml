@@ -1,0 +1,6 @@
+<!-- Loaded when the GitHub plugin is installed. Adds summaries to the changes of a pull request (changes-tree/07, ADR 0013). -->
+<idea-plugin>
+    <extensions defaultExtensionNs="io.github.agadek.smartdiff">
+        <reviewTreeAdapter implementation="io.github.agadek.smartdiff.ui.changes.GitHubTreeAdapter"/>
+    </extensions>
+</idea-plugin>
