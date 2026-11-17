@@ -53,7 +53,7 @@ class ChangedRunsTest {
 
         assertEquals(emptyList<DiffFragment>(), runs.fragment(change(3, 4, 3, 4))!!.innerFragments)
         assertEquals(emptyList<DiffFragment>(), runs.fragment(change(5, 7, 5, 7))!!.innerFragments)
-        assertEquals("a pure insertion", emptyList<DiffFragment>(), runs.fragment(change(6, 6, 5, 6))!!.innerFragments)
+        assertNull("a pure insertion keeps the native fragment and its colour", runs.fragment(change(6, 6, 5, 6)))
     }
 
     // declarations/10-fine-grained-differencing R13

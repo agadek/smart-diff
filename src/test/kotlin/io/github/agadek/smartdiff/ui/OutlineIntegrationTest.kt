@@ -148,6 +148,26 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertEquals(JAVA_NEW.indexOf("void bye()"), shown.viewer.editor2.caretModel.offset)
     }
 
+    // declarations/10-fine-grained-differencing R11, R12
+    fun `test a pure insertion inside a changed method keeps its native fragment`() {
+        val old = "class C {\n    int a() {\n        x();\n        y();\n        return 1;\n    }\n}\n"
+        val new = "class C {\n    int a() {\n        x();\n        log();\n        y();\n        return 2;\n    }\n}\n"
+        val diffSettings = DiffSettings.getSettings()
+        val savedOrder = diffSettings.diffToolsOrder
+        try {
+            diffSettings.diffToolsOrder = listOf(FilteringDiffTool::class.java.canonicalName) + savedOrder
+            val shown = open(history(old, new, "C.java"))
+            val viewer = shown.viewer as FilteringDiffViewer
+            shown.awaitResult()
+            awaitChanges(viewer) { it.size == 2 && !viewer.changedRuns.isEmpty }
+            fun change(line: Int) = viewer.diffChanges.single { it.getStartLine(Side.RIGHT) == line }
+            awaitChanges(viewer) { change(5).fragment.innerFragments?.size == 1 }
+            assertNull("the inserted line keeps the native fragment, without inner fragments", change(3).fragment.innerFragments)
+        } finally {
+            diffSettings.diffToolsOrder = savedOrder
+        }
+    }
+
     // declarations/10-fine-grained-differencing R17
     fun `test selecting a changed row highlights its changed runs on both sides`() {
         val shown = open(history(FORMATTED_OLD, FORMATTED_NEW, "Counter.java"))

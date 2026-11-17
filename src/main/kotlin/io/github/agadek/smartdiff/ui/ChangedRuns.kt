@@ -29,15 +29,17 @@ class ChangedRuns private constructor(
     /**
      * [fragment] with its word highlights replaced by the runs inside it, or null to keep the native fragment: when a
      * line of the change on a side lies outside the lines compared by tokens (R13), or the fragment does not fit the
-     * compared texts. A change with lines on one side only is checked on that side alone. A change with no run inside
-     * gets no word highlights and keeps its line colour (R12).
+     * compared texts. A change with lines on one side only, a pure insertion or deletion, keeps the native fragment
+     * too: it has no word highlights there, and any inner fragment would make the platform draw its lines in the paler
+     * colour of a change with inner differences (R12). A two-sided change with no run inside gets no word highlights
+     * and keeps its line colour (R12).
      */
     fun fragment(fragment: LineFragment): LineFragment? {
         if (isEmpty) return null
         if (fragment.endOffset1 > oldLength || fragment.endOffset2 > newLength) return null
         val oldEmpty = fragment.startLine1 >= fragment.endLine1
         val newEmpty = fragment.startLine2 >= fragment.endLine2
-        if (oldEmpty && newEmpty) return null
+        if (oldEmpty || newEmpty) return null
         if (!all(old, fragment.startLine1, fragment.endLine1) || !all(new, fragment.startLine2, fragment.endLine2)) return null
         return LineFragmentImpl(fragment, inner(fragment))
     }
