@@ -8,6 +8,8 @@ import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.api.EquivalenceRule
 import io.github.agadek.smartdiff.engine.api.EquivalenceRule.JAVA_NUMERIC_LITERALS
 import io.github.agadek.smartdiff.engine.api.EquivalenceRule.JAVA_REDUNDANT_PARENTHESES
+import io.github.agadek.smartdiff.engine.api.EquivalenceRule.KOTLIN_TEMPLATE_BRACES
+import io.github.agadek.smartdiff.engine.api.EquivalenceRule.SCALA_REDUNDANT_PARENTHESES
 import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
@@ -74,6 +76,28 @@ class RewriteOnlyOutlineTest {
         assertTrue(rows, "method hex()  rewrite-only" in rows)
         assertTrue(rows, "method relocated()  moved, changed" in rows)
         assertTrue(rows, "method both()  changed" in rows)
+    }
+
+    // declarations/09-kotlin-scala-equivalence-rules R3
+    @Test
+    fun `a disabled Kotlin rule keeps a Kotlin row changed and leaves Java and Scala rows rewrite-only`() {
+        val mixed = result.copy(
+            fileRegion = null,
+            changes = listOf(
+                node("java", setOf(JAVA_REDUNDANT_PARENTHESES)),
+                node("kotlin", setOf(KOTLIN_TEMPLATE_BRACES)),
+                node("scala", setOf(SCALA_REDUNDANT_PARENTHESES)),
+            ),
+        )
+        val rows = render(OutlineModel.build(mixed, "", "", formattingInline = true, rewriteOnly = all - KOTLIN_TEMPLATE_BRACES))
+        assertEquals(
+            """
+            method java()  rewrite-only
+            method kotlin()  changed
+            method scala()  rewrite-only
+            """.trimIndent(),
+            rows,
+        )
     }
 
     // declarations/08-equivalence-rules R15
