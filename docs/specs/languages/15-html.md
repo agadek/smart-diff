@@ -1,6 +1,6 @@
 # HTML
 
-Status: accepted, 2026-11-16
+Status: implemented, 2026-11-16
 
 **Description:** The [declaration engine](../../GLOSSARY.md#declaration-engine) supports HTML and XHTML files through the platform's XML support, the same parser family as the [XML provider](13-xml.md).
 
@@ -16,7 +16,7 @@ Status: accepted, 2026-11-16
 - **R6** Every other element is not a declaration: its tags, attributes and text are content of the nearest enclosing declaration, or of the [file region](../../GLOSSARY.md#file-region) when there is none.
 - **R7** A declaration's members are the nearest declaration elements inside it, at any depth; the top-level declarations are the declaration elements inside no other declaration element.
 - **R8** Attributes are content of their element: a changed, added, removed or reordered attribute changes the enclosing declaration.
-- **R9** Embedded JavaScript and CSS are content of their `script` or `style` tag and are compared exactly, whitespace included, except line-break whitespace at their edges.
+- **R9** Embedded JavaScript and CSS are content of their `script` or `style` tag and are compared exactly, whitespace included.
 - **R10** Text content outside `script` and `style` is compared as XML text content is ([languages/13](13-xml.md) R9); `pre` and `textarea` content is compared exactly, whitespace included.
 - **R11** Whitespace between tags and between attributes is [formatting-only](../../GLOSSARY.md#formatting-only) when nothing else changed.
 - **R12** A reorder of declarations in one container is reported as [moved](../../GLOSSARY.md#moved).

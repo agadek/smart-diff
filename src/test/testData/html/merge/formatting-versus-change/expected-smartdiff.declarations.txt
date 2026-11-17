@@ -1,0 +1,4 @@
+left: ANALYZED  right: ANALYZED
+tag body  UNCHANGED  base 6-9  left 6-9  right 6-9
+  tag div id=a  LEFT_ONLY  left: formatting-only  base 7  left 7  right 7
+  tag div id=b  CHANGED_ON_BOTH_SIDES  left: formatting-only  right: changed  base 8  left 8  right 8

@@ -63,6 +63,9 @@ class GoldenFixturesTest : BasePlatformTestCase() {
     // languages/13-xml R21
     fun `test XML fixtures`() = checkFixtures("xml", "XML", "xml")
 
+    // languages/15-html R22
+    fun `test HTML fixtures`() = checkFixtures("html", "HTML", "html")
+
     // languages/06-structure-view-fallback R1, R3, R4, R6, R7, R11; languages/06 R2 / languages/07
     // JSON now has a dedicated provider, so these fallback fixtures mask it and run through the real engine path.
     fun `test structure-view JSON fixtures`() =
@@ -130,6 +133,7 @@ class GoldenFixturesTest : BasePlatformTestCase() {
             }
             val requestLanguage = when (ext) {
                 "json5" -> "JSON5"
+                "xhtml" -> "XHTML"
                 else -> languageId
             }
             val old = read(File(case, "old.$ext"))

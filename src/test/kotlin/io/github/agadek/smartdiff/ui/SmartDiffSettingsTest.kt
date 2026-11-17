@@ -323,14 +323,14 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
     }
 
     fun `test the settings page lists each dedicated language with an engine`() {
-        // languages/14-markdown R1
+        // languages/15-html R21; languages/13-xml R21; languages/14-markdown R1
         settings.useStructureViewFallback = false
         val engines = EngineRegistry.getInstance(ProjectManager.getInstance().defaultProject).engines()
 
         val languages = SmartDiffConfigurable.languagesWithEngines(engines).map { (language, _) -> language.id }
 
         assertEquals(
-            listOf("Groovy", "JAVA", "JSON", "JSON5", "kotlin", "Markdown", "Properties", "Python", "Scala", "Shell Script", "TOML", "XML", "yaml"),
+            listOf("Groovy", "HTML", "JAVA", "JSON", "JSON5", "kotlin", "Markdown", "Properties", "Python", "Scala", "Shell Script", "TOML", "XHTML", "XML", "yaml"),
             languages,
         )
     }

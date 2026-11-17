@@ -1,0 +1,3 @@
+status: ANALYZED
+tag body  old 6-8  new 6-8
+  tag script src=app2.js  rename candidate from tag script src=app.js  old 7  new 7

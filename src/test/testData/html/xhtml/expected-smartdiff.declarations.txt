@@ -1,0 +1,3 @@
+status: ANALYZED
+tag body  old 4-8  new 4-8
+  tag section id=pricing  changed  old 5-7  new 5-7

@@ -1,0 +1,4 @@
+status: PARTIAL
+reason: some source could not be parsed and was not analyzed
+tag body  changed  old 6-12  new 6-11
+  tag section id=pricing  unanalyzed  old 8-10  new 7-10

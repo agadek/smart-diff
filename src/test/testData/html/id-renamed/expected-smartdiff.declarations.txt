@@ -1,0 +1,3 @@
+status: ANALYZED
+tag body  old 6-10  new 6-10
+  tag section id=new  rename candidate from tag section id=old  old 7-9  new 7-9
