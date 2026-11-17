@@ -119,6 +119,7 @@ Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.
 | [Expand context to the enclosing declaration](#expand-context-to-the-enclosing-declaration) | [outline/14](specs/outline/14-expand-to-declaration.md) (implemented 2026-11-16) |
 | [Summary in pull request reviews and the Git log](#summary-in-pull-request-reviews-and-the-git-log) | [changes-tree/07](specs/changes-tree/07-review-tree-summaries.md) (proposed 2026-11-16) |
 | [Opt-in equivalence rules](#opt-in-equivalence-rules) | [declarations/08](specs/declarations/08-equivalence-rules.md) (implemented 2026-11-17) |
+| [Platform API stability](#platform-api-stability) | [platform/01](specs/platform/01-platform-api-stability.md) (proposed 2026-11-17) |
 | [More languages](#more-languages) | [Format coverage plan](FORMAT-COVERAGE.md); feature specs with each phase |
 | Every other item below | Not specified yet |
 
@@ -260,7 +261,7 @@ Let the reviewer mark a change in the outline as reviewed and show progress in t
 
 ### Platform API stability
 
-*(weak-point review)* The plugin uses experimental platform API (`ChangesViewNodeAction`), the Scala plugin's internal PSI and the Kotlin Analysis API, and sets no `untilBuild`, so an IDE or Scala plugin update can break it without warning. Run Plugin Verifier against EAP builds on a schedule, keep each experimental or internal use behind one adapter with a fallback that degrades to the native diff, and replace a use when a public API becomes available.
+*(weak-point review)* The plugin uses experimental platform API (`ChangesViewNodeAction`), the Scala plugin's internal PSI and the Kotlin Analysis API, and sets no `untilBuild`, so an IDE or Scala plugin update can break it without warning. Run Plugin Verifier against EAP builds on a schedule, keep each experimental or internal use behind one adapter with a fallback that degrades to the native diff, and replace a use when a public API becomes available. Specified in [platform/01](specs/platform/01-platform-api-stability.md) (proposed, 2026-11-17): a weekly early-access Plugin Verifier run, an inventory in `docs/PLATFORM-API.md` with one adapter per API enforced by an architecture test, and a guard that turns off only the feature whose API is missing, so the native diff keeps working.
 
 ### Marketplace distribution
 
