@@ -61,6 +61,11 @@ _Avoid_: generic engine, fallback engine
 The comparison that the structural outline uses for a file no comparison engine supports, which reads each line as one unit and reports moved blocks of lines.
 _Avoid_: line engine, text engine, fallback diff
 
+### Tree-sitter language
+
+A language the IDE has no language support for, such as Swift in IntelliJ IDEA, that the Tree-sitter engine compares with a grammar bundled in the plugin, chosen by the file name's extension. Specified in [Tree-sitter engine](specs/engines/05-tree-sitter.md).
+_Avoid_: TextMate language, unsupported language
+
 ## Structure
 
 ### Declaration

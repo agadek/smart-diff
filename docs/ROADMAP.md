@@ -122,6 +122,7 @@ Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.
 | [Moves inside declarations](#moves-inside-declarations) | [relationships/08](specs/relationships/08-moves-inside-declarations.md) (proposed, 2026-11-17) |
 | [Fine-grained differencing](#fine-grained-differencing) | [declarations/10](specs/declarations/10-fine-grained-differencing.md) (proposed, 2026-11-17) |
 | [Platform API stability](#platform-api-stability) | [platform/01](specs/platform/01-platform-api-stability.md) (implemented 2026-11-17) |
+| [Tree-sitter support](#tree-sitter-support) | [engines/05](specs/engines/05-tree-sitter.md) (proposed 2026-11-17) |
 | [More languages](#more-languages) | [Format coverage plan](FORMAT-COVERAGE.md); feature specs with each phase |
 | Every other item below | Not specified yet |
 
@@ -193,7 +194,7 @@ Proposed 2026-11-13 ([languages/05](specs/languages/05-rust.md), [details](specs
 
 ### Tree-sitter support
 
-A Tree-sitter provider or engine for languages the host IDE cannot parse, after native packaging and grammar licence review ([research](RESEARCH.md#difftastic-and-alternatives)).
+A Tree-sitter provider or engine for languages the host IDE cannot parse, after native packaging and grammar licence review ([research](RESEARCH.md#difftastic-and-alternatives)). Specified in [engines/05](specs/engines/05-tree-sitter.md) (proposed, 2026-11-17) and [ADR 0015](adr/0015-tree-sitter-languages-are-chosen-by-file-name.md): a `Declarations (Tree-sitter)` engine with bundled grammars for Swift, C#, C and C++ in files the IDE opens as plain text or TextMate files, chosen by the file name's extension, reusing the declaration engine's matching and classification. Spike S12 first chooses the runtime (a JNI binding, WebAssembly grammars on a JVM runtime, the Java binding or a child process), so a grammar fault never ends the IDE and the plugin grows by at most 25 MB. Rider and CLion Nova stay out of scope until S12 records what they offer.
 
 ### Fine-grained differencing
 

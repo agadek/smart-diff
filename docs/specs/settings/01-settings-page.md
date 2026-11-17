@@ -32,6 +32,7 @@ Status: implemented, 2026-10-22; the outline view and relationship kind settings
 - **R22** "Mark rewrite-only changes" is off by default, is the same setting as the outline filter menu's checkbox, lists each language's equivalence rules with one checkbox each, all on by default and enabled only while it is on, and adds a rewrite-only checkbox to "Hide from the outline" while it is on.
 - **R23** "Highlight changed tokens in the SMART Diff viewer" is on by default.
 - **R24** "Detect code moved inside declarations" is on by default.
+- **R25** "Compare languages the IDE cannot parse with Tree-sitter" is on by default.
 
 ## References
 
@@ -42,6 +43,7 @@ Status: implemented, 2026-10-22; the outline view and relationship kind settings
 - [Opt-in equivalence rules](../declarations/08-equivalence-rules.md) (R22)
 - [Fine-grained differencing](../declarations/10-fine-grained-differencing.md) (R23)
 - [Moves inside declarations](../relationships/08-moves-inside-declarations.md) (R24, and the `Moved code` entry of R17)
+- [Tree-sitter engine](../engines/05-tree-sitter.md) (R25)
 - [Moved-code markers](../outline/13-moved-code-markers.md) (R20)
 - [Moved lines in unsupported files](../engines/04-moved-lines.md) (R21)
 - [Technical specification §11](../../TECHNICAL-SPECIFICATION.md#11-settings)
