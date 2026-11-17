@@ -114,6 +114,10 @@ Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.
 | [Hide comment-only changes](#hide-comment-only-changes) | [outline/11](specs/outline/11-comment-only-changes.md) |
 | [Formatting-only recall in Kotlin and Scala](#formatting-only-recall-in-kotlin-and-scala) | [declarations/07](specs/declarations/07-kotlin-scala-formatting.md) |
 | [Reviewed marks in the outline](#reviewed-marks-in-the-outline) | [outline/12](specs/outline/12-reviewed-marks.md) (implemented 2026-11-16) |
+| [Visual links for moved code](#visual-links-for-moved-code) | [outline/13](specs/outline/13-moved-code-markers.md) |
+| [Moved lines in unsupported files](#moved-lines-in-unsupported-files) | [engines/04](specs/engines/04-moved-lines.md) (implemented 2026-11-16) |
+| [Expand context to the enclosing declaration](#expand-context-to-the-enclosing-declaration) | [outline/14](specs/outline/14-expand-to-declaration.md) (implemented 2026-11-16) |
+| [Summary in pull request reviews and the Git log](#summary-in-pull-request-reviews-and-the-git-log) | [changes-tree/07](specs/changes-tree/07-review-tree-summaries.md) (proposed 2026-11-16) |
 | [More languages](#more-languages) | [Format coverage plan](FORMAT-COVERAGE.md); feature specs with each phase |
 | Every other item below | Not specified yet |
 
@@ -223,7 +227,7 @@ Give added and deleted files in the Changes tree a summary and declaration rows,
 
 ### Summary in pull request reviews and the Git log
 
-*(gap review)* SemanticDiff has a full pull request review UI. The IDE equivalent is showing the changed-declarations summary in the GitHub and GitLab pull request changes trees, in the Git log's commit details and in the modal commit dialog. `changesViewModifier` does not reach these ([ADR 0006](adr/0006-changes-tree-summary-through-changes-view-modifier.md)), so this starts with a spike for another hook.
+*(gap review)* SemanticDiff has a full pull request review UI. The IDE equivalent is showing the changed-declarations summary in the GitHub and GitLab pull request changes trees, in the Git log's commit details and in the modal commit dialog. `changesViewModifier` does not reach these ([ADR 0006](adr/0006-changes-tree-summary-through-changes-view-modifier.md)), so this starts with a spike for another hook. Specified in [changes-tree/07](specs/changes-tree/07-review-tree-summaries.md) (proposed, 2026-11-16) for the Git log's commit details and GitHub and GitLab pull request changes: the same summary line and declaration rows as the Changes tree, with spike S11 choosing the hook for each tree and a context menu popup where a tree has none. The modal commit dialog stays out of scope until S11 shows whether it takes the same hook.
 
 ### Reviewed marks in the outline
 
@@ -231,15 +235,15 @@ Let the reviewer mark a change in the outline as reviewed and show progress in t
 
 ### Expand context to the enclosing declaration
 
-*(gap review)* When the native diff collapses unchanged fragments, offer to expand a fragment to the whole surrounding declaration instead of a fixed number of lines. SemanticDiff expands context by complete blocks.
+*(gap review)* When the native diff collapses unchanged fragments, offer to expand a fragment to the whole surrounding declaration instead of a fixed number of lines. SemanticDiff expands context by complete blocks. Implemented 2026-11-16 in [outline/14](specs/outline/14-expand-to-declaration.md): an "Expand Declaration" action in the outline's and the editors' context menus expands every collapsed unchanged fragment in a changed declaration, on both sides, and leaves the rest collapsed, without comparing again or changing the diff's collapse setting. A relationship row expands the fragments of every declaration it frames.
 
-### Visual links for moved code
+### Visual links for moved code (implemented, 2026-11-16)
 
-*(gap review)* Show where moved code came from without selecting it first: mark moved declarations in both editors and link the old and new positions, for example in the gutter or the scrollbar. SemanticDiff boxes moved blocks and shows them on a minimap. Today the outline frames a moved declaration on both sides only when it is selected.
+*(gap review)* Show where moved code came from without selecting it first: mark moved declarations in both editors and link the old and new positions, for example in the gutter or the scrollbar. SemanticDiff boxes moved blocks and shows them on a minimap. Today the outline frames a moved declaration on both sides only when it is selected. Implemented in [outline/13](specs/outline/13-moved-code-markers.md): gutter icons and thin scrollbar marks on both sides name the other side's line, follow the outline's filters and setting, and select the moved declaration's row when clicked.
 
-### Moved lines in unsupported files
+### Moved lines in unsupported files (implemented, 2026-11-16)
 
-*(gap review)* For files no engine can analyze, a fallback that treats each line as one token and still reports moved lines, as SemanticDiff's fallback diff does. These files currently get only the plain native diff.
+*(gap review)* For files no engine can analyze, a fallback that treats each line as one token and still reports moved lines, as SemanticDiff's fallback diff does. These files currently get only the plain native diff. Implemented in [engines/04](specs/engines/04-moved-lines.md): two-sided diffs of plain text and of languages without an engine are compared by lines, and the outline lists each moved block of at least 3 lines, framed on both sides with moved-code markers, and one file region row for the rest, behind an on-by-default setting.
 
 ### Relationship recall
 

@@ -4,6 +4,7 @@ import com.intellij.diff.DiffContext
 import com.intellij.diff.FrameDiffTool
 import com.intellij.diff.tools.util.side.OnesideTextDiffViewer
 import com.intellij.diff.tools.util.side.TwosideTextDiffViewer
+import com.intellij.diff.util.DiffUtil
 import com.intellij.lang.Language
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
@@ -16,16 +17,20 @@ import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Key
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.OnePixelSplitter
+import io.github.agadek.smartdiff.engine.api.AnalysisNote
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.api.Limits
+import io.github.agadek.smartdiff.engine.api.LineEngineProvider
 import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.Status
+import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 import io.github.agadek.smartdiff.engine.api.compareSafely
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
@@ -48,6 +53,9 @@ sealed interface OutlineState {
 
     /** No installed engine supports the language, for example plain text or one whose plugin was removed (§10). */
     data class NoEngine(val languageName: String) : OutlineState
+
+    /** The line comparison found no moved block, so the native diff shows every change (engines/04 R14). */
+    data object NoMovedLines : OutlineState
 
     /** [hiddenCount] changes of the result are left out of [items] by the change type filter. */
     data class Shown(
@@ -83,6 +91,8 @@ class OutlineController internal constructor(
     internal val newEditor: Editor?,
     /** A row to select in the first result shown, when the diff was opened from the Changes tree (§9.4). */
     private var reveal: OutlinePath? = null,
+    /** True only for a two-sided diff: it may use the line comparison when no engine supports the language (engines/04). */
+    private val lineComparison: Boolean = false,
 ) : Disposable, OutlineToggleTarget {
 
     val panel = OutlinePanel(this)
@@ -96,6 +106,7 @@ class OutlineController internal constructor(
     )
     internal val strip = OutlineStrip { setMinimised(false) }
     internal val usageHighlights = RelationshipHighlights(viewer)
+    internal val movedMarkers = MovedCodeMarkers(viewer, ::revealFromMarker)
 
     var state: OutlineState = OutlineState.Hidden
         private set
@@ -145,6 +156,7 @@ class OutlineController internal constructor(
         val formattingOnlyInline: Boolean,
         val markCommentOnly: Boolean,
         val hideReviewed: Boolean,
+        val markMovedCode: Boolean,
         val outlineView: OutlineView,
         val hiddenRelationshipKinds: Set<RelationshipKind>,
     )
@@ -153,6 +165,7 @@ class OutlineController internal constructor(
         val engineId: EngineId?,
         val limits: Limits,
         val useStructureViewFallback: Boolean,
+        val compareLinesWithoutEngine: Boolean,
     )
 
     private var displaySnapshot: DisplaySnapshot? = null
@@ -186,8 +199,37 @@ class OutlineController internal constructor(
         }
     }
 
+    /**
+     * Expands the collapsed unchanged fragments of [item] on both sides and scrolls each editor to the declaration's first
+     * line on its side, keeping the outline's selection (outline/14 R3 to R10). It never compares again and never rebuilds
+     * the rows; the scroll runs with caret follow suppressed and synchronized scrolling paused, as a selection's scroll does.
+     */
+    fun expandDeclaration(item: OutlineItem) {
+        if (item.isGroup || item.kind == ItemKind.FILE_REGION) return
+        val oldRanges = ExpandDeclaration.oldRanges(item)
+        val newRanges = ExpandDeclaration.newRanges(item)
+        // Expanding changes the frames' size, so the selection's scroll hold is stale; the frames and selection stay.
+        navigator.releaseScrollSync()
+        withSuppressedCaretFollow {
+            navigator.withSyncDisabled {
+                ExpandDeclaration.expand(oldEditor, newEditor, item)
+                scrollToFirst(oldEditor, oldRanges.firstOrNull())
+                scrollToFirst(newEditor, newRanges.firstOrNull())
+            }
+        }
+    }
+
+    private fun scrollToFirst(editor: Editor?, range: TextRange?) {
+        if (editor == null || range == null) return
+        val line = editor.document.getLineNumber(range.start.coerceIn(0, editor.document.textLength))
+        DiffUtil.scrollEditor(editor, line, false)
+    }
+
     internal fun start() {
         viewer.component.putClientProperty(CONTROLLER, this)
+        // The editors' Expand Declaration action finds this controller through its user data (outline/14 R2).
+        oldEditor?.putUserData(EDITOR_KEY, this)
+        newEditor?.putUserData(EDITOR_KEY, this)
         if (!settingsSubscribed) {
             settingsSubscribed = true
             val settings = SmartDiffSettings.getInstance()
@@ -215,15 +257,30 @@ class OutlineController internal constructor(
         settings.formattingOnlyInline,
         settings.markCommentOnly,
         settings.hideReviewed,
+        settings.markMovedCode,
         settings.outlineView,
         settings.hiddenRelationshipKinds,
     )
 
     private fun analysisSnapshot(settings: SmartDiffSettings): AnalysisSnapshot = AnalysisSnapshot(
-        selection().selected?.id,
+        engineFor(selection())?.id,
         settings.limits,
         settings.useStructureViewFallback,
+        settings.compareLinesWithoutEngine,
     )
+
+    /**
+     * The engine this outline compares with (engines/04 R1 to R4, R19): a selected engine always wins, then the line
+     * comparison when the setting is on and this is a two-sided diff, and otherwise null for the `NoEngine` message.
+     * Both [refresh] and the staleness checks call it, so a setting change drops an older result.
+     */
+    internal fun engineFor(selection: EngineSelection): ComparisonEngine? {
+        selection.selected?.let { return it }
+        if (lineComparison && SmartDiffSettings.getInstance().compareLinesWithoutEngine) {
+            return ApplicationManager.getApplication().getService(LineEngineProvider::class.java).engine()
+        }
+        return null
+    }
 
     private fun settingsChanged() {
         if (disposed) return
@@ -273,6 +330,13 @@ class OutlineController internal constructor(
         applyVisibility()
     }
 
+    /** Selects the row of a clicked moved marker, restoring the panel first when it is minimised (outline/13 R7, R8). */
+    private fun revealFromMarker(path: OutlinePath) {
+        if (disposed || state !is OutlineState.Shown) return
+        if (isMinimised) setMinimised(false)
+        panel.reveal(path)
+    }
+
     private fun applyVisibility() {
         if (!isOutlineVisible) {
             hideOutline()
@@ -294,6 +358,7 @@ class OutlineController internal constructor(
         cancel()
         navigator.clear()
         usageHighlights.clear()
+        movedMarkers.clear()
         (viewer as? FilteringDiffViewer)?.hide(HiddenLines.NONE)
         removeStrip()
         splitter.secondComponent = null
@@ -334,7 +399,7 @@ class OutlineController internal constructor(
         if (disposed || !isOutlineVisible) return
         val selection = selection()
         panel.showEngines(selection)
-        val engine = selection.selected
+        val engine = engineFor(selection)
         if (engine == null) {
             // A previous result may have faded native changes; the message below promises the native diff shows every change.
             (viewer as? FilteringDiffViewer)?.hide(HiddenLines.NONE)
@@ -381,7 +446,7 @@ class OutlineController internal constructor(
             // A document listener has already scheduled the next comparison.
             return
         }
-        if (selection().selected?.id != job.engine.id) return refresh()
+        if (engineFor(selection())?.id != job.engine.id) return refresh()
         // The engine result is on screen before the pass starts, so a resolve never delays it (R2). Only the cheap
         // checks run here, on the EDT; the pass reads the project file index on its pooled thread (R3).
         if (ReferencePass.supports(languageId) && ReferencePass.canRun(project, file, result)) {
@@ -416,7 +481,7 @@ class OutlineController internal constructor(
     private fun finishPass(job: Job, request: ComparisonRequest, outcome: ReferencePass.Outcome) {
         if (disposed || job !== running || job.canceled) return
         if (oldDocument.modificationStamp != job.oldStamp || newDocument.modificationStamp != job.newStamp) return
-        if (selection().selected?.id != job.engine.id) return refresh()
+        if (engineFor(selection())?.id != job.engine.id) return refresh()
         running = null
         val note = if (outcome.notGrouped) USAGES_NOT_GROUPED else null
         showResult(request, outcome.result, note, keepSelection = true, policy = outcome.whitespacePolicy)
@@ -534,6 +599,13 @@ class OutlineController internal constructor(
         policy: WhitespacePolicy? = null,
         dropStale: Boolean = true,
     ) {
+        // The file region alone would repeat the native diff, and a line comparison with no moved block reports no
+        // structural change; show the message in place of an empty tree (engines/04 R14).
+        if (result.analysisNote == AnalysisNote.LINES && result.changes.isEmpty()) {
+            (viewer as? FilteringDiffViewer)?.hide(HiddenLines.NONE)
+            show(OutlineState.NoMovedLines)
+            return
+        }
         val settings = SmartDiffSettings.getInstance()
         val hidden = settings.hiddenChangeTypes
         val markCommentOnly = settings.markCommentOnly
@@ -573,6 +645,11 @@ class OutlineController internal constructor(
             ),
         )
         if (fileKey != null && dropStale && reviewed.stale.isNotEmpty()) marks.publish(fileKey)
+        if (settings.markMovedCode) {
+            movedMarkers.show(MovedCodeMarkers.targets(items))
+        } else {
+            movedMarkers.clear()
+        }
         if (view == OutlineView.REFACTORINGS) {
             usageHighlights.show(result, settings.hiddenRelationshipKinds)
         } else {
@@ -593,6 +670,7 @@ class OutlineController internal constructor(
         cancel()
         navigator.releaseScrollSync()
         usageHighlights.clear()
+        movedMarkers.clear()
         (viewer as? FilteringDiffViewer)?.forgetHidden()
         debounce.restart()
     }
@@ -607,6 +685,7 @@ class OutlineController internal constructor(
         if (state !is OutlineState.Shown) {
             shownRequest = null
             usageHighlights.clear()
+            movedMarkers.clear()
         }
         this.state = state
         panel.show(state)
@@ -685,6 +764,12 @@ class OutlineController internal constructor(
         return find(items, emptyList()) ?: listOf(target)
     }
 
+    /** The innermost shown row for [offset] on [side], or null; the editor's Expand Declaration action uses it (outline/14 R2). */
+    internal fun rowAt(side: CaretSide, offset: Int): OutlineItem? {
+        val shown = state as? OutlineState.Shown ?: return null
+        return matchingItem(shown.items, side, offset)
+    }
+
     /** The innermost shown row for [offset] on [side], or null (outline/07 R1-R3, R6, R7). */
     private fun matchingItem(items: List<OutlineItem>, side: CaretSide, offset: Int): OutlineItem? {
         val matches = mutableListOf<Match>()
@@ -729,6 +814,7 @@ class OutlineController internal constructor(
         OutlineState.Hidden -> null
         OutlineState.Loading -> "Comparing…"
         is OutlineState.NoEngine -> "No comparison engine supports ${state.languageName} files"
+        OutlineState.NoMovedLines -> "No moved lines found. The native diff shows every change."
         is OutlineState.Shown -> when (state.result.status) {
             Status.ANALYZED, Status.PARTIAL -> state.summary
             Status.UNSUPPORTED -> fallbackDetail("Not supported", state)
@@ -746,10 +832,13 @@ class OutlineController internal constructor(
         cancel()
         navigator.clear()
         usageHighlights.clear()
+        movedMarkers.clear()
         removeStrip()
         state = OutlineState.Hidden
         panel.show(OutlineState.Hidden)
         viewer.component.putClientProperty(CONTROLLER, null)
+        oldEditor?.putUserData(EDITOR_KEY, null)
+        newEditor?.putUserData(EDITOR_KEY, null)
     }
 
     /** One comparison: its engine, the document stamps it was made from, and its cancellation with the time limit (§9.2 step 5). */
@@ -803,6 +892,9 @@ class OutlineController internal constructor(
 
         /** The outline toggle's state for one diff window, shared by the viewers it shows one after another. */
         private const val CONTROLLER = "smartdiff.outline.controller"
+
+        /** The outline controller attached to a diff editor, for its Expand Declaration action (outline/14 R2). */
+        val EDITOR_KEY = Key.create<OutlineController>("smartdiff.outline.controller.editor")
 
         /** The outline attached to [viewer], or null if it has none. */
         fun of(viewer: FrameDiffTool.DiffViewer?): OutlineController? =

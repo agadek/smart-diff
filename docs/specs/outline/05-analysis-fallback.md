@@ -34,3 +34,4 @@ Status: implemented, 2026-11-04
 - [Changes tree summary](../changes-tree/01-changes-tree-summary.md)
 - [Technical specification §9.4](../../TECHNICAL-SPECIFICATION.md#94-changes-tree-summary) and [§10](../../TECHNICAL-SPECIFICATION.md#10-structural-outline)
 - [Validation](../../VALIDATION.md)
+- [Moved lines in unsupported files](../engines/04-moved-lines.md), which replaces R1's message with the line comparison while its setting is on

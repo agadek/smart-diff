@@ -9,12 +9,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class LineEngineContractTest : ComparisonEngineContractTest() {
-    override fun createEngine(): ComparisonEngine = LineEngine()
+    override fun createEngine(): ComparisonEngine = TestLineEngine()
 
     @Test
     fun `R22 the line engine reports no relationships and passes every relationship check`() {
         // relationships/02-relationship-model R22
-        val result = LineEngine().compare(ComparisonRequest("a\nb\n", "a\nc\n", "TEXT"), Cancellation.NONE)
+        val result = TestLineEngine().compare(ComparisonRequest("a\nb\n", "a\nc\n", "TEXT"), Cancellation.NONE)
 
         assertEquals(emptyList<Relationship>(), result.relationships)
     }

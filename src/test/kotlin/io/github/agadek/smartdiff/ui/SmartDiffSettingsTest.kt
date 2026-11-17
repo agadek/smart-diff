@@ -4,6 +4,8 @@ import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.components.JBCheckBox
+import com.intellij.util.ui.UIUtil
 import io.github.agadek.smartdiff.engine.api.ConfidencePolicy
 import io.github.agadek.smartdiff.engine.api.Limits
 import io.github.agadek.smartdiff.engine.api.RelationshipKind
@@ -101,6 +103,45 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
             configurable.disposeUIResources()
         }
         assertTrue("applying the page keeps the option", settings.markCommentOnly)
+    }
+
+    // outline/13 R1, R13; settings/01 R20
+    fun `test outline 13 R13 the settings page has the checkbox`() {
+        settings.loadState(SmartDiffSettings.SettingsState())
+        val configurable = SmartDiffConfigurable()
+        try {
+            val panel = configurable.createComponent()!!
+            configurable.reset()
+            assertFalse(configurable.isModified)
+            val box = UIUtil.findComponentsOfType(panel, JBCheckBox::class.java)
+                .single { it.text == "Mark moved code in the editors" }
+            assertTrue("the checkbox starts on", box.isSelected)
+
+            box.isSelected = false
+            assertTrue("isModified follows the checkbox", configurable.isModified)
+            configurable.apply()
+            assertFalse("applying writes the setting", settings.markMovedCode)
+            assertFalse(configurable.isModified)
+        } finally {
+            configurable.disposeUIResources()
+        }
+
+        settings.loadState(SmartDiffSettings.SettingsState().apply { markMovedCode = false })
+        val reopened = SmartDiffConfigurable()
+        try {
+            val panel = reopened.createComponent()!!
+            reopened.reset()
+            val box = UIUtil.findComponentsOfType(panel, JBCheckBox::class.java)
+                .single { it.text == "Mark moved code in the editors" }
+            assertFalse("the checkbox reads the stored value", box.isSelected)
+            assertFalse(reopened.isModified)
+            box.isSelected = true
+            assertTrue(reopened.isModified)
+            reopened.apply()
+            assertTrue(settings.markMovedCode)
+        } finally {
+            reopened.disposeUIResources()
+        }
     }
 
     fun `test R2 the outline view is stored and the container tree is the default`() {

@@ -50,9 +50,11 @@ class OutlineDiffExtension : DiffExtension() {
         val languageId = new.languageId() ?: return
         if (old.languageId() != languageId) return
         val project = context.project ?: ProjectManager.getInstance().defaultProject
-        // Plain text gets no panel unless an engine explicitly supports it, so it does not add noise to every text diff.
+        // Plain text gets no panel unless an engine supports it or the line comparison is on, so a mixed change list
+        // does not add the message to every text file (engines/04 R1, R3).
         if (languageId == PlainTextLanguage.INSTANCE.id &&
-            EngineRegistry.getInstance(project).select(languageId).selected == null
+            EngineRegistry.getInstance(project).select(languageId).selected == null &&
+            !SmartDiffSettings.getInstance().compareLinesWithoutEngine
         ) return
 
         val splitter = insertOutlineSplitter(viewer.component, "smartdiff.outline.proportion") ?: return
@@ -65,6 +67,7 @@ class OutlineDiffExtension : DiffExtension() {
         val controller = OutlineController(
             project, viewer, context, splitter, languageId, fileName, file,
             old.document, new.document, viewer.editor1, viewer.editor2, reveal,
+            lineComparison = true,
         )
         Disposer.register(viewer, controller)
         controller.start()

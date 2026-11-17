@@ -80,6 +80,10 @@
         <!-- The UI owns the fallback setting; the engine reads it through this interface (languages/06 R1, R10). -->
         <applicationService serviceInterface="io.github.agadek.smartdiff.engine.api.StructureViewFallbackSetting"
                             serviceImplementation="io.github.agadek.smartdiff.ui.SmartDiffStructureViewFallbackSetting"/>
+        <!-- The line comparison is deliberately not on the comparisonEngine extension point: the outline asks for it
+             through this API service, so the registry, dropdown and stored defaults never see it (engines/04). -->
+        <applicationService serviceInterface="io.github.agadek.smartdiff.engine.api.LineEngineProvider"
+                            serviceImplementation="io.github.agadek.smartdiff.engine.lines.LineEngine"/>
         <!-- The confidence thresholds the declaration engine classifies its relationships with, as high,medium
              (relationships/02 R15). A malformed value keeps the default (R30). -->
         <registryKey key="smartdiff.relationships.confidence"
@@ -98,6 +102,14 @@
             <add-to-group group-id="Diff.Conflicts.Additional.Actions" anchor="last"/>
             <!-- Ctrl+Alt+Shift+O is free in the platform's default and diff keymaps; Keymap lists it under SMART Diff. -->
             <keyboard-shortcut keymap="$default" first-keystroke="control alt shift O"/>
+        </action>
+        <!-- Expands the collapsed unchanged fragments of the declaration at the caret (outline/14). No default shortcut:
+             a user can assign one in the keymap. Diff.EditorPopupMenu is the diff editors' context menu. -->
+        <action id="SmartDiff.ExpandDeclaration"
+                class="io.github.agadek.smartdiff.ui.ExpandDeclarationAction"
+                text="Expand Declaration"
+                description="Expand the collapsed unchanged fragments of the declaration at the caret">
+            <add-to-group group-id="Diff.EditorPopupMenu" anchor="first"/>
         </action>
     </actions>
 

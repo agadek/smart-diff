@@ -54,6 +54,11 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                     .bindSelected(settings::useStructureViewFallback)
                     .comment("Analyze languages without a dedicated provider through the IDE's structure view.")
             }
+            row {
+                checkBox("Show moved lines in files without an engine")
+                    .bindSelected(settings::compareLinesWithoutEngine)
+                    .comment("In a two-sided diff of a file no comparison engine supports, list moved blocks of lines in the structural outline; the native diff always shows every change.")
+            }
             buttonsGroup("Formatting-only changes:") {
                 row { radioButton("Collapsed in a group", false) }
                 row { radioButton("Inline", true) }
@@ -63,6 +68,11 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                 markCommentOnly = checkBox("Mark comment-only changes")
                     .bindSelected(settings::markCommentOnly)
                     .comment("Label changed declarations whose only difference is in comments as comment-only in the outline, so the filter can hide them.")
+            }
+            row {
+                checkBox("Mark moved code in the editors")
+                    .bindSelected(settings::markMovedCode)
+                    .comment("Mark each moved declaration in the gutter and on the scrollbar of both editors while the outline shows the result.")
             }
             buttonsGroup("Outline view:") {
                 row { radioButton("Container tree", OutlineView.CONTAINER_TREE) }

@@ -47,6 +47,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [01 Comparison engines](engines/01-comparison-engines.md) | implemented, 2026-10-21 |
 | [02 Engine contract](engines/02-engine-contract.md) | implemented, 2026-10-21 |
 | [03 Analysis limits](engines/03-analysis-limits.md) | implemented, 2026-10-21 |
+| [04 Moved lines in unsupported files](engines/04-moved-lines.md) | implemented, 2026-11-16 |
 
 ## Declaration engine
 
@@ -96,6 +97,8 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [10 Outline settings button](outline/10-outline-settings-button.md) | implemented, 2026-11-15 |
 | [11 Comment-only changes](outline/11-comment-only-changes.md) | implemented, 2026-11-16 |
 | [12 Reviewed marks](outline/12-reviewed-marks.md) | implemented, 2026-11-16 |
+| [13 Moved-code markers](outline/13-moved-code-markers.md) | implemented, 2026-11-16 |
+| [14 Expand to declaration](outline/14-expand-to-declaration.md) | implemented, 2026-11-16 |
 
 ## Changes tree
 
@@ -107,6 +110,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [04 Hide and filter](changes-tree/04-hide-and-filter.md) | implemented, 2026-11-06 |
 | [05 Changes tree caret follow](changes-tree/05-changes-tree-caret-follow.md) | implemented, 2026-11-07 |
 | [06 Summaries for added and deleted files](changes-tree/06-added-deleted-file-summaries.md) | implemented, 2026-11-15 |
+| [07 Summaries in the Git log and pull requests](changes-tree/07-review-tree-summaries.md) | proposed, 2026-11-16 |
 
 ## Settings
 

@@ -65,8 +65,8 @@ import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
-import io.github.agadek.smartdiff.engine.lines.LineEngine
-import io.github.agadek.smartdiff.engine.lines.LineEngineFactory
+import io.github.agadek.smartdiff.engine.lines.TestLineEngine
+import io.github.agadek.smartdiff.engine.lines.TestLineEngineFactory
 import io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory
 import io.github.agadek.smartdiff.engine.registry.EngineDefaults
 import io.github.agadek.smartdiff.references.ReferencePass
@@ -411,17 +411,19 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test losing the engine clears faded changes and shows NoEngine`() {
+        // engines/04 R1: with the line comparison off, losing the engine keeps the NoEngine fallback.
+        settings.compareLinesWithoutEngine = false
         val diffSettings = DiffSettings.getSettings()
         val savedOrder = diffSettings.diffToolsOrder
         val registration = Disposer.newDisposable(testRootDisposable)
         try {
-            ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(LineEngineFactory()), registration)
+            ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(TestLineEngineFactory()), registration)
             diffSettings.diffToolsOrder = listOf(FilteringDiffTool::class.java.canonicalName) + savedOrder
 
             // LineEngine supports TEXT, so the plain-text skip does not apply and the result can be shown first.
             val viewer = openAny(history("one\n", "two\n", "notes.txt")) as FilteringDiffViewer
             val outline = OutlineController.of(viewer)!!
-            awaitResult(outline) { it.result.engineId == LineEngine.ID }
+            awaitResult(outline) { it.result.engineId == TestLineEngine.ID }
             outline.setHidden(ChangeType.CHANGED, true)
             awaitChanges(viewer) { changes -> changes.any { it.isSkipped } }
 
@@ -767,7 +769,7 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test a test-only engine appears in the dropdown and can be selected`() {
-        ExtensionTestUtil.addExtensions(ComparisonEngineFactory.EP_NAME, listOf(LineEngineFactory()), testRootDisposable)
+        ExtensionTestUtil.addExtensions(ComparisonEngineFactory.EP_NAME, listOf(TestLineEngineFactory()), testRootDisposable)
 
         val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
         val engines = outline.panel.engines
@@ -775,12 +777,12 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertEquals(listOf("Declarations", "Lines (test)"), (0 until engines.itemCount).map { engines.getItemAt(it).displayName })
         assertEquals("Declarations", (engines.selectedItem as ComparisonEngine).displayName)
 
-        engines.selectedItem = (0 until engines.itemCount).map { engines.getItemAt(it) }.single { it.id == LineEngine.ID }
+        engines.selectedItem = (0 until engines.itemCount).map { engines.getItemAt(it) }.single { it.id == TestLineEngine.ID }
 
-        val result = awaitResult(outline) { it.result.engineId == LineEngine.ID }
-        assertEquals(LineEngine.ID, result.result.engineId)
+        val result = awaitResult(outline) { it.result.engineId == TestLineEngine.ID }
+        assertEquals(TestLineEngine.ID, result.result.engineId)
         assertEquals(listOf("lines 2 changed to 2-4  changed"), rows(outline))
-        assertEquals("the choice is stored for the language", LineEngine.ID, EngineDefaults.getInstance().get("JAVA"))
+        assertEquals("the choice is stored for the language", TestLineEngine.ID, EngineDefaults.getInstance().get("JAVA"))
     }
 
     fun `test the dropdown is hidden with a single engine`() {
@@ -927,6 +929,8 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test a language without an engine shows the outline with an unsupported message`() {
+        // engines/04 R1: the NoEngine fallback is what this state is tested with.
+        settings.compareLinesWithoutEngine = false
         // outline/05-analysis-fallback R1, R2, R11
         // The light test IDE loads neither properties nor YAML; mask the engines so Kotlin, which is loaded, has none.
         ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(JavaOnlyEngine())), testRootDisposable)
@@ -963,6 +967,8 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test the setting keeps the outline hidden in a fallback state`() {
+        // engines/04 R1: keep the fallback path under test.
+        settings.compareLinesWithoutEngine = false
         // outline/05-analysis-fallback R11
         ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(JavaOnlyEngine())), testRootDisposable)
         settings.showOutline = false
@@ -975,6 +981,8 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test a plain-text diff gets no outline`() {
+        // engines/04 R1: this is the behaviour with the line comparison switched off.
+        settings.compareLinesWithoutEngine = false
         val viewer = openAny(history("one\n", "two\n", "notes.txt"))
 
         assertNull(OutlineController.of(viewer))
@@ -1423,6 +1431,8 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
     }
 
     fun `test outline 10 R4 the button is enabled in every state`() {
+        // engines/04 R1: keep the NoEngine state under test.
+        settings.compareLinesWithoutEngine = false
         // outline/10-outline-settings-button R4
         val action = OpenSmartDiffSettingsAction()
         fun assertEnabled(contextOutline: OutlineController) {
@@ -1892,6 +1902,209 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertEquals("1 changed · 1 added · 1 of 2 reviewed", second.panel.summary.text)
     }
 
+    fun `test outline 13 R7 clicking a marker selects the row`() {
+        // outline/13 R7
+        maskEngines(MovedEngine())
+        val shown = open(movedHistory())
+        val outline = shown.awaitResult()
+        assertEquals(2, outline.movedMarkers.shown.size)
+
+        clickMovedMarker(outline)
+
+        assertEquals("moved", outline.panel.selectedItem()?.title)
+        assertTrue(
+            "both ranges are framed: ${outline.navigator.shown.map { it.startOffset }}",
+            outline.navigator.shown.any {
+                it.document === shown.viewer.editor1.document && it.startOffset == MOVED_METHOD.indexOf("int moved()")
+            } && outline.navigator.shown.any {
+                it.document === shown.viewer.editor2.document && it.startOffset == MOVED_MARKER_NEW.indexOf("int moved()")
+            },
+        )
+    }
+
+    fun `test outline 13 R8 clicking a marker while minimised shows the panel`() {
+        // outline/13 R8
+        maskEngines(MovedEngine())
+        val shown = open(movedHistory())
+        val outline = shown.awaitResult()
+        outline.panel.minimiseAction.actionPerformed(TestActionEvent.createTestEvent(outline.panel.minimiseAction))
+        assertTrue(outline.isMinimised)
+        assertEquals("the markers stay while minimised", 2, outline.movedMarkers.shown.size)
+
+        clickMovedMarker(outline)
+
+        assertFalse(outline.isMinimised)
+        assertTrue(UIUtil.isAncestor(shown.viewer.component, outline.panel))
+        assertEquals("moved", outline.panel.selectedItem()?.title)
+    }
+
+    fun `test outline 13 R9 hiding the outline removes the markers`() {
+        // outline/13 R9
+        maskEngines(MovedEngine())
+        val outline = open(movedHistory()).awaitResult()
+        assertEquals(2, outline.movedMarkers.shown.size)
+
+        outline.setOutlineVisible(false)
+
+        assertTrue(outline.movedMarkers.shown.isEmpty())
+        outline.setOutlineVisible(true)
+        awaitResult(outline) { true }
+        assertEquals(2, outline.movedMarkers.shown.size)
+    }
+
+    fun `test outline 13 R10 an edit replaces the markers`() {
+        // outline/13 R10
+        maskEngines(MovedEngine())
+        val insertion = "    int before() {}\n"
+        val newText = "// edited later\n" + MOVED_METHOD
+        val local = myFixture.addFileToProject("local/Moved.java", newText).virtualFile
+        val shown = open(
+            SimpleDiffRequest(
+                "Moved.java",
+                DiffContents.vcsRevision(project, MOVED_METHOD, "/repo/Moved.java"),
+                DiffContents.localFile(project, local),
+                "HEAD",
+                "Current",
+            ),
+        )
+        val outline = shown.awaitResult()
+        val newStart = newText.indexOf("int moved()")
+        assertEquals(2, outline.movedMarkers.shown.size)
+        assertTrue(outline.movedMarkers.shown.any { it.document === shown.viewer.editor2.document && it.startOffset == newStart })
+
+        WriteCommandAction.runWriteCommandAction(project) {
+            shown.viewer.editor2.document.insertString(0, insertion)
+        }
+
+        assertTrue("the edit removes the markers at once", outline.movedMarkers.shown.isEmpty())
+        val shifted = newStart + insertion.length
+        PlatformTestUtil.waitWithEventsDispatching("the markers did not return", {
+            outline.movedMarkers.shown.any { it.document === shown.viewer.editor2.document && it.startOffset == shifted }
+        }, 10)
+    }
+
+    fun `test outline 13 R11 fallback states show no markers`() {
+        // engines/04 R1: keep the NoEngine state under test.
+        settings.compareLinesWithoutEngine = false
+        // outline/13 R11
+        val slowRegistration = Disposer.newDisposable(testRootDisposable)
+        try {
+            ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(SlowEngine())), slowRegistration)
+            val loading = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).outline
+            assertEquals(OutlineState.Loading, loading.state)
+            assertTrue(loading.movedMarkers.shown.isEmpty())
+        } finally {
+            Disposer.dispose(slowRegistration)
+        }
+
+        val largeRegistration = Disposer.newDisposable(testRootDisposable)
+        try {
+            val large = ResultEngine().apply { status = Status.TOO_LARGE; reason = "file is too large" }
+            ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(large)), largeRegistration)
+            val tooLarge = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java"))
+            val outline = tooLarge.awaitResult()
+            assertEquals(Status.TOO_LARGE, (outline.state as OutlineState.Shown).result.status)
+            assertTrue(outline.movedMarkers.shown.isEmpty())
+        } finally {
+            Disposer.dispose(largeRegistration)
+        }
+
+        val noEngineRegistration = Disposer.newDisposable(testRootDisposable)
+        try {
+            ExtensionTestUtil.maskExtensions(ComparisonEngineFactory.EP_NAME, listOf(factory(JavaOnlyEngine())), noEngineRegistration)
+            val noEngine = open(history(KOTLIN_OLD, KOTLIN_NEW, "Greeter.kt")).outline
+            PlatformTestUtil.waitWithEventsDispatching("no engine", { noEngine.state is OutlineState.NoEngine }, 10)
+            assertTrue(noEngine.movedMarkers.shown.isEmpty())
+        } finally {
+            Disposer.dispose(noEngineRegistration)
+        }
+    }
+
+    fun `test outline 13 R12 filter and view changes update the markers without comparing`() {
+        // outline/13 R12
+        val engine = CountingEngine(resultFactory = { _, _ -> movedResult() })
+        maskEngines(engine)
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+        val calls = engine.calls
+        assertEquals(2, outline.movedMarkers.shown.size)
+
+        outline.setHidden(ChangeType.MOVED, true)
+        assertTrue(outline.movedMarkers.shown.isEmpty())
+        assertEquals("the filter does not compare again", calls, engine.calls)
+
+        outline.setHidden(ChangeType.MOVED, false)
+        assertEquals(2, outline.movedMarkers.shown.size)
+        assertEquals(calls, engine.calls)
+
+        outline.setOutlineView(OutlineView.REFACTORINGS)
+        assertEquals("the view switch does not compare again", calls, engine.calls)
+        assertEquals(2, outline.movedMarkers.shown.size)
+
+        settings.markMovedCode = false
+        publishSettingsChanged()
+        assertTrue("turning the setting off updates open diffs", outline.movedMarkers.shown.isEmpty())
+        assertEquals(calls, engine.calls)
+
+        settings.markMovedCode = true
+        publishSettingsChanged()
+        assertEquals(2, outline.movedMarkers.shown.size)
+        assertEquals(calls, engine.calls)
+    }
+
+    /** Performs the click action of a moved marker, as a gutter click does. */
+    private fun clickMovedMarker(outline: OutlineController) {
+        val action = outline.movedMarkers.shown.first().gutterIconRenderer!!.clickAction!!
+        action.actionPerformed(TestActionEvent.createTestEvent(action))
+    }
+
+    /** A result with one moved declaration, with ranges inside the short Java fixture. */
+    private fun movedResult(): ComparisonResult {
+        val subject = Subject.Declaration(DeclarationKind.ITEM, "moved", null)
+        val range = TextRange(6, 12)
+        return ComparisonResult(
+            EngineId("smartdiff.test.moved"), "1", Status.ANALYZED,
+            changes = listOf(ChangeNode(subject, range, range, Presence.MATCHED, moved = true)),
+            relationships = listOf(
+                Relationship(
+                    setOf(RelationshipKind.MOVE),
+                    listOf(RelationshipEndpoint(subject, range)),
+                    listOf(RelationshipEndpoint(subject, range)),
+                    Confidence.HIGH,
+                    emptyList(),
+                ),
+            ),
+        )
+    }
+
+    /** A test engine whose moved ranges follow the text, so an edit moves the markers. */
+    private class MovedEngine : ComparisonEngine {
+        override val id = EngineId("smartdiff.test.movedEngine")
+        override val displayName = "Moved (test)"
+        override val version = "1"
+        override fun supports(languageId: String) = true
+
+        override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult {
+            val subject = Subject.Declaration(DeclarationKind.ITEM, "moved", null)
+            val start = request.newText.indexOf("int moved()")
+            val range = TextRange(start, (start + "int moved()".length).coerceAtMost(request.newText.length))
+            val oldStart = request.oldText.indexOf("int moved()")
+            val oldRange = TextRange(oldStart, (oldStart + "int moved()".length).coerceAtMost(request.oldText.length))
+            return ComparisonResult(
+                id, version, Status.ANALYZED,
+                changes = listOf(ChangeNode(subject, oldRange, range, Presence.MATCHED, moved = true)),
+                relationships = listOf(
+                    Relationship(
+                        setOf(RelationshipKind.MOVE),
+                        listOf(RelationshipEndpoint(subject, oldRange)),
+                        listOf(RelationshipEndpoint(subject, range)),
+                        Confidence.HIGH,
+                        emptyList(),
+                    ),
+                ),
+            )
+        }
+    }
+
     private fun method(name: String) = Subject.Declaration(DeclarationKind.METHOD, name, "")
 
     /** A real file under the project base, so the outline gets a file key and marks persist across diffs. */
@@ -1952,6 +2165,8 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
             10,
         )
     }
+
+    private fun movedHistory() = history(MOVED_METHOD, MOVED_MARKER_NEW, "Moved.java")
 
     private fun history(old: String, new: String, fileName: String) = SimpleDiffRequest(
         fileName,
@@ -2051,7 +2266,7 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         override fun supports(languageId: String) = languageId == "JAVA"
         override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult {
             calls++
-            val result = resultFactory?.invoke(request, cancellation) ?: LineEngine().compare(request, cancellation)
+            val result = resultFactory?.invoke(request, cancellation) ?: TestLineEngine().compare(request, cancellation)
             return result.copy(engineId = id, engineVersion = version)
         }
     }
@@ -2165,6 +2380,7 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
             append("}\n")
         }
         const val MOVED_METHOD = "    int moved() {\n        int value = 1;\n        return value;\n    }\n"
+        const val MOVED_MARKER_NEW = "// changed\n" + MOVED_METHOD
 
         const val JAVA_OLD = "class Greeter {\n    String hello() { return \"hi\"; }\n}\n"
         const val JAVA_NEW = "class Greeter {\n    String hello() { return \"hello\"; }\n\n    void bye() {}\n}\n"

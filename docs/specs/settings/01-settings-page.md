@@ -1,6 +1,6 @@
 # Settings page
 
-Status: implemented, 2026-10-22; the outline view and relationship kind settings (R16 and R17) arrive with the [refactorings view](../relationships/06-refactorings-view.md), 2026-11-09; the structure-view fallback setting (R18) arrives with the [structure-view fallback](../languages/06-structure-view-fallback.md), 2026-11-13; the comment-only setting (R19) is implemented with [comment-only changes](../outline/11-comment-only-changes.md), 2026-11-16.
+Status: implemented, 2026-10-22; the outline view and relationship kind settings (R16 and R17) arrive with the [refactorings view](../relationships/06-refactorings-view.md), 2026-11-09; the structure-view fallback setting (R18) arrives with the [structure-view fallback](../languages/06-structure-view-fallback.md), 2026-11-13; the comment-only setting (R19) is implemented with [comment-only changes](../outline/11-comment-only-changes.md), 2026-11-16; the moved-code marker setting (R20) is implemented with [moved-code markers](../outline/13-moved-code-markers.md), 2026-11-16.
 
 **Description:** A settings page under Settings | Tools | SMART Diff holds the plugin's options, for all projects.
 
@@ -27,6 +27,8 @@ Status: implemented, 2026-10-22; the outline view and relationship kind settings
 - **R17** "Hide from the refactorings view" has one checkbox per relationship kind, all off by default, and matches the refactorings view's menu.
 - **R18** "Use the IDE's structure view for other languages" is on by default.
 - **R19** "Mark comment-only changes" is off by default, is the same setting as the outline filter menu's checkbox, and adds a comment-only checkbox to "Hide from the outline" while it is on.
+- **R20** "Mark moved code in the editors" is on by default.
+- **R21** "Show moved lines in files without an engine" is on by default.
 
 ## References
 
@@ -34,4 +36,6 @@ Status: implemented, 2026-10-22; the outline view and relationship kind settings
 - [Refactorings view](../relationships/06-refactorings-view.md)
 - [Structure-view fallback](../languages/06-structure-view-fallback.md)
 - [Comment-only changes](../outline/11-comment-only-changes.md) (R19)
+- [Moved-code markers](../outline/13-moved-code-markers.md) (R20)
+- [Moved lines in unsupported files](../engines/04-moved-lines.md) (R21)
 - [Technical specification §11](../../TECHNICAL-SPECIFICATION.md#11-settings)

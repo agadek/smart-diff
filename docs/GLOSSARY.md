@@ -21,6 +21,11 @@ _Avoid_: right, target, after
 The IDE's own line and word diff for the same comparison.
 _Avoid_: text diff, default diff, raw diff
 
+### Collapsed unchanged fragment
+
+A run of unchanged lines that the native diff hides behind a separator when its "Collapse unchanged fragments" option is on; clicking the separator shows the lines again.
+_Avoid_: fold, hidden lines, folded block
+
 ### One-sided diff
 
 A diff of an added or deleted file that shows only the side where the file exists, the [new side](#new-side) for an added file and the [old side](#old-side) for a deleted file.
@@ -50,6 +55,11 @@ _Avoid_: thresholds, caps
 
 The generic declaration provider that builds a declaration tree from the IDE's structure view for a language without a dedicated provider.
 _Avoid_: generic engine, fallback engine
+
+### Line comparison
+
+The comparison that the structural outline uses for a file no comparison engine supports, which reads each line as one unit and reports moved blocks of lines.
+_Avoid_: line engine, text engine, fallback diff
 
 ## Structure
 
@@ -166,6 +176,16 @@ _Avoid_: doc change, cosmetic change, equivalent
 
 A matched declaration whose container or order among its siblings differs. It may also be changed or formatting-only.
 _Avoid_: relocated, refactored
+
+### Moved-code marker
+
+A gutter icon and a scrollbar mark that the structural outline adds in each editor at a moved declaration, linking its old and new positions.
+_Avoid_: move arrow, move link
+
+### Moved block
+
+A run of lines that the line comparison found removed in one place and added in another, with the same text apart from whitespace at the start and end of each line.
+_Avoid_: moved hunk, moved chunk
 
 ### Extraction
 
@@ -352,3 +372,8 @@ _Avoid_: filtering viewer, custom viewer
 
 The tree of changed files in the Local Changes view and the Commit tool window.
 _Avoid_: change list, commit tree
+
+### Review tree
+
+A tree of changed files outside the [Changes tree](#changes-tree): the Git log's commit details, or the changes of a GitHub pull request or a GitLab merge request.
+_Avoid_: change browser, commit tree, PR tree

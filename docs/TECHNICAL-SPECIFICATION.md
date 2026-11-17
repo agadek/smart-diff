@@ -17,7 +17,7 @@ Out of scope:
 - Directory diffs, binary content, and patch previews without full file content.
 - Comparisons where the old side and new side are different languages.
 - A change-list-level overview across files (Q3, decided: per-file only). The per-file summary in the Changes tree is in §9.4.
-- Engines other than the declaration engine (except a test-only engine used to verify the abstraction).
+- Engines other than the declaration engine, except the test-only abstraction engine and the line comparison of files no engine supports ([engines/04](specs/engines/04-moved-lines.md)), which is not a registered comparison engine.
 
 Three-way merges use the same engine twice and are specified in [THREE-WAY-MERGE.md](THREE-WAY-MERGE.md) and [docs/specs/merge/](specs/README.md#merges).
 
@@ -37,12 +37,16 @@ Three-way merges use the same engine twice and are specified in [THREE-WAY-MERGE
                  └─────────┬──────────┘
           ┌────────────────┼──────────────────────┐
 ┌─────────▼──────────┐  ┌──▼───────────────┐  ┌───▼──────────────┐
-│ engine/declarations│  │ (future)         │  │ (future)         │
-│  psi providers →   │  │ Tree-sitter      │  │ Difftastic CLI   │
-│  declaration model │  │ engine           │  │ engine           │
+│ engine/declarations│  │ engine/lines     │  │ (future)         │
+│  psi providers →   │  │ native line diff │  │ Difftastic CLI   │
+│  declaration model │  │ → moved blocks   │  │ engine           │
 │  → matching →      │  └──────────────────┘  └──────────────────┘
 │  classification    │
 └────────────────────┘
+
+The line comparison is built for the outline only: it is not on the `comparisonEngine` extension point, so the registry,
+dropdown, settings table and stored defaults never see it. The outline asks the `LineEngineProvider` application service
+in `engine.api` for it, which keeps `ui` independent of the concrete `engine.lines` package (§2 rules).
 ```
 
 Packages (under the plugin's root package, `io.github.agadek.smartdiff`):
@@ -54,6 +58,7 @@ Packages (under the plugin's root package, `io.github.agadek.smartdiff`):
 | `engine.declarations.model` | No | Declaration tree and tokens (internal to the declaration engine) |
 | `engine.declarations.analysis` | No | Matching (§7) and classification (§8) |
 | `engine.declarations.psi` | Yes | Declaration engine factory and PSI providers (§6) |
+| `engine.lines` | Yes | Line comparison of files no engine supports (engines/04); uses the platform's line diff |
 | `merge` | No | The join of a merge's base → left and base → right results ([THREE-WAY-MERGE.md §5](THREE-WAY-MERGE.md#5-the-join)) |
 | `ui` | Yes | Diff integration, outline, engine dropdown, navigation, settings |
 
@@ -129,7 +134,7 @@ interface ComparisonEngineFactory {          // extension point implementation
 </extensions>
 ```
 
-The extension point is interface-based: each extension is a `ComparisonEngineFactory`, and the engine id comes from the engine it creates, so it is written in one place. A keyed bean such as `KeyedLazyInstanceEP` would duplicate the id in `plugin.xml` and serves lookup by key, which the registry does not need: selection (§4) walks all engines in extension order. `order` is available on every extension. The extension point is dynamic, so SMART Diff's own add-on engines can be installed or removed without restarting. The extension point is internal (Q5): it is not documented or supported for other plugins, so the engine interface and result model can change without a compatibility policy.
+The extension point is interface-based: each extension is a `ComparisonEngineFactory`, and the engine id comes from the engine it creates, so it is written in one place. A keyed bean such as `KeyedLazyInstanceEP` would duplicate the id in `plugin.xml` and serves lookup by key, which the registry does not need: selection (§4) walks all engines in extension order. `order` is available on every extension. The extension point is dynamic, so SMART Diff's own add-on engines can be installed or removed without restarting. The extension point is internal (Q5): it is not documented or supported for other plugins, so the engine interface and result model can change without a compatibility policy. `engine.lines.LineEngine` is the one engine that is deliberately **not** registered here: the outline uses it only for two-sided diffs of files no registered engine supports, through the `LineEngineProvider` service in `engine.api` ([engines/04](specs/engines/04-moved-lines.md)).
 
 ## 4. Engine selection
 
@@ -552,6 +557,9 @@ Application-level, under *Settings → Tools → SMART Diff*:
 | Show declarations in the Changes tree | On. Each summarized file can be expanded to show its declaration rows (§9.4); also set from the tree's "Declarations" toggle |
 | Follow the caret in the Changes tree | On. The tree selects the declaration under the caret in the editor or a two-sided diff of the file (§9.4); changing it does not clear summaries or rebuild the tree |
 | Formatting-only changes | Collapsed group / inline |
+| Mark comment-only changes | Off. Labels declarations whose only difference is in comments as comment-only in the outline ([outline/11](specs/outline/11-comment-only-changes.md)) |
+| Mark moved code in the editors | On. Marks moved declarations in the gutter and on the scrollbar of both editors while the outline shows a result ([outline/13](specs/outline/13-moved-code-markers.md)) |
+| Show moved lines in files without an engine | On. Compares two-sided diffs of files no engine supports, plain text included, by lines and lists their moved blocks ([engines/04](specs/engines/04-moved-lines.md)); applying the change refreshes open outlines |
 | Hide from the outline | None. One checkbox per change type of the outline's filter (§10); also set from the outline toolbar |
 | Outline view | Container tree (the default) or the refactorings view (§10); also set from the outline toolbar |
 | Hide from the refactorings view | None. One checkbox per relationship kind: rename, move, kind change, extraction and inlining (§10); also set from the outline toolbar |
@@ -594,6 +602,7 @@ Spikes S1 to S3 ran as platform tests and were retired once the tests of §12 co
 | S8 | For [Rust](specs/languages/05-rust.md): which build target compiles and tests the Rust provider (a RustRover submodule or an Ultimate target), does the current Rust plugin keep the `Rs…` PSI classes, which edition does a text-built file parse, and do in-file references resolve without Cargo? | A Rust provider test and a golden fixture run with the shared harness locally and in CI with no licence, and the choice is in an ADR | Done 2026-11-13: option B, [ADR 0011](adr/0011-rust-provider-build-target-spike.md). The `rust/` subproject targets IntelliJ IDEA Ultimate 2025.1.3 (`IU-251.26927.53`) with pinned Marketplace `com.jetbrains.rust:251.26927.79`; the test sandbox also needs bundled `org.toml.lang` and `com.intellij.modules.json`, plus a test-only stand-in for the plugin's missing `TestCargoProjectsServiceImpl`. Option A failed: IPGP 2.15.0 rejected the RustRover 2025.1 distribution (`The 'Core' plugin (ID: 'com.intellij') is expected in …/lib`), and build `251.23774.463` was not found. `RustS8SpikeTest` runs headless with no licence prompt: plugin `com.jetbrains.rust` (251.26927.79) and language `Rust` (`org.rust.lang.RsLanguage`) are present; `org.rust.lang.core.psi.RsFunction`, `RsStructItem`, `RsEnumItem`, `RsEnumVariant`, `RsNamedFieldDecl`, `RsTraitItem`, `RsImplItem`, `RsModItem`, `RsModDeclItem`, `RsTypeAlias`, `RsConstant`, `RsMacro`, `RsMacro2` and `RsMacroCall` exist and parse with names and text offsets equal to the request text (CRLF included); `let … else`, `async` closures and `gen { }` blocks parse without errors; an in-file `RsPath` call to a local function resolves to its `RsFunctionImpl` without Cargo. Marketplace API 2026-11-13: plugin 22407 xmlId `com.jetbrains.rust`, `FREE`, installs in IntelliJ IDEA, CLion and PyCharm (bundled in RustRover); 251 line observed `251.29188.74` (id 1118668; RUST 2025.1.6, CLION 2025.1.7—2025.1.7.2, PYCHARM_PRO 2025.1.6—2025.1.6.2, IDEA_PRO 2025.1.7—2025.1.7.2, JBCLIENT 251.29188—251.*); latest observed `262.12573.30` and `263.7307.218`. Provider tests and golden fixtures follow in R1 with the same subproject. [Rust details §2](specs/languages/05-rust-details.md#2-build-target), phase R0. |
 | S9 | For the [structure-view provider](FORMAT-COVERAGE.md#3-generic-fallback-group-d): does a language's structure view, built on a PSI file from text with no editor, give correct names, nesting and ranges, and which bundled structure views need an editor or a project model? | A platform test passes for JSON, YAML, Markdown, properties and Groovy on 2025.1, and a manual run shows outlines for TypeScript, CSS and Go in WebStorm and GoLand with no errors | Done 2026-11-13 (G0/G1): text-built PSI files with no editor give the exact names, nesting and ranges recorded in [languages/06 details](specs/languages/06-structure-view-fallback-details.md) for JSON, YAML, Markdown, properties and Groovy (platform tests and golden fixtures on the current target): JSON keys have no quotes, a Markdown heading's range is the heading line, a YAML document item spans the file, and a Groovy field's name includes its type. Groovy structure-view building triggered `FileBasedIndex` work that rejected the default project; running comparisons with a real test project fixed it, so the provider relies on a project context as the host supplies. A structure view that throws is `FAILED` (R9 test). A manual run on WebStorm and GoLand (TypeScript, CSS, Go) was not performed in this environment; [format coverage §3](FORMAT-COVERAGE.md#3-generic-fallback-group-d) points here. |
 | S10 | For [structured data](FORMAT-COVERAGE.md#4-structured-data-group-c): do text-built JSON, YAML, TOML, properties and XML files give correct key ranges, including JSON with comments, multi-document YAML, anchors and aliases, and TOML arrays of tables? | A platform test passes for each format on 2025.1 | JSON done 2026-11-13: text-built JSON, JSON with comments and JSON5 files give correct key ranges on 2025.1.3, including with CRLF line ends. On 2025.1.3 the JSON file type's extensions are `har;json;jsonc` with language `JSON`, so `.jsonc` is `JSON` and there is no separate JSON-with-comments language; `JSON5` is its own language, and `JSON Lines` (.jsonl, .ndjson) is out of scope. YAML done 2026-11-14: text-built YAML files give correct key and document ranges on 2025.1.3, including a multi-document file, anchors and aliases, merge keys, flow mappings, block scalars and CRLF line ends; whitespace stays `SIGNIFICANT`. Properties done 2026-11-15: text-built properties files give correct key ranges on 2025.1.3, including escaped keys, line continuations, comments, a key without a value and CRLF line ends. TOML done 2026-11-15: text-built TOML files give correct key, table and array-of-tables ranges on 2025.1.3, including dotted and quoted keys, inline tables, arrays of inline tables, arrays of tables, multi-line strings, comments and CRLF line ends. S10 stays open for XML. [Format coverage §4](FORMAT-COVERAGE.md#4-structured-data-group-c), phase D0 |
+| S11 | For [summaries in the Git log and pull requests](specs/changes-tree/07-review-tree-summaries.md): how does the plugin learn of the Git log's commit details tree and the GitHub and GitLab pull request changes trees, can it replace their file nodes and add helper child nodes after the platform builds the model or only change how rows render, which two revisions a pull request node compares, and how a row opens the file's diff with an outline path? | Each review tree has a chosen hook (model post-processing, renderer wrapper or context menu action) shown working in a platform test or a manual run on 2025.1 and the latest IDE, recorded in ADR 0012 | Not started |
 
 ## 14. Open questions
 
