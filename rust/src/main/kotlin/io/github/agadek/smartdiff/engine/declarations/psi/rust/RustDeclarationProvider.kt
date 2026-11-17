@@ -1,5 +1,6 @@
 package io.github.agadek.smartdiff.engine.declarations.psi.rust
 
+import io.github.agadek.smartdiff.engine.api.GuardedFeature
 import com.intellij.lang.Language
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
@@ -14,6 +15,8 @@ import io.github.agadek.smartdiff.engine.declarations.psi.PsiDeclarationProvider
  * Rust declarations (languages/05-rust R3–R14). All Rust plugin PSI calls go through [RustInterop].
  */
 class RustDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.INSIGNIFICANT) {
+
+    override val guardedFeature: GuardedFeature get() = GuardedFeature.RUST_PROVIDER
 
     override fun supports(languageId: String): Boolean = languageId == "Rust"
 

@@ -1,5 +1,7 @@
 package io.github.agadek.smartdiff.ui.changes
 
+import io.github.agadek.smartdiff.engine.api.ApiGuard
+import io.github.agadek.smartdiff.engine.api.GuardedFeature
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.components.serviceIfCreated
@@ -58,9 +60,23 @@ import javax.swing.tree.TreeNode
  * summary is replaced by a [SummaryChangeNode] for the same change, so selection, inclusion and actions stay the
  * platform's, with a [DeclarationNode] child for each top-level outline row.
  */
-class ChangesSummaryModifier(private val project: Project) : ChangesViewModifier {
+class ChangesSummaryModifier internal constructor(
+    private val project: Project,
+    /** Replaces the tree modification in a test, to reach the guard (platform/01 R13). */
+    private val modifier: ((ChangesViewModelBuilder) -> Unit)?,
+) : ChangesViewModifier {
 
+    constructor(project: Project) : this(project, null)
+
+    /**
+     * Through [ApiGuard], so a missing or changed Changes view API turns the summaries off and leaves the tree as the
+     * platform builds it (platform/01 R13, R14).
+     */
     override fun modifyTreeModelBuilder(builder: ChangesViewModelBuilder) {
+        ApiGuard.run(GuardedFeature.CHANGES_TREE_HOOK, fallback = {}) { modifier?.invoke(builder) ?: modify(builder) }
+    }
+
+    private fun modify(builder: ChangesViewModelBuilder) {
         ChangesTreeActions.install()
         val settings = SmartDiffSettings.getInstance()
         val showSummary = settings.showChangesSummary
@@ -165,7 +181,10 @@ class DeclarationNodeAction @JvmOverloads constructor(
 
     override fun createNodeHoverIcon(node: ChangesBrowserNode<*>): HoverIcon? = null
 
-    override fun handleDoubleClick(node: ChangesBrowserNode<*>): Boolean {
+    override fun handleDoubleClick(node: ChangesBrowserNode<*>): Boolean =
+        ApiGuard.run(GuardedFeature.CHANGES_TREE_HOOK, fallback = { false }) { open(node) }
+
+    private fun open(node: ChangesBrowserNode<*>): Boolean {
         val declaration = node as? DeclarationNode ?: return false
         val change = declaration.fileNode?.userObject ?: return false
         val root = declaration.root as? ChangesBrowserNode<*> ?: return false

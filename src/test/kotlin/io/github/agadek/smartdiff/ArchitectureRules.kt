@@ -1,7 +1,9 @@
 package io.github.agadek.smartdiff
 
+import com.tngtech.archunit.base.DescribedPredicate
 import com.tngtech.archunit.base.DescribedPredicate.alwaysTrue
 import com.tngtech.archunit.base.DescribedPredicate.not
+import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage
 import com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAnyPackage
 import com.tngtech.archunit.lang.ArchRule
@@ -58,6 +60,26 @@ class ArchitectureRules(private val root: String) {
             .allowEmptyShould(true)
             .because("the engine API, declaration model, analysis and merge join must run without the IntelliJ Platform")
 
+    /**
+     * platform/01 R7: each API of `docs/PLATFORM-API.md` (a class, or a package ending in `..`) and the adapters that
+     * alone may use it (classes, or packages ending in `..`). The Rust plugin's row is checked by the `rust` subproject.
+     */
+    val platformApiAdapters: Map<String, List<String>> = mapOf(
+        "com.intellij.openapi.vcs.changes.ChangesViewNodeAction" to listOf("$root.ui.changes.DeclarationNodeAction"),
+        "com.jetbrains.python.ast.PyAstClass" to listOf("$root.engine.declarations.psi.python.."),
+        "com.jetbrains.python.ast.PyAstFunction" to listOf("$root.engine.declarations.psi.python.."),
+        "com.jetbrains.python.ast.PyAstNamedParameter" to listOf("$root.engine.declarations.psi.python.."),
+        "com.jetbrains.python.ast.PyAstTargetExpression" to listOf("$root.engine.declarations.psi.python..", "$root.references.PythonReferenceResolver"),
+        "com.jetbrains.python.ast.PyAstReferenceExpression" to listOf("$root.references.PythonReferenceResolver"),
+        "org.intellij.plugins.markdown.lang.psi.impl.MarkdownFrontMatterHeader" to listOf("$root.engine.declarations.psi.markdown.."),
+        "org.jetbrains.plugins.scala.." to listOf("$root.engine.declarations.psi.scala..", "$root.references.ScalaReferenceResolver"),
+        "com.jetbrains.python.." to listOf("$root.engine.declarations.psi.python..", "$root.references.PythonReferenceResolver"),
+        "org.jetbrains.kotlin.analysis.." to listOf("$root.references.KotlinReferenceResolver"),
+    )
+
+    /** One rule per entry of [platformApiAdapters], by API (platform/01 R7). */
+    val platformApi: Map<String, ArchRule> = platformApiAdapters.mapValues { (api, adapters) -> onlyAdaptersUse(root, api, adapters) }
+
     val all: List<ArchRule> = listOf(
         uiDependsOnlyOnApiAndRegistry,
         apiDependsOnNothingInThePlugin,
@@ -66,3 +88,18 @@ class ArchitectureRules(private val root: String) {
         coreIsIntelliJFree,
     )
 }
+
+/** A class named [name] or nested in it, or a class in the package [name] when it ends in `..`. */
+internal fun named(name: String): DescribedPredicate<JavaClass> =
+    if (name.endsWith("..")) {
+        resideInAPackage(name)
+    } else {
+        DescribedPredicate.describe(name) { it.name == name || it.name.startsWith("$name$") }
+    }
+
+/** No class under [root] outside [adapters] depends on [api] (platform/01 R7). */
+fun onlyAdaptersUse(root: String, api: String, adapters: List<String>): ArchRule =
+    noClasses().that(resideInAPackage("$root..").and(not(adapters.map(::named).reduce { a, b -> a.or(b) })))
+        .should().dependOnClassesThat(named(api))
+        .allowEmptyShould(true)
+        .because("only ${adapters.joinToString(", ")} may use $api, as docs/PLATFORM-API.md lists (platform/01 R7)")

@@ -34,6 +34,7 @@ dependencies {
     testImplementation(testFixtures(project(":")))
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.opentest4j:opentest4j:1.3.0")
+    testImplementation("com.tngtech.archunit:archunit:1.5.1")
 }
 
 kotlin {

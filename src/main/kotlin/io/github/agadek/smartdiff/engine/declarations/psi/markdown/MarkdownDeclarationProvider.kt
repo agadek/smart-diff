@@ -1,5 +1,6 @@
 package io.github.agadek.smartdiff.engine.declarations.psi.markdown
 
+import io.github.agadek.smartdiff.engine.api.GuardedFeature
 import com.intellij.lang.Language
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
@@ -25,6 +26,8 @@ import org.intellij.plugins.markdown.lang.psi.impl.MarkdownHeader
  * into code blocks, block quotes, lists or HTML blocks (R9).
  */
 class MarkdownDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.SIGNIFICANT) {
+
+    override val guardedFeature: GuardedFeature get() = GuardedFeature.MARKDOWN_PROVIDER
 
     override fun supports(languageId: String): Boolean = languageId == "Markdown"
 

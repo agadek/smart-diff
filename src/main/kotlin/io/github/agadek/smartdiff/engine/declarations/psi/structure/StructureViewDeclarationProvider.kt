@@ -123,7 +123,7 @@ class StructureViewDeclarationProvider : DeclarationProvider {
     private fun hasStructureViewBuilder(language: Language): Boolean {
         var current: Language? = language
         while (current != null) {
-            if (LanguageStructureViewBuilder.INSTANCE.forLanguage(current) != null) return true
+            if (LanguageStructureViewBuilder.getInstance().forLanguage(current) != null) return true
             current = current.baseLanguage
         }
         return false
@@ -132,7 +132,7 @@ class StructureViewDeclarationProvider : DeclarationProvider {
     private fun structureViewBuilder(file: PsiFile): com.intellij.ide.structureView.StructureViewBuilder? {
         var current: Language? = file.language
         while (current != null) {
-            val factory = LanguageStructureViewBuilder.INSTANCE.forLanguage(current)
+            val factory = LanguageStructureViewBuilder.getInstance().forLanguage(current)
             val builder = factory?.getStructureViewBuilder(file)
             if (builder != null) return builder
             current = current.baseLanguage

@@ -6,6 +6,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiFile
 import io.github.agadek.smartdiff.engine.api.AnalysisNote
 import io.github.agadek.smartdiff.engine.api.Cancellation
+import io.github.agadek.smartdiff.engine.api.GuardedFeature
 import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
 import io.github.agadek.smartdiff.engine.declarations.model.EquivalenceRuleImpl
 
@@ -31,6 +32,12 @@ interface DeclarationProvider {
      * language without rules, which then never produces rewrite-only declarations (R18).
      */
     val equivalenceRules: List<EquivalenceRuleImpl> get() = emptyList()
+
+    /**
+     * The feature [io.github.agadek.smartdiff.engine.api.ApiGuard] turns off when this provider meets a missing
+     * optional-plugin API (platform/01 R11); null for a provider that uses only the platform's public API.
+     */
+    val guardedFeature: GuardedFeature? get() = null
 
     /**
      * The dialect every side is parsed in, chosen once from all [texts] so their trees compare (§6.2): both sides of the

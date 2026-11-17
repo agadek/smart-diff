@@ -1,5 +1,7 @@
 package io.github.agadek.smartdiff.ui.changes
 
+import io.github.agadek.smartdiff.engine.api.ApiGuard
+import io.github.agadek.smartdiff.engine.api.GuardedFeature
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
@@ -59,6 +61,11 @@ internal object ChangesTreeSetup {
      * handlers of another tree that still shows rows.
      */
     fun installIn(project: Project, suppressExpansion: Boolean) {
+        // platform/01 R13: a missing Changes view API leaves the trees as the platform builds them.
+        ApiGuard.run(GuardedFeature.CHANGES_TREE_HOOK, fallback = {}) { install(project, suppressExpansion) }
+    }
+
+    private fun install(project: Project, suppressExpansion: Boolean) {
         val manager = ToolWindowManager.getInstance(project)
         for (id in listOf(ToolWindowId.VCS, ToolWindowId.COMMIT)) {
             val toolWindow = manager.getToolWindow(id) ?: continue

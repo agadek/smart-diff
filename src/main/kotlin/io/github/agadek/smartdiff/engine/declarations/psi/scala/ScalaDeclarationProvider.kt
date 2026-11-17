@@ -1,5 +1,6 @@
 package io.github.agadek.smartdiff.engine.declarations.psi.scala
 
+import io.github.agadek.smartdiff.engine.api.GuardedFeature
 import com.intellij.lang.Language
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
@@ -58,6 +59,8 @@ import org.jetbrains.plugins.scala.lang.scaladoc.psi.api.ScDocComment
  * `Scala3Language`, and a file built from text has no module whose settings could change that.
  */
 class ScalaDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.SCALA2_LINE_BREAKS) {
+
+    override val guardedFeature: GuardedFeature get() = GuardedFeature.SCALA_PROVIDER
 
     // A .scala file's type gives `Scala` even in a Scala 3 module, so requests never carry the `Scala 3` id.
     override fun supports(languageId: String): Boolean = languageId == ScalaLanguage.INSTANCE.id

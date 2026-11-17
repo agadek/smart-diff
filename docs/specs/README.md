@@ -124,7 +124,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 
 | Feature | Status |
 | --- | --- |
-| [01 Platform API stability](platform/01-platform-api-stability.md) | proposed, 2026-11-17 |
+| [01 Platform API stability](platform/01-platform-api-stability.md) | implemented, 2026-11-17 |
 
 ## Merges
 

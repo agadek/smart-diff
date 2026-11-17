@@ -93,17 +93,7 @@ intellijPlatform {
 
     pluginVerification {
         ides {
-            val verifierIdes = providers.gradleProperty("smartdiff.verifier.ides")
-                .map { v ->
-                    v.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet().also { families ->
-                        val known = setOf("idea", "pycharm", "rustrover")
-                        val unknown = families - known
-                        if (unknown.isNotEmpty()) {
-                            error("Unknown smartdiff.verifier.ides families: ${unknown.sorted().joinToString(", ")}. Known families: ${known.sorted().joinToString(", ")}")
-                        }
-                    }
-                }
-                .getOrElse(setOf("idea", "pycharm", "rustrover"))
+            val verifierIdes = verifierFamilies(providers.gradleProperty("smartdiff.verifier.ides").orNull)
             if ("idea" in verifierIdes) {
                 create(IntelliJPlatformType.IntellijIdeaCommunity, providers.gradleProperty("platformVersion"))
                 // IntelliJ IDEA is a single product from 2025.3, so the latest release is of the unified type.
@@ -126,9 +116,87 @@ intellijPlatform {
                     channels = listOf(ProductRelease.Channel.RELEASE)
                 }
             }
+            if ("eap" in verifierIdes) {
+                // platform/01 R1, R2: the newest IntelliJ IDEA early-access build, or the newest release when no
+                // early-access build is newer. A release is listed by version (2026.3.1), an EAP build by build
+                // number (271.1234.5), so both are compared by their branch (263, 271).
+                val newestEap = ProductReleasesValueSource {
+                    types = listOf(IntelliJPlatformType.IntellijIdea)
+                    channels = listOf(ProductRelease.Channel.EAP)
+                }
+                val newestRelease = ProductReleasesValueSource {
+                    types = listOf(IntelliJPlatformType.IntellijIdea)
+                    channels = listOf(ProductRelease.Channel.RELEASE)
+                }
+                create(newestEap.zip(newestRelease) { eap, release ->
+                    listOf(earlyAccessOrRelease(eap.firstOrNull(), release.firstOrNull() ?: error("No IntelliJ IDEA release found")))
+                })
+            }
         }
     }
 }
+
+/** The verifier IDE families of -Psmartdiff.verifier.ides; `eap` is accepted but never in the default set (platform/01 R1, R4). */
+fun verifierFamilies(value: String?): Set<String> {
+    val known = setOf("idea", "pycharm", "rustrover", "eap")
+    if (value == null) return setOf("idea", "pycharm", "rustrover")
+    return value.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet().also { families ->
+        val unknown = families - known
+        if (unknown.isNotEmpty()) {
+            error("Unknown smartdiff.verifier.ides families: ${unknown.sorted().joinToString(", ")}. Known families: ${known.sorted().joinToString(", ")}")
+        }
+    }
+}
+
+/** The branch of an IDE notation: `IU-271.1234.5` is 271, `IU-2026.3.1` is 263. */
+fun branchOf(notation: String): Int {
+    val parts = notation.substringAfter('-').split('.')
+    val first = parts[0].toInt()
+    return if (first >= 2000) (first - 2000) * 10 + parts.getOrElse(1) { "0" }.toInt() else first
+}
+
+/**
+ * The notation the early-access family verifies: [eap] when it is on a newer branch than [release], otherwise [release],
+ * noted in the GitHub step summary when there is one (platform/01 R2).
+ */
+fun earlyAccessOrRelease(eap: String?, release: String): String {
+    if (eap != null && branchOf(eap) > branchOf(release)) return eap
+    val note = "No early-access build newer than $release; verified the latest release."
+    println(note)
+    System.getenv("GITHUB_STEP_SUMMARY")?.takeIf { it.isNotBlank() }?.let { File(it).appendText("$note\n") }
+    return release
+}
+
+// platform/01 R1, R4: a configuration check, run by `check`, of which families the verifier accepts.
+val verifierFamiliesTest by tasks.registering {
+    group = "verification"
+    description = "Checks the -Psmartdiff.verifier.ides families (platform/01 R1, R4)."
+    doLast {
+        check(verifierFamilies("eap") == setOf("eap")) { "eap is an accepted family" }
+        check("eap" !in verifierFamilies(null)) { "eap is not in the default set" }
+        check(verifierFamilies(null) == setOf("idea", "pycharm", "rustrover")) { "the default set is unchanged" }
+        check(runCatching { verifierFamilies("idea,nope") }.isFailure) { "an unknown family still fails" }
+        check(branchOf("IU-2026.3.1") == 263 && branchOf("IU-271.1234.5") == 271 && branchOf("IC-2025.1") == 251) { "branches compare" }
+        check(earlyAccessOrRelease("IU-271.1234.5", "IU-2026.3.1") == "IU-271.1234.5") { "a newer EAP build is verified" }
+        check(earlyAccessOrRelease("IU-263.100.1", "IU-2026.3.1") == "IU-2026.3.1") { "an EAP build on the release's branch is not newer" }
+        check(earlyAccessOrRelease(null, "IU-2026.3.1") == "IU-2026.3.1") { "no EAP build verifies the release" }
+    }
+}
+
+// platform/01 R8: every experimental, internal, deprecated or scheduled-for-removal use by a plugin class that a
+// verifier report names must be listed in docs/PLATFORM-API.md. Run after verifyPlugin; `check` does not depend on it.
+val checkPlatformApiInventory by tasks.registering(JavaExec::class) {
+    group = "verification"
+    description = "Fails when a Plugin Verifier report names an API use that docs/PLATFORM-API.md does not list (platform/01 R8)."
+    dependsOn("testClasses")
+    // The IDE supplies the Kotlin standard library to tests; this plain JVM run needs its own.
+    classpath = sourceSets["test"].runtimeClasspath +
+        configurations.detachedConfiguration(dependencies.create("org.jetbrains.kotlin:kotlin-stdlib:2.1.20"))
+    mainClass = "io.github.agadek.smartdiff.platform.PlatformApiInventoryCheck"
+    args(layout.buildDirectory.dir("reports/pluginVerifier").get().asFile.path, file("docs/PLATFORM-API.md").path)
+}
+
+tasks.named("check") { dependsOn(verifierFamiliesTest) }
 
 changelog {
     groups.empty()

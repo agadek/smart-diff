@@ -1,6 +1,6 @@
 # Platform API stability
 
-Status: proposed, 2026-11-17
+Status: implemented, 2026-11-17
 
 **Description:** A scheduled Plugin Verifier run checks the plugin against the next IntelliJ IDEA build before it is released, every experimental, internal or non-public API the plugin uses is listed with the one adapter that uses it, and a missing or changed API turns off only the feature that needs it, so the diff keeps working.
 
