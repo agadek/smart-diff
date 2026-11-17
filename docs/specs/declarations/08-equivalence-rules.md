@@ -40,7 +40,7 @@ Status: implemented, 2026-11-17
 ## References
 
 - [Details: design and tests](08-equivalence-rules-details.md)
-- [ADR 0012](../../adr/0012-opt-in-equivalence-rules.md), amending [ADR 0003](../../adr/0003-conservative-classification.md)
+- [ADR 0013](../../adr/0012-opt-in-equivalence-rules.md), amending [ADR 0003](../../adr/0003-conservative-classification.md)
 - [Change classification](02-change-classification.md), which this option does not change
 - [Comment-only changes](../outline/11-comment-only-changes.md), the pattern this follows
 - [Change type filter](../outline/03-change-type-filter.md)

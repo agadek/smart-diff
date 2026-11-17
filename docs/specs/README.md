@@ -7,7 +7,7 @@ One file per feature, in one folder per context, plus a details file for each ne
 SMART Diff adds a [structural outline](../GLOSSARY.md#structural-outline) to the IntelliJ diff. It shows which [declarations](../GLOSSARY.md#declaration) changed and how, and the [native diff](../GLOSSARY.md#native-diff) stays the detail view and the fallback. These rules hold for every feature below:
 
 - **P1** No source code leaves the IDE process, and the plugin sends no telemetry.
-- **P2** The plugin never claims that two versions behave the same. An opt-in [equivalence rule](../GLOSSARY.md#equivalence-rule) claims only the rewrite it names ([ADR 0012](../adr/0012-opt-in-equivalence-rules.md)).
+- **P2** The plugin never claims that two versions behave the same. An opt-in [equivalence rule](../GLOSSARY.md#equivalence-rule) claims only the rewrite it names ([ADR 0013](../adr/0012-opt-in-equivalence-rules.md)).
 - **P3** The plugin never hides a change by default, and every change stays reachable in the native diff.
 - **P4** The plugin never edits code, resolves merge conflicts or applies patches.
 - **P5** Unsupported, malformed or oversized files still open in the native diff.
@@ -112,7 +112,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [04 Hide and filter](changes-tree/04-hide-and-filter.md) | implemented, 2026-11-06 |
 | [05 Changes tree caret follow](changes-tree/05-changes-tree-caret-follow.md) | implemented, 2026-11-07 |
 | [06 Summaries for added and deleted files](changes-tree/06-added-deleted-file-summaries.md) | implemented, 2026-11-15 |
-| [07 Summaries in the Git log and pull requests](changes-tree/07-review-tree-summaries.md) | proposed, 2026-11-16 |
+| [07 Summaries in the Git log and pull requests](changes-tree/07-review-tree-summaries.md) | implemented, 2026-11-17 |
 
 ## Settings
 

@@ -64,6 +64,7 @@ class OutlineDiffExtension : DiffExtension() {
         val file = new.highlightFile ?: old.highlightFile
         // Taken off the request, so showing it again later does not select the row again.
         val reveal = request.getUserData(OutlinePath.KEY)?.also { request.putUserData(OutlinePath.KEY, null) }
+            ?: pendingReveal(project, fileName)
         val controller = OutlineController(
             project, viewer, context, splitter, languageId, fileName, file,
             old.document, new.document, viewer.editor1, viewer.editor2, reveal,
@@ -87,6 +88,7 @@ class OutlineDiffExtension : DiffExtension() {
         val fileName = shown.highlightFile?.name
         val file = shown.highlightFile
         val reveal = request.getUserData(OutlinePath.KEY)?.also { request.putUserData(OutlinePath.KEY, null) }
+            ?: pendingReveal(project, fileName)
         val empty = EditorFactory.getInstance().createDocument("")
         val oldDocument = if (viewer.side == Side.LEFT) shown.document else empty
         val newDocument = if (viewer.side == Side.RIGHT) shown.document else empty
@@ -129,6 +131,10 @@ class OutlineDiffExtension : DiffExtension() {
 }
 
 /** The language of a document content, from its content type or else its file. */
+/** The outline path a review tree left for the diff of [fileName] (changes-tree/07 R10), taken once. */
+private fun pendingReveal(project: com.intellij.openapi.project.Project, fileName: String?): OutlinePath? =
+    if (project.isDefault) null else PendingOutlineReveal.getInstance(project).take(fileName)
+
 internal fun DocumentContent.languageId(): String? {
     val fileType = contentType ?: highlightFile?.fileType
     return (fileType as? LanguageFileType)?.language?.id

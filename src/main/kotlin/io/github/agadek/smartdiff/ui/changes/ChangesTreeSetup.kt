@@ -8,7 +8,9 @@ import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.vcs.changes.Change
+import com.intellij.openapi.vcs.changes.ui.ChangesBrowserNode
 import com.intellij.openapi.vcs.changes.ui.ChangesListView
+import com.intellij.openapi.vcs.changes.ui.ChangesTree
 import com.intellij.openapi.wm.ToolWindowId
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.util.Processor
@@ -35,6 +37,20 @@ import javax.swing.tree.TreePath
  * path instead.
  */
 internal object ChangesTreeSetup {
+
+    /**
+     * Opens a declaration row of one tree. A review tree sets its own (changes-tree/07 R10); the Changes tree has none
+     * and opens through [DeclarationNodeAction].
+     */
+    fun interface DeclarationOpener {
+        fun open(node: DeclarationNode): Boolean
+    }
+
+    /** The tree's [DeclarationOpener], as a client property. */
+    val DECLARATION_OPENER = Key.create<DeclarationOpener>("smartdiff.changes.tree.declarationOpener")
+
+    /** Whether [node] is a summarized file row of the Changes tree or of a review tree. */
+    private fun isSummaryRow(node: Any?): Boolean = node is SummaryChangeNode || node is ReviewSummaryNode
 
     /** Whether [ChangesPressListener] must suppress the second press of a SMART row's double-click. */
     private val EXPANSION_SUPPRESSED = Key.create<Boolean>("smartdiff.changes.tree.expansionSuppressed")
@@ -76,7 +92,7 @@ internal object ChangesTreeSetup {
     }
 
     /** Applies or removes the setup on [tree]; safe to call more than once. */
-    fun configure(tree: ChangesListView, suppressExpansion: Boolean) {
+    fun configure(tree: ChangesTree, suppressExpansion: Boolean) {
         if (suppressExpansion) {
             if (tree.getClientProperty(SAVED_TOGGLE_CLICK_COUNT) == null) {
                 tree.putClientProperty(SAVED_TOGGLE_CLICK_COUNT, tree.toggleClickCount)
@@ -95,7 +111,7 @@ internal object ChangesTreeSetup {
         }
     }
 
-    private fun installPressHandler(tree: ChangesListView) {
+    private fun installPressHandler(tree: ChangesTree) {
         val ours = tree.mouseListeners.filterIsInstance<ChangesPressListener>().singleOrNull()
         if (ours != null && tree.mouseListeners.firstOrNull() === ours) return
 
@@ -106,7 +122,7 @@ internal object ChangesTreeSetup {
         others.forEach(tree::addMouseListener)
     }
 
-    private fun installDoubleClickHandler(tree: ChangesListView) {
+    private fun installDoubleClickHandler(tree: ChangesTree) {
         if (tree.doubleClickHandler is ChangesDoubleClickHandler) return
         tree.doubleClickHandler = ChangesDoubleClickHandler(tree, tree.doubleClickHandler)
     }
@@ -115,7 +131,7 @@ internal object ChangesTreeSetup {
      * Replaces the platform's Enter listener with one that keeps its leaf-only guard for ordinary rows and bypasses it
      * for a summarized file or a declaration. The platform's listener is private, so it is recognised by its class.
      */
-    private fun installEnterHandler(tree: ChangesListView) {
+    private fun installEnterHandler(tree: ChangesTree) {
         val listeners = tree.keyListeners
         val ours = listeners.filterIsInstance<ChangesEnterListener>().singleOrNull()
         val platform = listeners.firstOrNull(::isPlatformEnterListener)
@@ -134,7 +150,7 @@ internal object ChangesTreeSetup {
         others.forEach(tree::addKeyListener)
     }
 
-    private fun moveToFront(tree: ChangesListView, listener: KeyListener) {
+    private fun moveToFront(tree: ChangesTree, listener: KeyListener) {
         val others = tree.keyListeners.filterNot { it === listener }
         others.forEach(tree::removeKeyListener)
         tree.removeKeyListener(listener)
@@ -145,8 +161,9 @@ internal object ChangesTreeSetup {
     private fun isPlatformEnterListener(listener: KeyListener): Boolean =
         listener.javaClass.name.endsWith("ChangesTreeHandlers\$MyEnterListener")
 
-    private fun openDeclaration(tree: ChangesListView, node: DeclarationNode): Boolean =
-        DeclarationNodeAction(tree.project).handleDoubleClick(node)
+    private fun openDeclaration(tree: ChangesTree, node: DeclarationNode): Boolean =
+        (tree.getClientProperty(DECLARATION_OPENER) as? DeclarationOpener)?.open(node)
+            ?: DeclarationNodeAction(tree.project).handleDoubleClick(node)
 
     /**
      * Opens a summarized file row through the platform's double-click handler. The platform rejects a non-leaf row as a
@@ -155,8 +172,8 @@ internal object ChangesTreeSetup {
      * the platform's Enter handler makes the same choice without a double-click guard.
      */
     private fun openSummaryFromDoubleClick(
-        tree: ChangesListView,
-        node: SummaryChangeNode,
+        tree: ChangesTree,
+        node: ChangesBrowserNode<*>,
         e: MouseEvent,
         platform: Processor<in MouseEvent>?,
     ): Boolean {
@@ -167,8 +184,8 @@ internal object ChangesTreeSetup {
 
     /** Opens a summarized file row through the platform's Enter handler, then the source as the platform would. */
     private fun openSummaryFromEnter(
-        tree: ChangesListView,
-        node: SummaryChangeNode,
+        tree: ChangesTree,
+        node: ChangesBrowserNode<*>,
         e: KeyEvent,
         requestFocus: Boolean,
     ): Boolean {
@@ -177,14 +194,14 @@ internal object ChangesTreeSetup {
         return openSource(tree, node, requestFocus)
     }
 
-    private fun singleClick(tree: ChangesListView, e: MouseEvent): MouseEvent =
+    private fun singleClick(tree: ChangesTree, e: MouseEvent): MouseEvent =
         MouseEvent(tree, e.id, e.`when`, e.modifiersEx, e.x, e.y, 1, false, e.button)
 
-    private fun syntheticEnter(tree: ChangesListView): KeyEvent =
+    private fun syntheticEnter(tree: ChangesTree): KeyEvent =
         KeyEvent(tree, KeyEvent.KEY_PRESSED, System.currentTimeMillis(), 0, KeyEvent.VK_ENTER, KeyEvent.CHAR_UNDEFINED)
 
-    private fun openSource(tree: ChangesListView, node: SummaryChangeNode, requestFocus: Boolean): Boolean {
-        val change = node.userObject as? Change ?: return false
+    private fun openSource(tree: ChangesTree, node: ChangesBrowserNode<*>, requestFocus: Boolean): Boolean {
+        val change = (node as? ReviewSummaryNode)?.change ?: node.userObject as? Change ?: return false
         val file = (change.afterRevision ?: change.beforeRevision)?.file?.virtualFile ?: return false
         // The platform's public navigation API; FileEditorManager.openFile is deprecated from 2026.3.
         OpenFileDescriptor(tree.project, file).navigate(requestFocus)
@@ -195,7 +212,7 @@ internal object ChangesTreeSetup {
      * The second press of a double-click on a SMART row is consumed before `BasicTreeUI` can toggle the row. The first
      * press still selects the row and the release still reaches the platform's double-click handler.
      */
-    private class ChangesPressListener(private val tree: ChangesListView) : MouseAdapter() {
+    private class ChangesPressListener(private val tree: ChangesTree) : MouseAdapter() {
 
         override fun mousePressed(e: MouseEvent) {
             if (tree.getClientProperty(EXPANSION_SUPPRESSED) != true) return
@@ -203,7 +220,7 @@ internal object ChangesTreeSetup {
 
             val path = tree.getPathForLocation(e.x, e.y) ?: return
             val node = path.lastPathComponent
-            if (node !is SummaryChangeNode && node !is DeclarationNode) return
+            if (!isSummaryRow(node) && node !is DeclarationNode) return
             if (isExpandControlClick(tree, path, e)) return
 
             tree.selectionPath = path
@@ -212,14 +229,14 @@ internal object ChangesTreeSetup {
     }
 
     /** A public hit test for the tree's expand control, left of the row bounds in a left-to-right tree. */
-    private fun isExpandControlClick(tree: ChangesListView, path: TreePath, e: MouseEvent): Boolean {
+    private fun isExpandControlClick(tree: ChangesTree, path: TreePath, e: MouseEvent): Boolean {
         val bounds = tree.getPathBounds(path) ?: return false
         if (e.y < bounds.y || e.y >= bounds.y + bounds.height) return false
         return if (tree.componentOrientation.isLeftToRight) e.x < bounds.x else e.x >= bounds.x + bounds.width
     }
 
     private class ChangesDoubleClickHandler(
-        private val tree: ChangesListView,
+        private val tree: ChangesTree,
         private val platform: Processor<in MouseEvent>?,
     ) : Processor<MouseEvent> {
 
@@ -229,13 +246,13 @@ internal object ChangesTreeSetup {
 
             val node = path.lastPathComponent
             if (node is DeclarationNode) return openDeclaration(tree, node)
-            if (node is SummaryChangeNode) return openSummaryFromDoubleClick(tree, node, e, platform)
+            if (isSummaryRow(node)) return openSummaryFromDoubleClick(tree, node as ChangesBrowserNode<*>, e, platform)
             return platform?.process(e) ?: false
         }
     }
 
     private class ChangesEnterListener(
-        private val tree: ChangesListView,
+        private val tree: ChangesTree,
         val wrapped: Boolean,
     ) : KeyAdapter() {
 
@@ -252,8 +269,8 @@ internal object ChangesTreeSetup {
                     }
                     // A summarized row can have children, which the platform's Enter listener would skip; its handler
                     // still applies the same preview, diff or source choice as for a leaf.
-                    is SummaryChangeNode -> {
-                        if (openSummaryFromEnter(tree, node, e, requestFocus = false)) e.consume()
+                    is SummaryChangeNode, is ReviewSummaryNode -> {
+                        if (openSummaryFromEnter(tree, node as ChangesBrowserNode<*>, e, requestFocus = false)) e.consume()
                         return
                     }
                 }
@@ -267,7 +284,7 @@ internal object ChangesTreeSetup {
     }
 
     /** Whether [tree] has declaration rows, so its summary file rows are non-leaf and need the setup. */
-    private fun hasDeclarationRows(tree: ChangesListView): Boolean =
+    private fun hasDeclarationRows(tree: ChangesTree): Boolean =
         tree.root.depthFirstEnumeration().asSequence().any { it is DeclarationNode }
 
     /** Every Changes tree under [component], so a content with more than one is not left half configured. */

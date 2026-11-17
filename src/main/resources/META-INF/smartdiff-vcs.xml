@@ -1,6 +1,15 @@
-<!-- Loaded when the IDE has VCS support. Adds each file's structural summary and declarations to the Local Changes and Commit tree. -->
+<!-- Loaded when the IDE has VCS support. Adds each file's structural summary and declarations to the Local Changes and Commit tree,
+     and finds the review trees that the adapters of smartdiff-vcs-log.xml, smartdiff-github.xml and smartdiff-gitlab.xml summarize
+     (changes-tree/07, ADR 0013). -->
 <idea-plugin>
+    <extensionPoints>
+        <!-- Internal: one adapter per review tree, each in the optional descriptor of the plugin that shows the tree. -->
+        <extensionPoint name="reviewTreeAdapter"
+                        interface="io.github.agadek.smartdiff.ui.changes.ReviewTreeAdapter"
+                        dynamic="true"/>
+    </extensionPoints>
     <extensions defaultExtensionNs="com.intellij">
+        <postStartupActivity implementation="io.github.agadek.smartdiff.ui.changes.ReviewTreeStartup"/>
         <vcs.changes.changesViewModifier implementation="io.github.agadek.smartdiff.ui.changes.ChangesSummaryModifier"/>
         <vcs.changes.changesViewNodeAction implementation="io.github.agadek.smartdiff.ui.changes.DeclarationNodeAction"/>
         <postStartupActivity implementation="io.github.agadek.smartdiff.ui.changes.ChangesTreeCaretFollowActivity"/>

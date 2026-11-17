@@ -1,6 +1,6 @@
 # Summaries in the Git log and pull requests
 
-Status: proposed, 2026-11-16
+Status: implemented, 2026-11-17
 
 **Description:** Each changed file in a [review tree](../../GLOSSARY.md#review-tree), the Git log's commit details and the changes of a GitHub pull request or GitLab merge request, gets the same [summary line](../../GLOSSARY.md#summary-line) and [declaration](../../GLOSSARY.md#declaration) rows as in the [Changes tree](../../GLOSSARY.md#changes-tree).
 
@@ -27,12 +27,12 @@ Status: proposed, 2026-11-16
 - **R17** When the selected commits or the shown pull request change, summaries still pending for files no longer in the tree are not computed.
 - **R18** Selecting a commit again shows its summaries within 1 s without comparing again, while the cache holds them.
 - **R19** Summaries in one review tree never remove or change the summaries of the Changes tree or of another review tree.
-- **R20** A review tree that spike S11 records as having no supported hook has a "Structural Summary" action in its context menu instead, which shows the selected files with their summary lines and declaration rows in a popup.
+- **R20** A review tree that spike S11 records as having no supported hook has a "Structural Summary" action in its context menu instead, which shows the selected files with their summary lines and declaration rows in a popup. *(not applicable, S11: every review tree takes the model hook)*
 - **R21** The plugin loads, and the other trees are unchanged, when Git, GitHub or GitLab support is not installed or is disabled.
 
 ## Out of scope
 
-- The modal commit dialog, whose tree has no hook either; it can follow once the hook chosen here is known.
+- The modal commit dialog, whose tree has no hook either; spike S11 left it out (ADR 0013).
 - The file history panel and change browsers of other plugins.
 - Caret follow and [reviewed marks](../../GLOSSARY.md#reviewed-mark) in review trees.
 - Posting summaries to GitHub or GitLab, or a review UI of the plugin's own.
@@ -49,5 +49,6 @@ Status: proposed, 2026-11-16
 - [Summaries for added and deleted files](06-added-deleted-file-summaries.md)
 - [Analysis fallback](../outline/05-analysis-fallback.md)
 - [ADR 0006](../../adr/0006-changes-tree-summary-through-changes-view-modifier.md)
+- [ADR 0013](../../adr/0013-review-tree-summaries-through-the-tree-model-property.md)
 - [Technical specification §9.4](../../TECHNICAL-SPECIFICATION.md#94-changes-tree-summary) and [§13, spike S11](../../TECHNICAL-SPECIFICATION.md#13-prototype-spikes)
 - [Roadmap: summary in pull request reviews and the Git log](../../ROADMAP.md#summary-in-pull-request-reviews-and-the-git-log)

@@ -21,6 +21,16 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-17: summaries in the Git log and pull requests
+
+[changes-tree/07](specs/changes-tree/07-review-tree-summaries.md) adds summaries to the review trees through the tree's `model` property ([ADR 0013](adr/0013-review-tree-summaries-through-the-tree-model-property.md)). `ReviewTreeSummaryTest`, `ReviewTreeRevisionsTest`, `SummaryScopeTest`, `ReviewTreeOpenTest`, `ChangesSummarySettingsListenerTest` and `OptionalDescriptorTest` cover the behaviour automatically, and Plugin Verifier checks the optional descriptors on IntelliJ IDEA, PyCharm and RustRover. **Manual checks: outstanding.** On IntelliJ IDEA Community 2025.1 and the latest release, with a commit and a pull request or merge request that change a Java and a Kotlin file:
+
+| Tree | Check |
+| --- | --- |
+| Git log commit details | Select the commit: each file shows its summary within a second or two; expand a file to its declaration rows; double-click a row to open the diff with it selected in the outline; hide a change type in the Changes tree's filter and confirm the counts and rows follow; select another commit and back, and the summaries show at once. Repeat with two commits selected and with a merge commit under "Show changes to parents". |
+| GitHub pull request changes | Open the pull request in the Pull Requests tool window: the summaries, expanding the rows, opening a row (the pull request's diff opens with the declaration selected) and the filter. |
+| GitLab merge request changes | The same in the Merge Requests tool window. |
+
 ## 2026-11-16: moved lines in unsupported files
 
 [engines/04](specs/engines/04-moved-lines.md) compares two-sided diffs of files no engine supports by lines. `LineEngineTest`, the golden fixtures in `src/test/testData/lines/` and `OutlineControllerLineTest` cover the behaviour automatically. **Manual check: outstanding.** Open a plain-text diff with a moved paragraph in IntelliJ IDEA Community 2025.1: confirm the outline lists the paragraph as `lines A–B → C–D`, that selecting it frames both sides and puts moved-code markers in both editors, that the summary ends with `· lines`, and that turning *Show moved lines in files without an engine* off and applying the settings hides the outline again on the next diff. Confirm a language that has an engine still uses that engine.

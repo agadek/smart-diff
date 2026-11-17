@@ -1,7 +1,7 @@
 package io.github.agadek.smartdiff.engine.api
 
 /**
- * An opt-in, language-specific rule that names one kind of rewrite that keeps a value (declarations/08, ADR 0012). It
+ * An opt-in, language-specific rule that names one kind of rewrite that keeps a value (declarations/08, ADR 0013). It
  * claims only what it names (R19) and never changes classification: a rewritten declaration stays [Content.CHANGED],
  * and the outline alone can show it as `rewrite-only`.
  */

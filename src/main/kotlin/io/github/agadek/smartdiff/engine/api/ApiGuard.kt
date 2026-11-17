@@ -16,6 +16,7 @@ enum class GuardedFeature(val displayName: String, val api: String) {
     SCALA_REFERENCES("Scala rename usages", "the Scala plugin PSI"),
     PYTHON_REFERENCES("Python rename usages", "the Python plugin PSI"),
     CHANGES_TREE_HOOK("the Changes tree summaries", "the experimental Changes view API"),
+    REVIEW_TREE_HOOK("the Git log and pull request tree summaries", "the changes tree, Git or collaboration tools API"),
 }
 
 /**
