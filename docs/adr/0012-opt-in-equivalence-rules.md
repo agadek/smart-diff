@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Opt-in equivalence rules, one language at a time

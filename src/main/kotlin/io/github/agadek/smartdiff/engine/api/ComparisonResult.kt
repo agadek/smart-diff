@@ -146,6 +146,13 @@ data class ChangeNode(
      * when the user turns that option on (outline/11 R3); the content stays [Content.CHANGED] (declarations/02 R6).
      */
     val commentOnly: Boolean = false,
+    /**
+     * Only for [Presence.MATCHED] with [Content.CHANGED]: the smallest set of [EquivalenceRule]s that make the own source
+     * the same on both sides, with whitespace compared as for [Content.FORMATTING_ONLY]; empty when the node is not
+     * rewrite-only under any set of rules. The outline shows it as `rewrite-only` only when the user turns that option on
+     * and enables every rule of the set (declarations/08 R4, R7); the content stays [Content.CHANGED].
+     */
+    val rewriteRules: Set<EquivalenceRule> = emptySet(),
 ) {
     /** Whether this node is a change by itself, not only because of its children. */
     val isChangedItself: Boolean

@@ -7,6 +7,7 @@ import com.intellij.psi.PsiFile
 import io.github.agadek.smartdiff.engine.api.AnalysisNote
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
+import io.github.agadek.smartdiff.engine.declarations.model.EquivalenceRuleImpl
 
 /**
  * Turns one side of a file into a [DeclarationTree] for one language (technical specification §6.1). Implementations
@@ -24,6 +25,12 @@ interface DeclarationProvider {
      * structure-view fallback; null for a dedicated language provider.
      */
     val analysisNote: String? get() = null
+
+    /**
+     * The language's opt-in equivalence rules, in the order the classifier applies them (declarations/08); empty for a
+     * language without rules, which then never produces rewrite-only declarations (R18).
+     */
+    val equivalenceRules: List<EquivalenceRuleImpl> get() = emptyList()
 
     /**
      * The dialect every side is parsed in, chosen once from all [texts] so their trees compare (§6.2): both sides of the

@@ -61,7 +61,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [05 Extraction detection](declarations/05-extraction-detection.md) | implemented, 2026-10-23 |
 | [06 Change labels](declarations/06-change-labels.md) | implemented, 2026-11-04 (`usages renamed` with 04) |
 | [07 Kotlin and Scala formatting](declarations/07-kotlin-scala-formatting.md) | implemented, 2026-11-16 |
-| [08 Opt-in equivalence rules](declarations/08-equivalence-rules.md) | proposed, 2026-11-17 |
+| [08 Opt-in equivalence rules](declarations/08-equivalence-rules.md) | implemented, 2026-11-17 |
 
 ## Languages
 

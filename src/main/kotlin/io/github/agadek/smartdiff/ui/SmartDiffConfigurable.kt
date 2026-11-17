@@ -16,6 +16,7 @@ import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.dsl.builder.selected
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.EquivalenceRule
 import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.registry.EngineDefaults
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
@@ -69,6 +70,31 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                     .bindSelected(settings::markCommentOnly)
                     .comment("Label changed declarations whose only difference is in comments as comment-only in the outline, so the filter can hide them.")
             }
+            lateinit var markRewriteOnly: Cell<JBCheckBox>
+            row {
+                markRewriteOnly = checkBox("Mark rewrite-only changes")
+                    .bindSelected(settings::markRewriteOnly)
+                    .comment("Label changed declarations whose only differences are rewrites the rules below name as rewrite-only in the outline, so the filter can hide them. A rule claims only the rewrite it names.")
+            }
+            // declarations/08 R3, settings/01 R22: one checkbox per rule, grouped by language, all on by default.
+            indent {
+                for ((language, rules) in EquivalenceRule.entries.groupBy { it.language }) {
+                    row { label(language) }.enabledIf(markRewriteOnly.selected)
+                    indent {
+                        for (rule in rules) {
+                            row {
+                                checkBox(rule.displayName).bindSelected(
+                                    { rule.name !in settings.disabledEquivalenceRules },
+                                    { on ->
+                                        settings.disabledEquivalenceRules =
+                                            if (on) settings.disabledEquivalenceRules - rule.name else settings.disabledEquivalenceRules + rule.name
+                                    },
+                                ).enabledIf(markRewriteOnly.selected)
+                            }
+                        }
+                    }
+                }
+            }
             row {
                 checkBox("Mark moved code in the editors")
                     .bindSelected(settings::markMovedCode)
@@ -87,6 +113,8 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                         )
                         // settings/01 R19: comment-only can be hidden only while it is marked.
                         if (type == ChangeType.COMMENT_ONLY) box.enabledIf(markCommentOnly.selected)
+                        // settings/01 R22: rewrite-only can be hidden only while it is marked.
+                        if (type == ChangeType.REWRITE_ONLY) box.enabledIf(markRewriteOnly.selected)
                     }
                 }
                 row {

@@ -4,6 +4,7 @@ import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.Confidence
 import io.github.agadek.smartdiff.engine.api.Content
+import io.github.agadek.smartdiff.engine.api.EquivalenceRule
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.Evidence
 import io.github.agadek.smartdiff.engine.api.Presence
@@ -27,6 +28,7 @@ enum class Tag(val text: String) {
     CHANGED("changed"),
     FORMATTING_ONLY("formatting-only"),
     COMMENT_ONLY("comment-only"),
+    REWRITE_ONLY("rewrite-only"),
     UNANALYZED("unanalyzed"),
     SIGNATURE_CHANGED("signature changed"),
     USAGES_RENAMED("usages renamed"),
@@ -45,14 +47,24 @@ enum class ChangeType(val text: String, val tags: Set<Tag>) {
 
     /** Offered only in the outline, and only while "Mark comment-only changes" is on (outline/11 R8, R9). */
     COMMENT_ONLY("Comment-only", setOf(Tag.COMMENT_ONLY)),
+
+    /** Offered only in the outline, and only while "Mark rewrite-only changes" is on (declarations/08 R13, R14). */
+    REWRITE_ONLY("Rewrite-only", setOf(Tag.REWRITE_ONLY)),
     ;
 
     companion object {
-        /** The change types of views without comment-only changes: the Changes tree and the merge outline. */
-        val withoutCommentOnly: List<ChangeType> get() = entries.filter { it != COMMENT_ONLY }
+        /**
+         * The change types of views without comment-only and rewrite-only changes: the Changes tree and the merge
+         * outline (outline/11, declarations/08 out of scope).
+         */
+        val withoutCommentOnly: List<ChangeType> get() = entries.filter { it != COMMENT_ONLY && it != REWRITE_ONLY }
 
         /** The change types the outline's filter offers (outline/11 R8, R9). */
-        fun forOutline(markCommentOnly: Boolean): List<ChangeType> = if (markCommentOnly) entries else withoutCommentOnly
+        fun forOutline(markCommentOnly: Boolean): List<ChangeType> = forOutline(markCommentOnly, markRewriteOnly = false)
+
+        /** The change types the outline's filter offers (outline/11 R8, R9; declarations/08 R13, R14). */
+        fun forOutline(markCommentOnly: Boolean, markRewriteOnly: Boolean): List<ChangeType> =
+            entries.filter { (it != COMMENT_ONLY || markCommentOnly) && (it != REWRITE_ONLY || markRewriteOnly) }
     }
 }
 
@@ -162,17 +174,18 @@ object OutlineModel {
         markCommentOnly: Boolean = false,
         reviewed: Set<ChangeNode> = emptySet(),
         hideReviewed: Boolean = false,
+        rewriteOnly: Set<EquivalenceRule> = emptySet(),
     ): List<OutlineItem> {
         val uncertain = mutableListOf<OutlineItem>()
         val usages = Usages(result, oldText, newText, whitespacePolicy)
         val reviewedSet = identitySetOf(reviewed)
         val markable = markableNodes(result, oldText, newText, whitespacePolicy)
         val reviewedState = Reviewed(reviewedSet, markable, emptyMap(), emptyMap())
-        val builder = Builder(formattingInline, hidden, uncertain, Links(result), usages, markCommentOnly, reviewedState, hideReviewed)
+        val builder = Builder(formattingInline, hidden, uncertain, Links(result), usages, markCommentOnly, reviewedState, hideReviewed, rewriteOnly)
         val rows = mutableListOf<OutlineItem>()
-        result.fileRegion?.takeIf { it.isReported && !isHidden(it, hidden, markCommentOnly = markCommentOnly, hideReviewed = hideReviewed, reviewed = reviewedSet) }?.let { region ->
+        result.fileRegion?.takeIf { it.isReported && !isHidden(it, hidden, markCommentOnly = markCommentOnly, hideReviewed = hideReviewed, reviewed = reviewedSet, rewriteOnly = rewriteOnly) }?.let { region ->
             rows += OutlineItem(
-                ItemKind.FILE_REGION, "File region", tags(region, markCommentOnly = markCommentOnly), region.oldRange, region.newRange, region.details,
+                ItemKind.FILE_REGION, "File region", tags(region, markCommentOnly = markCommentOnly, rewriteOnly = rewriteOnly), region.oldRange, region.newRange, region.details,
                 node = region,
             ).also { it.reviewed = reviewedState.isReviewed(it) }
         }
@@ -207,8 +220,9 @@ object OutlineModel {
         markCommentOnly: Boolean = false,
         reviewed: Set<ChangeNode> = emptySet(),
         hideReviewed: Boolean = false,
+        rewriteOnly: Set<EquivalenceRule> = emptySet(),
     ): String {
-        val parts = summaryParts(result, hidden, oldText, newText, whitespacePolicy, markCommentOnly, reviewed, hideReviewed)
+        val parts = summaryParts(result, hidden, oldText, newText, whitespacePolicy, markCommentOnly, reviewed, hideReviewed, rewriteOnly)
         return if (parts.isEmpty()) "No structural changes" else parts.joinToString(" · ")
     }
 
@@ -234,14 +248,15 @@ object OutlineModel {
         markCommentOnly: Boolean = false,
         reviewed: Set<ChangeNode> = emptySet(),
         hideReviewed: Boolean = false,
+        rewriteOnly: Set<EquivalenceRule> = emptySet(),
     ): List<String> {
         val usages = Usages(result, oldText, newText, whitespacePolicy)
         val counts = LinkedHashMap<String, Int>()
-        listOf(Tag.CHANGED.text, EXTRACTED, Tag.ADDED.text, INLINED, Tag.REMOVED.text, Tag.MOVED.text, Tag.FORMATTING_ONLY.text, Tag.COMMENT_ONLY.text,
+        listOf(Tag.CHANGED.text, EXTRACTED, Tag.ADDED.text, INLINED, Tag.REMOVED.text, Tag.MOVED.text, Tag.FORMATTING_ONLY.text, Tag.COMMENT_ONLY.text, Tag.REWRITE_ONLY.text,
             Tag.RENAME_CANDIDATE.text, Tag.USAGES_RENAMED.text, Tag.UNCERTAIN.text, Tag.UNANALYZED.text).forEach { counts[it] = 0 }
         fun count(node: ChangeNode) {
             if (node.isChangedItself || usages.hasUsages(node)) {
-                tags(node, usages.isRenameOnly(node), markCommentOnly).map {
+                tags(node, usages.isRenameOnly(node), markCommentOnly, rewriteOnly).map {
                     when {
                         it == Tag.ADDED && node.extractedFrom.isNotEmpty() -> EXTRACTED
                         it == Tag.REMOVED && node.inlinedInto.isNotEmpty() -> INLINED
@@ -259,7 +274,7 @@ object OutlineModel {
         val reviewedCount = markable.count { it in reviewedSet }
         val reviewedPart = if (reviewedCount > 0) listOf("$reviewedCount of ${markable.size} reviewed") else emptyList()
         return counts.filterValues { it > 0 }.map { (label, n) -> "$n $label" } +
-            listOfNotNull(hiddenCount(result, hidden, markCommentOnly, reviewedSet, hideReviewed).takeIf { it > 0 }?.let { "$it hidden" }) +
+            listOfNotNull(hiddenCount(result, hidden, markCommentOnly, reviewedSet, hideReviewed, rewriteOnly).takeIf { it > 0 }?.let { "$it hidden" }) +
             reviewedPart +
             if (result.status == Status.ANALYZED || result.status == Status.PARTIAL)
                 listOfNotNull(result.analysisNote) else emptyList()
@@ -272,12 +287,13 @@ object OutlineModel {
         markCommentOnly: Boolean = false,
         reviewed: Set<ChangeNode> = emptySet(),
         hideReviewed: Boolean = false,
+        rewriteOnly: Set<EquivalenceRule> = emptySet(),
     ): Int {
         if (hidden.isEmpty() && !hideReviewed) return 0
         val usages = Usages(result, "", "", WhitespacePolicy.INSIGNIFICANT)
         val reviewedSet = identitySetOf(reviewed)
         fun count(node: ChangeNode): Int =
-            (if (node.isReported && isHidden(node, hidden, usages.hasUsages(node), markCommentOnly, hideReviewed, reviewedSet)) 1 else 0) +
+            (if (node.isReported && isHidden(node, hidden, usages.hasUsages(node), markCommentOnly, hideReviewed, reviewedSet, rewriteOnly)) 1 else 0) +
                 node.children.sumOf(::count)
         return (result.fileRegion?.let(::count) ?: 0) + result.changes.sumOf(::count)
     }
@@ -312,12 +328,13 @@ object OutlineModel {
         markCommentOnly: Boolean = false,
         hideReviewed: Boolean = false,
         reviewed: Set<ChangeNode> = emptySet(),
+        rewriteOnly: Set<EquivalenceRule> = emptySet(),
     ): Boolean {
         if (groupedUsages || !node.isChangedItself) return false
         if (hideReviewed && node in reviewed) return true
         if (hidden.isEmpty()) return false
         val hiddenTags = hidden.flatMapTo(HashSet()) { it.tags }
-        return tags(node, markCommentOnly = markCommentOnly).all { it in hiddenTags }
+        return tags(node, markCommentOnly = markCommentOnly, rewriteOnly = rewriteOnly).all { it in hiddenTags }
     }
 
     /** A subject's title: kind, receiver, name and signature for a declaration (`method parse(String,int)`,
@@ -438,9 +455,16 @@ object OutlineModel {
     /**
      * The change labels of a node that is a change itself; none for a node shown only as a container. With
      * [markCommentOnly], a changed node whose only difference is in comments is `comment-only` instead of `changed`
-     * (outline/11 R3, R6).
+     * (outline/11 R3, R6). [rewriteOnly] holds the enabled equivalence rules while "Mark rewrite-only changes" is on,
+     * and is empty while it is off: a changed node whose needed rules are all enabled is `rewrite-only` instead of
+     * `changed` (declarations/08 R4, R7, R8).
      */
-    fun tags(node: ChangeNode, usagesRenamed: Boolean = false, markCommentOnly: Boolean = false): List<Tag> {
+    fun tags(
+        node: ChangeNode,
+        usagesRenamed: Boolean = false,
+        markCommentOnly: Boolean = false,
+        rewriteOnly: Set<EquivalenceRule> = emptySet(),
+    ): List<Tag> {
         if (usagesRenamed) return listOf(Tag.USAGES_RENAMED)
         if (!node.isChangedItself) return emptyList()
         return buildList {
@@ -453,7 +477,13 @@ object OutlineModel {
             if (node.renamedFrom != null) add(Tag.RENAME_CANDIDATE)
             if (node.moved) add(Tag.MOVED)
             when (node.content) {
-                Content.CHANGED -> add(if (markCommentOnly && node.commentOnly) Tag.COMMENT_ONLY else Tag.CHANGED)
+                Content.CHANGED -> add(
+                    when {
+                        markCommentOnly && node.commentOnly -> Tag.COMMENT_ONLY
+                        node.rewriteRules.isNotEmpty() && rewriteOnly.containsAll(node.rewriteRules) -> Tag.REWRITE_ONLY
+                        else -> Tag.CHANGED
+                    },
+                )
                 Content.FORMATTING_ONLY -> add(Tag.FORMATTING_ONLY)
                 Content.UNANALYZED -> add(Tag.UNANALYZED)
                 Content.UNCHANGED -> {}
@@ -540,6 +570,7 @@ object OutlineModel {
         private val markCommentOnly: Boolean,
         private val reviewed: Reviewed,
         private val hideReviewed: Boolean,
+        private val rewriteOnly: Set<EquivalenceRule>,
     ) {
 
         /** Sets a row's reviewed flag from its own and its children's markable nodes (outline/12 R4, R5). */
@@ -570,7 +601,7 @@ object OutlineModel {
         private fun item(node: ChangeNode): OutlineItem? {
             val children = children(node.children)
             val grouped = usages.references(node)
-            if (isHidden(node, hidden, grouped.isNotEmpty(), markCommentOnly, hideReviewed, reviewed.reviewed)) {
+            if (isHidden(node, hidden, grouped.isNotEmpty(), markCommentOnly, hideReviewed, reviewed.reviewed, rewriteOnly)) {
                 if (children.isEmpty()) return null
                 return marked(OutlineItem(ItemKind.CHANGE, title(node), emptyList(), node.oldRange, node.newRange, children = children, node = node))
             }
@@ -587,7 +618,7 @@ object OutlineModel {
                 val count = usages.renameReferences(node).size
                 if (count == 0) null else if (count == 1) "1 usage" else "$count usages"
             }
-            val tags = tags(node, usages.isRenameOnly(node), markCommentOnly)
+            val tags = tags(node, usages.isRenameOnly(node), markCommentOnly, rewriteOnly)
             return marked(
                 OutlineItem(
                     ItemKind.CHANGE, title(node), tags, oldRange, newRange,

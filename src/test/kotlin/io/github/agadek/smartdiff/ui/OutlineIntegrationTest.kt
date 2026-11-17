@@ -1,5 +1,6 @@
 package io.github.agadek.smartdiff.ui
 
+import io.github.agadek.smartdiff.engine.api.EquivalenceRule
 import com.intellij.diff.DiffContext
 import com.intellij.diff.DiffExtension
 import com.intellij.diff.DiffManager
@@ -2390,5 +2391,48 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         const val USAGE_NEW = "class Order {\n    int sum() { return 2; }\n    int twice() { return sum() * 2; }\n}\n"
         const val KOTLIN_OLD = "class Greeter {\n    fun hello() = \"hi\"\n}\n"
         const val KOTLIN_NEW = "class Greeter {\n    fun hello() = \"hello\"\n\n    fun bye() {}\n}\n"
+    }
+
+    fun `test declarations 08 R2 R17 the toggle and a rule redraw without comparing and keep the selection`() {
+        // declarations/08-equivalence-rules R2, R13, R14, R17
+        val old = "class Constants {\n    int hex() { return 0x10; }\n    int b() { return 2; }\n}\n"
+        val new = "class Constants {\n    int hex() { return 16; }\n    int b() { return 3; }\n}\n"
+        val outline = open(history(old, new, "Constants.java")).awaitResult()
+        val before = (outline.state as OutlineState.Shown).result
+        assertEquals(listOf("class Constants", "  method hex()  changed", "  method b()  changed"), rows(outline))
+
+        val filter = findAction(outline.panel, "Hide Change Types") as DefaultActionGroup
+        val mark = filter.getChildren(null).single { it.templatePresentation.text == OutlinePanel.MARK_REWRITE_ONLY }
+        val rewriteOnly = filter.getChildren(null).single { it.templatePresentation.text == ChangeType.REWRITE_ONLY.text }
+        val offEvent = TestActionEvent.createTestEvent(rewriteOnly)
+        rewriteOnly.update(offEvent)
+        assertFalse("the filter has no rewrite-only entry while the option is off", offEvent.presentation.isVisible)
+
+        select(outline, "method hex()  changed")
+        (mark as ToggleAction).setSelected(TestActionEvent.createTestEvent(mark), true)
+
+        assertTrue("the same setting as the settings page", settings.markRewriteOnly)
+        assertEquals(listOf("class Constants", "  method hex()  rewrite-only", "  method b()  changed"), rows(outline))
+        assertSame("no new comparison", before, (outline.state as OutlineState.Shown).result)
+        assertEquals("1 changed · 1 rewrite-only", outline.panel.summary.text)
+        assertEquals("the selection is kept", "method hex()  rewrite-only", outline.panel.selectedItem()?.label)
+        val onEvent = TestActionEvent.createTestEvent(rewriteOnly)
+        rewriteOnly.update(onEvent)
+        assertTrue("the filter gains the entry while the option is on", onEvent.presentation.isVisible)
+
+        // A rule turned off on the settings page redraws open outlines too (R17).
+        settings.disabledEquivalenceRules = setOf(EquivalenceRule.JAVA_NUMERIC_LITERALS.name)
+        ApplicationManager.getApplication().messageBus.syncPublisher(SmartDiffSettings.CHANGED).settingsChanged()
+        assertEquals(listOf("class Constants", "  method hex()  changed", "  method b()  changed"), rows(outline))
+        settings.disabledEquivalenceRules = emptySet()
+        ApplicationManager.getApplication().messageBus.syncPublisher(SmartDiffSettings.CHANGED).settingsChanged()
+
+        outline.setHidden(ChangeType.REWRITE_ONLY, true)
+        assertEquals(listOf("class Constants", "  method b()  changed"), rows(outline))
+
+        (mark as ToggleAction).setSelected(TestActionEvent.createTestEvent(mark), false)
+        assertEquals("a hidden rewrite-only type hides nothing while the option is off",
+            listOf("class Constants", "  method hex()  changed", "  method b()  changed"), rows(outline))
+        assertSame("no new comparison", before, (outline.state as OutlineState.Shown).result)
     }
 }

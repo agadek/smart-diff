@@ -2,6 +2,7 @@ package io.github.agadek.smartdiff.ui
 
 import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
+import io.github.agadek.smartdiff.engine.api.EquivalenceRule
 import io.github.agadek.smartdiff.engine.api.TextRange
 import java.util.BitSet
 
@@ -39,19 +40,20 @@ class HiddenLines private constructor(private val old: BitSet, private val new: 
             oldText: CharSequence,
             newText: CharSequence,
             markCommentOnly: Boolean = false,
+            rewriteOnly: Set<EquivalenceRule> = emptySet(),
         ): HiddenLines {
             if (hidden.isEmpty()) return NONE
             val sides = Sides(LineIndex(oldText), LineIndex(newText))
             val grouped = OutlineModel.groupedUsageNodes(result)
             result.fileRegion?.let { region ->
-                if (region.isChangedItself) sides.add(region.details.map { it.old }, region.details.map { it.new }, OutlineModel.isHidden(region, hidden, markCommentOnly = markCommentOnly))
+                if (region.isChangedItself) sides.add(region.details.map { it.old }, region.details.map { it.new }, OutlineModel.isHidden(region, hidden, markCommentOnly = markCommentOnly, rewriteOnly = rewriteOnly))
             }
             fun visit(node: ChangeNode) {
                 if (node.isChangedItself) {
                     val children = node.children.filter { it.isReported }
                     val olds = subtract(listOf(node.oldRange) + node.details.map { it.old }, children.flatMap { extent(it).first })
                     val news = subtract(listOf(node.newRange) + node.details.map { it.new }, children.flatMap { extent(it).second })
-                    sides.add(olds, news, OutlineModel.isHidden(node, hidden, node in grouped, markCommentOnly))
+                    sides.add(olds, news, OutlineModel.isHidden(node, hidden, node in grouped, markCommentOnly, rewriteOnly = rewriteOnly))
                 }
                 node.children.forEach(::visit)
             }

@@ -808,4 +808,16 @@ class MergeOutlineIntegrationTest : BasePlatformTestCase() {
         const val SCALA3_BASE = "class Greeter:\n  def hello = \"hi\"\n"
         const val SCALA3_RIGHT = "class Greeter:\n  def hello = \"hello\"\n"
     }
+
+    fun `test the merge filter has no rewrite-only entry`() {
+        // declarations/08-equivalence-rules, out of scope: the merge outline never gains the rewrite-only entry
+        val outline = open().awaitShown()
+        val toolbar = findToolbar(outline.panel) ?: error("no merge outline toolbar")
+        fun labels(group: ActionGroup): List<String?> = group.getChildren(null).flatMap { child ->
+            listOf(child.templatePresentation.text) + (child as? ActionGroup)?.let(::labels).orEmpty()
+        }
+        val entries = labels(toolbar.actionGroup)
+        assertTrue("the merge filter has change types: $entries", "Changed" in entries)
+        assertFalse("the merge filter has no rewrite-only entry: $entries", ChangeType.REWRITE_ONLY.text in entries)
+    }
 }

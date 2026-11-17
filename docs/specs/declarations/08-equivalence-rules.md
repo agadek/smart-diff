@@ -1,6 +1,6 @@
 # Opt-in equivalence rules
 
-Status: proposed, 2026-11-17
+Status: implemented, 2026-11-17
 
 **Description:** Opt-in, language-specific [equivalence rules](../../GLOSSARY.md#equivalence-rule) mark a [changed](../../GLOSSARY.md#changed) [declaration](../../GLOSSARY.md#declaration) as [rewrite-only](../../GLOSSARY.md#rewrite-only) when every difference in its own source is a rewrite one of the user's enabled rules names, such as `0x10` written as `16`. The first rules are for Java.
 

@@ -1,5 +1,6 @@
 package io.github.agadek.smartdiff.ui
 
+import io.github.agadek.smartdiff.engine.api.EquivalenceRule
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.registry.Registry
@@ -400,5 +401,72 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
 
         assertNotNull("the settings page is not registered", page)
         assertEquals("tools", page!!.parentId)
+    }
+
+    // declarations/08-equivalence-rules R1, R3; settings/01-settings-page R22
+    fun `test rewrite-only marking is off and every rule is on by default`() {
+        settings.loadState(SmartDiffSettings.SettingsState())
+        assertFalse("rewrite-only changes are not marked by default", settings.markRewriteOnly)
+        assertEquals(emptySet<String>(), settings.disabledEquivalenceRules)
+        assertEquals(EquivalenceRule.entries.toSet(), settings.enabledEquivalenceRules)
+        assertEquals("no rules apply while the option is off", emptySet<EquivalenceRule>(), settings.rewriteOnlyRules)
+    }
+
+    // declarations/08-equivalence-rules R1, R2, R3, R17
+    fun `test rewrite-only marking and the rules are persisted and are display settings`() {
+        settings.loadState(SmartDiffSettings.SettingsState())
+        val analysis = settings.analysisRevision
+        val tree = settings.treeRevision
+
+        settings.markRewriteOnly = true
+        settings.disabledEquivalenceRules = setOf(EquivalenceRule.JAVA_STRING_ESCAPES.name)
+
+        assertTrue(settings.state.markRewriteOnly)
+        assertEquals(EquivalenceRule.JAVA_STRING_ESCAPES.name, settings.state.disabledEquivalenceRules)
+        assertEquals(
+            EquivalenceRule.entries.toSet() - EquivalenceRule.JAVA_STRING_ESCAPES,
+            settings.rewriteOnlyRules,
+        )
+        assertEquals("marking does not compare files again", analysis, settings.analysisRevision)
+        assertEquals("marking does not rebuild the Changes tree", tree, settings.treeRevision)
+
+        settings.loadState(SmartDiffSettings.SettingsState().apply {
+            markRewriteOnly = true
+            disabledEquivalenceRules = "JAVA_NUMERIC_LITERALS, NO_SUCH_RULE"
+        })
+        assertTrue("a stored true value is read back", settings.markRewriteOnly)
+        assertFalse(EquivalenceRule.JAVA_NUMERIC_LITERALS in settings.rewriteOnlyRules)
+        assertTrue("a rule no stored name turns off stays on", EquivalenceRule.JAVA_REDUNDANT_PARENTHESES in settings.rewriteOnlyRules)
+    }
+
+    // declarations/08-equivalence-rules R2, R3; settings/01-settings-page R22
+    fun `test the settings page round-trips rewrite-only marking and its rules`() {
+        settings.loadState(SmartDiffSettings.SettingsState())
+        val configurable = SmartDiffConfigurable()
+        try {
+            val panel = configurable.createComponent()!!
+            configurable.reset()
+            assertFalse(configurable.isModified)
+            val boxes = UIUtil.findComponentsOfType(panel, JBCheckBox::class.java)
+            val mark = boxes.single { it.text == "Mark rewrite-only changes" }
+            val rules = EquivalenceRule.entries.map { rule -> boxes.single { it.text == rule.displayName } }
+            val hide = boxes.single { it.text == ChangeType.REWRITE_ONLY.text }
+            assertFalse("the option starts off", mark.isSelected)
+            assertTrue("every rule starts on", rules.all { it.isSelected })
+            assertTrue("the rules are enabled only with the option", rules.none { it.isEnabled })
+            assertFalse("rewrite-only can be hidden only with the option", hide.isEnabled)
+
+            mark.isSelected = true
+            assertTrue("the rules follow the option", rules.all { it.isEnabled })
+            assertTrue(hide.isEnabled)
+            boxes.single { it.text == EquivalenceRule.JAVA_REDUNDANT_PARENTHESES.displayName }.isSelected = false
+            assertTrue(configurable.isModified)
+            configurable.apply()
+            assertFalse(configurable.isModified)
+        } finally {
+            configurable.disposeUIResources()
+        }
+        assertTrue("applying the page writes the option", settings.markRewriteOnly)
+        assertEquals(setOf(EquivalenceRule.JAVA_REDUNDANT_PARENTHESES.name), settings.disabledEquivalenceRules)
     }
 }

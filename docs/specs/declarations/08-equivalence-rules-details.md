@@ -1,6 +1,6 @@
 # Opt-in equivalence rules: details
 
-Status: proposed, 2026-11-17
+Status: implemented, 2026-11-17
 
 **Feature:** [Opt-in equivalence rules](08-equivalence-rules.md)
 
@@ -12,10 +12,10 @@ As for [comment-only changes](../outline/11-comment-only-changes-details.md), th
 
 - A new `engine.api` enum `EquivalenceRule(language, displayName)` with `JAVA_NUMERIC_LITERALS`, `JAVA_STRING_ESCAPES` and `JAVA_REDUNDANT_PARENTHESES`.
 - `ChangeNode` gets `rewriteRules: Set<EquivalenceRule> = emptySet()`, documented as "only for `Presence.MATCHED` with `Content.CHANGED`; empty when the node is not rewrite-only under any set of rules". The file region's node gets it too (R9).
-- A `DeclarationProvider` gets `equivalenceRules: List<EquivalenceRuleImpl> = emptyList()`; only `JavaDeclarationProvider` returns any (R18). `EquivalenceRuleImpl` has `rule: EquivalenceRule` and `rewrite(tokens: List<Token>): List<Token>`.
+- A `DeclarationProvider` gets `equivalenceRules: List<EquivalenceRuleImpl> = emptyList()`; only `JavaDeclarationProvider` returns any (R18), from `JavaEquivalenceRules`. `EquivalenceRuleImpl`, in `engine.declarations.model` next to `Token`, has `rule: EquivalenceRule` and `rewrite(tokens: List<Token>): List<Token>`. `DeclarationEngine` passes the provider's rules to `DeclarationAnalysis.compare`.
 - `ContentClassifier` gets `rewriteRules(old, new, policy, parseError, signatureChanged, rules): Set<EquivalenceRule>`, called from the two `DeclarationAnalysis` call sites next to `isCommentOnly`, only when the result is `Content.CHANGED`.
 - `OutlineModel` gets `Tag.REWRITE_ONLY("rewrite-only")` and `ChangeType.REWRITE_ONLY("Rewrite-only", setOf(Tag.REWRITE_ONLY))`.
-- `SmartDiffSettings` gets `markRewriteOnly: Boolean = false` and `disabledEquivalenceRules: Set<String> = emptySet()` (rule names, so a rule added later is on by default, R3), persisted with the other outline settings and compared in the display-settings check, so applying either redraws open outlines without comparing again (R17).
+- `SmartDiffSettings` gets `markRewriteOnly: Boolean = false` and `disabledEquivalenceRules: Set<String> = emptySet()` (rule names, so a rule added later is on by default, R3), persisted with the other outline settings. `rewriteOnlyRules` is the enabled rules while the option is on and empty while it is off; the outline's display-settings check compares it, so applying the option or a rule redraws open outlines without comparing again (R17). The outline functions take it as `rewriteOnly`, next to `markCommentOnly`.
 
 ### The rule set of a node (R4 to R7)
 
@@ -32,7 +32,7 @@ A formatting-only node never reaches this, since its content is not `CHANGED`.
 
 ### Java rules
 
-Token types are the Java lexer's (`JavaTokenType`), as `Token.type` already records them.
+Token types are the Java lexer's (`JavaTokenType`), as `Token.type` already records them. The lexer writes `>=`, `>>=` and `>>>=` as one `GT`, two or three `GT` tokens followed directly by `EQ`, and `<=`, `==`, `!=` as `LE`, `EQEQ` and `NE` (checked by the rule tests).
 
 **Numeric literals (R10).** Each `INTEGER_LITERAL`, `LONG_LITERAL`, `FLOAT_LITERAL` and `DOUBLE_LITERAL` token is replaced by a token of the same type whose text is a canonical form of its value:
 
@@ -47,10 +47,10 @@ Token types are the Java lexer's (`JavaTokenType`), as `Token.type` already reco
 | Before the `(` | After the `)` |
 | --- | --- |
 | `RETURN_KEYWORD`, `THROW_KEYWORD` | `SEMICOLON` |
-| `EQ` or a compound assignment (`PLUSEQ`, `MINUSEQ`, `ASTERISKEQ`, `DIVEQ`, `PERCEQ`, `ANDEQ`, `OREQ`, `XOREQ`, `LTLTEQ`, `GTGTEQ`, `GTGTGTEQ`) | `SEMICOLON`, `COMMA`, `RPARENTH` |
+| `EQ` or a compound assignment (`PLUSEQ`, `MINUSEQ`, `ASTERISKEQ`, `DIVEQ`, `PERCEQ`, `ANDEQ`, `OREQ`, `XOREQ`, `LTLTEQ`, and `>>=` or `>>>=`, which the lexer writes as two or three `GT` and an `EQ`) | `SEMICOLON`, `COMMA`, `RPARENTH` |
 | `LPARENTH`, `COMMA` | `COMMA`, `RPARENTH` |
 
-Whitespace and comments are skipped when looking for the tokens around the pair. The table never matches a cast (a cast's `)` is followed by its operand), a call's own parentheses (preceded by a name), a lambda's parameters (followed by `->`) or an operand of an operator. `if ((x))` and `foo((a + b))` match through the `LPARENTH` row, and the `if`'s own parentheses never do, since `IF_KEYWORD` is not in the table. A pair is removed together with no whitespace; `normalize` already merges what is left. Pairs are removed from the inside out until none matches, so `return ((a));` becomes `return a;`.
+Whitespace and comments are skipped when looking for the tokens around the pair. An `EQ` directly after one `GT` is the comparison `>=` and matches no row, so `x = a >= (b == c);` stays changed. The table never matches a cast (a cast's `)` is followed by its operand), a call's own parentheses (preceded by a name), a lambda's parameters (followed by `->`) or an operand of an operator. `if ((x))` and `foo((a + b))` match through the `LPARENTH` row, and the `if`'s own parentheses never do, since `IF_KEYWORD` is not in the table. A pair is removed together with no whitespace; `normalize` already merges what is left. Pairs are removed from the inside out until none matches, so `return ((a));` becomes `return a;`.
 
 ### Labels and summary (R4, R8, R15, R16)
 
@@ -78,7 +78,7 @@ In `OutlineModel`'s tag computation, when `markRewriteOnly` is on and the node's
 | `RewriteOnlyEngineTest`: a Java method with each rule, a field initializer, the file region, a Kotlin file with the same edits staying changed | R4, R9, R10, R11, R12, R18 |
 | `RewriteOnlyOutlineTest`: option off shows `changed` and the same rows and summary as before; option on shows `rewrite-only` with `moved` kept; a disabled rule keeps the row changed; summary order; hiding with the option on and off; only the outline offers the type; the refactorings view's other changes | R1, R4, R7, R8, R13, R14, R15, R16 |
 | `SmartDiffSettingsTest`: off by default, rules on by default, persisted, counted as display settings, round-tripped on the settings page, rule checkboxes enabled only with the option | R1, R2, R3, R17 |
-| `OutlineIntegrationTest` declarations 08 R2 R17: the toggle and a rule redraw without a new comparison and keep the selection | R2, R17 |
+| `OutlineIntegrationTest` declarations 08 R2 R17: the toggle and a rule redraw without a new comparison and keep the selection | R2, R13, R14, R17 |
 | `ChangesTreeFilterTest` and `MergeOutlineIntegrationTest`: no rewrite-only entry | Out of scope |
 
 The relationship benchmark and the corpus validation must give the same output as before, since classification does not change.

@@ -157,7 +157,7 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         }
         // The comment-only entry shows only while comment-only changes are marked (outline/11 R8, R9); the option itself
         // ends the menu (R2). "Hide Reviewed" comes last, after a separator (outline/12 R12).
-        val filterActions = ChangeType.entries.map(::HideAction) + Separator.getInstance() + MarkCommentOnlyAction() +
+        val filterActions = ChangeType.entries.map(::HideAction) + Separator.getInstance() + MarkCommentOnlyAction() + MarkRewriteOnlyAction() +
             Separator.getInstance() + HideReviewedAction()
         val filter = DefaultActionGroup("Hide Change Types", filterActions).apply {
             templatePresentation.description = "Hide types of changes from the outline"
@@ -447,6 +447,7 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
         override fun update(e: AnActionEvent) {
             super.update(e)
             if (type == ChangeType.COMMENT_ONLY) e.presentation.isEnabledAndVisible = SmartDiffSettings.getInstance().markCommentOnly
+            if (type == ChangeType.REWRITE_ONLY) e.presentation.isEnabledAndVisible = SmartDiffSettings.getInstance().markRewriteOnly
         }
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
     }
@@ -455,6 +456,13 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
     private inner class MarkCommentOnlyAction : DumbAwareToggleAction(MARK_COMMENT_ONLY) {
         override fun isSelected(e: AnActionEvent): Boolean = SmartDiffSettings.getInstance().markCommentOnly
         override fun setSelected(e: AnActionEvent, state: Boolean) = controller.setMarkCommentOnly(state)
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+    }
+
+    /** The filter menu's "Mark Rewrite-Only Changes" checkbox, the same setting as on the settings page (declarations/08 R2). */
+    private inner class MarkRewriteOnlyAction : DumbAwareToggleAction(MARK_REWRITE_ONLY) {
+        override fun isSelected(e: AnActionEvent): Boolean = SmartDiffSettings.getInstance().markRewriteOnly
+        override fun setSelected(e: AnActionEvent, state: Boolean) = controller.setMarkRewriteOnly(state)
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
     }
 
@@ -487,6 +495,9 @@ class OutlinePanel internal constructor(private val controller: OutlineControlle
 
         /** The filter menu checkbox and settings page label for outline/11 R2. */
         const val MARK_COMMENT_ONLY = "Mark Comment-Only Changes"
+
+        /** The filter menu checkbox for declarations/08 R2. */
+        const val MARK_REWRITE_ONLY = "Mark Rewrite-Only Changes"
 
         /** The filter menu checkbox for outline/12 R12. */
         const val HIDE_REVIEWED = "Hide Reviewed"
