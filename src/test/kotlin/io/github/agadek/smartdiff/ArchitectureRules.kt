@@ -66,6 +66,7 @@ class ArchitectureRules(private val root: String) {
      */
     val platformApiAdapters: Map<String, List<String>> = mapOf(
         "com.intellij.openapi.vcs.changes.ChangesViewNodeAction" to listOf("$root.ui.changes.DeclarationNodeAction"),
+        "com.intellij.collaboration.util.RefComparisonChange" to listOf("$root.ui.changes.CodeReviewTreeAdapter"),
         "com.jetbrains.python.ast.PyAstClass" to listOf("$root.engine.declarations.psi.python.."),
         "com.jetbrains.python.ast.PyAstFunction" to listOf("$root.engine.declarations.psi.python.."),
         "com.jetbrains.python.ast.PyAstNamedParameter" to listOf("$root.engine.declarations.psi.python.."),

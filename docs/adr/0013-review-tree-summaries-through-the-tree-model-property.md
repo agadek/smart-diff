@@ -29,13 +29,13 @@ the build verifies against) on 2026-11-17 to choose a hook per tree.
   - Git log: the tree has an ancestor of class `com.intellij.vcs.log.ui.frame.VcsLogChangesBrowser`, checked by name.
     The class is final, internal to the log module, and its constructor changed between 2025.1 and 2026.3, so the
     plugin does not link against it.
-  - GitHub: the tree's file nodes hold `RefComparisonChange` (public, collaboration tools) and the tree is under the
+  - GitHub: the tree's file nodes hold `RefComparisonChange` (collaboration tools, experimental) and the tree is under the
     `Pull Requests` tool window, or under a component of the GitHub plugin's packages.
   - GitLab: the same with the `Merge Requests` tool window and the GitLab plugin's packages.
 - **Revisions.** A Git log node holds the `Change` the log's own diff opens: the parent against the commit, the
   range's change for several commits, and one `Change` per parent under "Show changes to parents"; a `MergedChange` is
   a `Change`. A pull request node's `RefComparisonChange` holds the base and head revision numbers and paths its diff
-  compares. The adapter turns it into a `Change` whose revisions call the public `GitContentRevision.createRevision`
+  compares; the class is experimental in both builds. The adapter turns it into a `Change` whose revisions call the public `GitContentRevision.createRevision`
   only when the summary executor reads them, so nothing is read on the EDT. A revision whose commit is not fetched
   fails to read and the row stays plain.
 - **Opening a row.** A Git log node's `Change` opens through the same platform diff action as the Changes tree, with
@@ -64,9 +64,15 @@ All three review trees use **model post-processing through the tree's `model` pr
   platform restores the tree state. Arriving summaries and settings changes ask the tree to rebuild
   (`ChangesTree.rebuildTree`), which runs the same step.
 
-Only public API is linked: `ChangesTree`, `ChangesBrowserNode`, `RefComparisonChange`, `GitContentRevision` and Swing.
-The two class names (`VcsLogChangesBrowser`, the plugins' packages) are matched as strings, so a rename only stops the
-match: the tree is then drawn as the platform draws it. An adapter that throws is logged once and detached.
+The linked API is public except one class: `ChangesTree`, `ChangesBrowserNode`, `GitContentRevision` and Swing are
+public, while `RefComparisonChange` is experimental (Plugin Verifier reports it and its four getters). It has no public
+replacement, since the collaboration tools give a request's changes only as this class, so it is used only by
+`CodeReviewTreeAdapter`, the one adapter class behind both request trees, and listed in
+[docs/PLATFORM-API.md](../PLATFORM-API.md). The whole review tree hook runs through `ApiGuard` as the
+`REVIEW_TREE_HOOK` feature: a missing or changed class turns the review tree summaries off for the session and leaves
+the trees as the platform draws them (platform/01 R10, R13, R14). The two class names (`VcsLogChangesBrowser`, the
+plugins' packages) are matched as strings, so a rename only stops the match: the tree is then drawn as the platform
+draws it. An adapter that throws is logged once and stops adding summaries to that tree.
 
 ## Consequences
 

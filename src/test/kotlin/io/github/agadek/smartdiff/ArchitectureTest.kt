@@ -67,6 +67,11 @@ class ArchitectureTest {
     fun `platform 01 R7 only the Changes tree adapter uses ChangesViewNodeAction`() =
         checkPlatformRule("com.intellij.openapi.vcs.changes.ChangesViewNodeAction")
 
+    // platform/01-platform-api-stability R7, changes-tree/07 (ADR 0013)
+    @Test
+    fun `platform 01 R7 only the code review tree adapter uses RefComparisonChange`() =
+        checkPlatformRule("com.intellij.collaboration.util.RefComparisonChange")
+
     // platform/01-platform-api-stability R7
     @Test
     fun `platform 01 R7 only the Python adapters use the experimental Python AST members`() {
