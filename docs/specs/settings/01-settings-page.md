@@ -30,6 +30,7 @@ Status: implemented, 2026-10-22; the outline view and relationship kind settings
 - **R20** "Mark moved code in the editors" is on by default.
 - **R21** "Show moved lines in files without an engine" is on by default.
 - **R22** "Mark rewrite-only changes" is off by default, is the same setting as the outline filter menu's checkbox, lists each language's equivalence rules with one checkbox each, all on by default and enabled only while it is on, and adds a rewrite-only checkbox to "Hide from the outline" while it is on.
+- **R23** "Compare languages the IDE cannot parse with Tree-sitter" is on by default.
 
 ## References
 
@@ -38,6 +39,7 @@ Status: implemented, 2026-10-22; the outline view and relationship kind settings
 - [Structure-view fallback](../languages/06-structure-view-fallback.md)
 - [Comment-only changes](../outline/11-comment-only-changes.md) (R19)
 - [Opt-in equivalence rules](../declarations/08-equivalence-rules.md) (R22)
+- [Tree-sitter engine](../engines/05-tree-sitter.md) (R23)
 - [Moved-code markers](../outline/13-moved-code-markers.md) (R20)
 - [Moved lines in unsupported files](../engines/04-moved-lines.md) (R21)
 - [Technical specification §11](../../TECHNICAL-SPECIFICATION.md#11-settings)

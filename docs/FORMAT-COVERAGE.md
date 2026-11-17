@@ -72,7 +72,7 @@ Most languages the IDE parses, including those of group (b) and third-party plug
 | --- | --- | --- |
 | C#, F#, VB.NET (Rider) | Rider's language support runs in the ReSharper backend process. The IntelliJ-side PSI of these files is a thin stub with no declarations, and the structure view is filled over the backend protocol, not from PSI | A [Tree-sitter provider](ROADMAP.md#tree-sitter-support), later |
 | C, C++, Objective-C (CLion) | CLion Nova, the ReSharper-based engine, is the default for all users from 2025.3; the classic engine's PSI is being retired. The same backend split as Rider applies | Tree-sitter, later; or the structure view, if S9 shows CLion fills it with PSI-backed items |
-| Swift | No current JetBrains IDE (AppCode was discontinued) | Tree-sitter, later |
+| Swift | No current JetBrains IDE (AppCode was discontinued) | The [Tree-sitter engine](specs/engines/05-tree-sitter.md) (proposed, 2026-11-17) |
 | Jupyter notebooks | A notebook is JSON with cells; the diff the IDE shows is its own notebook diff, not the text diff the outline attaches to | Out of scope |
 | Binary and generated files (images, lock files, minified bundles) | No structure worth showing, or too large for the [analysis limits](GLOSSARY.md#analysis-limits) | Native diff, as today ([product scope](specs/README.md#product-scope) P5) |
 
