@@ -12,7 +12,8 @@ package io.github.agadek.smartdiff.engine.api
  * 5. All ranges in the result are offsets into the request's texts.
  * 6. Nothing hidden: every character that differs between the sides lies inside a reported change, the reported file
  *    region or an unanalyzed range.
- * 7. No source content leaves the IDE process.
+ * 7. No source content leaves the computer; an engine passes source only to its own helper process, over a pipe
+ *    (engines/02 R13, ADR 0016).
  */
 interface ComparisonEngine {
     /** Stable; persisted in settings. */

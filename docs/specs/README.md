@@ -6,7 +6,7 @@ One file per feature, in one folder per context, plus a details file for each ne
 
 SMART Diff adds a [structural outline](../GLOSSARY.md#structural-outline) to the IntelliJ diff. It shows which [declarations](../GLOSSARY.md#declaration) changed and how, and the [native diff](../GLOSSARY.md#native-diff) stays the detail view and the fallback. These rules hold for every feature below:
 
-- **P1** No source code leaves the IDE process, and the plugin sends no telemetry.
+- **P1** No source code leaves the computer, it reaches no process but the IDE and the plugin's own helpers, and the plugin sends no telemetry.
 - **P2** The plugin never claims that two versions behave the same. An opt-in [equivalence rule](../GLOSSARY.md#equivalence-rule) claims only the rewrite it names ([ADR 0012](../adr/0012-opt-in-equivalence-rules.md)).
 - **P3** The plugin never hides a change by default, and every change stays reachable in the native diff.
 - **P4** The plugin never edits code, resolves merge conflicts or applies patches.

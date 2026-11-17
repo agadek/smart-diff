@@ -17,9 +17,10 @@ Status: implemented, 2026-10-21
 - **R7** All ranges in a result lie inside the text of their side.
 - **R8** Identical texts give no reported changes.
 - **R9** Empty texts, and a text that is empty on one side, give a valid result.
-- **R10** No source code leaves the IDE process.
+- **R10** *(retired, replaced by R13)*
 - **R11** Every engine passes the shared contract test suite.
 - **R12** A test-only engine passes the suite, appears in the engine dropdown and can be selected, with no change to the UI code.
+- **R13** No source code leaves the computer, and an engine passes source only to its own helper process, over a pipe.
 
 ## References
 
