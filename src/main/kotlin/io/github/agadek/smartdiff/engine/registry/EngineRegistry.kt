@@ -2,8 +2,10 @@ package io.github.agadek.smartdiff.engine.registry
 
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.project.Project
+import io.github.agadek.smartdiff.engine.api.ApiGuard
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import io.github.agadek.smartdiff.engine.api.EngineId
 
@@ -58,6 +60,11 @@ class EngineRegistry(private val project: Project) {
     }
 
     companion object {
+        init {
+            // platform/01 R10, R14: a turned-off feature is logged once as a warning, never as an error report.
+            ApiGuard.reporter = { message -> Logger.getInstance(ApiGuard::class.java).warn(message) }
+        }
+
         fun getInstance(project: Project): EngineRegistry = project.service()
     }
 }

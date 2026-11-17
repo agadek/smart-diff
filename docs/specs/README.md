@@ -120,6 +120,12 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | --- | --- |
 | [01 Settings page](settings/01-settings-page.md) | implemented, 2026-10-22 |
 
+## Platform
+
+| Feature | Status |
+| --- | --- |
+| [01 Platform API stability](platform/01-platform-api-stability.md) | implemented, 2026-11-17 |
+
 ## Merges
 
 | Feature | Status |

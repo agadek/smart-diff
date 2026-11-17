@@ -1,5 +1,6 @@
 package io.github.agadek.smartdiff.engine.declarations.psi.python
 
+import io.github.agadek.smartdiff.engine.api.GuardedFeature
 import com.intellij.lang.Language
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiComment
@@ -47,6 +48,8 @@ import io.github.agadek.smartdiff.engine.declarations.psi.PsiDeclarationProvider
  * statements are part of the declaration that contains them or of the file region.
  */
 class PythonDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.INDENTATION_SIGNIFICANT) {
+
+    override val guardedFeature: GuardedFeature get() = GuardedFeature.PYTHON_PROVIDER
 
     override fun supports(languageId: String): Boolean = languageId == PythonLanguage.getInstance().id
 

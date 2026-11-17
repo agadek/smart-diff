@@ -6,6 +6,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiNamedElement
 import com.intellij.psi.util.PsiTreeUtil
 import io.github.agadek.smartdiff.engine.api.Cancellation
+import io.github.agadek.smartdiff.engine.api.GuardedFeature
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
@@ -30,6 +31,8 @@ import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.ScConstructorOw
  * call to a renamed `+` method, is not a usage that follows the rename and is left out.
  */
 class ScalaReferenceResolver : ReferenceResolver {
+
+    override val guardedFeature: GuardedFeature get() = GuardedFeature.SCALA_REFERENCES
 
     override fun supports(languageId: String): Boolean = languageId == SCALA
 

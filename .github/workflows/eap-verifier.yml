@@ -1,0 +1,68 @@
+name: Early-access Plugin Verifier
+
+# platform/01 R1 to R3: verify the plugin against the newest IntelliJ IDEA early-access build once a week and on
+# demand, or against the latest release when no early-access build is newer, and fail on any compatibility problem or
+# on an API use that docs/PLATFORM-API.md does not list.
+on:
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Plugin Verifier (early access)
+    runs-on: ubuntu-latest
+    steps:
+      # The verifier downloads a full IDE; make room on the runner.
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Verify plugin
+        run: ./gradlew verifyPlugin -Psmartdiff.verifier.ides=eap
+
+      - name: Check the platform API inventory
+        run: ./gradlew checkPlatformApiInventory
+
+      - name: Summary
+        if: ${{ !cancelled() }}
+        run: |
+          shopt -s nullglob
+          verdicts=(build/reports/pluginVerifier/*/plugins/*/*/verification-verdict.txt)
+          if [ ${#verdicts[@]} -eq 0 ]; then
+            echo "No verifier report was written." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          for verdict in "${verdicts[@]}"; do
+            ide=$(basename "$(dirname "$(dirname "$(dirname "$(dirname "$verdict")")")")")
+            text=$(head -n 1 "$verdict")
+            count() { echo "$text" | grep -oE "[0-9]+ usages? of $1" | grep -oE "^[0-9]+" || echo 0; }
+            {
+              echo "### $ide"
+              echo
+              echo "$text"
+              echo
+              echo "| Experimental | Internal | Deprecated | Scheduled for removal |"
+              echo "| --- | --- | --- | --- |"
+              echo "| $(count 'experimental API') | $(count 'internal API') | $(count 'deprecated API') | $(count 'scheduled for removal API') |"
+              echo
+            } >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Upload verifier reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: plugin-verifier-reports-eap
+          path: build/reports/pluginVerifier
+          if-no-files-found: ignore

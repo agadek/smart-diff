@@ -14,6 +14,7 @@ import com.jetbrains.python.psi.PyReferenceExpression
 import com.jetbrains.python.psi.PyStatement
 import com.jetbrains.python.psi.PyTargetExpression
 import io.github.agadek.smartdiff.engine.api.Cancellation
+import io.github.agadek.smartdiff.engine.api.GuardedFeature
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.LanguageIds
 import io.github.agadek.smartdiff.engine.api.Subject
@@ -27,6 +28,8 @@ import java.util.concurrent.CancellationException
  * type inference in general, and unresolved names are left out.
  */
 class PythonReferenceResolver : ReferenceResolver {
+
+    override val guardedFeature: GuardedFeature get() = GuardedFeature.PYTHON_REFERENCES
 
     override fun supports(languageId: String): Boolean = languageId == LanguageIds.PYTHON
 

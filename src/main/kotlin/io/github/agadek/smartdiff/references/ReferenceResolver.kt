@@ -4,6 +4,7 @@ import com.intellij.openapi.extensions.ExtensionPointName
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import io.github.agadek.smartdiff.engine.api.Cancellation
+import io.github.agadek.smartdiff.engine.api.GuardedFeature
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
@@ -47,6 +48,12 @@ internal interface ReferenceResolver {
 
     /** The language's whitespace policy, as the declaration engine built its tree with. */
     fun whitespacePolicy(file: PsiFile): WhitespacePolicy
+
+    /**
+     * The feature [ApiGuard] turns off when this resolver meets a missing optional-plugin API (platform/01 R12); null for
+     * a resolver that uses only the platform's public API.
+     */
+    val guardedFeature: GuardedFeature? get() = null
 
     companion object {
         val EP_NAME: ExtensionPointName<ReferenceResolver> =

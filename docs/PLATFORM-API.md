@@ -1,0 +1,36 @@
+# Platform API inventory
+
+Every API the plugin uses that Plugin Verifier reports as experimental, internal, deprecated or scheduled for removal, and the PSI of every optional plugin dependency and the Kotlin Analysis API ([platform/01](specs/platform/01-platform-api-stability.md) R6). Each one is used only by its adapter, which the architecture test checks (R7), and `./gradlew checkPlatformApiInventory` fails when a verifier report names a use by a plugin class that no class or member row of this table lists (R8); a package row names an optional plugin's whole PSI for the architecture test and lists no reported use.
+
+Written from the Plugin Verifier reports of IntelliJ IDEA 2025.1 (IC-251.26927.53) and 2026.3 (IU-263.7307.200), PyCharm 2025.1 and 2026.3, and RustRover 2025.1 and 2026.3, on 2026-11-17, and from the imports of the main and `rust` source sets. A public replacement was checked once in 2025.1, the lowest supported build (R9).
+
+## Inventory
+
+The API column names a class, a class and member as `Class#member`, or a package with its subpackages as `package..`. The adapter column names the classes, or the packages ending in `..`, that may use it. The feature is the [`GuardedFeature`](../src/main/kotlin/io/github/agadek/smartdiff/engine/api/ApiGuard.kt) that `ApiGuard` turns off when the API is missing (R10).
+
+| API | Status | Adapter | Feature | Fallback | Public replacement in 2025.1 |
+| --- | --- | --- | --- | --- | --- |
+| `com.intellij.openapi.vcs.changes.ChangesViewNodeAction` | experimental | `io.github.agadek.smartdiff.ui.changes.DeclarationNodeAction` | `CHANGES_TREE_HOOK` | The Changes tree without summaries or declaration rows, as the platform shows it (R13) | None: the platform's node action extension takes only this interface |
+| `com.jetbrains.python.ast.PyAstClass#getName` | experimental | `io.github.agadek.smartdiff.engine.declarations.psi.python..` | `PYTHON_PROVIDER` | Python files get the analysis fallback (R11) | None: `PyClass.getName` is declared on this experimental interface |
+| `com.jetbrains.python.ast.PyAstFunction#getName` | experimental | `io.github.agadek.smartdiff.engine.declarations.psi.python..` | `PYTHON_PROVIDER` | Python files get the analysis fallback (R11) | None: `PyFunction.getName` is declared on this experimental interface |
+| `com.jetbrains.python.ast.PyAstNamedParameter#getName` | experimental | `io.github.agadek.smartdiff.engine.declarations.psi.python..` | `PYTHON_PROVIDER` | Python files get the analysis fallback (R11) | None: declared on this experimental interface |
+| `com.jetbrains.python.ast.PyAstNamedParameter#isKeywordContainer` | experimental | `io.github.agadek.smartdiff.engine.declarations.psi.python..` | `PYTHON_PROVIDER` | Python files get the analysis fallback (R11) | None: declared on this experimental interface |
+| `com.jetbrains.python.ast.PyAstNamedParameter#isPositionalContainer` | experimental | `io.github.agadek.smartdiff.engine.declarations.psi.python..` | `PYTHON_PROVIDER` | Python files get the analysis fallback (R11) | None: declared on this experimental interface |
+| `com.jetbrains.python.ast.PyAstTargetExpression#getName` | experimental | `io.github.agadek.smartdiff.engine.declarations.psi.python..`, `io.github.agadek.smartdiff.references.PythonReferenceResolver` | `PYTHON_PROVIDER`, `PYTHON_REFERENCES` | The analysis fallback for the provider; renames without grouped usages for the resolver (R11, R12) | None: declared on this experimental interface |
+| `com.jetbrains.python.ast.PyAstReferenceExpression#getNameElement` | experimental | `io.github.agadek.smartdiff.references.PythonReferenceResolver` | `PYTHON_REFERENCES` | Python renames without grouped usages (R12) | None: declared on this experimental interface |
+| `com.jetbrains.python.ast.PyAstReferenceExpression#getReferencedName` | experimental | `io.github.agadek.smartdiff.references.PythonReferenceResolver` | `PYTHON_REFERENCES` | Python renames without grouped usages (R12) | None: declared on this experimental interface |
+| `org.intellij.plugins.markdown.lang.psi.impl.MarkdownFrontMatterHeader` | experimental | `io.github.agadek.smartdiff.engine.declarations.psi.markdown..` | `MARKDOWN_PROVIDER` | Markdown files get the analysis fallback (R11) | None: the front matter header has no public PSI type |
+| `org.jetbrains.plugins.scala..` | non-public plugin PSI | `io.github.agadek.smartdiff.engine.declarations.psi.scala..`, `io.github.agadek.smartdiff.references.ScalaReferenceResolver` | `SCALA_PROVIDER`, `SCALA_REFERENCES` | Scala files get the analysis fallback; Scala renames without grouped usages (R11, R12) | None: the Scala plugin publishes no stable PSI API |
+| `com.jetbrains.python..` | non-public plugin PSI | `io.github.agadek.smartdiff.engine.declarations.psi.python..`, `io.github.agadek.smartdiff.references.PythonReferenceResolver` | `PYTHON_PROVIDER`, `PYTHON_REFERENCES` | Python files get the analysis fallback; Python renames without grouped usages (R11, R12) | None: the Python plugin publishes no stable PSI API |
+| `org.rust..` | non-public plugin PSI | `io.github.agadek.smartdiff.engine.declarations.psi.rust..` | `RUST_PROVIDER` | Rust files get the analysis fallback (R11) | None: the Rust plugin publishes no stable PSI API |
+| `org.jetbrains.kotlin.analysis..` | Kotlin Analysis API, not used | `io.github.agadek.smartdiff.references.KotlinReferenceResolver` | `KOTLIN_REFERENCES` | Kotlin renames without grouped usages (R12) | Not needed: the resolver uses `PsiReference.resolve()` only |
+
+The `rust` subproject's own architecture test checks the `org.rust..` row; the root's checks the others.
+
+## Replaced
+
+- `com.intellij.lang.LanguageStructureViewBuilder#INSTANCE` (deprecated) was replaced by `LanguageStructureViewBuilder.getInstance()`, public in 2025.1, in `StructureViewDeclarationProvider` (R9).
+
+## Not listed
+
+The reports also name experimental Python AST interfaces and `com.intellij.psi` interfaces that other plugins' own classes reference, such as `PyAstTupleExpression` referenced in `PyTupleExpression`. They are not uses by a plugin class, so the inventory check ignores them.

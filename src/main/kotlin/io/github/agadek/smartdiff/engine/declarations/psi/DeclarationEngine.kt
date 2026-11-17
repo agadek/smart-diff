@@ -6,6 +6,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
+import io.github.agadek.smartdiff.engine.api.ApiGuard
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
@@ -37,27 +38,36 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
 
     override fun supports(languageId: String): Boolean = provider(languageId) != null
 
-    override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult {
-        val provider = provider(request.languageId, request.useStructureViewFallback)
-            ?: return ComparisonResult.unsupported(this, "no declaration provider for language ${request.languageId}")
-        return try {
-            val (old, new) = trees(provider, request, cancellation)
-            val result = DeclarationAnalysis(id, version).compare(
-                old, new, request.limits.maxDeclarations, cancellation, request.confidence, request.languageId, provider.equivalenceRules,
-            )
-            provider.analysisNote?.let { result.copy(analysisNote = it) } ?: result
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: ProcessCanceledException) {
-            throw e
-        } catch (e: Exception) {
-            ComparisonResult.threw(this, e.message ?: e.javaClass.simpleName)
-        }
+    override fun compare(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult = try {
+        // A provider that meets a missing optional-plugin API is turned off, and the comparison runs once more without it:
+        // the next provider that supports the language, or none (platform/01 R11, R15).
+        compareWithProvider(request, cancellation) ?: compareWithProvider(request, cancellation) ?: unsupported(request)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: ProcessCanceledException) {
+        throw e
+    } catch (e: Exception) {
+        ComparisonResult.threw(this, e.message ?: e.javaClass.simpleName)
     }
+
+    /** The result with the current provider; unsupported without one, null when [ApiGuard] has just turned it off. */
+    private fun compareWithProvider(request: ComparisonRequest, cancellation: Cancellation): ComparisonResult? {
+        val provider = provider(request.languageId, request.useStructureViewFallback) ?: return unsupported(request)
+        val (old, new) = guarded(provider, fallback = { null }) { trees(provider, request, cancellation) } ?: return null
+        val result = DeclarationAnalysis(id, version).compare(
+            old, new, request.limits.maxDeclarations, cancellation, request.confidence, request.languageId, provider.equivalenceRules,
+        )
+        return provider.analysisNote?.let { result.copy(analysisNote = it) } ?: result
+    }
+
+    private fun unsupported(request: ComparisonRequest) =
+        ComparisonResult.unsupported(this, "no declaration provider for language ${request.languageId}")
 
     /** The declaration trees of both sides of [request], for the corpus validation's diagnostics. */
     internal fun trees(request: ComparisonRequest, cancellation: Cancellation): Pair<DeclarationTree, DeclarationTree>? =
-        provider(request.languageId, request.useStructureViewFallback)?.let { trees(it, request, cancellation) }
+        provider(request.languageId, request.useStructureViewFallback)?.let { provider ->
+            guarded(provider, fallback = { null }) { trees(provider, request, cancellation) }
+        }
 
     private fun trees(provider: DeclarationProvider, request: ComparisonRequest, cancellation: Cancellation): Pair<DeclarationTree, DeclarationTree> {
         val dialect = cancellableReadAction(cancellation) {
@@ -86,10 +96,18 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
 
     private fun project(): Project = project ?: ProjectManager.getInstance().defaultProject
 
+    /** The first provider for [languageId]; one that is turned off, or fails to answer, supports nothing (platform/01 R11). */
     private fun provider(languageId: String, useStructureViewFallback: Boolean = true): DeclarationProvider? =
         DeclarationProvider.EP_NAME.extensionList.firstOrNull { provider ->
-            provider.supports(languageId) && (useStructureViewFallback || provider.analysisNote == null)
+            guarded(provider, fallback = { false }) { provider.supports(languageId) } &&
+                (useStructureViewFallback || provider.analysisNote == null)
         }
+
+    /** [block] through [ApiGuard] for a provider that needs an optional-plugin API, and as it is for the others. */
+    private fun <T> guarded(provider: DeclarationProvider, fallback: () -> T, block: () -> T): T {
+        val feature = provider.guardedFeature ?: return block()
+        return ApiGuard.run(feature, fallback, block)
+    }
 
     companion object {
         val ID = EngineId("smartdiff.declarations")
@@ -113,7 +131,11 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
          * first `META-INF/plugin.xml` belongs to another plugin.
          */
         private fun scalaPluginVersion(): String? {
-            if (DeclarationProvider.EP_NAME.extensionList.none { it.supports(SCALA) }) return null
+            val supportsScala = { provider: DeclarationProvider ->
+                val feature = provider.guardedFeature
+                if (feature == null) provider.supports(SCALA) else ApiGuard.run(feature, { false }) { provider.supports(SCALA) }
+            }
+            if (DeclarationProvider.EP_NAME.extensionList.none(supportsScala)) return null
             val version = try {
                 val language = Language.findLanguageByID(SCALA)
                 val descriptors = language?.javaClass?.classLoader

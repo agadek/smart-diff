@@ -6,6 +6,7 @@ import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiNamedElement
 import com.intellij.psi.util.PsiTreeUtil
 import io.github.agadek.smartdiff.engine.api.Cancellation
+import io.github.agadek.smartdiff.engine.api.GuardedFeature
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
@@ -33,6 +34,8 @@ import org.jetbrains.kotlin.psi.KtTypeReference
  * left out because it is not a usage that follows the rename.
  */
 class KotlinReferenceResolver : ReferenceResolver {
+
+    override val guardedFeature: GuardedFeature get() = GuardedFeature.KOTLIN_REFERENCES
 
     override fun supports(languageId: String): Boolean = languageId == KotlinLanguage.INSTANCE.id
 
