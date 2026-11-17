@@ -56,6 +56,8 @@ Status: proposed, 2026-11-17
 - [ADR 0003](../../adr/0003-conservative-classification.md)
 - [ADR 0004](../../adr/0004-pluggable-comparison-engines.md)
 - [ADR 0015](../../adr/0015-tree-sitter-languages-are-chosen-by-file-name.md)
+- [ADR 0016](../../adr/0016-tree-sitter-runs-in-a-native-helper-process.md)
+- [Engine contract](02-engine-contract.md) R13
 - [Comparison engines](01-comparison-engines.md)
 - [Moved lines in unsupported files](04-moved-lines.md) R4
 - [Kotlin and Scala formatting](../declarations/07-kotlin-scala-formatting.md)
