@@ -207,6 +207,11 @@ _Avoid_: move arrow, move link
 A run of lines that the line comparison found removed in one place and added in another, with the same text apart from whitespace at the start and end of each line.
 _Avoid_: moved hunk, moved chunk
 
+### Code move
+
+A run of whole statements removed from one place in a matched declaration and added at another place in the same or another matched declaration of the file, possibly with edits inside it ([relationships/08](specs/relationships/08-moves-inside-declarations.md)).
+_Avoid_: statement move, moved block, moved hunk
+
 ### Extraction
 
 An added method or function whose body is mostly code that a changed declaration on the old side had and no longer has. It stays added and is linked to that declaration, its extraction source. Specified in [extraction detection](specs/declarations/05-extraction-detection.md).
