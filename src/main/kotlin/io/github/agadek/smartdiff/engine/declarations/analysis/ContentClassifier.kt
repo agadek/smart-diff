@@ -2,7 +2,9 @@ package io.github.agadek.smartdiff.engine.declarations.analysis
 
 import io.github.agadek.smartdiff.engine.api.BracketDepth
 import io.github.agadek.smartdiff.engine.api.Content
+import io.github.agadek.smartdiff.engine.api.EquivalenceRule
 import io.github.agadek.smartdiff.engine.api.LineBreakRules
+import io.github.agadek.smartdiff.engine.declarations.model.EquivalenceRuleImpl
 import io.github.agadek.smartdiff.engine.declarations.model.Token
 import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
@@ -79,6 +81,41 @@ object ContentClassifier {
         } catch (e: Exception) {
             // A pure comparison must never turn a changed node into a claim about its source (outline/11, failure).
             false
+        }
+    }
+
+    /**
+     * The smallest set of [rules] that makes a declaration's own source the same on both sides, with whitespace compared
+     * under [policy] as for formatting-only (declarations/08 R4, R6); empty when no set does. Never with a parse error,
+     * a changed signature or a comment change (R5), and never for identical sources. [rules] are applied in their
+     * order; a rule is in the set when leaving it out, and applying the others, makes the sides differ.
+     */
+    fun rewriteRules(
+        old: List<Token>,
+        new: List<Token>,
+        policy: WhitespacePolicy,
+        parseError: Boolean,
+        signatureChanged: Boolean = false,
+        rules: List<EquivalenceRuleImpl>,
+    ): Set<EquivalenceRule> {
+        return try {
+            if (rules.isEmpty() || parseError || signatureChanged) return emptySet()
+            val oldContent = old.filterNot { it.kind == TokenKind.SEPARATOR }
+            val newContent = new.filterNot { it.kind == TokenKind.SEPARATOR }
+            if (oldContent.map { it.text } == newContent.map { it.text }) return emptySet()
+            val comments = { tokens: List<Token> -> tokens.filter { it.kind == TokenKind.COMMENT }.map { it.text } }
+            if (comments(oldContent) != comments(newContent)) return emptySet()
+            fun same(applied: List<EquivalenceRuleImpl>): Boolean {
+                val rewritten = { tokens: List<Token> ->
+                    comparable(normalize(applied.fold(tokens) { acc, rule -> rule.rewrite(acc) }, policy), policy)
+                }
+                return rewritten(oldContent) == rewritten(newContent)
+            }
+            if (!same(rules)) return emptySet()
+            rules.filter { rule -> !same(rules - rule) }.mapTo(LinkedHashSet()) { it.rule }
+        } catch (e: Exception) {
+            // A pure comparison must never turn a changed node into a claim about its source (declarations/08, failure).
+            emptySet()
         }
     }
 

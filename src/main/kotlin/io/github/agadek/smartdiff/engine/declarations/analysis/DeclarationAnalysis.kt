@@ -9,6 +9,7 @@ import io.github.agadek.smartdiff.engine.api.ConfidencePolicy
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.EngineId
+import io.github.agadek.smartdiff.engine.api.EquivalenceRule
 import io.github.agadek.smartdiff.engine.api.Evidence
 import io.github.agadek.smartdiff.engine.api.Inlined
 import io.github.agadek.smartdiff.engine.api.Origin
@@ -21,6 +22,7 @@ import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.declarations.model.Declaration
 import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
+import io.github.agadek.smartdiff.engine.declarations.model.EquivalenceRuleImpl
 import io.github.agadek.smartdiff.engine.declarations.model.FileRegion
 import io.github.agadek.smartdiff.engine.declarations.model.Token
 import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
@@ -48,6 +50,7 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
         cancellation: Cancellation,
         confidence: ConfidencePolicy = ConfidencePolicy.DEFAULT,
         languageId: String? = null,
+        equivalenceRules: List<EquivalenceRuleImpl> = emptyList(),
     ): ComparisonResult {
         val largest = maxOf(old.all.size, new.all.size)
         if (largest > maxDeclarations) {
@@ -57,10 +60,10 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
         unparsable(new, "new")?.let { return result(Status.FAILED, reason = it) }
 
         val matching = DeclarationMatcher.match(old, new, confidence, languageId, cancellation)
-        val tree = Tree(old, new, matching, cancellation)
+        val tree = Tree(old, new, matching, cancellation, equivalenceRules)
         tree.detectLinks()
         val changes = tree.build()
-        val fileRegion = fileRegion(old, new)
+        val fileRegion = fileRegion(old, new, equivalenceRules)
         val partial = fileRegion?.content == Content.UNANALYZED || changes.any { it.hasUnanalyzed() }
         return result(
             status = if (partial) Status.PARTIAL else Status.ANALYZED,
@@ -92,7 +95,7 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
      * an unchanged node: it is not reported, and the nothing-hidden check covers the separator through its ranges. A
      * side without file region gets an empty range at offset 0.
      */
-    private fun fileRegion(old: DeclarationTree, new: DeclarationTree): ChangeNode? {
+    private fun fileRegion(old: DeclarationTree, new: DeclarationTree, rules: List<EquivalenceRuleImpl>): ChangeNode? {
         val content = ContentClassifier.classify(
             old.fileRegion.tokens,
             new.fileRegion.tokens,
@@ -120,6 +123,14 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
                 new.whitespacePolicy,
                 parseError = old.fileRegion.hasParseError || new.fileRegion.hasParseError,
             ),
+            // declarations/08 R9: the file region is rewrite-only under the same rule.
+            rewriteRules = if (content == Content.CHANGED) ContentClassifier.rewriteRules(
+                old.fileRegion.tokens,
+                new.fileRegion.tokens,
+                new.whitespacePolicy,
+                parseError = old.fileRegion.hasParseError || new.fileRegion.hasParseError,
+                rules = rules,
+            ) else emptySet(),
         )
     }
 
@@ -135,6 +146,7 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
         private val new: DeclarationTree,
         private val matching: Matching,
         private val cancellation: Cancellation,
+        private val equivalenceRules: List<EquivalenceRuleImpl>,
     ) {
         /** A node under construction; its children can still be inserted. */
         private inner class Builder(val build: (List<ChangeNode>) -> ChangeNode) {
@@ -309,6 +321,7 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
                     ?.old?.first()?.subject?.let { (it as? Subject.Declaration)?.kind },
                 content = content(match),
             ).let { if (it.content == Content.CHANGED && commentOnly(match)) it.copy(commentOnly = true) else it }
+                .let { if (it.content == Content.CHANGED) it.copy(rewriteRules = rewriteRules(match)) else it }
             // The extracted code is highlighted on the old side, apart from the lines that really changed.
             val withExtractions = if (extracted.isEmpty()) node else node.copy(
                 extractedTo = extracted.map { it.new.first().subject },
@@ -423,6 +436,38 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
             }.getOrDefault(false)
             return sameIndentation && ContentClassifier.isCommentOnly(
                 oldTokens.drop(oldLeading.size), newTokens.drop(newLeading.size), policy, parseError, changedSignature,
+            )
+        }
+
+        /**
+         * The equivalence rules a changed match needs to be rewrite-only (declarations/08 R4 to R7), empty when none
+         * make it so. As for comment-only, the whitespace before the first token is layout (declarations/02 R14).
+         */
+        private fun rewriteRules(match: Match): Set<EquivalenceRule> {
+            if (equivalenceRules.isEmpty()) return emptySet()
+            val oldTokens = renamed(match)
+            val newTokens = match.new.ownTokens
+            val policy = new.whitespacePolicy
+            val parseError = match.old.hasParseError || match.new.hasParseError
+            val changedSignature = signatureChanged(match)
+            val whole = ContentClassifier.rewriteRules(oldTokens, newTokens, policy, parseError, changedSignature, equivalenceRules)
+            if (whole.isNotEmpty() || policy == WhitespacePolicy.SIGNIFICANT) return whole
+            val oldLeading = leadingTokens(match.old)
+            val newLeading = leadingTokens(match.new)
+            val sameIndentation = runCatching {
+                when (policy) {
+                    WhitespacePolicy.SCALA3_INDENTATION -> {
+                        val oldShift = ContentClassifier.indentationShift(ContentClassifier.normalize(oldTokens, policy))
+                        val newShift = ContentClassifier.indentationShift(ContentClassifier.normalize(newTokens, policy))
+                        indentation(oldLeading).removePrefix(oldShift ?: "") == indentation(newLeading).removePrefix(newShift ?: "")
+                    }
+                    else -> policy != WhitespacePolicy.INDENTATION_SIGNIFICANT ||
+                        indentation(oldLeading) == indentation(newLeading)
+                }
+            }.getOrDefault(false)
+            if (!sameIndentation) return emptySet()
+            return ContentClassifier.rewriteRules(
+                oldTokens.drop(oldLeading.size), newTokens.drop(newLeading.size), policy, parseError, changedSignature, equivalenceRules,
             )
         }
 

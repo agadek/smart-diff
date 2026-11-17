@@ -2,6 +2,7 @@ package io.github.agadek.smartdiff.ui
 
 import io.github.agadek.smartdiff.engine.api.ChangeNode
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
+import io.github.agadek.smartdiff.engine.api.EquivalenceRule
 import io.github.agadek.smartdiff.engine.api.Confidence
 import io.github.agadek.smartdiff.engine.api.Evidence
 import io.github.agadek.smartdiff.engine.api.Relationship
@@ -40,6 +41,7 @@ object RefactoringsModel {
         markCommentOnly: Boolean = false,
         reviewed: Set<ChangeNode> = emptySet(),
         hideReviewed: Boolean = false,
+        rewriteOnly: Set<EquivalenceRule> = emptySet(),
     ): List<OutlineItem> {
         val relationships = visibleRelationships(result, hiddenKinds)
         val colours = renameColours(result, hiddenKinds)
@@ -49,7 +51,7 @@ object RefactoringsModel {
         val coverage = Coverage.of(relationships)
         val lowLinks = lowLinks(relationships)
         val containerTree = OutlineModel.build(
-            result, oldText, newText, formattingInline, hidden, whitespacePolicy, markCommentOnly, reviewed, hideReviewed,
+            result, oldText, newText, formattingInline, hidden, whitespacePolicy, markCommentOnly, reviewed, hideReviewed, rewriteOnly,
         )
         val other = containerTree.mapNotNull { otherChanges(it, coverage, lowLinks) }
         val refactorings = rows.ifEmpty { listOf(OutlineItem(ItemKind.EVIDENCE, NO_REFACTORINGS)) }

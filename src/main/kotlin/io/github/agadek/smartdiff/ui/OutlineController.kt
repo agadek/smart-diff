@@ -23,6 +23,7 @@ import com.intellij.ui.OnePixelSplitter
 import io.github.agadek.smartdiff.engine.api.AnalysisNote
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ComparisonEngine
+import io.github.agadek.smartdiff.engine.api.EquivalenceRule
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.EngineId
@@ -155,6 +156,7 @@ class OutlineController internal constructor(
         val hiddenChangeTypes: Set<ChangeType>,
         val formattingOnlyInline: Boolean,
         val markCommentOnly: Boolean,
+        val rewriteOnly: Set<EquivalenceRule>,
         val hideReviewed: Boolean,
         val markMovedCode: Boolean,
         val outlineView: OutlineView,
@@ -256,6 +258,7 @@ class OutlineController internal constructor(
         settings.hiddenChangeTypes,
         settings.formattingOnlyInline,
         settings.markCommentOnly,
+        settings.rewriteOnlyRules,
         settings.hideReviewed,
         settings.markMovedCode,
         settings.outlineView,
@@ -502,6 +505,14 @@ class OutlineController internal constructor(
         rebuild()
     }
 
+    /** Turns rewrite-only labels on or off in every outline, and rebuilds this one's rows without comparing again (declarations/08 R2, R17). */
+    fun setMarkRewriteOnly(mark: Boolean) {
+        val settings = SmartDiffSettings.getInstance()
+        if (settings.markRewriteOnly == mark) return
+        settings.markRewriteOnly = mark
+        rebuild()
+    }
+
     /** Hides or shows reviewed changes in every outline, without comparing again (outline/12 R12). */
     fun setHideReviewed(hide: Boolean) {
         val settings = SmartDiffSettings.getInstance()
@@ -609,6 +620,7 @@ class OutlineController internal constructor(
         val settings = SmartDiffSettings.getInstance()
         val hidden = settings.hiddenChangeTypes
         val markCommentOnly = settings.markCommentOnly
+        val rewriteOnly = settings.rewriteOnlyRules
         val hideReviewed = settings.hideReviewed
         val whitespacePolicy = policy ?: whitespacePolicy(languageId)
         val selection = if (keepSelection) panel.selectedPath() else null
@@ -624,12 +636,12 @@ class OutlineController internal constructor(
         val items = if (view == OutlineView.REFACTORINGS) {
             RefactoringsModel.build(
                 result, request.oldText, request.newText, settings.formattingOnlyInline, hidden,
-                settings.hiddenRelationshipKinds, whitespacePolicy, markCommentOnly, reviewedNodes, hideReviewed,
+                settings.hiddenRelationshipKinds, whitespacePolicy, markCommentOnly, reviewedNodes, hideReviewed, rewriteOnly,
             )
         } else {
             OutlineModel.build(
                 result, request.oldText, request.newText, settings.formattingOnlyInline, hidden, whitespacePolicy,
-                markCommentOnly, reviewedNodes, hideReviewed,
+                markCommentOnly, reviewedNodes, hideReviewed, rewriteOnly,
             )
         }
         val revealApplied = !keepSelection && reveal != null
@@ -637,9 +649,9 @@ class OutlineController internal constructor(
         show(
             OutlineState.Shown(
                 result,
-                OutlineModel.summary(result, hidden, request.oldText, request.newText, whitespacePolicy, markCommentOnly, reviewedNodes, hideReviewed),
+                OutlineModel.summary(result, hidden, request.oldText, request.newText, whitespacePolicy, markCommentOnly, reviewedNodes, hideReviewed, rewriteOnly),
                 items,
-                OutlineModel.hiddenCount(result, hidden, markCommentOnly, reviewedNodes, hideReviewed),
+                OutlineModel.hiddenCount(result, hidden, markCommentOnly, reviewedNodes, hideReviewed, rewriteOnly),
                 note,
                 whitespacePolicy,
             ),
@@ -660,7 +672,7 @@ class OutlineController internal constructor(
             !keepSelection -> reveal?.let(panel::reveal)
         }
         if (!keepSelection) reveal = null
-        (viewer as? FilteringDiffViewer)?.hide(HiddenLines.of(result, hidden, request.oldText, request.newText, markCommentOnly))
+        (viewer as? FilteringDiffViewer)?.hide(HiddenLines.of(result, hidden, request.oldText, request.newText, markCommentOnly, rewriteOnly))
         // Follow once after a result shown when a caret move was skipped while a comparison was pending (R8); ranges stay valid during the reference pass.
         if (!revealApplied && caretFollowPending) followLastCaret(afterResult = true)
     }

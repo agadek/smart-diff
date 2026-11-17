@@ -527,4 +527,13 @@ class ChangesTreeFilterTest : BasePlatformTestCase() {
             ),
         )
     }
+
+    fun `test the filter has no rewrite-only entry`() {
+        // declarations/08-equivalence-rules, out of scope: the Changes tree never gains the rewrite-only entry
+        ChangesTreeActions.installNow()
+        val manager = ActionManager.getInstance()
+        val filter = manager.getAction("SmartDiff.ChangesTree.HideChangeTypes") as DefaultActionGroup
+        val labels = filter.getChildren(manager).map { it.templatePresentation.text }
+        assertFalse("the tree has no rewrite-only filter: $labels", ChangeType.REWRITE_ONLY.text in labels)
+    }
 }

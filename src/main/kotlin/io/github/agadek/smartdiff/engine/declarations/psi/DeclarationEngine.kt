@@ -42,7 +42,9 @@ class DeclarationEngine(private val project: Project?) : ComparisonEngine {
             ?: return ComparisonResult.unsupported(this, "no declaration provider for language ${request.languageId}")
         return try {
             val (old, new) = trees(provider, request, cancellation)
-            val result = DeclarationAnalysis(id, version).compare(old, new, request.limits.maxDeclarations, cancellation, request.confidence, request.languageId)
+            val result = DeclarationAnalysis(id, version).compare(
+                old, new, request.limits.maxDeclarations, cancellation, request.confidence, request.languageId, provider.equivalenceRules,
+            )
             provider.analysisNote?.let { result.copy(analysisNote = it) } ?: result
         } catch (e: CancellationException) {
             throw e

@@ -24,6 +24,7 @@ import com.intellij.psi.util.JavaPsiRecordUtil
 import com.intellij.psi.util.PsiUtil
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
+import io.github.agadek.smartdiff.engine.declarations.model.EquivalenceRuleImpl
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationInfo
 import io.github.agadek.smartdiff.engine.declarations.psi.PsiDeclarationProvider
 import io.github.agadek.smartdiff.engine.declarations.psi.Signatures
@@ -35,6 +36,8 @@ import io.github.agadek.smartdiff.engine.declarations.psi.Signatures
 class JavaDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.INSIGNIFICANT) {
 
     override fun supports(languageId: String): Boolean = languageId == JavaLanguage.INSTANCE.id
+
+    override val equivalenceRules: List<EquivalenceRuleImpl> get() = JavaEquivalenceRules.ALL
 
     override fun parse(project: Project, text: CharSequence, fileName: String?, dialect: Language?): PsiFile {
         val file = PsiFileFactory.getInstance(project).createFileFromText(FILE_NAME, JavaLanguage.INSTANCE, text, false, false)

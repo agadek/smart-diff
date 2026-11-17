@@ -118,6 +118,7 @@ Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.
 | [Moved lines in unsupported files](#moved-lines-in-unsupported-files) | [engines/04](specs/engines/04-moved-lines.md) (implemented 2026-11-16) |
 | [Expand context to the enclosing declaration](#expand-context-to-the-enclosing-declaration) | [outline/14](specs/outline/14-expand-to-declaration.md) (implemented 2026-11-16) |
 | [Summary in pull request reviews and the Git log](#summary-in-pull-request-reviews-and-the-git-log) | [changes-tree/07](specs/changes-tree/07-review-tree-summaries.md) (proposed 2026-11-16) |
+| [Opt-in equivalence rules](#opt-in-equivalence-rules) | [declarations/08](specs/declarations/08-equivalence-rules.md) (implemented 2026-11-17) |
 | [More languages](#more-languages) | [Format coverage plan](FORMAT-COVERAGE.md); feature specs with each phase |
 | Every other item below | Not specified yet |
 
@@ -223,7 +224,7 @@ Give added and deleted files in the Changes tree a summary and declaration rows,
 
 ### Opt-in equivalence rules
 
-*(gap review)* Language-specific rules that treat some syntax rewrites as unchanged, for example redundant parentheses, the base of an integer literal, or string escapes. [ADR 0003](adr/0003-conservative-classification.md) left these out on purpose because each rule is a behavioural claim; reconsider them as opt-in rules, one language at a time, each with fixtures that prove it.
+*(gap review)* Language-specific rules that treat some syntax rewrites as unchanged, for example redundant parentheses, the base of an integer literal, or string escapes. [ADR 0003](adr/0003-conservative-classification.md) left these out on purpose because each rule is a behavioural claim; reconsider them as opt-in rules, one language at a time, each with fixtures that prove it. Implemented as [declarations/08](specs/declarations/08-equivalence-rules.md) (2026-11-17) and [ADR 0012](adr/0012-opt-in-equivalence-rules.md) for Java first: numeric literals in another base or format, strings and characters with other escapes, and redundant parentheses, each its own setting, mark a declaration `rewrite-only` in the outline, which the change type filter can hide, as comment-only changes are.
 
 ### Summary in pull request reviews and the Git log
 

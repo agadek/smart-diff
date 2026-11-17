@@ -9,6 +9,7 @@ import com.intellij.openapi.diagnostic.thisLogger
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.util.messages.Topic
 import io.github.agadek.smartdiff.engine.api.ConfidencePolicy
+import io.github.agadek.smartdiff.engine.api.EquivalenceRule
 import io.github.agadek.smartdiff.engine.api.Limits
 import io.github.agadek.smartdiff.engine.api.RelationshipKind
 
@@ -41,6 +42,15 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
 
         /** Label changed declarations whose only difference is in comments as comment-only in the outline (outline/11 R1). */
         var markCommentOnly: Boolean = false
+
+        /** Label changed declarations whose only differences are rewrites an enabled equivalence rule names (declarations/08 R1). */
+        var markRewriteOnly: Boolean = false
+
+        /**
+         * The [EquivalenceRule] names the user turned off, comma-separated; a rule added later is on by default
+         * (declarations/08 R3).
+         */
+        var disabledEquivalenceRules: String = ""
 
         /** Leave reviewed changes out of the outline (outline/12 R12). Off by default. */
         var hideReviewed: Boolean = false
@@ -131,6 +141,27 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
     var markCommentOnly: Boolean
         get() = current.markCommentOnly
         set(value) = update { markCommentOnly = value }
+
+    /** Whether the outline labels rewrite-only changes (declarations/08 R1, R2). Display-only: no new comparison (R17). */
+    var markRewriteOnly: Boolean
+        get() = current.markRewriteOnly
+        set(value) = update { markRewriteOnly = value }
+
+    /** The names of the equivalence rules the user turned off (declarations/08 R3). Display-only (R17). */
+    var disabledEquivalenceRules: Set<String>
+        get() = current.disabledEquivalenceRules.split(',').map { it.trim() }.filterTo(LinkedHashSet()) { it.isNotEmpty() }
+        set(value) = update { disabledEquivalenceRules = value.map { it.trim() }.filter { it.isNotEmpty() }.sorted().joinToString(",") }
+
+    /** The equivalence rules that are on, whether or not "Mark rewrite-only changes" is (declarations/08 R3). */
+    val enabledEquivalenceRules: Set<EquivalenceRule>
+        get() = disabledEquivalenceRules.let { disabled -> EquivalenceRule.entries.filterTo(LinkedHashSet()) { it.name !in disabled } }
+
+    /**
+     * The rules the outline marks rewrite-only changes with: the enabled rules while "Mark rewrite-only changes" is on,
+     * none while it is off (declarations/08 R1, R4, R7).
+     */
+    val rewriteOnlyRules: Set<EquivalenceRule>
+        get() = if (markRewriteOnly) enabledEquivalenceRules else emptySet()
 
     /** Whether the outline leaves reviewed changes out; a display setting for outline/10 R5 (outline/12 R12). */
     var hideReviewed: Boolean
@@ -227,6 +258,8 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
             it.followChangesTreeCaret = old.followChangesTreeCaret
             it.formattingOnlyInline = old.formattingOnlyInline
             it.markCommentOnly = old.markCommentOnly
+            it.markRewriteOnly = old.markRewriteOnly
+            it.disabledEquivalenceRules = old.disabledEquivalenceRules
             it.hideReviewed = old.hideReviewed
             it.markMovedCode = old.markMovedCode
             it.mergeGroupedBySide = old.mergeGroupedBySide
