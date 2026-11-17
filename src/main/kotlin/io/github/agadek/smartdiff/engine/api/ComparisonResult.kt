@@ -153,6 +153,19 @@ data class ChangeNode(
      * and enables every rule of the set (declarations/08 R4, R7); the content stays [Content.CHANGED].
      */
     val rewriteRules: Set<EquivalenceRule> = emptySet(),
+    /**
+     * Only for [Presence.MATCHED] with [Content.CHANGED] or [Content.FORMATTING_ONLY], and the file region: each run of
+     * tokens the token comparison found different, old and new side; empty when the node is formatting-only or not
+     * compared by tokens (declarations/10 R2, R9, R10). A run that only removes tokens has `new = null`, one that only
+     * adds tokens has `old = null`. Every range lies inside the node's own range on its side, outside its children's.
+     * Runs come in old-side order, then new-side order for runs without an old side.
+     */
+    val changedRuns: List<RangePair> = emptyList(),
+    /**
+     * Whether the token comparison ran for this node, so a formatting-only node, whose native changes lose their word
+     * highlights, can be told from a node over the limits, which keeps them (declarations/10 R12, R13).
+     */
+    val comparedByTokens: Boolean = false,
 ) {
     /** Whether this node is a change by itself, not only because of its children. */
     val isChangedItself: Boolean

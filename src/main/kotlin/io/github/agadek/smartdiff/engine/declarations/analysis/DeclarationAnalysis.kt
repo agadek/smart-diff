@@ -63,7 +63,7 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
         val tree = Tree(old, new, matching, cancellation, equivalenceRules)
         tree.detectLinks()
         val changes = tree.build()
-        val fileRegion = fileRegion(old, new, equivalenceRules)
+        val fileRegion = fileRegion(old, new, equivalenceRules, cancellation)
         val partial = fileRegion?.content == Content.UNANALYZED || changes.any { it.hasUnanalyzed() }
         return result(
             status = if (partial) Status.PARTIAL else Status.ANALYZED,
@@ -95,7 +95,12 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
      * an unchanged node: it is not reported, and the nothing-hidden check covers the separator through its ranges. A
      * side without file region gets an empty range at offset 0.
      */
-    private fun fileRegion(old: DeclarationTree, new: DeclarationTree, rules: List<EquivalenceRuleImpl>): ChangeNode? {
+    private fun fileRegion(
+        old: DeclarationTree,
+        new: DeclarationTree,
+        rules: List<EquivalenceRuleImpl>,
+        cancellation: Cancellation,
+    ): ChangeNode? {
         val content = ContentClassifier.classify(
             old.fileRegion.tokens,
             new.fileRegion.tokens,
@@ -109,6 +114,16 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
             old.fileRegion.ranges == new.fileRegion.ranges) return null
         // An unchanged region exists only to cover its exact ranges for the nothing-hidden check, so its span is the
         // first range, not the whole region; a reported region keeps its span for the outline.
+        val runs = tokenRuns(
+            content,
+            old.fileRegion.tokens, old.fileRegion.tokenStarts,
+            new.fileRegion.tokens, new.fileRegion.tokenStarts,
+            new.whitespacePolicy,
+            parseError = old.fileRegion.hasParseError || new.fileRegion.hasParseError,
+            cancellation,
+            oldOwn = old.fileRegion.ranges,
+            newOwn = new.fileRegion.ranges,
+        )
         return ChangeNode(
             subject = Subject.Region(FILE_REGION),
             oldRange = if (separatorOnly) old.fileRegion.ranges.firstOrNull() ?: TextRange(0, 0) else span(old.fileRegion),
@@ -131,6 +146,8 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
                 parseError = old.fileRegion.hasParseError || new.fileRegion.hasParseError,
                 rules = rules,
             ) else emptySet(),
+            changedRuns = runs.orEmpty(),
+            comparedByTokens = runs != null,
         )
     }
 
@@ -322,6 +339,7 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
                 content = content(match),
             ).let { if (it.content == Content.CHANGED && commentOnly(match)) it.copy(commentOnly = true) else it }
                 .let { if (it.content == Content.CHANGED) it.copy(rewriteRules = rewriteRules(match)) else it }
+                .let { node -> changedRuns(match, node.content)?.let { node.copy(changedRuns = it, comparedByTokens = true) } ?: node }
             // The extracted code is highlighted on the old side, apart from the lines that really changed.
             val withExtractions = if (extracted.isEmpty()) node else node.copy(
                 extractedTo = extracted.map { it.new.first().subject },
@@ -471,6 +489,42 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
             )
         }
 
+        /**
+         * The changed runs of a changed or formatting-only match (declarations/10 R2, R3), compared from the first token
+         * of the declaration on: its leading whitespace belongs to the line before (§6.1). Null when not compared.
+         */
+        private fun changedRuns(match: Match, content: Content): List<RangePair>? {
+            val start = { declaration: Declaration -> declaration.range.start }
+            fun own(declaration: Declaration, tokens: List<Token>): Pair<List<Token>, List<Int>> {
+                if (declaration.ownTokenStarts.size != tokens.size) return tokens to emptyList()
+                val kept = tokens.indices.filter { declaration.ownTokenStarts[it] >= start(declaration) }
+                return kept.map { tokens[it] } to kept.map { declaration.ownTokenStarts[it] }
+            }
+            val (oldTokens, oldStarts) = own(match.old, renamed(match))
+            val (newTokens, newStarts) = own(match.new, match.new.ownTokens)
+            return tokenRuns(
+                content, oldTokens, oldStarts, newTokens, newStarts, new.whitespacePolicy,
+                parseError = match.old.hasParseError || match.new.hasParseError,
+                cancellation,
+                oldOwn = ownRanges(match.old),
+                newOwn = ownRanges(match.new),
+            )
+        }
+
+        /** [declaration]'s range minus its children's, with their leading whitespace and layout (§6.1). */
+        private fun ownRanges(declaration: Declaration): List<TextRange> {
+            val ranges = mutableListOf<TextRange>()
+            var start = declaration.range.start
+            for (child in declaration.children) {
+                val childStart = child.leadingWhitespace?.start ?: child.range.start
+                val childEnd = child.layout?.end ?: child.range.end
+                if (childStart > start) ranges += TextRange(start, minOf(childStart, declaration.range.end))
+                start = maxOf(start, childEnd)
+            }
+            if (declaration.range.end > start) ranges += TextRange(start, declaration.range.end)
+            return ranges
+        }
+
         /** The whitespace tokens at the start of [declaration]'s own tokens, its leading whitespace (§6.1). */
         private fun leadingTokens(declaration: Declaration): List<Token> =
             declaration.ownTokens.takeWhile { it.kind == TokenKind.WHITESPACE }
@@ -596,5 +650,35 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
             { it.new.first().range.start },
             { it.kinds.first().ordinal },
         )
+    }
+}
+
+/**
+ * The changed runs for a node of [content] (declarations/10 R2, R9, R10): compared only when changed or formatting-only,
+ * and a formatting-only node is compared with no runs. Null when not compared. A failure other than cancellation leaves
+ * the node without runs and keeps its classification (declarations/10 details, Failure).
+ */
+private fun tokenRuns(
+    content: Content,
+    old: List<Token>,
+    oldStarts: List<Int>,
+    new: List<Token>,
+    newStarts: List<Int>,
+    policy: WhitespacePolicy,
+    parseError: Boolean,
+    cancellation: Cancellation,
+    oldOwn: List<TextRange>,
+    newOwn: List<TextRange>,
+): List<RangePair>? {
+    if (content != Content.CHANGED && content != Content.FORMATTING_ONLY) return null
+    if (parseError) return null
+    if ((old.isNotEmpty() && oldStarts.size != old.size) || (new.isNotEmpty() && newStarts.size != new.size)) return null
+    if (content == Content.FORMATTING_ONLY) return emptyList()
+    return try {
+        ContentClassifier.changedRuns(old, oldStarts, new, newStarts, policy, parseError, cancellation, oldOwn, newOwn)
+    } catch (e: java.util.concurrent.CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        null
     }
 }

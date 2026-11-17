@@ -111,6 +111,7 @@ class YamlDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.SIGNIFIC
                 ranges = PsiTreeParts.gaps(whole, topLevel.map { it.extent }),
                 tokens = tokens.own(whole, topLevel.map { it.extent }),
                 hasParseError = fileRegionError,
+                tokenStarts = tokens.ownStarts(whole, topLevel.map { it.extent }),
             )
             return DeclarationTree(topLevel.map(::declaration), fileRegion, whitespacePolicy(file))
         } finally {

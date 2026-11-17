@@ -1,0 +1,4 @@
+status: ANALYZED
+File region  changed  no runs
+function clear  changed  1 run
+  - "\n        "  + "\n            "

@@ -1,6 +1,6 @@
 # Fine-grained differencing: details
 
-Status: proposed, 2026-11-17
+Status: proposed, 2026-11-17; the token comparison in the declaration engine (R2 to R10) is implemented, 2026-11-17
 
 **Feature:** [Fine-grained differencing](10-fine-grained-differencing.md)
 

@@ -148,6 +148,7 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
             ranges = PsiTreeParts.gaps(whole, covered),
             tokens = tokens.own(whole, covered, significant),
             hasParseError = fileRegionError,
+            tokenStarts = tokens.ownStarts(whole, covered),
         )
         return DeclarationTree(topLevel.map(::declaration), fileRegion, whitespacePolicy(file))
     }
