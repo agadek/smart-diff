@@ -4,7 +4,7 @@ Status: proposed, 2026-11-17
 
 **Description:** The [declaration engine](../../GLOSSARY.md#declaration-engine) finds [code moves](../../GLOSSARY.md#code-move): statements removed from one place in a [matched](../../GLOSSARY.md#match) [declaration](../../GLOSSARY.md#declaration) and added at another place in the same declaration or another matched declaration of the file. The [structural outline](../../GLOSSARY.md#structural-outline) lists each code move as a [relationship](../../GLOSSARY.md#relationship), frames both positions, and shows the edits made inside the moved code.
 
-**Use case:** A reviewer reads a change where a teammate moved a validation block from the end of `process` to its start, renamed a variable inside it, and moved a logging loop from `process` into `finish`. The native diff shows both blocks as removed lines and added lines. The outline lists `moved code in process` and `moved code process → finish` under their declarations, and selecting one frames the old and new positions and highlights only the renamed variable.
+**Use case:** A reviewer reads a change where a teammate moved a validation block from the end of `process` to its start, renamed a variable inside it, and moved a logging loop from `process` into `finish`. The native diff shows both blocks as removed lines and added lines. The outline lists `moved code lines 40–46 → 12–18` under `process`, and another such row under `finish` with the note `from process`, and selecting one frames the old and new positions and highlights only the renamed variable.
 
 ## Requirements
 
@@ -13,7 +13,7 @@ Status: proposed, 2026-11-17
 - **R3** The source and the target of a code move are the same declaration or two declarations of the same file.
 - **R4** A code move holds at least 12 tokens that are not whitespace or comments.
 - **R5** Each statement of a code move is similar to its counterpart: at least 0.8 of their adjacent token pairs are shared.
-- **R6** A statement that is as similar to another statement, within 0.1, is not part of a code move.
+- **R6** A statement whose best counterpart scores less than 0.1 above its next-best option is not part of a code move.
 - **R7** A statement that lies inside a statement of a code move is not a code move of its own.
 - **R8** Each statement belongs to at most one code move.
 - **R9** Code added to an [added](../../GLOSSARY.md#added) declaration, or removed from a [removed](../../GLOSSARY.md#removed) one, is never a code move.
@@ -32,8 +32,10 @@ Status: proposed, 2026-11-17
 - **R22** Code moves are found for Java, Kotlin, Scala 2, Scala 3 and Python.
 - **R23** The [relationship benchmark](../relationships/01-relationship-benchmark.md) has labelled code move cases in each of those languages, and reports no wrong code move.
 - **R24** Changing the setting applies to open outlines when applied.
-- **R25** Code moves are found only after [fine-grained differencing](../declarations/10-fine-grained-differencing.md) gives the declarations their changed runs.
+- **R25** A declaration that [fine-grained differencing](../declarations/10-fine-grained-differencing.md) does not compare by tokens is neither the source nor the target of a code move.
 - **R26** A code move never says that two versions behave the same, and the native diff keeps showing every changed line.
+- **R27** A code move compares indentation relative to its first statement, so a block moved to another nesting depth with its lines indented alike differs only in formatting.
+- **R28** Hiding a code move row does not fade its lines in the [SMART Diff viewer](../../GLOSSARY.md#smart-diff-viewer) while its target declaration is shown.
 
 ## Out of scope
 
