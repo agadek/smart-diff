@@ -1,0 +1,4 @@
+status: ANALYZED
+method reset  changed  2 runs
+  - ";\n        log("reset")"
+  + "log("reset");"

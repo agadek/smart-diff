@@ -179,6 +179,8 @@ data class ChangeNode(
     val extractedTo: List<Subject>,        // only for MATCHED: where code removed from it went
     val inlinedInto: List<Inlined>,        // only for REMOVED: where its code was inlined
     val inlinedFrom: List<Inlined>,        // only for MATCHED: the removed code it took
+    val changedRuns: List<RangePair>,      // only for MATCHED changed or formatting-only, and the file region: the token runs that differ (declarations/10)
+    val comparedByTokens: Boolean,         // whether the token comparison ran for this node (declarations/10)
 )
 
 sealed interface Subject {

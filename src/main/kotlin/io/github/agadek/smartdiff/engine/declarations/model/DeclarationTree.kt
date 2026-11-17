@@ -84,6 +84,8 @@ class FileRegion(
     val ranges: List<TextRange>,
     val tokens: List<Token>,
     val hasParseError: Boolean = false,
+    /** The start offset of each of [tokens]; empty when the provider has no offsets, and then the region has no changed runs. */
+    val tokenStarts: List<Int> = emptyList(),
 )
 
 /** A lexer token; [type] is the lexer's token type name, compared together with [text]. */
