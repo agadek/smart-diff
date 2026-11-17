@@ -29,6 +29,13 @@ These steps need the maintainer's own accounts and keys; nothing in the reposito
 
    The key signs every release, so keep the same one: the Marketplace rejects updates signed with a different key.
 
+## Version on main
+
+Between releases, `pluginVersion` on main names the next pre-release with a `-SNAPSHOT` suffix, for example
+`0.4.0-beta.2-SNAPSHOT` after `0.4.0-beta.1` is released. The IDE then sorts a local build above the last released
+version and below the next one. Release branches replace it with the release version (step 2 below), and after a
+release main moves on to the next snapshot.
+
 ## Every release
 
 1. Make sure `CHANGELOG.md` lists the changes under `## [Unreleased]`, in user-facing words.
