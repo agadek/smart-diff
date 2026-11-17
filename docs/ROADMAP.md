@@ -119,6 +119,7 @@ Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.
 | [Expand context to the enclosing declaration](#expand-context-to-the-enclosing-declaration) | [outline/14](specs/outline/14-expand-to-declaration.md) (implemented 2026-11-16) |
 | [Summary in pull request reviews and the Git log](#summary-in-pull-request-reviews-and-the-git-log) | [changes-tree/07](specs/changes-tree/07-review-tree-summaries.md) (implemented 2026-11-17) |
 | [Opt-in equivalence rules](#opt-in-equivalence-rules) | [declarations/08](specs/declarations/08-equivalence-rules.md) (implemented 2026-11-17), [declarations/09](specs/declarations/09-kotlin-scala-equivalence-rules.md) for Kotlin and Scala (implemented 2026-11-17) |
+| [Fine-grained differencing](#fine-grained-differencing) | [declarations/10](specs/declarations/10-fine-grained-differencing.md) (proposed, 2026-11-17) |
 | [Platform API stability](#platform-api-stability) | [platform/01](specs/platform/01-platform-api-stability.md) (implemented 2026-11-17) |
 | [More languages](#more-languages) | [Format coverage plan](FORMAT-COVERAGE.md); feature specs with each phase |
 | Every other item below | Not specified yet |
@@ -198,6 +199,8 @@ A Tree-sitter provider or engine for languages the host IDE cannot parse, after 
 A second comparison engine that highlights changed expressions inside declarations, using the result model's `details`. Compare a project-owned matcher with Difftastic and GumTree as baselines.
 
 *(gap review)* This is SemanticDiff's central feature and the largest gap: inside the diff itself, formatting noise is hidden and only the changed tokens are highlighted, so a reviewer does not have to read every changed line of a declaration that is only partly reformatted. The outline currently judges formatting per declaration while the native diff still shows every line.
+
+Specified in [declarations/10](specs/declarations/10-fine-grained-differencing.md) (proposed, 2026-11-17) and [ADR 0014](adr/0014-changed-runs-come-from-the-declaration-engine.md): instead of a second engine, the declaration engine compares the tokens of each changed declaration under its whitespace policy and reports changed runs, which the SMART Diff viewer highlights in place of the native word highlights, behind an on-by-default setting. Lines inside a changed declaration that were only reformatted keep their line colour without word highlights. Difftastic and GumTree are baselines in the validation, not part of the plugin.
 
 ### Extraction detection
 
