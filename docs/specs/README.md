@@ -15,7 +15,7 @@ SMART Diff adds a [structural outline](../GLOSSARY.md#structural-outline) to the
 - **P7** Comparisons never run on the UI thread, and the IDE stays responsive.
 - **P8** The outline is usable from the keyboard, every row has an accessible name, and labels never rely on color alone.
 
-Out of scope for now: AI explanations, cloud processing, expression-level differencing inside a declaration, and cross-file refactoring detection. Later work is in the [roadmap](../ROADMAP.md).
+Out of scope for now: AI explanations, cloud processing, syntax-tree matching inside a declaration (changed tokens are highlighted by [fine-grained differencing](declarations/10-fine-grained-differencing.md)), and cross-file refactoring detection. Later work is in the [roadmap](../ROADMAP.md).
 
 ### Change labels
 
@@ -63,6 +63,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [07 Kotlin and Scala formatting](declarations/07-kotlin-scala-formatting.md) | implemented, 2026-11-16 |
 | [08 Opt-in equivalence rules](declarations/08-equivalence-rules.md) | implemented, 2026-11-17 |
 | [09 Kotlin and Scala equivalence rules](declarations/09-kotlin-scala-equivalence-rules.md) | proposed, 2026-11-17 |
+| [10 Fine-grained differencing](declarations/10-fine-grained-differencing.md) | proposed, 2026-11-17 |
 
 ## Languages
 
