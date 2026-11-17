@@ -125,6 +125,10 @@ class OutlineItem(
         get() = kind == ItemKind.FORMATTING_GROUP || kind == ItemKind.UNCERTAIN_GROUP ||
             kind == ItemKind.UNANALYZED_GROUP || kind == ItemKind.SECTION
 
+    /** Whether this row is a declaration shown only as the container of its changed children, with no change label of its own. */
+    val isContainerOnly: Boolean
+        get() = kind == ItemKind.CHANGE && tags.isEmpty() && children.isNotEmpty()
+
     /** The row's text, which is also its accessible name: the title, the labels, the note, the confidence and its mark. */
     val label: String get() {
         val labels = tags.map { it.text } + listOfNotNull(note, confidence?.name?.lowercase()) +

@@ -23,7 +23,8 @@ closing the diff removes them. Only the caret of these two editors is followed; 
    focus (R5), or the caret's editor does not have focus (R10). Focus is checked when the timer fires, not when the caret
    event arrives, so a click that moves the caret before focus settles is followed. Following works while usages are being
    resolved, because the documents have not changed.
-3. It walks the rows the tree shows, depth first in tree order, and keeps every row that is not a group and whose range
+3. It walks the rows the tree shows, depth first in tree order, and keeps every row that is not a group, is not a
+   container shown only for its changed children (a `CHANGE` row with no labels and with children, R11), and whose range
    on the caret's side contains the offset: `oldRange` for the old side, `newRange` for the new side (R2). A range
    contains the offset when `start <= offset < end`, or `offset == end` for the last character of the document.
 4. Among the matches it picks the one with the shortest range on that side, the innermost declaration (R1). On a tie
@@ -84,6 +85,7 @@ still scrolls.
 | R8 | `OutlineCaretFollowTest` `test a stale result is not followed until the new result is shown`, `test the caret is followed while the reference pass runs`, `test a caret moved during Loading is followed once the result is shown` |
 | R9 | Plugin Verifier reports no new internal, experimental or deprecated usage |
 | R10 | `OutlineCaretFollowTest` `test a scrolling selection in the outline does not trigger following`, `test a scrolling selection in the outline supersedes a recorded caret move`, `test a caret move in an editor without focus does not change the selection`, `test a caret move is followed after focus moves to the editor` |
+| R11 | `OutlineCaretFollowTest` `test an unchanged line of a container shown only for its changed members keeps the selection`, `test a container with a change of its own is still followed` |
 | outline/01 R27 | `OutlineIntegrationTest` `test a rebuild keeps the selected row without scrolling the editors` |
 
 Tests use `BasePlatformTestCase` with a real two-sided diff viewer, as `OutlineIntegrationTest` does, and drive the
