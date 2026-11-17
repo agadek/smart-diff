@@ -30,6 +30,10 @@ does not stay on a method they have left.
 - **R9** Following uses no internal, experimental or deprecated platform API.
 - **R10** Only a caret move in the editor that has focus is followed. A caret move caused by the outline's own scrolling
   selection does not trigger following.
+- **R11** A row shown only as the container of its changed members, with no change label of its own, is never selected
+  by following. A caret on an unchanged line of such a container, such as a field or a blank line between methods of a
+  class whose only changes are in its methods, keeps the selection as R3 does. A container with a change of its own is
+  still followed.
 
 ## Out of scope
 

@@ -133,6 +133,57 @@ class OutlineCaretFollowTest : BasePlatformTestCase() {
         assertEquals("method hello()  changed", outline.panel.selectedItem()?.label)
     }
 
+    fun `test an unchanged line of a container shown only for its changed members keeps the selection`() {
+        // outline/07 R11
+        val old = """
+            class Greeter {
+                private final String name = "x";
+
+                String hello() { return "hi"; }
+            }
+        """.trimIndent() + "\n"
+        val new = """
+            class Greeter {
+                private final String name = "x";
+
+                String hello() { return "hello"; }
+            }
+        """.trimIndent() + "\n"
+        val shown = open(history(old, new, "Greeter.java"))
+        val outline = shown.awaitResult()
+        select(outline, "method hello()  changed")
+
+        moveCaret(outline, OutlineController.CaretSide.NEW, new.indexOf("private final") + 2)
+        outline.fireCaretFollow()
+
+        assertEquals("method hello()  changed", outline.panel.selectedItem()?.label)
+    }
+
+    fun `test a container with a change of its own is still followed`() {
+        // outline/07 R11
+        val old = """
+            class Greeter {
+                String hello() { return "hi"; }
+            }
+        """.trimIndent() + "\n"
+        val new = """
+            class Greeter implements Runnable {
+                String hello() { return "hello"; }
+                public void run() { }
+            }
+        """.trimIndent() + "\n"
+        val shown = open(history(old, new, "Greeter.java"))
+        val outline = shown.awaitResult()
+        val classRow = allItems((outline.state as OutlineState.Shown).items).single { it.title.startsWith("class Greeter") }
+        assertFalse("the class has a change of its own here", classRow.isContainerOnly)
+        select(outline, "method hello()  changed")
+
+        moveCaret(outline, OutlineController.CaretSide.NEW, new.indexOf("implements") + 2)
+        outline.fireCaretFollow()
+
+        assertSame(classRow, outline.panel.selectedItem())
+    }
+
     fun `test following frames the row without scrolling either editor or moving focus`() {
         // outline/07 R4
         val shown = open(history(SCROLL_OLD, SCROLL_NEW, "LongFile.java"))

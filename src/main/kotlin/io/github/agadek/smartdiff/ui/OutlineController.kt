@@ -748,7 +748,7 @@ class OutlineController internal constructor(
         if (!isEditorFocused(side)) return
         val offset = lastCaretOffset
         val shown = state as? OutlineState.Shown ?: return
-        val match = matchingItem(shown.items, side, offset)
+        val match = matchingItem(shown.items, side, offset, skipContainers = true)
         if (match == null) {
             caretFollowPending = false
             return
@@ -782,13 +782,16 @@ class OutlineController internal constructor(
         return matchingItem(shown.items, side, offset)
     }
 
-    /** The innermost shown row for [offset] on [side], or null (outline/07 R1-R3, R6, R7). */
-    private fun matchingItem(items: List<OutlineItem>, side: CaretSide, offset: Int): OutlineItem? {
+    /**
+     * The innermost shown row for [offset] on [side], or null (outline/07 R1-R3, R6, R7). With [skipContainers], a row
+     * shown only as the container of its changed children never matches, so following keeps the selection (outline/07 R11).
+     */
+    private fun matchingItem(items: List<OutlineItem>, side: CaretSide, offset: Int, skipContainers: Boolean = false): OutlineItem? {
         val matches = mutableListOf<Match>()
         fun visit(level: List<OutlineItem>, index: IntArray) {
             for (item in level) {
                 val i = index[0]++
-                if (item.isGroup) {
+                if (item.isGroup || (skipContainers && item.isContainerOnly)) {
                     visit(item.children, index)
                     continue
                 }
