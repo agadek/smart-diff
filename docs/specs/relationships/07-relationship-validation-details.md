@@ -1,6 +1,6 @@
 # Relationship validation: details
 
-Status: proposed, 2026-11-01
+Status: accepted, 2026-11-18
 
 Feature: [Relationship validation](07-relationship-validation.md)
 
@@ -32,7 +32,7 @@ A dated VALIDATION.md section has:
 
 ### Thresholds and reasons
 
-- At least 95% held-out precision for high confidence: a high-confidence relationship keeps the [rename candidate](../declarations/03-rename-candidates.md) mark in the container tree ([relationships/03](03-relationship-matching.md), decided 2026-11-04), so a wrong one misleads the reviewer there and in the refactorings view. Proposed; to confirm against the baseline.
+- At least 95% held-out precision for high confidence: a high-confidence relationship keeps the [rename candidate](../declarations/03-rename-candidates.md) mark in the container tree ([relationships/03](03-relationship-matching.md), decided 2026-11-04), so a wrong one misleads the reviewer there and in the refactorings view. Confirmed on 2026-11-18 against the full-corpus run: the four benchmark matrix languages (Java, Kotlin, Scala 2, Scala 3) have 1.000 held-out precision for every kind, and the checked-in policy `high = 0.82` is the highest threshold that keeps tuning-split high-confidence precision at least 95%. The Python corpus is a smoke corpus outside the matrix; its reported held-out wrong pairs are label errors (names and signatures that do not match their fixtures), not engine pairs, and are corrected before the release is accepted.
 
 ## Tests
 
