@@ -21,6 +21,49 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-18: 0.4.0 release validation
+
+The release checks of [relationships/07](specs/relationships/07-relationship-validation.md) on `chore/release-0.4.0`, which includes the Tree-sitter Swift engine from PR #213. Results below are from this branch's head after merging `origin/main`.
+
+### Versions and corpus
+
+- Engine: `smartdiff.declarations` **23** (the fix for the Python ambiguous-group pairs is not merged, so the engine version is unchanged). Reference pass: **2**.
+- IDE builds checked by Plugin Verifier: `IC-251.26927.53`, `IU-263.7307.200`, `PY-251.26927.74`, `PY-263.7307.206`, `RR-251.25410.170`, `RR-263.7307.313`. Scala plugin **2025.1.32** on 2025.1, resolved by the verifier on the newer families as before. The latest [early-access verifier run](https://github.com/agadek/smart-diff/actions/workflows/eap-verifier.yml) is **green** (2026-11-17, on demand).
+- Full benchmark corpus revision: **`110b31f1131b`**. The two-sided and merge corpora use the 2026-11-04 and 2026-11-2x lists with every clone's HEAD pinned to the commits in [0.3.0](#2026-11-08-030-release-checks) and [2026-11-02](#2026-11-02-merge-validation-rerun).
+
+### Benchmark
+
+`RelationshipBenchmarkTest` on `relationships-corpus-full.txt` with `no-new-wrong-pairs` against the checked-in baseline: **583 cases**, precision **1.000**, recall **0.943**, 316 reported pairs of 331 labelled. High-confidence held-out precision is **1.000 for every kind and language**, including Python; held-out recall 0.891, tuning recall 0.983. The baseline's `wrongPairs` is empty. The `no-new-wrong-pairs` gate **fails** on six forced pairs in Python's ambiguous-rename-group cases (R3); there are no other wrong pairs, no hidden or unlabelled file and no unhandled fallback. Reference evidence: `GROUPED=25`, `NOT_GROUPED=552`, `NONE=6`, usage median 0 ms / p95 5 ms / slowest 83 ms of the 1000 ms budget.
+
+### Two-sided corpus
+
+`CorpusValidationTest` with every clone's HEAD pinned, compared with the [0.3.0 run](#2026-11-08-030-release-checks):
+
+- Java and Kotlin list: **5128 files** from 240 commits; 5127 `ANALYZED` and 1 `TOO_LARGE`, no `hidden` or `empty` flag. 137 flagged: 3 extraction, 3 extraction-near-miss, 99 noisy, 7 rename, 24 rename-candidate, 1 same-name, 1 slow (a generated HTML file, 1761 ms, under the 5000 ms limit), 1 status (`docs/api/scripts/pages.json`, `TOO_LARGE`) and 1 uncertain. The file count is larger than 0.3.0's because the harness now also walks JSON, YAML, Groovy, shell, Python, Rust, properties, TOML, Markdown, XML and HTML files, not only Java, Kotlin and Scala. The Java/Kotlin/Scala flags are the reviewed set from 0.3.0; no new wrong link or hidden change was found.
+- Scala list: **507 files** from 120 commits; 33 flagged, of the same reviewed kinds as 0.3.0, with no new wrong link or hidden change.
+
+### Merge validation
+
+`CorpusValidationTest` in merge mode on the 2026-11-02 list with the same pinned HEADs: **275 files from 121 merge commits**, 2 files missing from a parent or the base, no skipped merge commit. Flags: 47 `both-sides-clean`, 12 `conflict-one-side`, 6 `status`; coverage Java 50, Kotlin 67, Scala 2 117, Scala 3 41, matching 0.3.0. There is **no `join-mismatch`** and no thrown comparison. The report says `not ready` only because the flagged files require review, as in 0.3.0. Median merge comparison 31 ms against 26 ms for one base-side comparison, within the twice-the-side limit.
+
+### Limits
+
+`LimitsBenchmarkTest` on the six 0.3.0 large files with the reference pass on: every comparison `ANALYZED` or the known Scala 3 `PARTIAL`; median 58–230 ms, slowest **230 ms** against the 5000 ms analysis limit; the reference pass is 0–5 ms and never times out. R7 holds.
+
+### Build and Plugin Verifier
+
+- `./gradlew clean buildPlugin check` **passed**.
+- `./gradlew verifyPlugin` (all families) **passed**: Compatible on all six IDEs above. IC/IU report 50 experimental API usages, PyCharm 25/49 and RustRover 49, with no internal or deprecated usage; all are the reviewed optional-plugin PSI and platform usages in [PLATFORM-API.md](PLATFORM-API.md).
+- `./gradlew checkPlatformApiInventory` **passed**.
+
+### Wrong relationships (R10)
+
+Seven of the nine wrong pairs in the first full run were label errors in the Python cases and are corrected in this branch: `ambiguous-rename-group-2/3` named the wrong class and methods, and `extraction-1/2` plus `method-rename-1` omitted the signatures that the Python provider reports. The remaining **six forced pairs** in `ambiguous-rename-group-1/2/3` are a genuine matching issue: Python forces a pairing on a group with equally plausible candidates, where the other languages leave the two candidates as ties. They are a **known issue**; a fix that changes matching was attempted on a separate `fix/` branch but regressed [relationships/03 R7](specs/relationships/03-relationship-matching.md)'s duplicate-body rule, so it was reverted. Follow-up work should make the Python provider's duplicate-body evidence match the other languages'. Because R3 fails, relationships/07 stays `accepted` and the release is blocked on this gate.
+
+### Manual checks
+
+The physical checks on **IC 2025.1.3** and **IU 2026.3** — one rename with usages, one extraction and one inlining in each language, in both outline views, plus the 0.3.0 Changes tree rows — are **pending, maintainer**. No manual result is claimed here.
+
 ## 2026-11-17: summaries in the Git log and pull requests
 
 [changes-tree/07](specs/changes-tree/07-review-tree-summaries.md) adds summaries to the review trees through the tree's `model` property ([ADR 0013](adr/0013-review-tree-summaries-through-the-tree-model-property.md)). `ReviewTreeSummaryTest`, `ReviewTreeRevisionsTest`, `SummaryScopeTest`, `ReviewTreeOpenTest`, `ChangesSummarySettingsListenerTest` and `OptionalDescriptorTest` cover the behaviour automatically, and Plugin Verifier checks the optional descriptors on IntelliJ IDEA, PyCharm and RustRover. **Manual checks: outstanding.** On IntelliJ IDEA Community 2025.1 and the latest release, with a commit and a pull request or merge request that change a Java and a Kotlin file:
