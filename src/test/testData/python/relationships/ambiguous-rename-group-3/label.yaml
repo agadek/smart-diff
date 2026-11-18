@@ -7,8 +7,8 @@ expected:
   relationships: []
   changes: []
   ambiguous:
-    - { path: "class Basket", kind: FUNCTION, name: "alpha", signature: "self" }
-    - { path: "class Basket", kind: FUNCTION, name: "beta", signature: "self" }
-    - { path: "class Basket", kind: FUNCTION, name: "gamma", signature: "self" }
-    - { path: "class Basket", kind: FUNCTION, name: "delta", signature: "self" }
+    - { path: "class Item", kind: FUNCTION, name: "x", signature: "self" }
+    - { path: "class Item", kind: FUNCTION, name: "y", signature: "self" }
+    - { path: "class Item", kind: FUNCTION, name: "p", signature: "self" }
+    - { path: "class Item", kind: FUNCTION, name: "q", signature: "self" }
 notes: "Two equally plausible pairings; no pair is correct."
