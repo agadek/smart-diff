@@ -11,8 +11,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # engines/05 R22, ADR 0016: the Tree-sitter helper for each platform (treesitter-helper.yml).
+  helper:
+    uses: ./.github/workflows/treesitter-helper.yml
+
   build:
     name: Build and test
+    needs: helper
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -21,6 +26,18 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v6
+
+      # The plugin archive carries every platform's helper (engines/05 R26, R28).
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: treesitter-helper-*
+          path: build/treesitter/helpers
+      - name: Place the helpers
+        run: |
+          cd build/treesitter/helpers
+          for dir in treesitter-helper-*; do mv "$dir" "${dir#treesitter-helper-}"; done
+          chmod +x */smartdiff-treesitter || true
+          ls -R
 
       - name: Build and test
         run: ./gradlew buildPlugin check

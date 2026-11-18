@@ -8,8 +8,14 @@ on:
     types: [published]
 
 jobs:
+  helper:
+    uses: ./.github/workflows/treesitter-helper.yml
+    with:
+      ref: ${{ github.event.release.tag_name }}
+
   release:
     name: Build, sign and publish
+    needs: helper
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -36,6 +42,18 @@ jobs:
             echo "::error::Tag $TAG does not match pluginVersion $version in gradle.properties"
             exit 1
           fi
+
+      # The plugin archive carries every platform's helper (engines/05 R26, R28).
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: treesitter-helper-*
+          path: build/treesitter/helpers
+      - name: Place the helpers
+        run: |
+          cd build/treesitter/helpers
+          for dir in treesitter-helper-*; do mv "$dir" "${dir#treesitter-helper-}"; done
+          chmod +x */smartdiff-treesitter || true
+          ls -R
 
       - name: Build, test and verify
         run: ./gradlew buildPlugin check verifyPlugin
