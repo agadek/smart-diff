@@ -1,0 +1,54 @@
+name: Tree-sitter helper
+
+# engines/05 R22, ADR 0016: the Tree-sitter helper for each platform, built and started on that platform's runner and
+# uploaded as treesitter-helper-<platform>. The Intel Mac helper is cross-built on the Apple silicon runner. Build and
+# Release download all six before packaging the plugin.
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: The commit or tag to build; empty for the calling workflow's own.
+        type: string
+        default: ""
+
+jobs:
+  helper:
+    name: Tree-sitter helper (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { platform: linux-x64, runner: ubuntu-latest }
+          - { platform: linux-arm64, runner: ubuntu-24.04-arm }
+          - { platform: mac-arm64, runner: macos-latest }
+          - { platform: mac-x64, runner: macos-latest, cc: "clang -arch x86_64", cross: true }
+          - { platform: windows-x64, runner: windows-latest, cc: clang }
+          - { platform: windows-arm64, runner: windows-11-arm, cc: clang }
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Build the helper
+        shell: bash
+        env:
+          CC: ${{ matrix.cc }}
+        run: ./gradlew buildTreeSitterHelper -PtreeSitterPlatform=${{ matrix.platform }}
+
+      - name: Start the helper
+        if: ${{ !matrix.cross }}
+        shell: bash
+        run: ./gradlew smokeTestTreeSitterHelper
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: treesitter-helper-${{ matrix.platform }}
+          path: build/treesitter/helpers/${{ matrix.platform }}
+          if-no-files-found: error
+

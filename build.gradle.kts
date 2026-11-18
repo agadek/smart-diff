@@ -246,3 +246,4 @@ tasks.test {
         if (listOf("BENCHMARK ", "GOLDEN ", "RELATIONSHIPS ", "VALIDATION ").any { event.message.startsWith(it) }) logger.lifecycle(event.message.trimEnd())
     })
 }
+apply(from = "gradle/treesitter-helper.gradle.kts")

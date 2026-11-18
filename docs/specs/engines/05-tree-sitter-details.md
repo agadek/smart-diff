@@ -11,11 +11,12 @@ Status: proposed, 2026-11-17
 | Phase | Work | Done when |
 | --- | --- | --- |
 | T0 | Spike S12 (§2) and ADR 0016 for the parser runtime | Done 2026-11-17: S12's questions 1 and 2 are answered, question 3 is a recorded manual check, and [ADR 0016](../../adr/0016-tree-sitter-runs-in-a-native-helper-process.md) is accepted |
-| T1 | The helper build (§9), the language resolver of [ADR 0015](../../adr/0015-tree-sitter-languages-are-chosen-by-file-name.md), the setting, the engine, the tree builder and Swift (§3 to §10) | The Swift golden fixtures and the engine contract suite pass on every platform of R22 |
+| T1a | The helper build for six platforms (§9), the helper client and manager (§8), notices and size checks | Done 2026-11-18: `TreeSitterHelperTest` and the checks pass, and CI builds and starts the helper on every platform it has a runner for |
+| T1b | The language resolver of [ADR 0015](../../adr/0015-tree-sitter-languages-are-chosen-by-file-name.md), the setting, the engine, the tree builder and Swift (§3 to §7, §10) | The Swift golden fixtures and the engine contract suite pass on every platform of R22 |
 | T2 | C#, C and C++ | Their golden fixtures pass, and the archive size check holds (R28) |
 | T3 | Merge and benchmark fixtures, and a corpus validation | R30 holds, the benchmark's `no-new-wrong-pairs` gate passes, and the results are in [VALIDATION.md](../../VALIDATION.md) |
 
-T1 can start only after ADR 0016 is accepted. T2's three languages are independent of each other.
+T1b builds on T1a. T2's three languages are independent of each other.
 
 ### 2. Spike S12
 
@@ -165,9 +166,9 @@ Each test names its requirement, for example `// engines/05-tree-sitter R14`.
 - Golden fixtures under `src/test/testData/treesitter/<language>/`: per language, changed, added, removed, moved, formatting-only, renamed and extracted declarations with their expected outline text, including a Swift line-break case (R19), a C directive line-break case (R17, R18) and the `· tree-sitter` summary note (R7, R21).
 - `TreeSitterEngineContractTest`: the shared engine contract suite with the four languages, including nothing hidden, cancellation and identical texts (R6, R25).
 - `TreeSitterOutlineTest` (platform test): a `.swift` file opened as plain text gets the outline from this engine and not the line comparison (R2, R5); the Changes tree shows a summary for a changed `.cpp` file, and a three-sided diff and the merge window show the merge outline (R6); a file over the size limit shows `Too large to analyze` (R25); changing the setting and applying it switches an open diff to the line comparison and back (R31).
-- `TreeSitterFailureTest`: a runtime that fails to load leaves the engine supporting nothing, falls back as with the setting off, and logs one warning (R23); a grammar call that throws gives `Analysis failed` (R24).
-- `TreeSitterPackagingCheck` (Gradle task in `check`): every grammar and the runtime have a notice entry (R27), the archive growth is at most 25 MB (R28), and the engine version names each grammar version (R29).
-- The CI workflow runs `TreeSitterEngineContractTest` and the golden fixtures on Linux, macOS and Windows runners, on x64 and, where the runner exists, arm64 (R22). If ADR 0016 picks a platform-neutral runtime, Linux x64 and macOS arm64 are enough.
+- `TreeSitterHelperTest` (unit test, with the helper the build made): each grammar's names and fields, a Swift parse with offsets in the text's `char` units, C#, C and C++ samples without errors, a parse error marked in the tree (R20), a killed helper failing one comparison and starting again (R24), a cancellation that stops the helper without counting as a failure (R25), and a missing helper or one that keeps answering garbage turning Tree-sitter off after 3 failures in a row (R23, R24). T1b adds the engine-level fallback: a disabled helper makes Tree-sitter languages behave as with the setting off and logs one warning.
+- Gradle checks in `check`: `checkTreeSitterNotices`, every pinned source has its `THIRD-PARTY-NOTICES.md` entry with the same version (R27); `checkTreeSitterArchiveSize`, the archive is at most 25 MB larger than `treeSitterArchiveBaselineBytes` (R28). The engine version test that names each grammar version (R29) comes with the engine in T1b.
+- The `treesitter-helper.yml` workflow, called by Build and Release, builds the helper on Linux, macOS and Windows runners on x64 and arm64 and runs `smokeTestTreeSitterHelper` there (the Intel Mac helper is cross-built on the Apple silicon runner and not started); Build and Release package all six (R22, R26). The engine contract suite and golden fixtures run on the Linux build job with that platform's helper.
 - Merge fixtures and relationship benchmark fixtures for each language, added to the existing suites (R30).
 
 ## Open questions

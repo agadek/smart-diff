@@ -11,7 +11,7 @@ The [Tree-sitter engine](../specs/engines/05-tree-sitter.md) needs a way to run 
 Tree-sitter runs in **one native helper executable per platform**, `smartdiff-treesitter`, built from pinned sources: the Tree-sitter runtime 0.25.3 and the Swift (0.7.4), C# (0.23.1), C (0.23.2) and C++ (0.23.4) grammars, all linked into the one executable. The IDE starts it on the first comparison that needs it and talks to it over standard input and output:
 
 - A request is one byte for the language, a 32-bit little-endian byte length, and the text as UTF-16LE, so node offsets come back in the request text's own `char` units.
-- The response is a 32-bit node count, then six 32-bit integers per node in pre-order: the grammar symbol, the start and end offsets, the parent's index, the field id and flags (named, error, missing). The engine reads symbol and field names from a table built with the helper.
+- The response is a 32-bit node count, then six 32-bit integers per node in pre-order: the grammar symbol, the start and end offsets, the parent's index, the field id and flags (named, error, missing). The engine asks the helper for each grammar's symbol and field names once, with a request whose language byte has its high bit set (`treesitter-helper/main.c` documents the protocol).
 - The helper serves requests one after another until its input closes. Each comparison holds the helper for both sides, and the engine runs one helper per IDE session.
 - When the helper dies or answers garbage, the comparison is `FAILED` (R24), and the next comparison starts a new helper. When it cannot be started at all, the engine turns itself off through the API guard (R23).
 
@@ -40,9 +40,9 @@ S12's third question, Rider and CLion Nova, was not run: neither IDE is installe
 ## Consequences
 
 - Product rule P1 and engine contract R10 said that no source leaves the IDE process. They now say that no source leaves the computer and that it reaches only the plugin's own helpers: contract R10 is retired for R13, and the technical specification's engine rule 7 says the same. The helper opens no file and no network connection, so the privacy that P1 protects is unchanged.
-- `treesitter-helper/main.c` is the helper as S12 measured it. T1 builds it; until then it is source only.
+- `treesitter-helper/main.c` is the helper, and `gradle/treesitter-helper.gradle.kts` builds it (T1a).
 - The build compiles the helper from pinned sources with a C compiler. The CI workflow builds it on native runners for macOS (arm64 and x64), Linux (x64 and arm64) and Windows (x64 and arm64), and the release job packages all six. A local build packages only the host platform's helper, and the engine reports its language as unsupported on any other platform.
 - The engine code talks to a process, not a library, so it needs no JNI, and the Plugin Verifier sees only JVM classes.
 - Each platform's helper is an executable the plugin starts. The T1 manual check confirms on macOS that an executable copied by the IDE starts without a Gatekeeper prompt, and on Windows that it starts without a SmartScreen prompt. If either prompts, signing the helpers becomes part of the release.
-- Grammar node and field names come from the helper's symbol table, which the tree builder's tests check against [details §5](../specs/engines/05-tree-sitter-details.md#5-language-tables).
+- Grammar node and field names come from the helper's names request, which the tree builder's tests check against [details §5](../specs/engines/05-tree-sitter-details.md#5-language-tables).
 - A grammar update means rebuilding the helper and raising the engine version (R29).
