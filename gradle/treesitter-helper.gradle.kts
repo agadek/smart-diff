@@ -87,7 +87,8 @@ val buildTreeSitterHelper by tasks.registering {
     // -PtreeSitterPlatform=mac-x64 with CC="clang -arch x86_64" cross-builds the Intel Mac helper on an Apple silicon Mac.
     val platform = providers.gradleProperty("treeSitterPlatform").orElse(provider { treeSitterPlatform() })
     val output = platform.flatMap { p -> treeSitterHelpers.map { it.file("$p/$helperName") } }
-    val compiler = providers.environmentVariable("CC").orElse(if (windowsHost) "clang" else "cc")
+    // A workflow passes CC="" where its matrix sets none, which means the default.
+    val compiler = providers.environmentVariable("CC").filter { it.isNotBlank() }.orElse(if (windowsHost) "clang" else "cc")
     inputs.dir(sources)
     inputs.file(main)
     inputs.property("compiler", compiler)
