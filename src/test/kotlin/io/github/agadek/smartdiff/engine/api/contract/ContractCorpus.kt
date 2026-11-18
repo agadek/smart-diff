@@ -18,7 +18,40 @@ object ContractCorpus {
     const val KOTLIN = "kotlin"
     const val TEXT = "TEXT"
 
-    val languages: List<String> = listOf(JAVA, KOTLIN, TEXT)
+    /** engines/05: a Tree-sitter language id (ADR 0015). */
+    const val SWIFT = "tree-sitter.swift"
+
+    val languages: List<String> = listOf(JAVA, KOTLIN, TEXT, SWIFT)
+
+    private val swiftBase = """
+        import Foundation
+
+        /// Shapes.
+        final class Shapes {
+            private var count: Int
+
+            init(count: Int) {
+                self.count = count
+            }
+
+            func area(side: Int) -> Int {
+                return side * side
+            }
+
+            func area(width: Int, height: Int) -> Int {
+                return width * height
+            }
+
+            func name() -> String {
+                return "shapes"
+            }
+
+            struct Inner {
+                func helper() {}
+            }
+        }
+
+    """.trimIndent()
 
     private val javaBase = """
         package shapes;
@@ -121,6 +154,15 @@ object ContractCorpus {
             "",
         ).replace("/** Shapes. */", "fun top(a: Int, b: Int) = max(a, b)\n\n/** Shapes. */")),
         ContractCase("parse error on old side", KOTLIN, kotlinBase.replace("fun area(side: Int)", "fun area(side: Int"), kotlinBase, malformed = true),
+        swift("method body changed", swiftBase.replace("return side * side", "return side * side * 1")),
+        swift("method added", swiftBase.replace("    struct Inner {", "    func reset() {}\n\n    struct Inner {")),
+        swift("methods reordered", swiftBase.replace(
+            "    func name() -> String {\n        return \"shapes\"\n    }\n\n", "",
+        ).replace("    init(count: Int) {", "    func name() -> String {\n        return \"shapes\"\n    }\n\n    init(count: Int) {")),
+        swift("line break inside parentheses", swiftBase.replace("func area(width: Int, height: Int)", "func area(\n        width: Int,\n        height: Int\n    )")),
+        swift("string literal changed", swiftBase.replace("\"shapes\"", "\"fig  ures\"")),
+        swift("parse error on new side", swiftBase.replace("func area(side: Int) -> Int {", "func area(side: Int -> Int {"), malformed = true),
+        swift("unbalanced garbage", "}}} class { ( \"unterminated\n", malformed = true),
         text("one line changed", textBase.replace("second", "2nd")),
         text("lines added and removed", "zeroth line\nfirst line\nthird line\nfourth line\n"),
         text("missing final line break", textBase.removeSuffix("\n")),
@@ -129,7 +171,7 @@ object ContractCorpus {
     )
 
     /** Pairs with an empty side, for every language. */
-    val emptyCases: List<ContractCase> = listOf(JAVA to javaBase, KOTLIN to kotlinBase, TEXT to textBase).flatMap { (language, text) ->
+    val emptyCases: List<ContractCase> = listOf(JAVA to javaBase, KOTLIN to kotlinBase, TEXT to textBase, SWIFT to swiftBase).flatMap { (language, text) ->
         listOf(
             ContractCase("both empty", language, "", ""),
             ContractCase("old side empty", language, "", text),
@@ -140,16 +182,22 @@ object ContractCorpus {
 
     /** Each well-formed side of the corpus compared with itself. */
     val identicalCases: List<ContractCase> =
-        (listOf(java("base", javaBase), kotlin("base", kotlinBase), text("base", textBase)) + cases.filterNot { it.malformed })
+        (listOf(java("base", javaBase), kotlin("base", kotlinBase), text("base", textBase), swift("base", swiftBase)) + cases.filterNot { it.malformed })
             .map { ContractCase("identical: ${it.name}", it.languageId, it.newText, it.newText) }
 
     /** A large pair in [languageId], for cancellation: [size] members, every tenth changed on the new side. */
     fun large(languageId: String, size: Int = 300): ContractCase {
         fun side(changed: Boolean): String = buildString {
-            append(if (languageId == KOTLIN) "class Large {\n" else "public class Large {\n")
+            append(
+                when (languageId) {
+                    KOTLIN, SWIFT -> "class Large {\n"
+                    else -> "public class Large {\n"
+                },
+            )
             for (i in 0 until size) {
                 val body = if (changed && i % 10 == 0) "i + $i" else "i * $i"
                 if (languageId == KOTLIN) append("    fun m$i(i: Int): Int = $body\n\n")
+                else if (languageId == SWIFT) append("    func m$i(i: Int) -> Int {\n        return $body\n    }\n\n")
                 else append("    int m$i(int i) {\n        return $body;\n    }\n\n")
             }
             append("}\n")
@@ -160,4 +208,5 @@ object ContractCorpus {
     private fun java(name: String, newText: String, malformed: Boolean = false) = ContractCase(name, JAVA, javaBase, newText, malformed)
     private fun kotlin(name: String, newText: String, malformed: Boolean = false) = ContractCase(name, KOTLIN, kotlinBase, newText, malformed)
     private fun text(name: String, newText: String) = ContractCase(name, TEXT, textBase, newText)
+    private fun swift(name: String, newText: String, malformed: Boolean = false) = ContractCase(name, SWIFT, swiftBase, newText, malformed)
 }

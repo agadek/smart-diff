@@ -1,0 +1,6 @@
+status: ANALYZED
+protocol Priced  changed  old 3-7  new 3-7
+class Cart  old 9-22  new 9-22
+  property b  changed  old 12  new 12
+  method cost(quantity: Int)  changed  old 19  new 19
+type alias Basket  changed  old 30  new 30

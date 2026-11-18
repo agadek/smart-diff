@@ -12,7 +12,7 @@ Status: proposed, 2026-11-17
 | --- | --- | --- |
 | T0 | Spike S12 (§2) and ADR 0016 for the parser runtime | Done 2026-11-17: S12's questions 1 and 2 are answered, question 3 is a recorded manual check, and [ADR 0016](../../adr/0016-tree-sitter-runs-in-a-native-helper-process.md) is accepted |
 | T1a | The helper build for six platforms (§9), the helper client and manager (§8), notices and size checks | Done 2026-11-18: `TreeSitterHelperTest` and the checks pass, and CI builds and starts the helper on every platform it has a runner for |
-| T1b | The language resolver of [ADR 0015](../../adr/0015-tree-sitter-languages-are-chosen-by-file-name.md), the setting, the engine, the tree builder and Swift (§3 to §7, §10) | The Swift golden fixtures and the engine contract suite pass on every platform of R22 |
+| T1b | The language resolver of [ADR 0015](../../adr/0015-tree-sitter-languages-are-chosen-by-file-name.md), the setting, the engine, the tree builder and Swift (§3 to §7, §10) | Done 2026-11-18 for Swift: `SwiftTreeTest`, the Swift golden fixtures, `TreeSitterEngineContractTest`, `EngineLanguageTest` and `TreeSitterOutlineTest` pass with the helper of this platform |
 | T2 | C#, C and C++ | Their golden fixtures pass, and the archive size check holds (R28) |
 | T3 | Merge and benchmark fixtures, and a corpus validation | R30 holds, the benchmark's `no-new-wrong-pairs` gate passes, and the results are in [VALIDATION.md](../../VALIDATION.md) |
 
@@ -39,14 +39,14 @@ S12 is added to the [technical specification §13](../../TECHNICAL-SPECIFICATION
 [ADR 0015](../../adr/0015-tree-sitter-languages-are-chosen-by-file-name.md) records the decision. A new object, `EngineLanguage` in `engine.registry`, has one function:
 
 ```kotlin
-fun of(languageId: String?, fileName: String?, treeSitterEnabled: Boolean): String?
+fun of(languageId: String?, fileName: String?): String?
 ```
 
-It returns `languageId` unchanged unless that id is null, `PlainText.id` or the TextMate language's id, the setting is on, and the file name's extension, compared ignoring case, is in the table of R3. Then it returns the Tree-sitter language id: `tree-sitter.swift`, `tree-sitter.c-sharp`, `tree-sitter.c` or `tree-sitter.cpp`. These ids are constants in `engine.api.LanguageIds` and are never an IntelliJ language id, so no PSI provider or other engine claims them (R4).
+It returns `languageId` unchanged unless that id is null, `PlainText.id` or the TextMate language's id and the file name's extension, compared ignoring case, is in the table of R3. Then it returns the Tree-sitter language id: `tree-sitter.swift`, `tree-sitter.c-sharp`, `tree-sitter.c` or `tree-sitter.cpp`. These ids are constants in `engine.api.LanguageIds` and are never an IntelliJ language id, so no PSI provider or other engine claims them (R4).
 
-Every place that selects an engine calls `EngineLanguage.of` first and puts its result in `ComparisonRequest.languageId`: `DocumentContent.languageId()` and its three callers in `OutlineDiffExtension`, the restore check in `OutlineController` and `MergeOutlineController`, `MergeWindowSupport` and `ChangesSummary.request` (R6). Engines still never read `fileName` (engine contract), because the resolved id carries the language.
+Every place that selects an engine calls `EngineLanguage.of` first and puts its result in `ComparisonRequest.languageId`: `DocumentContent.languageId()` and its three callers in `OutlineDiffExtension`, `MergeWindowSupport` and `ChangesSummary.request` (R6). The file name is the content's file, or for a revision whose file is not on disk the last path segment of the diff request's title. Engines still never read `fileName` (engine contract), because the resolved id carries the language.
 
-Because the resolved id has a supporting engine, the line comparison is not used for it ([engines/04](04-moved-lines.md) R4), which gives R5 without a change to `LineEngine`. With the setting off, `of` returns the IntelliJ id, so plain-text files reach the line comparison as before (R1).
+The resolver does not read the setting. The setting turns the engine off instead: `TreeSitterEngine.supports` is false while "Compare languages the IDE cannot parse with Tree-sitter" is off, so no engine supports the resolved id and the outline uses the line comparison as for plain text ([engines/04](04-moved-lines.md) R2), or attaches no panel when that setting is off too (R1). With the setting on, the resolved id has a supporting engine, so the line comparison is not used for it ([engines/04](04-moved-lines.md) R4), which gives R5 without a change to `LineEngine`. Every open outline reads the setting on its next refresh, which the settings page triggers when applied (R31).
 
 ### 4. The engine
 
@@ -55,11 +55,11 @@ Because the resolved id has a supporting engine, the line comparison is not used
 `compare(request, cancellation)`:
 
 1. Find the language's `TreeSitterLanguage` (§5); a missing one is `UNSUPPORTED`.
-2. Parse both sides in the helper of [ADR 0016](../../adr/0016-tree-sitter-runs-in-a-native-helper-process.md), calling `cancellation.checkCanceled()` before each side and while waiting for its answer. A cancellation while the helper parses kills the helper, so the next comparison starts a new one. Comparisons share the one helper and wait for it in turn; if waiting makes the Changes tree too slow, T1 measures a pool of at most 2 helpers.
+2. Parse both sides in the helper of [ADR 0016](../../adr/0016-tree-sitter-runs-in-a-native-helper-process.md), calling `cancellation.checkCanceled()` once before the names and once before each side, so every comparison checks it equally often (engine contract R2, R4). The wait for the helper's answer is not interrupted, since a 1 MB side takes well under a second; a cancellation at a check stops the helper, so the next comparison starts a new one. Comparisons share the one helper and wait for it in turn; if waiting makes the Changes tree too slow, T1 measures a pool of at most 2 helpers.
 3. Build a `DeclarationTree` for each side with `TreeSitterTreeBuilder` (§6).
 4. Compare them with the declaration engine's `DeclarationAnalysis.compare`, with the request's limits and confidence policy, and set `analysisNote = AnalysisNote.TREE_SITTER` (`"tree-sitter"`, a new constant), which gives R7.
 
-Reusing `DeclarationAnalysis` is what gives R21: matching, classification, rename candidates, kind changes, moves, extraction and inlining all work on the `DeclarationTree`, not on PSI. The rename grouping's reference pass needs PSI, so Tree-sitter declarations get no usage evidence. `DeclarationAnalysis` and its model move from `engine.declarations.analysis` and `engine.declarations.model` only if the architecture test forbids `engine.treesitter` to depend on them; then they move to a shared package `engine.structure` in the same change, without other edits.
+Reusing `DeclarationAnalysis` is what gives R21: matching, classification, rename candidates, kind changes, moves, extraction and inlining all work on the `DeclarationTree`, not on PSI. The rename grouping's reference pass needs PSI, so Tree-sitter declarations get no usage evidence. The architecture rule that keeps engines independent allows `engine.treesitter` to use `engine.declarations.model` and `engine.declarations.analysis`, which depend on no IntelliJ API, and nothing else of the declaration engine.
 
 `version` is `1 (swift <v>; c-sharp <v>; c <v>; cpp <v>; <runtime> <v>)`, from a resource file that the build writes from the pinned grammar versions (R29). Raise the leading number when the builder or a language table changes.
 
@@ -162,7 +162,7 @@ The runtime and grammar sources are pinned by version and checksum in the build,
 Each test names its requirement, for example `// engines/05-tree-sitter R14`.
 
 - `EngineLanguageTest` (unit): each extension of R3 resolves to its id from plain text, the TextMate language and no language, ignoring case (R2, R3); `JAVA` and any other IntelliJ id stays unchanged (R4); with the setting off nothing changes (R1).
-- `TreeSitterTreeBuilderTest`, one class per language: each declaration kind of R8 to R11 with its name, range and signature; a qualified C++ method (R12); locals and lambdas in a body are not declarations (R13); declarations under `#ifdef` and `#else` (R14); attributes and doc comments in the range (R15); Swift labels in signatures (R16); an `ERROR` node marks the smallest declaration (R20); every character of the file is in a declaration or the file region.
+- `SwiftTreeTest`, and one such class per language of T2: each declaration kind of R8 to R11 with its name, range and signature; a qualified C++ method (R12); locals and lambdas in a body are not declarations (R13); declarations under `#ifdef` and `#else` (R14); attributes and doc comments in the range (R15); Swift labels in signatures (R16); an `ERROR` node marks the smallest declaration (R20); every character of the file is in a declaration or the file region.
 - Golden fixtures under `src/test/testData/treesitter/<language>/`: per language, changed, added, removed, moved, formatting-only, renamed and extracted declarations with their expected outline text, including a Swift line-break case (R19), a C directive line-break case (R17, R18) and the `· tree-sitter` summary note (R7, R21).
 - `TreeSitterEngineContractTest`: the shared engine contract suite with the four languages, including nothing hidden, cancellation and identical texts (R6, R25).
 - `TreeSitterOutlineTest` (platform test): a `.swift` file opened as plain text gets the outline from this engine and not the line comparison (R2, R5); the Changes tree shows a summary for a changed `.cpp` file, and a three-sided diff and the merge window show the merge outline (R6); a file over the size limit shows `Too large to analyze` (R25); changing the setting and applying it switches an open diff to the line comparison and back (R31).

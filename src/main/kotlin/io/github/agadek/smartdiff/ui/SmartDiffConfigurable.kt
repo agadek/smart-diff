@@ -60,6 +60,11 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                     .bindSelected(settings::compareLinesWithoutEngine)
                     .comment("In a two-sided diff of a file no comparison engine supports, list moved blocks of lines in the structural outline; the native diff always shows every change.")
             }
+            row {
+                checkBox("Compare languages the IDE cannot parse with Tree-sitter")
+                    .bindSelected(settings::treeSitterLanguages)
+                    .comment("Swift, C#, C and C++ files the IDE opens as plain text get a structural outline from grammars bundled with the plugin; the source never leaves this computer.")
+            }
             buttonsGroup("Formatting-only changes:") {
                 row { radioButton("Collapsed in a group", false) }
                 row { radioButton("Inline", true) }

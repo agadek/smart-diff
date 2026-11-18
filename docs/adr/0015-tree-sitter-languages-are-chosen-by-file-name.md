@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # Tree-sitter languages are chosen by file name
@@ -8,7 +8,7 @@ Engines are selected by the IntelliJ language id of a file ([ADR 0004](0004-plug
 
 ## Decision
 
-- One resolver, `EngineLanguage.of(languageId, fileName, enabled)` in `engine.registry`, turns such a file into a Tree-sitter language id, such as `tree-sitter.swift`, by its file name's extension. Every caller that selects an engine uses it before `EngineRegistry.select`, and the request carries the resolved id.
+- One resolver, `EngineLanguage.of(languageId, fileName)` in `engine.registry`, turns such a file into a Tree-sitter language id, such as `tree-sitter.swift`, by its file name's extension. Every caller that selects an engine uses it before `EngineRegistry.select`, and the request carries the resolved id.
 - It applies only when the IntelliJ id is plain text, the TextMate language or missing. A file with any other language id keeps it, so language support in the IDE, through PSI or the structure view, always wins ([ADR 0002](0002-parser-neutral-model-with-psi-first.md)).
 - Tree-sitter language ids start with `tree-sitter.` and are never IntelliJ language ids, so no PSI provider claims them and stored engine defaults cannot collide with a real language.
 - The extension table is part of the Tree-sitter engine's spec; each new language adds its extensions there.
@@ -23,4 +23,5 @@ Engines are selected by the IntelliJ language id of a file ([ADR 0004](0004-plug
 
 - The outline, the Changes tree, the merge outline and the line comparison all treat a resolved file as a supported language, with no change to their own rules.
 - A file with a non-standard extension, or a shebang-only script, is not resolved; the user can associate the extension with a file type only if a language for it exists.
-- Spike S12 confirms which language ids IntelliJ IDEA gives these files; if it finds another id, this ADR lists it before it is accepted.
+- Spike S12 found that IntelliJ IDEA gives these files a file type without a language (ADR 0016), so the resolver starts from a missing id; plain text and the TextMate language stay in the rule for IDEs that give them.
+- A revision whose file is not on disk has no file; the outline then takes the name from the diff request's title.

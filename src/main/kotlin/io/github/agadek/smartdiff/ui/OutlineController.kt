@@ -34,6 +34,7 @@ import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 import io.github.agadek.smartdiff.engine.api.compareSafely
+import io.github.agadek.smartdiff.engine.registry.EngineLanguage
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
 import io.github.agadek.smartdiff.engine.registry.EngineSelection
 import io.github.agadek.smartdiff.references.ReferencePass
@@ -168,6 +169,7 @@ class OutlineController internal constructor(
         val limits: Limits,
         val useStructureViewFallback: Boolean,
         val compareLinesWithoutEngine: Boolean,
+        val treeSitterLanguages: Boolean,
     )
 
     private var displaySnapshot: DisplaySnapshot? = null
@@ -270,6 +272,7 @@ class OutlineController internal constructor(
         settings.limits,
         settings.useStructureViewFallback,
         settings.compareLinesWithoutEngine,
+        settings.treeSitterLanguages,
     )
 
     /**
@@ -407,7 +410,7 @@ class OutlineController internal constructor(
             // A previous result may have faded native changes; the message below promises the native diff shows every change.
             (viewer as? FilteringDiffViewer)?.hide(HiddenLines.NONE)
             usageHighlights.clear()
-            return show(OutlineState.NoEngine(Language.findLanguageByID(languageId)?.displayName ?: languageId))
+            return show(OutlineState.NoEngine(Language.findLanguageByID(languageId)?.displayName ?: EngineLanguage.displayName(languageId) ?: languageId))
         }
 
         val settings = SmartDiffSettings.getInstance()
