@@ -46,6 +46,12 @@ class ArchitectureRules(private val root: String) {
         slices().matching("$root.engine.(*)..")
             .should().notDependOnEachOther()
             .ignoreDependency(alwaysTrue(), resideInAnyPackage(api, registry))
+            // engines/05-tree-sitter-details §4: the Tree-sitter engine builds declaration trees and compares them with
+            // the declaration engine's IntelliJ-free model and analysis, never with its PSI providers.
+            .ignoreDependency(
+                resideInAPackage("$root.engine.treesitter.."),
+                resideInAnyPackage("$root.engine.declarations.model..", "$root.engine.declarations.analysis.."),
+            )
             .allowEmptyShould(true)
             .because("no engine depends on another engine, and the registry knows no concrete engine")
 

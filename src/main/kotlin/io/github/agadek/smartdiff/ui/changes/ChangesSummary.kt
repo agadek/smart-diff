@@ -38,6 +38,7 @@ import io.github.agadek.smartdiff.engine.api.Limits
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.compareSafely
 import io.github.agadek.smartdiff.engine.registry.EngineDefaults
+import io.github.agadek.smartdiff.engine.registry.EngineLanguage
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
 import io.github.agadek.smartdiff.ui.OutlineItem
 import io.github.agadek.smartdiff.ui.OutlineModel
@@ -450,9 +451,11 @@ class ChangesSummaryService(private val project: Project) {
             else -> return null
         }
         val fileName = existing.file.name
-        val languageId =
-            (FileTypeRegistry.getInstance().getFileTypeByFileName(fileName) as? LanguageFileType)?.language?.id
-                ?: return null
+        // ADR 0015: a file without language support takes its Tree-sitter language from its name (engines/05 R6).
+        val languageId = EngineLanguage.of(
+            (FileTypeRegistry.getInstance().getFileTypeByFileName(fileName) as? LanguageFileType)?.language?.id,
+            fileName,
+        ) ?: return null
         val engine = EngineRegistry.getInstance(project).select(languageId).selected ?: return null
         val key = when {
             old != null && new != null ->

@@ -1,0 +1,3 @@
+status: ANALYZED
+class Cart  old 1-7  new 1-7
+  method total(prices: [Int])  rename candidate from method computeTotal(prices: [Int])  old 2-6  new 2-6

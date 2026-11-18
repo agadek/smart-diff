@@ -84,6 +84,9 @@
         <!-- The UI owns the fallback setting; the engine reads it through this interface (languages/06 R1, R10). -->
         <applicationService serviceInterface="io.github.agadek.smartdiff.engine.api.StructureViewFallbackSetting"
                             serviceImplementation="io.github.agadek.smartdiff.ui.SmartDiffStructureViewFallbackSetting"/>
+        <!-- The UI owns the Tree-sitter setting; the Tree-sitter engine reads it through this interface (engines/05 R1). -->
+        <applicationService serviceInterface="io.github.agadek.smartdiff.engine.api.TreeSitterSetting"
+                            serviceImplementation="io.github.agadek.smartdiff.ui.SmartDiffTreeSitterSetting"/>
         <!-- The line comparison is deliberately not on the comparisonEngine extension point: the outline asks for it
              through this API service, so the registry, dropdown and stored defaults never see it (engines/04). -->
         <applicationService serviceInterface="io.github.agadek.smartdiff.engine.api.LineEngineProvider"
@@ -120,6 +123,9 @@
     <extensions defaultExtensionNs="io.github.agadek.smartdiff">
         <comparisonEngine order="first"
                           implementation="io.github.agadek.smartdiff.engine.declarations.psi.DeclarationEngineFactory"/>
+        <!-- engines/05: languages the IDE has no language support for, chosen by file name (ADR 0015). -->
+        <comparisonEngine order="last"
+                          implementation="io.github.agadek.smartdiff.engine.treesitter.TreeSitterEngineFactory"/>
         <declarationProvider order="last"
                              implementation="io.github.agadek.smartdiff.engine.declarations.psi.structure.StructureViewDeclarationProvider"/>
     </extensions>

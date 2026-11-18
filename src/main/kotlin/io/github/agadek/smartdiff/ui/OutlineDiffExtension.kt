@@ -17,6 +17,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
+import io.github.agadek.smartdiff.engine.registry.EngineLanguage
 import io.github.agadek.smartdiff.engine.registry.EngineRegistry
 import io.github.agadek.smartdiff.ui.merge.MergeOutlineController
 
@@ -49,19 +50,19 @@ class OutlineDiffExtension : DiffExtension() {
         if (contents.size != 2) return
         val old = contents[0] as? DocumentContent ?: return
         val new = contents[1] as? DocumentContent ?: return
-        val languageId = new.languageId() ?: return
-        if (old.languageId() != languageId) return
+        val languageId = new.languageId(request) ?: return
+        if (old.languageId(request) != languageId) return
         val project = context.project ?: ProjectManager.getInstance().defaultProject
         // Plain text gets no panel unless an engine supports it or the line comparison is on, so a mixed change list
         // does not add the message to every text file (engines/04 R1, R3).
-        if (languageId == PlainTextLanguage.INSTANCE.id &&
+        if ((languageId == PlainTextLanguage.INSTANCE.id || EngineLanguage.isTreeSitter(languageId)) &&
             EngineRegistry.getInstance(project).select(languageId).selected == null &&
             !SmartDiffSettings.getInstance().compareLinesWithoutEngine
         ) return
 
         val splitter = insertOutlineSplitter(viewer.component, "smartdiff.outline.proportion") ?: return
 
-        val fileName = (new.highlightFile ?: old.highlightFile)?.name
+        val fileName = (new.highlightFile ?: old.highlightFile)?.name ?: request.fileName()
         // The new side's file, or the old side's when the new side has none; the reference pass needs it for R3.
         val file = new.highlightFile ?: old.highlightFile
         // Taken off the request, so showing it again later does not select the row again.
@@ -79,9 +80,9 @@ class OutlineDiffExtension : DiffExtension() {
     private fun attachOneSided(viewer: OnesideTextDiffViewer, context: DiffContext, request: DiffRequest) {
         val contentRequest = request as? ContentDiffRequest ?: return
         val shown = viewer.side.select(contentRequest.contents) as? DocumentContent ?: return
-        val languageId = shown.languageId() ?: return
+        val languageId = shown.languageId(request) ?: return
         val project = context.project ?: ProjectManager.getInstance().defaultProject
-        if (languageId == PlainTextLanguage.INSTANCE.id &&
+        if ((languageId == PlainTextLanguage.INSTANCE.id || EngineLanguage.isTreeSitter(languageId)) &&
             EngineRegistry.getInstance(project).select(languageId).selected == null
         ) return
 
@@ -109,12 +110,12 @@ class OutlineDiffExtension : DiffExtension() {
         val contentRequest = request as? ContentDiffRequest ?: return
         if (contentRequest.contents.size != 3) return
         val contents = contentRequest.contents.map { it as? DocumentContent ?: return }
-        val languageId = contents.map { it.languageId() }.toSet().singleOrNull() ?: return
+        val languageId = contents.map { it.languageId(request) }.toSet().singleOrNull() ?: return
         val project = context.project ?: ProjectManager.getInstance().defaultProject
         if (EngineRegistry.getInstance(project).select(languageId).selected == null) return
 
         val splitter = insertOutlineSplitter(viewer.component, "smartdiff.merge.outline.proportion") ?: return
-        val fileName = contents.firstNotNullOfOrNull { it.highlightFile }?.name
+        val fileName = contents.firstNotNullOfOrNull { it.highlightFile }?.name ?: request.fileName()
         val controller = MergeOutlineController.threeSided(
             project,
             viewer,
@@ -139,8 +140,18 @@ class OutlineDiffExtension : DiffExtension() {
 private fun pendingReveal(project: Project, file: VirtualFile?, fileName: String?): OutlinePath? =
     if (project.isDefault) null else PendingOutlineReveal.getInstance(project).take(file?.path, fileName)
 
-/** The language of a document content, from its content type or else its file. */
-internal fun DocumentContent.languageId(): String? {
+/**
+ * The language an engine is selected by for a document content: the language of its content type or else its file, or
+ * the Tree-sitter language of its file name when the IDE has no language for it (ADR 0015, engines/05 R2).
+ */
+internal fun DocumentContent.languageId(request: DiffRequest? = null): String? {
     val fileType = contentType ?: highlightFile?.fileType
-    return (fileType as? LanguageFileType)?.language?.id
+    return EngineLanguage.of((fileType as? LanguageFileType)?.language?.id, highlightFile?.name ?: request?.fileName())
 }
+
+/**
+ * The file name a diff request's title names, for content without a file, such as a revision of a file that is not on
+ * disk: the title's last path segment, without a ` (…)` note after it.
+ */
+internal fun DiffRequest.fileName(): String? =
+    title?.substringAfterLast('/')?.substringAfterLast('\\')?.substringBefore(" (")?.trim()?.takeIf { it.isNotEmpty() }

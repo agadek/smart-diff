@@ -1,6 +1,7 @@
 package io.github.agadek.smartdiff.engine.declarations.psi
 
 import io.github.agadek.smartdiff.engine.api.Cancellation
+import io.github.agadek.smartdiff.engine.api.ComparisonEngine
 import io.github.agadek.smartdiff.engine.api.ComparisonRequest
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.contract.NothingHidden
@@ -21,13 +22,13 @@ object GoldenFixtures {
         fail: (String) -> Nothing = { error(it) },
         assertTrue: (String, Boolean) -> Unit = { message, condition -> if (!condition) fail(message) },
         println: (String) -> Unit = { kotlin.io.println(it) },
+        engine: ComparisonEngine = DeclarationEngine(null),
     ) {
         val cases = File(testData, directory)
             .listFiles { file -> file.isDirectory && file.name != "merge" && file.name != "relationships" }
             .orEmpty()
             .sortedBy { it.name }
         assertTrue("no fixtures in ${File(testData, directory).absolutePath}", cases.isNotEmpty())
-        val engine = DeclarationEngine(null)
         val failures = mutableListOf<String>()
         for (case in cases) {
             val old = read(File(case, "old.$extension"))

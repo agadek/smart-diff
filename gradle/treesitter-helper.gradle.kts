@@ -140,10 +140,16 @@ val checkTreeSitterNotices by tasks.registering {
     description = "Checks that THIRD-PARTY-NOTICES.md lists every Tree-sitter source with its version (engines/05 R27)."
     val notices = layout.projectDirectory.file("THIRD-PARTY-NOTICES.md")
     inputs.file(notices)
+    inputs.file(layout.projectDirectory.file("src/main/kotlin/io/github/agadek/smartdiff/engine/treesitter/TreeSitterEngine.kt"))
     doLast {
         val text = notices.asFile.readText()
         val missing = treeSitterSources.filter { "- Component: `${it.name}`\n- Version: `${it.tag}`" !in text }
         check(missing.isEmpty()) { "THIRD-PARTY-NOTICES.md lacks ${missing.joinToString { "${it.name} ${it.tag}" }}" }
+        // engines/05 R29: the engine version names the same versions.
+        val engine = layout.projectDirectory.file("src/main/kotlin/io/github/agadek/smartdiff/engine/treesitter/TreeSitterEngine.kt").asFile.readText()
+        val version = Regex("const val VERSION = \"([^\"]*)\"").find(engine)?.groupValues?.get(1) ?: error("no TreeSitterEngine.VERSION")
+        val unnamed = treeSitterSources.filter { "${it.name} ${it.tag}" !in version }
+        check(unnamed.isEmpty()) { "TreeSitterEngine.VERSION lacks ${unnamed.joinToString { "${it.name} ${it.tag}" }}" }
     }
 }
 
