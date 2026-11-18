@@ -8,6 +8,7 @@ import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.Status
+import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
 import java.util.concurrent.CancellationException
 
@@ -228,6 +229,30 @@ class ComparisonEngineContract(private val newEngine: () -> ComparisonEngine) {
             }
         }
         if (node.presence != Presence.UNCERTAIN) check(case, node.candidates.isEmpty()) { "candidates on a ${node.presence} node: $node" }
+        checkChangedRuns(case, node)
+    }
+
+    /**
+     * declarations/10-fine-grained-differencing details: every changed run lies inside its node's range on its side and
+     * outside every child's range there, and only a node compared by tokens has runs.
+     */
+    private fun checkChangedRuns(case: ContractCase, node: ChangeNode) {
+        if (node.changedRuns.isEmpty()) return
+        check(case, node.comparedByTokens) { "changed runs on a node not compared by tokens: $node" }
+        check(case, node.presence == Presence.MATCHED) { "changed runs on a ${node.presence} node: $node" }
+        fun inside(run: TextRange?, range: TextRange?, children: List<TextRange?>, side: String) {
+            if (run == null) return
+            check(case, range != null && run.start >= range.start && run.end <= range.end) { "$side run $run lies outside $node" }
+            children.filterNotNull().forEach { child ->
+                check(case, run.end <= child.start || run.start >= child.end) { "$side run $run overlaps child $child of $node" }
+            }
+        }
+        // The file region's runs lie in its ranges, which its details list; a declaration's lie in its own range.
+        val isRegion = node.subject is Subject.Region
+        node.changedRuns.forEach { run ->
+            inside(run.old, node.oldRange, if (isRegion) emptyList() else node.children.map { it.oldRange }, "old")
+            inside(run.new, node.newRange, if (isRegion) emptyList() else node.children.map { it.newRange }, "new")
+        }
     }
 
     private fun checkRange(case: ContractCase, range: TextRange?, text: CharSequence, what: String) {

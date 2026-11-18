@@ -105,6 +105,12 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                     .bindSelected(settings::markMovedCode)
                     .comment("Mark each moved declaration in the gutter and on the scrollbar of both editors while the outline shows the result.")
             }
+            row {
+                // settings/01 R23, declarations/10 R1
+                checkBox("Highlight changed tokens in the SMART Diff viewer")
+                    .bindSelected(settings::highlightChangedTokens)
+                    .comment("Inside changed declarations, highlight only the tokens that changed, so reformatted code is not highlighted.")
+            }
             buttonsGroup("Outline view:") {
                 row { radioButton("Container tree", OutlineView.CONTAINER_TREE) }
                 row { radioButton("Refactorings", OutlineView.REFACTORINGS) }

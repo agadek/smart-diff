@@ -57,6 +57,9 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         /** Mark moved declarations in both editors while the outline shows a result (outline/13 R1). */
         var markMovedCode: Boolean = true
 
+        /** Highlight the changed runs inside changed lines in the SMART Diff viewer (declarations/10 R1). */
+        var highlightChangedTokens: Boolean = true
+
         /** List merge rows grouped by side instead of as the base's container tree. */
         var mergeGroupedBySide: Boolean = true
 
@@ -175,6 +178,14 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         get() = current.markMovedCode
         set(value) = update { markMovedCode = value }
 
+    /**
+     * Whether the SMART Diff viewer highlights changed runs in place of the native word highlights (declarations/10 R1).
+     * Display-only: applying it rebuilds open outlines from the kept result without comparing again (R18).
+     */
+    var highlightChangedTokens: Boolean
+        get() = current.highlightChangedTokens
+        set(value) = update { highlightChangedTokens = value }
+
     var mergeGroupedBySide: Boolean
         get() = current.mergeGroupedBySide
         set(value) = update { mergeGroupedBySide = value }
@@ -270,6 +281,7 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
             it.disabledEquivalenceRules = old.disabledEquivalenceRules
             it.hideReviewed = old.hideReviewed
             it.markMovedCode = old.markMovedCode
+            it.highlightChangedTokens = old.highlightChangedTokens
             it.mergeGroupedBySide = old.mergeGroupedBySide
             it.mergeHideBothSides = old.mergeHideBothSides
             it.hiddenChangeTypes = old.hiddenChangeTypes

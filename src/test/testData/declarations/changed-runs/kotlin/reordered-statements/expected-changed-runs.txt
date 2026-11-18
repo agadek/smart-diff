@@ -1,0 +1,4 @@
+status: ANALYZED
+function reset  changed  2 runs
+  - "\n        log("reset")"
+  + "log("reset")\n        "

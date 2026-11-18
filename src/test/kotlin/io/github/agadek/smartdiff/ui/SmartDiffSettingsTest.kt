@@ -145,6 +145,27 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
         }
     }
 
+    // declarations/10-fine-grained-differencing R1; settings/01 R23
+    fun `test declarations 10 R1 the changed-token checkbox is on by default and stored`() {
+        settings.loadState(SmartDiffSettings.SettingsState())
+        assertTrue(settings.highlightChangedTokens)
+        val configurable = SmartDiffConfigurable()
+        try {
+            val panel = configurable.createComponent()!!
+            configurable.reset()
+            val box = UIUtil.findComponentsOfType(panel, JBCheckBox::class.java)
+                .single { it.text == "Highlight changed tokens in the SMART Diff viewer" }
+            assertTrue("the checkbox starts on", box.isSelected)
+            box.isSelected = false
+            assertTrue(configurable.isModified)
+            configurable.apply()
+            assertFalse("applying writes the setting", settings.highlightChangedTokens)
+            assertFalse("the stored state keeps it", settings.state.highlightChangedTokens)
+        } finally {
+            configurable.disposeUIResources()
+        }
+    }
+
     fun `test R2 the outline view is stored and the container tree is the default`() {
         // relationships/06-refactorings-view R2
         settings.loadState(SmartDiffSettings.SettingsState())

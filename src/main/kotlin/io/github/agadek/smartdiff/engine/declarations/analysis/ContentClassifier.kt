@@ -1,9 +1,12 @@
 package io.github.agadek.smartdiff.engine.declarations.analysis
 
 import io.github.agadek.smartdiff.engine.api.BracketDepth
+import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.EquivalenceRule
 import io.github.agadek.smartdiff.engine.api.LineBreakRules
+import io.github.agadek.smartdiff.engine.api.RangePair
+import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.declarations.model.EquivalenceRuleImpl
 import io.github.agadek.smartdiff.engine.declarations.model.Token
 import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
@@ -117,6 +120,196 @@ object ContentClassifier {
             // A pure comparison must never turn a changed node into a claim about its source (declarations/08, failure).
             emptySet()
         }
+    }
+
+    /** A declaration with more own tokens than this on either side is not compared by tokens (declarations/10 R10). */
+    const val MAX_RUN_TOKENS = 20_000
+
+    /** A comparison whose edit distance, removed plus added tokens, passes this has no changed runs (declarations/10 R10). */
+    const val MAX_RUN_EDITS = 2_000
+
+    /**
+     * The changed runs of a changed or formatting-only declaration or file region (declarations/10 R2 to R10): each
+     * stretch of tokens the token comparison found different, as a range on the old side, the new side, or both. Null
+     * when the source is not compared by tokens: a parse error on either side, no token offsets, or the limits of R10.
+     *
+     * [old] and [new] are the own tokens to compare, without leading whitespace, each with its start offset in
+     * [oldStarts] and [newStarts]. A rename candidate's old tokens already carry the new name. Whitespace counts as for
+     * formatting-only under [policy] (R4), a comment by its exact text (R5). Runs separated only by whitespace are one
+     * run (R6). Runs come in old-side order, then new-side order for runs without an old side.
+     *
+     * [oldOwn] and [newOwn], when given, are the source ranges the tokens own, such as a declaration's range minus its
+     * children's: a run is cut to them, so no run covers a child, and a run cut in pieces gives one run per piece.
+     *
+     * [oldLengths], when given, are the source lengths of the old tokens, for a rename whose old tokens carry the new
+     * name. [oldShiftSource] and [newShiftSource], when given, are the tokens the Scala 3 shift is measured on, the
+     * leading whitespace included, as classification measures it (declarations/07 R8).
+     */
+    fun changedRuns(
+        old: List<Token>,
+        oldStarts: List<Int>,
+        new: List<Token>,
+        newStarts: List<Int>,
+        policy: WhitespacePolicy,
+        parseError: Boolean,
+        cancellation: Cancellation = Cancellation.NONE,
+        oldOwn: List<TextRange>? = null,
+        newOwn: List<TextRange>? = null,
+        oldLengths: List<Int>? = null,
+        oldShiftSource: List<Token>? = null,
+        newShiftSource: List<Token>? = null,
+    ): List<RangePair>? {
+        cancellation.checkCanceled()
+        if (parseError) return null
+        if (old.size != oldStarts.size || new.size != newStarts.size) return null
+        if ((old.isNotEmpty() && oldStarts.isEmpty()) || (new.isNotEmpty() && newStarts.isEmpty())) return null
+        if (old.size > MAX_RUN_TOKENS || new.size > MAX_RUN_TOKENS) return null
+        if (oldLengths != null && oldLengths.size != old.size) return null
+        val a = comparableWithOffsets(normalizeWithOffsets(old, oldStarts, policy, oldLengths), policy, oldShiftSource)
+        val b = comparableWithOffsets(normalizeWithOffsets(new, newStarts, policy), policy, newShiftSource)
+        val matches = TokenDiff(a, b, { x, y -> x.first.type == y.first.type && x.first.text == y.first.text }, cancellation)
+            .matches(MAX_RUN_EDITS) ?: return null
+        return cut(runs(a, b, matches), oldOwn, newOwn)
+    }
+
+    /**
+     * [runs] cut to [oldOwn] and [newOwn]; the pieces of a cut run pair up in order, the rest stand alone. An empty
+     * piece, such as Python's `DEDENT` token, which has no text, is left out: there is nothing to highlight.
+     */
+    private fun cut(runs: List<RangePair>, oldOwn: List<TextRange>?, newOwn: List<TextRange>?): List<RangePair> {
+        fun pieces(range: TextRange?, own: List<TextRange>?): List<TextRange> = when {
+            range == null -> emptyList()
+            own == null -> listOfNotNull(range.takeIf { it.length > 0 })
+            else -> own.mapNotNull { part ->
+                val start = maxOf(part.start, range.start)
+                val end = minOf(part.end, range.end)
+                if (start < end) TextRange(start, end) else null
+            }
+        }
+        return runs.flatMap { run ->
+            val old = pieces(run.old, oldOwn)
+            val new = pieces(run.new, newOwn)
+            (0 until maxOf(old.size, new.size)).map { RangePair(old.getOrNull(it), new.getOrNull(it)) }
+        }.sortedWith(compareBy<RangePair>({ it.old == null }, { it.old?.start ?: it.new!!.start }))
+    }
+
+    /** Joins the unmatched stretches between [matches] into runs, across matched whitespace only (R6). */
+    private fun runs(a: List<Pair<Token, TextRange>>, b: List<Pair<Token, TextRange>>, matches: List<IntArray>): List<RangePair> {
+        val runs = mutableListOf<RangePair>()
+        var oldFrom = -1
+        var oldTo = -1
+        var newFrom = -1
+        var newTo = -1
+        fun span(tokens: List<Pair<Token, TextRange>>, from: Int, to: Int): TextRange? =
+            if (from < 0) null else TextRange(tokens[from].second.start, tokens[to].second.end)
+        fun close() {
+            if (oldFrom >= 0 || newFrom >= 0) runs += RangePair(span(a, oldFrom, oldTo), span(b, newFrom, newTo))
+            oldFrom = -1; oldTo = -1; newFrom = -1; newTo = -1
+        }
+        var previousOld = -1
+        var previousNew = -1
+        // Whether only matched whitespace lies between the open run and the current position.
+        var joinable = false
+        for (index in 0..matches.size) {
+            val nextOld = if (index < matches.size) matches[index][0] else a.size
+            val nextNew = if (index < matches.size) matches[index][1] else b.size
+            val gapOld = previousOld + 1 < nextOld
+            val gapNew = previousNew + 1 < nextNew
+            if (gapOld || gapNew) {
+                if (!joinable) close()
+                if (gapOld) {
+                    if (oldFrom < 0) oldFrom = previousOld + 1
+                    oldTo = nextOld - 1
+                }
+                if (gapNew) {
+                    if (newFrom < 0) newFrom = previousNew + 1
+                    newTo = nextNew - 1
+                }
+                joinable = true
+            }
+            if (index < matches.size && a[nextOld].first.kind != TokenKind.WHITESPACE) joinable = false
+            previousOld = nextOld
+            previousNew = nextNew
+        }
+        close()
+        return runs.sortedWith(compareBy<RangePair>({ it.old == null }, { it.old?.start ?: it.new!!.start }))
+    }
+
+    /**
+     * [normalize] with each token's source range (declarations/10 details, step 2). A whitespace run that becomes one
+     * token has the range from the first to the last whitespace token it replaces; a dropped run has no token. As in
+     * classification, a [TokenKind.SEPARATOR] token is left out, so it never splits a whitespace run. [lengths], when
+     * given, are the tokens' source lengths, which differ from their text for a renamed old side.
+     */
+    internal fun normalizeWithOffsets(
+        tokens: List<Token>,
+        starts: List<Int>,
+        policy: WhitespacePolicy,
+        lengths: List<Int>? = null,
+    ): List<Pair<Token, TextRange>> {
+        require(tokens.size == starts.size) { "every token needs a start" }
+        fun range(index: Int) = TextRange(starts[index], starts[index] + (lengths?.get(index) ?: tokens[index].text.length))
+        if (policy == WhitespacePolicy.SIGNIFICANT) {
+            return tokens.indices.filter { tokens[it].kind != TokenKind.SEPARATOR }.map { tokens[it] to range(it) }
+        }
+        val normalized = mutableListOf<Pair<Token, TextRange>>()
+        val run = StringBuilder()
+        var runStart = -1
+        var runEnd = -1
+        val depth = BracketDepth()
+        var previous: String? = null
+        fun endsWithLineBreak(token: Token): Boolean =
+            token.text.lastOrNull() == '\n' || token.text.lastOrNull() == '\r'
+        fun endRun(next: String?) {
+            if (run.isEmpty()) return
+            val text = run.toString()
+            val whole = TextRange(runStart, runEnd)
+            run.setLength(0)
+            val lastBreak = maxOf(text.lastIndexOf('\n'), text.lastIndexOf('\r'))
+            if (lastBreak < 0) {
+                if (policy == WhitespacePolicy.SEPARATION_SIGNIFICANT) {
+                    val afterLineBreak = normalized.lastOrNull()?.first?.let { it == LINE_BREAK || endsWithLineBreak(it) } == true
+                    if (!afterLineBreak) normalized += SPACE to whole
+                }
+                return
+            }
+            if (LineBreakRules.ignorable(policy, previous, next, depth)) return
+            when {
+                policy.countsLineBreaks -> normalized += LINE_BREAK to whole
+                policy.countsIndentation -> normalized += lineBreak(text.substring(lastBreak + 1)) to whole
+                policy == WhitespacePolicy.SEPARATION_SIGNIFICANT -> normalized += LINE_BREAK to whole
+            }
+        }
+        for ((index, token) in tokens.withIndex()) {
+            when (token.kind) {
+                TokenKind.WHITESPACE -> {
+                    if (run.isEmpty()) runStart = starts[index]
+                    run.append(token.text)
+                    runEnd = range(index).end
+                }
+                TokenKind.SEPARATOR -> Unit
+                else -> {
+                    endRun(token.text)
+                    normalized += token to range(index)
+                    LineBreakRules.track(depth, token.text)
+                    previous = token.text
+                }
+            }
+        }
+        endRun(null)
+        return normalized
+    }
+
+    /** [normalized] as compared under [policy], keeping each token's range: Scala 3 strips the common shift (R8). */
+    private fun comparableWithOffsets(
+        normalized: List<Pair<Token, TextRange>>,
+        policy: WhitespacePolicy,
+        shiftSource: List<Token>?,
+    ): List<Pair<Token, TextRange>> {
+        if (policy != WhitespacePolicy.SCALA3_INDENTATION) return normalized
+        val tokens = normalized.map { it.first }
+        val shift = indentationShift(shiftSource?.let { normalize(it.filterNot { t -> t.kind == TokenKind.SEPARATOR }, policy) } ?: tokens)
+        return applyIndentShift(tokens, shift).zip(normalized) { token, (_, range) -> token to range }
     }
 
     /** The line breaks of [text], so two whitespace runs can be compared by line breaks only. */

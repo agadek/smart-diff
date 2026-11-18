@@ -54,10 +54,13 @@ internal class OutlineNavigator(
         val newRanges = listOfNotNull(item.newRange) + item.frames.mapNotNull { it.new }
         val follows = scroll && oldRanges.size == 1 && newRanges.size == 1 && oldEditor != null && newEditor != null &&
             followsSynchronizedScrolling()
+        // declarations/10 R17: a row built from a node also highlights its changed runs, while the setting is on.
+        val runs = item.node?.changedRuns.orEmpty().takeIf { SmartDiffSettings.getInstance().highlightChangedTokens }.orEmpty()
+        val highlighted = item.details + runs
         val showEditors = {
             withSyncDisabled {
-                oldEditor?.let { show(it, oldRanges, item.details.mapNotNull { it.old }, scroll) }
-                newEditor?.let { show(it, newRanges, item.details.mapNotNull { it.new }, scroll) }
+                oldEditor?.let { show(it, oldRanges, highlighted.mapNotNull { it.old }.distinct(), scroll) }
+                newEditor?.let { show(it, newRanges, highlighted.mapNotNull { it.new }.distinct(), scroll) }
             }
         }
         if (scroll) controller.withSuppressedCaretFollow(showEditors) else showEditors()

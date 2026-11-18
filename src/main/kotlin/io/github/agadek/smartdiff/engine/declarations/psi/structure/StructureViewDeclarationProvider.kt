@@ -113,6 +113,7 @@ class StructureViewDeclarationProvider : DeclarationProvider {
                 ranges = PsiTreeParts.gaps(whole, declarations.map { it.extent }),
                 tokens = tokens.own(whole, declarations.map { it.extent }),
                 hasParseError = fileRegionError,
+                tokenStarts = tokens.ownStarts(whole, declarations.map { it.extent }),
             )
             return DeclarationTree(declarations.map { it.declaration }, fileRegion, WhitespacePolicy.SIGNIFICANT)
         } finally {
