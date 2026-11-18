@@ -5,6 +5,7 @@ import com.intellij.diff.FrameDiffTool
 import com.intellij.diff.requests.DiffRequest
 import com.intellij.diff.tools.simple.SimpleDiffChange
 import com.intellij.diff.tools.simple.SimpleDiffViewer
+import com.intellij.diff.tools.util.base.HighlightPolicy
 import com.intellij.diff.util.Side
 import com.intellij.openapi.util.IconLoader
 import javax.swing.Icon
@@ -45,28 +46,61 @@ class FilteringDiffViewer(context: DiffContext, request: DiffRequest) : SimpleDi
     var hiddenLines: HiddenLines = HiddenLines.NONE
         private set
 
-    /** Fades the changes on [lines] from now on, comparing the sides again if that changes anything. */
-    fun hide(lines: HiddenLines) {
-        if (lines == hiddenLines) return
+    /**
+     * The changed runs the viewer highlights in place of the native word highlights (declarations/10 R11). Read by the
+     * comparison on a pooled thread; replaced on the event dispatch thread.
+     */
+    @Volatile
+    var changedRuns: ChangedRuns = ChangedRuns.NONE
+        private set
+
+    /**
+     * Fades the changes on [lines] and highlights [runs] from now on, comparing the sides again if that changes
+     * anything. Every caller that clears the hidden lines clears the runs too (declarations/10 R16).
+     */
+    fun hide(lines: HiddenLines, runs: ChangedRuns = ChangedRuns.NONE) {
+        if (lines == hiddenLines && runs == changedRuns) return
         hiddenLines = lines
+        changedRuns = runs
         rediff()
     }
 
-    /** Forgets the hidden lines without comparing again, for an edit that makes them stale; the edit's own rediff shows every change. */
+    /**
+     * Forgets the hidden lines and the changed runs without comparing again, for an edit that makes them stale; the
+     * edit's own rediff shows every change with the native word highlights (declarations/10 R16).
+     */
     fun forgetHidden() {
         hiddenLines = HiddenLines.NONE
+        changedRuns = ChangedRuns.NONE
     }
 
     override fun apply(changes: List<SimpleDiffChange>?, isContentsEqual: Boolean): Runnable {
         val lines = hiddenLines
-        if (changes == null || lines.isEmpty) return super.apply(changes, isContentsEqual)
+        val runs = changedRuns.takeIf { highlightsByWord() } ?: ChangedRuns.NONE
+        if (changes == null || (lines.isEmpty && runs.isEmpty)) return super.apply(changes, isContentsEqual)
         val filtered = changes.map { change ->
             val hidden = lines.covers(
                 change.getStartLine(Side.LEFT), change.getEndLine(Side.LEFT),
                 change.getStartLine(Side.RIGHT), change.getEndLine(Side.RIGHT),
             )
-            if (hidden && !change.isSkipped) SimpleDiffChange(change.index, change.fragment, change.isExcluded, true) else change
+            // declarations/10 R11 to R14: the same lines and offsets, so index, next and previous change, the gutter
+            // actions and fading are as before; only the word highlights come from the runs. A fragment the runs cannot
+            // map, for example after the document changed, keeps the native one.
+            val fragment = runs.fragment(change.fragment) ?: change.fragment
+            val skipped = change.isSkipped || hidden
+            if (fragment === change.fragment && skipped == change.isSkipped) change
+            else SimpleDiffChange(change.index, fragment, change.isExcluded, skipped)
         }
         return super.apply(filtered, isContentsEqual)
+    }
+
+    /**
+     * Whether the viewer highlights words or characters; any other policy is left as the native viewer shows it
+     * (declarations/10 R15). Splitting by words splits a change by its inner fragments, so replacing them would leave
+     * the split and the highlights out of step.
+     */
+    private fun highlightsByWord(): Boolean {
+        val policy = textSettings.highlightPolicy
+        return policy == HighlightPolicy.BY_WORD || policy == HighlightPolicy.BY_CHAR
     }
 }

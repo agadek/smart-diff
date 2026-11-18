@@ -159,6 +159,7 @@ class OutlineController internal constructor(
         val rewriteOnly: Set<EquivalenceRule>,
         val hideReviewed: Boolean,
         val markMovedCode: Boolean,
+        val highlightChangedTokens: Boolean,
         val outlineView: OutlineView,
         val hiddenRelationshipKinds: Set<RelationshipKind>,
     )
@@ -261,6 +262,7 @@ class OutlineController internal constructor(
         settings.rewriteOnlyRules,
         settings.hideReviewed,
         settings.markMovedCode,
+        settings.highlightChangedTokens,
         settings.outlineView,
         settings.hiddenRelationshipKinds,
     )
@@ -672,7 +674,9 @@ class OutlineController internal constructor(
             !keepSelection -> reveal?.let(panel::reveal)
         }
         if (!keepSelection) reveal = null
-        (viewer as? FilteringDiffViewer)?.hide(HiddenLines.of(result, hidden, request.oldText, request.newText, markCommentOnly, rewriteOnly))
+        // declarations/10 R1, R11, R18: the changed runs, built only while the setting is on.
+        val runs = if (settings.highlightChangedTokens) ChangedRuns.of(result, request.oldText, request.newText) else ChangedRuns.NONE
+        (viewer as? FilteringDiffViewer)?.hide(HiddenLines.of(result, hidden, request.oldText, request.newText, markCommentOnly, rewriteOnly), runs)
         // Follow once after a result shown when a caret move was skipped while a comparison was pending (R8); ranges stay valid during the reference pass.
         if (!revealApplied && caretFollowPending) followLastCaret(afterResult = true)
     }

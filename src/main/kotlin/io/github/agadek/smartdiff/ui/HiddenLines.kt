@@ -62,11 +62,11 @@ class HiddenLines private constructor(private val old: BitSet, private val new: 
             return sides.hiddenLines()
         }
 
-        private fun extent(node: ChangeNode): Pair<List<TextRange?>, List<TextRange?>> =
+        internal fun extent(node: ChangeNode): Pair<List<TextRange?>, List<TextRange?>> =
             (listOf(node.oldRange) + node.details.map { it.old }) to (listOf(node.newRange) + node.details.map { it.new })
 
         /** [ranges] with the parts covered by [holes] removed. */
-        private fun subtract(ranges: List<TextRange?>, holes: List<TextRange?>): List<TextRange> {
+        internal fun subtract(ranges: List<TextRange?>, holes: List<TextRange?>): List<TextRange> {
             var pieces = ranges.filterNotNull()
             for (hole in holes.filterNotNull()) {
                 pieces = pieces.flatMap { piece ->
@@ -98,27 +98,27 @@ class HiddenLines private constructor(private val old: BitSet, private val new: 
             return if (hiddenOld.isEmpty && hiddenNew.isEmpty) NONE else HiddenLines(hiddenOld, hiddenNew)
         }
     }
+}
 
-    /** Maps offsets of one text to 0-based lines. */
-    private class LineIndex(private val text: CharSequence) {
-        private val starts: IntArray = buildList {
-            add(0)
-            for (i in text.indices) if (text[i] == '\n') add(i + 1)
-        }.toIntArray()
+/** Maps offsets of one text to 0-based lines. */
+internal class LineIndex(private val text: CharSequence) {
+    private val starts: IntArray = buildList {
+        add(0)
+        for (i in text.indices) if (text[i] == '\n') add(i + 1)
+    }.toIntArray()
 
-        fun line(offset: Int): Int {
-            val i = starts.binarySearch(offset)
-            return if (i >= 0) i else -i - 2
-        }
+    fun line(offset: Int): Int {
+        val i = starts.binarySearch(offset)
+        return if (i >= 0) i else -i - 2
+    }
 
-        /**
-         * Marks every line [range] touches, except a line it touches only at its line break, as a declaration's leading
-         * whitespace touches the line before it; an empty range marks nothing.
-         */
-        fun mark(range: TextRange, lines: BitSet) {
-            val start = if (range.start < text.length && text[range.start] == '\n') range.start + 1 else range.start
-            if (start >= range.end) return
-            lines.set(line(start), line(range.end - 1) + 1)
-        }
+    /**
+     * Marks every line [range] touches, except a line it touches only at its line break, as a declaration's leading
+     * whitespace touches the line before it; an empty range marks nothing.
+     */
+    fun mark(range: TextRange, lines: BitSet) {
+        val start = if (range.start < text.length && text[range.start] == '\n') range.start + 1 else range.start
+        if (start >= range.end) return
+        lines.set(line(start), line(range.end - 1) + 1)
     }
 }
