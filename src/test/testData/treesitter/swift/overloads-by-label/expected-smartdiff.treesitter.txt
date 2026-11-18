@@ -1,0 +1,3 @@
+status: ANALYZED
+class Mover  old 1-4  new 1-4
+  method move(from: Int, to: Int)  changed  old 2  new 2

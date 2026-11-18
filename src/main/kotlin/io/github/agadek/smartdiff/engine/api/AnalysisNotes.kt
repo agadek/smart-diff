@@ -7,6 +7,9 @@ object AnalysisNote {
 
     /** The result came from the line comparison of a file no comparison engine supports (engines/04 R13). */
     const val LINES = "lines"
+
+    /** The result came from the Tree-sitter engine (engines/05 R7). */
+    const val TREE_SITTER = "tree-sitter"
 }
 
 /**
@@ -27,6 +30,19 @@ interface LineEngineProvider {
  * registered the default is on.
  */
 interface StructureViewFallbackSetting {
+    fun isEnabled(): Boolean
+
+    companion object {
+        const val DEFAULT_ENABLED: Boolean = true
+    }
+}
+
+/**
+ * The persisted switch for Tree-sitter languages (engines/05 R1, R31). The UI registers an application service with
+ * this interface, so the Tree-sitter engine can read the setting without depending on a `ui` class; while no service is
+ * registered the default is on.
+ */
+interface TreeSitterSetting {
     fun isEnabled(): Boolean
 
     companion object {

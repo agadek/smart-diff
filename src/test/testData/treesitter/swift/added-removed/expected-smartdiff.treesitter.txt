@@ -1,0 +1,5 @@
+status: ANALYZED
+struct Point  old 1-6  new 1-8
+  property y  removed  old 3
+  property z  added  new 3
+  method scaled(by: Double)  added  new 7

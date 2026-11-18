@@ -8,7 +8,6 @@ import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.file.Path
-import java.util.concurrent.TimeUnit
 
 /** A grammar in the helper, by the number the helper's protocol gives it (ADR 0016). */
 enum class TreeSitterGrammar(val code: Int) { SWIFT(0), C_SHARP(1), C(2), CPP(3) }
@@ -69,8 +68,8 @@ class TreeSitterHelper(executable: Path) : AutoCloseable {
     /** The names of [grammar]'s symbols and fields. */
     @Synchronized
     fun names(grammar: TreeSitterGrammar, cancellation: Cancellation = Cancellation.NONE): TreeSitterNames = call(cancellation) {
-        send(grammar.code or METADATA, ByteArray(0))
         await(cancellation)
+        send(grammar.code or METADATA, ByteArray(0))
         TreeSitterNames(strings(), strings())
     }
 
@@ -79,8 +78,8 @@ class TreeSitterHelper(executable: Path) : AutoCloseable {
     fun parse(grammar: TreeSitterGrammar, text: CharSequence, cancellation: Cancellation): TreeSitterTree = call(cancellation) {
         val bytes = ByteBuffer.allocate(text.length * 2).order(ByteOrder.LITTLE_ENDIAN)
         for (i in text.indices) bytes.putChar(text[i])
-        send(grammar.code, bytes.array())
         await(cancellation)
+        send(grammar.code, bytes.array())
         val count = u32()
         if (count <= 0 || count > MAX_NODES) throw TreeSitterHelperException("the Tree-sitter helper sent $count nodes")
         val raw = ByteArray(count * 24)
@@ -119,14 +118,13 @@ class TreeSitterHelper(executable: Path) : AutoCloseable {
         output.flush()
     }
 
-    /** Waits for the first byte of the answer, checking [cancellation] meanwhile; the helper answers only when done. */
+    /**
+     * Checks [cancellation] once before a request, so a comparison checks it a fixed number of times (engine contract
+     * R2, R4). The helper parses 1 MB in well under a second, so the wait for its answer is not interrupted; a helper
+     * that exits while it is awaited ends the read with an [java.io.EOFException].
+     */
     private fun await(cancellation: Cancellation) {
-        while (input.available() == 0) {
-            cancellation.checkCanceled()
-            if (process.waitFor(POLL_MILLIS, TimeUnit.MILLISECONDS) && input.available() == 0) {
-                throw TreeSitterHelperException("the Tree-sitter helper exited with status ${process.exitValue()}")
-            }
-        }
+        cancellation.checkCanceled()
     }
 
     private fun u32(): Int {
@@ -160,7 +158,6 @@ class TreeSitterHelper(executable: Path) : AutoCloseable {
 
     companion object {
         private const val METADATA = 0x80
-        private const val POLL_MILLIS = 5L
 
         /** More nodes than any text within the analysis limits can have, so a garbled count fails instead of allocating. */
         private const val MAX_NODES = 50_000_000

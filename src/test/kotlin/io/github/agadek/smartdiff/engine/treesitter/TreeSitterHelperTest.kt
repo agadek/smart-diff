@@ -102,9 +102,9 @@ class TreeSitterHelperTest {
         assertNull(helpers.disabled)
     }
 
-    // engines/05 R25: a cancelled comparison stops the helper, and the next comparison works
+    // engines/05 R25: a cancelled comparison stops before the helper parses, and the next comparison works
     @Test
-    fun `a cancelled parse stops the helper without counting as a failure`() {
+    fun `a cancelled parse never counts as a failure`() {
         val helpers = TreeSitterHelpers { executable }.also { opened += AutoCloseable(it::shutdown) }
         val big = "func f() { let x = 1 }\n".repeat(100_000)
         repeat(TreeSitterHelpers.MAX_FAILURES + 1) {

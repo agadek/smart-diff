@@ -82,6 +82,9 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
 
         /** Compare two-sided diffs of files no engine supports by lines, showing moved blocks (engines/04 R1, R21). */
         var compareLinesWithoutEngine: Boolean = true
+
+        /** Compare files the IDE has no language support for with Tree-sitter (engines/05 R1, R31). */
+        var treeSitterLanguages: Boolean = true
         var maxChars: Int = Limits.DEFAULT.maxChars
         var maxDeclarations: Int = Limits.DEFAULT.maxDeclarations
         var timeoutMillis: Long = Limits.DEFAULT.timeoutMillis
@@ -223,6 +226,11 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         get() = current.compareLinesWithoutEngine
         set(value) = update { compareLinesWithoutEngine = value }
 
+    /** Compare files the IDE has no language support for with Tree-sitter (engines/05 R1, R31). */
+    var treeSitterLanguages: Boolean
+        get() = current.treeSitterLanguages
+        set(value) = update { treeSitterLanguages = value }
+
     /** The limits passed to engines; a stored value that is out of range falls back to its default. */
     var limits: Limits
         get() = Limits(
@@ -282,6 +290,7 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
             it.hiddenRelationshipKinds = old.hiddenRelationshipKinds
             it.useStructureViewFallback = old.useStructureViewFallback
             it.compareLinesWithoutEngine = old.compareLinesWithoutEngine
+            it.treeSitterLanguages = old.treeSitterLanguages
             it.maxChars = old.maxChars
             it.maxDeclarations = old.maxDeclarations
             it.timeoutMillis = old.timeoutMillis
@@ -294,7 +303,7 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
 
     /** The settings that change what a summary contains; display toggles, filters and merge options do not. */
     private fun SettingsState.analysisSignature(): List<Any> =
-        listOf(maxChars, maxDeclarations, timeoutMillis, formattingOnlyInline, useStructureViewFallback)
+        listOf(maxChars, maxDeclarations, timeoutMillis, formattingOnlyInline, useStructureViewFallback, treeSitterLanguages)
 
     /**
      * The settings the Changes tree shows or analyzes. Outline, merge and follow settings are display-only for this
@@ -303,7 +312,7 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
     private fun SettingsState.treeSignature(): List<Any> =
         listOf(
             showChangesSummary, showChangesDeclarations, hiddenChangesTreeChangeTypes,
-            formattingOnlyInline, maxChars, maxDeclarations, timeoutMillis, useStructureViewFallback,
+            formattingOnlyInline, maxChars, maxDeclarations, timeoutMillis, useStructureViewFallback, treeSitterLanguages,
         )
 
     /** Told after the settings page is applied, so views that show results outside a diff can update. */
