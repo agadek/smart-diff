@@ -23,7 +23,7 @@ Its report is written to `build/reports/smartdiff-validation/merge/`.
 
 ## 2026-11-19: 0.4.0 release validation
 
-The release checks of [relationships/07](specs/relationships/07-relationship-validation.md) on `chore/release-0.4.0`, which includes the Tree-sitter Swift engine from PR #213 and the matcher fix from `fix/python-ambiguous-rename-pairing` (merged on 0.11-19, commit `28c47ed`). Results below are from the branch's head after that merge.
+The release checks of [relationships/07](specs/relationships/07-relationship-validation.md) on `chore/release-0.4.0`, which includes the Tree-sitter Swift engine from PR #213 and the matcher fix from `fix/python-ambiguous-rename-pairing` (merged on 2026-11-19, commit `28c47ed`). Results below are from the branch's head after that merge.
 
 ### Versions and corpus
 
@@ -52,14 +52,14 @@ The release checks of [relationships/07](specs/relationships/07-relationship-val
 
 ### Build and Plugin Verifier
 
-- `./gradlew clean buildPlugin check` **passed** (rerun 0.11-19, engine 24).
+- `./gradlew clean buildPlugin check` **passed** (rerun on 2026-11-19, engine 24).
 - `./gradlew verifyPlugin` (all families) **passed**: Compatible on all six IDEs above. IC/IU report 50 experimental API usages, PyCharm 25/49 and RustRover 49, with no internal or deprecated usage; all are the reviewed optional-plugin PSI and platform usages in [PLATFORM-API.md](PLATFORM-API.md).
 - `./gradlew checkPlatformApiInventory` **passed**.
 - `./gradlew verifyPluginProjectConfiguration` **passed**; `./gradlew verifyPluginStructure` **passed**.
 
 ### Wrong relationships (R10)
 
-The first full run reported 9 wrong pairs in the Python cases: 2 `forced` in `ambiguous-rename-group-1` (`alpha→gamma`, `beta→delta`) and 7 label errors — `ambiguous-rename-group-2/3` named the wrong class and methods, and `extraction-1/2` and `method-rename-1` omitted the signatures that the Python provider reports. The 7 label errors were corrected on the release branch, and they were the only held-out wrong pairs: the forced pairs were in tuning-split cases. The real forced pairs are gone now: the engine fix in `fix/python-ambiguous-rename-pairing` (commit `8c5891a`, merged on 0.11-19 as `28c47ed`) makes `DeclarationMatcher.bigrams()` skip empty-text tokens, so the Python duplicate-body groups take the same duplicate-body path the Java, Kotlin and Scala matchers already use, and the assignment leaves the equally-plausible candidates unpaired. The 0.11-19 rerun has **0 wrong pairs and 0 forced pairs**, so the `no-new-wrong-pairs` gate passes. `PythonAmbiguousGroupTest` (`io.github.agadek.smartdiff.engine.declarations.psi`) now covers the three cases.
+The first full run reported 9 wrong pairs in the Python cases: 2 `forced` in `ambiguous-rename-group-1` (`alpha→gamma`, `beta→delta`) and 7 label errors — `ambiguous-rename-group-2/3` named the wrong class and methods, and `extraction-1/2` and `method-rename-1` omitted the signatures that the Python provider reports. The 7 label errors were corrected on the release branch, and they were the only held-out wrong pairs: the forced pairs were in tuning-split cases. The real forced pairs are gone now: the engine fix in `fix/python-ambiguous-rename-pairing` (commit `8c5891a`, merged on 2026-11-19 as `28c47ed`) makes `DeclarationMatcher.bigrams()` skip empty-text tokens, so the Python duplicate-body groups take the same duplicate-body path the Java, Kotlin and Scala matchers already use, and the assignment leaves the equally-plausible candidates unpaired. The 2026-11-19 rerun has **0 wrong pairs and 0 forced pairs**, so the `no-new-wrong-pairs` gate passes. `PythonAmbiguousGroupTest` (`io.github.agadek.smartdiff.engine.declarations.psi`) now covers the three cases.
 
 ### Manual checks
 
