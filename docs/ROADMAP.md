@@ -1,12 +1,12 @@
 # SMART Diff Roadmap
 
-Status: 2026-11-18. Items after the shipped baseline are candidates, not commitments; their order is a proposal. Scope details live in the [product scope](specs/README.md#product-scope), the [feature specifications](specs/README.md) and the [technical specification](TECHNICAL-SPECIFICATION.md).
+Status: 2026-11-19. Items after the shipped baseline are candidates, not commitments; their order is a proposal. Scope details live in the [product scope](specs/README.md#product-scope), the [feature specifications](specs/README.md) and the [technical specification](TECHNICAL-SPECIFICATION.md).
 
 0.4.0 is prepared on the release branch with version `0.4.0` and a dated [changelog](../CHANGELOG.md) section; its [plan](releases/0.4.0-plan.md) records the merged work. 0.3.0 was released on 2026-11-10; the [0.3.0 plan](releases/0.3.0-plan.md) records its remaining manual rows. Agent prompts for 0.4.0 are in [agent-prompts/0.4.0/](agent-prompts/0.4.0/README.md).
 
 ## Shipped baseline
 
-0.1.0, 0.1.1 and 0.2.0 (2026-11-05) are released. 0.3.0 was released on 2026-11-10; see [0.3.0](#030-changes-tree-in-the-ide-released-2026-11-10). 0.4.0 is prepared with version `0.4.0` on 2026-11-18; see [0.4.0](#040-structural-relationships-prepared-2026-11-18).
+0.1.0, 0.1.1 and 0.2.0 (2026-11-05) are released. 0.3.0 was released on 2026-11-10; see [0.3.0](#030-changes-tree-in-the-ide-released-2026-11-10). 0.4.0 is prepared with version `0.4.0` on 2026-11-19; see [0.4.0](#040-structural-relationships-prepared-2026-11-19).
 
 - Structural outline for two-sided diffs, attached to the native diff, per file only. It opens by default, with a setting to turn it off and a toolbar button in every diff to switch to the plain native diff.
 - Comparison engine interface, registry, per-language default, and engine dropdown ([ADR 0004](adr/0004-pluggable-comparison-engines.md)).
@@ -79,9 +79,9 @@ Decided 2026-11-07 in [releases/0.3.0-plan.md](releases/0.3.0-plan.md). The rele
 
 The [2026-11-08 release checks](VALIDATION.md#2026-11-08-030-release-checks) pass: the two-sided corpus and the merge validation reproduce the 2026-11-04 results with every flagged file reviewed, the relationship benchmark reports no new wrong pair, and Plugin Verifier is compatible on both target IDEs with the same experimental API usages as 0.2.0 and no internal or deprecated usage. `pluginVersion` is 0.3.0 and the changelog section is dated. The 2026-11-09 release-head re-check on `f912d8c` passes caret-follow R7 and R8 (PR #137 is merged at `afc7457`); main now carries #132 (relationships/04 step 2) as 0.4.0 work. The remaining manual rows are listed in the [manual runIde checklist](releases/0.3.0-manual-check.md): R3 splitter, R5 inclusion/count, R11, #111 R16, #144 splitter/control, the section A/B partials, and #112 M3's no-arrow detail, M6 and the IC 2025.1 M8 comparison. M7 and M9 pass on both IDEs. #108 is verified and accepted from its 2026-11-09 record. The `v0.3.0` GitHub release was published on 2026-11-10 from tag `v0.3.0` (`bff3a35`), with the signed zip attached; the remaining manual rows are documented as partial or inconclusive.
 
-## 0.4.0: structural relationships, prepared 2026-11-18
+## 0.4.0: structural relationships, prepared 2026-11-19
 
-Decided in [releases/0.4.0-plan.md](releases/0.4.0-plan.md). Rename grouping with usages, inlining detection and the refactorings view finish the structural-relationships track, alongside the language and format work in the [0.4.0 changelog section](../CHANGELOG.md#040---2026-11-18) and the Tree-sitter Swift engine from PR #213.
+Decided in [releases/0.4.0-plan.md](releases/0.4.0-plan.md). Rename grouping with usages, inlining detection and the refactorings view finish the structural-relationships track, alongside the language and format work in the [0.4.0 changelog section](../CHANGELOG.md#040---2026-11-19) and the Tree-sitter Swift engine from PR #213.
 
 | Work | Spec | State |
 | --- | --- | --- |
@@ -105,7 +105,7 @@ Proposed 2026-11-01 as the next item after 0.2.0. The benchmark harness, the ful
 | Rename grouped with its usages | [relationships/04](specs/relationships/04-rename-grouping.md) | Implemented (2026-11-07): Java, Kotlin K2 and Scala 2/3 usages group into the rename; the full 440-case usage gate passes with no wrongly grouped usage, while unresolved or also-changed usages stay ordinary changes |
 | Inlining detection | [relationships/05](specs/relationships/05-inlining-detection.md) | Implemented (2026-11-08): the inlining cases pass in all four corpora and every linked declaration stays visible |
 | Refactorings view | [relationships/06](specs/relationships/06-refactorings-view.md) | Implemented (2026-11-09): the view shows every change the container tree shows, with relationship rows, confidence words, evidence, kind filtering and per-rename usage colours; the automated checks pass, and the [manual IDE check](VALIDATION.md#2026-11-09-refactorings-view-manual-check) is outstanding |
-| Validation and release | [relationships/07](specs/relationships/07-relationship-validation.md) | Results recorded in [VALIDATION.md](VALIDATION.md#2026-11-18-040-release-validation); the benchmark gate fails on Python ambiguous-group forced pairs, so the spec is accepted but not implemented |
+| Validation and release | [relationships/07](specs/relationships/07-relationship-validation.md) | Implemented, 2026-11-19; results recorded in [VALIDATION.md](VALIDATION.md#2026-11-19-040-release-validation); the benchmark gate passes with 0 wrong and 0 forced pairs |
 | Relationships across files | Not specified; only if the product scope is extended | A separate design and benchmark exist |
 
 It also covers the later [rename grouping across usages](#rename-grouping-across-usages) item, through a separate reference pass.

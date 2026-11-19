@@ -17,7 +17,7 @@ The kit for the first manual upload of SMART Diff to the [JetBrains Marketplace]
 | Since build | `251` (2025.1); no until build — every later IDE is supported |
 | Channel | `default` |
 
-The listing must not claim that the outline makes reviews faster: the usability study ([outline/06](specs/outline/06-usability-validation.md)) has not reached R7. The description and [0.4.0 changelog](../CHANGELOG.md#040---2026-11-18) make no speed claim.
+The listing must not claim that the outline makes reviews faster: the usability study ([outline/06](specs/outline/06-usability-validation.md)) has not reached R7. The description and [0.4.0 changelog](../CHANGELOG.md#040---2026-11-19) make no speed claim.
 
 ## Categories and tags
 
@@ -47,7 +47,7 @@ All five are 1500×920, larger than the recommended size and with a slightly tal
 
 1. On the final `0.4.0` tag, build, test, verify and sign with the release secrets: `./gradlew clean buildPlugin check verifyPlugin signPlugin`. The signed archive is `build/distributions/smart-diff-0.4.0-signed.zip`. Alternatively download that file from the `v0.4.0` GitHub release. Do not upload an unsigned zip.
 2. Sign in at `https://plugins.jetbrains.com` with the maintainer account and open [Upload plugin](https://plugins.jetbrains.com/plugin/add).
-3. Upload `smart-diff-0.4.0-signed.zip`. The Marketplace reads the ID, name, vendor, description, since build and change notes from the plugin archive; check that the description matches `plugin.xml` and that the change notes show the [0.4.0 section](../CHANGELOG.md#040---2026-11-18) as HTML.
+3. Upload `smart-diff-0.4.0-signed.zip`. The Marketplace reads the ID, name, vendor, description, since build and change notes from the plugin archive; check that the description matches `plugin.xml` and that the change notes show the [0.4.0 section](../CHANGELOG.md#040---2026-11-19) as HTML.
 4. Fill in the one-line summary, choose the categories and tags above, select the **PolyForm Noncommercial 1.0.0** license and paste its link, keep the source and issue tracker URLs, and upload the five screenshots with their captions.
 5. Keep the **default** channel and submit. JetBrains reviews every first upload and each update; wait for approval before announcing it.
 6. After approval, set the `PUBLISH_TOKEN` repository secret and the `PUBLISH_TO_MARKETPLACE` variable to `true` so later releases publish through [release.yml](../.github/workflows/release.yml). The same signing key must be kept for every later upload.
