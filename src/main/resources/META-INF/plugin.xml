@@ -4,20 +4,18 @@
     <vendor url="https://github.com/agadek">agadek</vendor>
 
     <description><![CDATA[
-        Review code changes by structure in IntelliJ-based IDEs, with the native text diff always available.
+        Review code changes by structure in IntelliJ-based IDEs: a structural outline, a refactorings view, review-tree summaries and a merge outline, with the native text diff always available.
         <br/><br/>
-        SMART Diff adds a structural outline beside the side-by-side diff of Java, Kotlin, Scala, JSON, Python, YAML, Groovy, shell script and Rust files. It lists
-        the declarations that changed, marked added, removed, changed, moved, signature changed or formatting-only, so
-        a reviewer sees which methods, classes and keys a change touches before reading the lines.
+        SMART Diff adds a structural outline beside the side-by-side diff. For Java, Kotlin (including <i>.gradle.kts</i> scripts), Scala 2 and Scala 3, Groovy and Gradle scripts, Python, Rust, shell scripts, JSON and JSON5, YAML, TOML, XML and HTML, Java properties and Markdown, it lists the declarations that changed — added, removed, changed, moved, signature changed, formatting-only and rename candidates — so a reviewer sees which methods, classes and keys a change touches before reading the lines. Swift files get an outline from a bundled Tree-sitter grammar. Other languages use the IDE's structure view, and plain text or unsupported files report moved lines as <i>lines A–B → C–D</i> alongside the other changes.
         <ul>
-            <li>Select a declaration to frame it on both sides of the diff; press Enter to jump to it.</li>
-            <li>Formatting-only changes are kept apart from changes in content.</li>
-            <li>Hide chosen change types from the outline, and fade them in the SMART Diff side-by-side viewer.</li>
-            <li>The Local Changes and Commit tree, the Git log's commit details and GitHub and GitLab pull request changes show each file's summary, such as <i>2 changed · 1 added</i>, and its changed declarations under it.</li>
-            <li>Unsupported, malformed or oversized files stay in the plain native diff, with the reason shown.</li>
-            <li>A toolbar button in every diff switches back to the plain native diff.</li>
+            <li>Select a declaration or relationship to frame every endpoint on both sides of the diff; press Enter to jump to it. Mark rows as reviewed and hide them with the reviewed filter.</li>
+            <li>The refactorings view, one toolbar toggle away, lists renames with their grouped usages, moves, extractions and inlinings, with confidence, evidence and its own kind filter.</li>
+            <li>Local Changes, the Commit tool window, the Git log's commit details and GitHub and GitLab pull requests show each changed file's summary, such as <i>2 changed · 1 added</i>, and its declaration rows.</li>
+            <li>The merge window and three-sided diffs show a structural outline grouped by side, so changes on both sides stay visible.</li>
+            <li>Hide chosen change types from the outline, fade them in the SMART Diff side-by-side viewer, keep formatting-only changes apart from content changes, and switch back to the native diff with one toolbar button.</li>
+            <li>Unsupported, malformed or oversized files stay in the plain native diff with the reason shown.</li>
         </ul>
-        Settings are under <i>Settings | Tools | SMART Diff</i>.
+        Scala, Python and Rust support need their IDE plugins installed (Python and Rust are bundled in PyCharm and RustRover); the other formats use language support bundled with the IDE. Settings are under <i>Settings | Tools | SMART Diff</i>.
         <br/><br/>
         Free for noncommercial use under the
         <a href="https://polyformproject.org/licenses/noncommercial/1.0.0">PolyForm Noncommercial License 1.0.0</a>.

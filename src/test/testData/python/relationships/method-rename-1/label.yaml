@@ -6,14 +6,14 @@ split: tuning
 expected:
   relationships:
     - kinds: [RENAME]
-      old: { path: "class Order", kind: FUNCTION, name: "total", signature: "(self)" }
-      new: { path: "class Order", kind: FUNCTION, name: "sum", signature: "(self)" }
+      old: { path: "class Order", kind: FUNCTION, name: "total", signature: "self" }
+      new: { path: "class Order", kind: FUNCTION, name: "sum", signature: "self" }
       usages: []
   changes:
     - subject: { path: "", kind: CLASS, name: "Order", signature: null }
       presence: MATCHED
       content: UNCHANGED
-    - subject: { path: "class Order", kind: FUNCTION, name: "sum", signature: "(self)" }
+    - subject: { path: "class Order", kind: FUNCTION, name: "sum", signature: "self" }
       presence: MATCHED
       content: UNCHANGED
   ambiguous: []

@@ -66,6 +66,7 @@ Off for now. To turn it on:
 2. **First upload by hand.** The Marketplace accepts uploads through its API only for a plugin that already exists, so
    the first version goes through the website. Download the signed zip of the latest GitHub release and upload it at
    [Upload plugin](https://plugins.jetbrains.com/plugin/add), choose the license (PolyForm Noncommercial 1.0.0, linked
-   from the plugin description) and the tags, and wait for JetBrains' approval.
+   from the plugin description) and the tags, and wait for JetBrains' approval. The listing details, categories, tags,
+   screenshots and the exact upload steps are in [MARKETPLACE.md](MARKETPLACE.md).
 3. Add the repository variable `PUBLISH_TO_MARKETPLACE` with the value `true` (GitHub: Settings | Secrets and variables
    | Actions | Variables). Every later release then publishes through the workflow.

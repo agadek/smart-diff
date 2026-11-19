@@ -150,5 +150,5 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [04 Rename grouping](relationships/04-rename-grouping.md) | implemented, 2026-11-07 |
 | [05 Inlining detection](relationships/05-inlining-detection.md) | implemented, 2026-11-08 |
 | [06 Refactorings view](relationships/06-refactorings-view.md) | implemented, 2026-11-09 |
-| [07 Relationship validation](relationships/07-relationship-validation.md) | proposed, 2026-11-01 |
+| [07 Relationship validation](relationships/07-relationship-validation.md) | implemented, 2026-11-19 |
 | [08 Moves inside declarations](relationships/08-moves-inside-declarations.md) | proposed, 2026-11-17 |

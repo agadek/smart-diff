@@ -1,6 +1,6 @@
 # Relationship validation
 
-Status: proposed, 2026-11-01
+Status: implemented, 2026-11-19
 
 **Description:** The checks a release with relationships passes before it ships: the benchmark, real commits, and the existing suites.
 
