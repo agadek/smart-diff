@@ -605,7 +605,7 @@ object DeclarationMatcher {
                 cancellation.checkCanceled()
                 val nameRange = d.nameRange
                 d.ownTokens.forEachIndexed { index, token ->
-                    if (token.kind == TokenKind.WHITESPACE || token.kind == TokenKind.SEPARATOR) return@forEachIndexed
+                    if (token.kind == TokenKind.WHITESPACE || token.kind == TokenKind.SEPARATOR || token.text.isEmpty()) return@forEachIndexed
                     val start = d.ownTokenStarts.getOrNull(index)
                     val ownName = start != null && nameRange != null && start >= nameRange.start && start < nameRange.end
                     texts += if (ownName || token.text == declaration.name) NAME else token.text
