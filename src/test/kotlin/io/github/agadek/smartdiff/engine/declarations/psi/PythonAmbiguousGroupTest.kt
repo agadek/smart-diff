@@ -19,7 +19,7 @@ class PythonAmbiguousGroupTest : BasePlatformTestCase() {
         assertTrue("$case reports no relationship: ${result.relationships}", result.relationships.isEmpty())
     }
 
-    fun `test the ambiguous rename group 1 is not forced`() = noForcedRelationships("ambiguous-rename-group-1")
-    fun `test the ambiguous rename group 2 is not forced`() = noForcedRelationships("ambiguous-rename-group-2")
-    fun `test the ambiguous rename group 3 is not forced`() = noForcedRelationships("ambiguous-rename-group-3")
+    fun `test R3 the ambiguous rename group 1 is not forced`() = noForcedRelationships("ambiguous-rename-group-1")
+    fun `test R3 the ambiguous rename group 2 is not forced`() = noForcedRelationships("ambiguous-rename-group-2")
+    fun `test R3 the ambiguous rename group 3 is not forced`() = noForcedRelationships("ambiguous-rename-group-3")
 }
