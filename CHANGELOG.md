@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-## [0.4.0] - 2026-11-18
+## [0.4.0] - 2026-11-19
 
 ### Added
 
@@ -17,6 +17,7 @@
 ### Fixed
 
 - Python classes and functions are no longer reported as changed when statements are inserted before them, including before a decorator or after an indented block.
+- Python: a rename on a group of same-body declarations is no longer forced into a pair by position; the matcher now leaves the group as ties, as the Java, Kotlin and Scala matchers do.
 - Extraction detection links a helper to every method its code was taken from, including when the call that replaced the code repeats a few of its tokens.
 - The outline follows the caret without scrolling the editors or snapping back when rows rebuild, and keeps a minimum width of 200 px so the summary stays readable.
 - Low-confidence links in the refactorings view no longer attach to unrelated declarations, and the relationship-kind filter is hidden where it has no effect.
