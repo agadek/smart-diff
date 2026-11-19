@@ -6,16 +6,16 @@ split: tuning
 expected:
   relationships:
     - kinds: [EXTRACT]
-      old: { path: "class Order", kind: FUNCTION, name: "render", signature: "(self, lines)" }
-      new: { path: "class Order", kind: FUNCTION, name: "render_lines", signature: "(self, lines)" }
+      old: { path: "class Order", kind: FUNCTION, name: "render", signature: "self, lines" }
+      new: { path: "class Order", kind: FUNCTION, name: "render_lines", signature: "self, lines" }
   changes:
     - subject: { path: "", kind: CLASS, name: "Order" }
       presence: MATCHED
       content: UNCHANGED
-    - subject: { path: "class Order", kind: FUNCTION, name: "render", signature: "(self, lines)" }
+    - subject: { path: "class Order", kind: FUNCTION, name: "render", signature: "self, lines" }
       presence: MATCHED
       content: CHANGED
-    - subject: { path: "class Order", kind: FUNCTION, name: "render_lines", signature: "(self, lines)" }
+    - subject: { path: "class Order", kind: FUNCTION, name: "render_lines", signature: "self, lines" }
       presence: ADDED
       content: UNCHANGED
   ambiguous: []
