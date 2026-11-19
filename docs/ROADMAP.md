@@ -88,7 +88,7 @@ Decided in [releases/0.4.0-plan.md](releases/0.4.0-plan.md). Rename grouping wit
 | Rename grouping with usages (Java, Kotlin K2, Scala 2/3) | [relationships/04](specs/relationships/04-rename-grouping.md) | Implemented and merged |
 | Inlining detection | [relationships/05](specs/relationships/05-inlining-detection.md) | Implemented and merged |
 | Refactorings view | [relationships/06](specs/relationships/06-refactorings-view.md) | Implemented and merged |
-| Validation and release | [relationships/07](specs/relationships/07-relationship-validation.md) | Accepted; [2026-11-18 validation](VALIDATION.md#2026-11-18-040-release-validation) recorded. The `no-new-wrong-pairs` gate fails on six forced pairs in Python ambiguous-rename groups, so the release is blocked on that gate and the spec is not yet implemented. |
+| Validation and release | [relationships/07](specs/relationships/07-relationship-validation.md) | Implemented, 2026-11-19; [2026-11-19 validation](VALIDATION.md#2026-11-19-040-release-validation) recorded. The `no-new-wrong-pairs` gate passes with 0 wrong and 0 forced pairs. |
 | Tree-sitter Swift engine | [engines/05](specs/engines/05-tree-sitter.md) | Implemented and merged (PR #213) |
 
 The benchmark reports 583 cases, precision 1.000 and recall 0.943; the two-sided and merge corpora have no new wrong link or `join-mismatch` and all limits hold with the reference pass on. Plugin Verifier is compatible on all six IDE families with no internal or deprecated API use. The physical manual checks on IC 2025.1.3 and IU 2026.3 are pending, maintainer.
