@@ -21,25 +21,25 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
-## 2026-11-18: 0.4.0 release validation
+## 2026-11-19: 0.4.0 release validation
 
-The release checks of [relationships/07](specs/relationships/07-relationship-validation.md) on `chore/release-0.4.0`, which includes the Tree-sitter Swift engine from PR #213. Results below are from this branch's head after merging `origin/main`.
+The release checks of [relationships/07](specs/relationships/07-relationship-validation.md) on `chore/release-0.4.0`, which includes the Tree-sitter Swift engine from PR #213 and the matcher fix from `fix/python-ambiguous-rename-pairing` (merged on 0.11-19, commit `28c47ed`). Results below are from the branch's head after that merge.
 
 ### Versions and corpus
 
-- Engine: `smartdiff.declarations` **23** (the fix for the Python ambiguous-group pairs is not merged, so the engine version is unchanged). Reference pass: **2**.
+- Engine: `smartdiff.declarations` **24** (the matcher fix for the Python ambiguous-group pairs). Reference pass: **2**.
 - IDE builds checked by Plugin Verifier: `IC-251.26927.53`, `IU-263.7307.200`, `PY-251.26927.74`, `PY-263.7307.206`, `RR-251.25410.170`, `RR-263.7307.313`. Scala plugin **2025.1.32** on 2025.1, resolved by the verifier on the newer families as before. The latest [early-access verifier run](https://github.com/agadek/smart-diff/actions/workflows/eap-verifier.yml) is **green** (2026-11-17, on demand).
-- Full benchmark corpus revision: **`110b31f1131b`**. The two-sided and merge corpora use the 2026-11-04 and 2026-11-2x lists with every clone's HEAD pinned to the commits in [0.3.0](#2026-11-08-030-release-checks) and [2026-11-02](#2026-11-02-merge-validation-rerun).
+- Full benchmark corpus revision: **`357430c56bb4`**. The two-sided and merge corpora use the 2026-11-04 and 2026-11-2x lists with every clone's HEAD pinned to the commits in [0.3.0](#2026-11-08-030-release-checks) and [2026-11-02](#2026-11-02-merge-validation-rerun).
 
 ### Benchmark
 
-`RelationshipBenchmarkTest` on `relationships-corpus-full.txt` with `no-new-wrong-pairs` against the checked-in baseline: **583 cases**, precision **1.000**, recall **0.943**, 316 reported pairs of 331 labelled. High-confidence held-out precision is **1.000 for every kind and language**, including Python; held-out recall 0.891, tuning recall 0.983. The baseline's `wrongPairs` is empty. The `no-new-wrong-pairs` gate **fails** on six forced pairs in Python's ambiguous-rename-group cases (R3); there are no other wrong pairs, no hidden or unlabelled file and no unhandled fallback. Reference evidence: `GROUPED=25`, `NOT_GROUPED=552`, `NONE=6`, usage median 0 ms / p95 5 ms / slowest 83 ms of the 1000 ms budget.
+`RelationshipBenchmarkTest` on `relationships-corpus-full.txt` with `no-new-wrong-pairs` against the checked-in baseline: **583 cases**, precision **1.000**, recall **0.943**, 312 reported pairs of 331 labelled, wrong share 0.000. High-confidence held-out precision is **1.000 for every kind and language**, including Python (held-out recall 0.891, tuning recall 0.984; Python overall precision 1.000, recall 0.898). The baseline's `wrongPairs` is empty and there are **0 forced pairs**, so the `no-new-wrong-pairs` gate **passes**. Reference evidence: `GROUPED=25`, `NOT_GROUPED=552`, `NONE=6`, usage median 0 ms / p95 4 ms / slowest 69 ms of the 1000 ms budget.
 
 ### Two-sided corpus
 
 `CorpusValidationTest` with every clone's HEAD pinned, compared with the [0.3.0 run](#2026-11-08-030-release-checks):
 
-- Java and Kotlin list: **5128 files** from 240 commits; 5127 `ANALYZED` and 1 `TOO_LARGE`, no `hidden` or `empty` flag. 137 flagged: 3 extraction, 3 extraction-near-miss, 99 noisy, 7 rename, 24 rename-candidate, 1 same-name, 1 slow (a generated HTML file, 1761 ms, under the 5000 ms limit), 1 status (`docs/api/scripts/pages.json`, `TOO_LARGE`) and 1 uncertain. The file count is larger than 0.3.0's because the harness now also walks JSON, YAML, Groovy, shell, Python, Rust, properties, TOML, Markdown, XML and HTML files, not only Java, Kotlin and Scala. The Java/Kotlin/Scala flags are the reviewed set from 0.3.0; no new wrong link or hidden change was found.
+- Java and Kotlin list: **5128 files** from 240 commits; 5127 `ANALYZED` and 1 `TOO_LARGE`, no `hidden` or `empty` flag. 136 flagged: 3 extraction, 3 extraction-near-miss, 99 noisy, 7 rename, 24 rename-candidate, 1 same-name, 1 slow (a generated HTML file, 1761 ms, under the 5000 ms limit), 1 status (`docs/api/scripts/pages.json`, `TOO_LARGE`) and 1 uncertain. The file count is larger than 0.3.0's because the harness now also walks JSON, YAML, Groovy, shell, Python, Rust, properties, TOML, Markdown, XML and HTML files, not only Java, Kotlin and Scala. The Java/Kotlin/Scala flags are the reviewed set from 0.3.0; no new wrong link or hidden change was found.
 - Scala list: **507 files** from 120 commits; 33 flagged, of the same reviewed kinds as 0.3.0, with no new wrong link or hidden change.
 
 ### Merge validation
@@ -48,17 +48,18 @@ The release checks of [relationships/07](specs/relationships/07-relationship-val
 
 ### Limits
 
-`LimitsBenchmarkTest` on the six 0.3.0 large files with the reference pass on: every comparison `ANALYZED` or the known Scala 3 `PARTIAL`; median 58–230 ms, slowest **230 ms** against the 5000 ms analysis limit; the reference pass is 0–5 ms and never times out. R7 holds.
+`LimitsBenchmarkTest` on the six 0.3.0 large files with the reference pass on: every comparison `ANALYZED` or the known Scala 3 `PARTIAL`; median 61–75 ms, slowest **221 ms** against the 5000 ms analysis limit; the reference pass is 0–4 ms and never times out. R7 holds.
 
 ### Build and Plugin Verifier
 
-- `./gradlew clean buildPlugin check` **passed**.
+- `./gradlew clean buildPlugin check` **passed** (rerun 0.11-19, engine 24).
 - `./gradlew verifyPlugin` (all families) **passed**: Compatible on all six IDEs above. IC/IU report 50 experimental API usages, PyCharm 25/49 and RustRover 49, with no internal or deprecated usage; all are the reviewed optional-plugin PSI and platform usages in [PLATFORM-API.md](PLATFORM-API.md).
 - `./gradlew checkPlatformApiInventory` **passed**.
+- `./gradlew verifyPluginProjectConfiguration` **passed**; `./gradlew verifyPluginStructure` **passed**.
 
 ### Wrong relationships (R10)
 
-Seven of the nine wrong pairs in the first full run were label errors in the Python cases and are corrected in this branch: `ambiguous-rename-group-2/3` named the wrong class and methods, and `extraction-1/2` plus `method-rename-1` omitted the signatures that the Python provider reports. The remaining **six forced pairs** in `ambiguous-rename-group-1/2/3` are a genuine matching issue: Python forces a pairing on a group with equally plausible candidates, where the other languages leave the two candidates as ties. They are a **known issue**; a fix that changes matching was attempted on a separate `fix/` branch but regressed [relationships/03 R7](specs/relationships/03-relationship-matching.md)'s duplicate-body rule, so it was reverted. Follow-up work should make the Python provider's duplicate-body evidence match the other languages'. Because R3 fails, relationships/07 stays `accepted` and the release is blocked on this gate.
+The first full run reported 9 wrong pairs in the Python cases: 2 `forced` in `ambiguous-rename-group-1` (`alpha→gamma`, `beta→delta`) and 7 label errors — `ambiguous-rename-group-2/3` named the wrong class and methods, and `extraction-1/2` and `method-rename-1` omitted the signatures that the Python provider reports. The 7 label errors were corrected on the release branch, and they were the only held-out wrong pairs: the forced pairs were in tuning-split cases. The real forced pairs are gone now: the engine fix in `fix/python-ambiguous-rename-pairing` (commit `8c5891a`, merged on 0.11-19 as `28c47ed`) makes `DeclarationMatcher.bigrams()` skip empty-text tokens, so the Python duplicate-body groups take the same duplicate-body path the Java, Kotlin and Scala matchers already use, and the assignment leaves the equally-plausible candidates unpaired. The 0.11-19 rerun has **0 wrong pairs and 0 forced pairs**, so the `no-new-wrong-pairs` gate passes. `PythonAmbiguousGroupTest` (`io.github.agadek.smartdiff.engine.declarations.psi`) now covers the three cases.
 
 ### Manual checks
 
