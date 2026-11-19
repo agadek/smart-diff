@@ -406,7 +406,7 @@ def target():
     fun `test R24 the engine version names its own version, the IDE build and the Scala plugin`() {
         // relationships/02-relationship-model R24; relationships/03-relationship-matching R18; languages/08-groovy R11-R20;
         // languages/14-markdown §7
-        assertEquals("23", DeclarationEngine.VERSION)
+        assertEquals("24", DeclarationEngine.VERSION)
         assertEquals("24 (251.26927.53)", DeclarationEngine.formatVersion("251.26927.53", null))
         assertEquals("24 (251.26927.53; Scala 2025.1.32)", DeclarationEngine.formatVersion("251.26927.53", "2025.1.32"))
 
