@@ -593,10 +593,18 @@ object DeclarationMatcher {
             // more than a few tokens before content is meaningful.
             val tooSmall = o.kind != DeclarationKind.KEY && n.kind != DeclarationKind.KEY &&
                 (a.size < MIN_CONTENT || b.size < MIN_CONTENT)
-            return if (tooSmall || a.bag.isEmpty() || b.bag.isEmpty()) 0.0 else dice(a.bag, b.bag)
+            if (a.bag.isEmpty() || b.bag.isEmpty()) return 0.0
+            if (!tooSmall) return dice(a.bag, b.bag)
+            // relationships/03 R21: a short initializer, such as `= 42`, identifies a field-like declaration only when
+            // the whole declaration is the same on both sides; a partly similar one, or one without a value, says nothing.
+            val sameValue = o.kind in VALUE_KINDS && n.kind in VALUE_KINDS && a.bag == b.bag && hasValue(a.bag)
+            return if (sameValue) 1.0 else 0.0
         }
 
         private class Bigrams(val bag: Map<String, Int>, val size: Int)
+
+        /** Whether the tokens have an initializer: `=` followed by a value (relationships/03 R21). */
+        private fun hasValue(bag: Map<String, Int>): Boolean = bag.keys.any { it.startsWith(ASSIGN + SEPARATOR) }
 
         /** Adjacent pairs of the tokens other than whitespace and separators, children included, with the name masked. */
         private fun bigrams(declaration: Declaration): Bigrams = bigrams.getOrPut(declaration) {
@@ -675,6 +683,14 @@ object DeclarationMatcher {
 
             /** Declarations with fewer tokens than this, not counting their name, are not compared by content. */
             const val MIN_CONTENT = 6
+
+            /** The token that starts an initializer in every language the engine reads (R21). */
+            const val ASSIGN = "="
+
+            /** The field-like kinds whose short value may identify them (relationships/03 R21). */
+            val VALUE_KINDS = setOf(
+                DeclarationKind.FIELD, DeclarationKind.PROPERTY, DeclarationKind.VARIABLE, DeclarationKind.CONSTANT,
+            )
 
             /**
              * Content, name, parameter types, context and order (relationships/03, `Score for rename candidates`),

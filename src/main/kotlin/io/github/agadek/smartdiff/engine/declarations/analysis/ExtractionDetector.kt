@@ -174,7 +174,7 @@ object ExtractionDetector {
             val sources = candidates.mapNotNull { match ->
                 val old = keys.significant(match.old) ?: return@mapNotNull null
                 val new = keys.significant(match.new) ?: return@mapNotNull null
-                Source(match, old, removedForExtraction(old.keys, new.keys, budget))
+                Source(match, old, removedOutsideRuns(old.keys, new.keys, budget))
             }
             val pairs = targets.flatMap { target -> sources.filter { overlaps(target, it) }.map { target to it } }
             pairs.mapNotNull { (target, source) -> link(target, source, budget, thresholds) }
@@ -221,7 +221,8 @@ object ExtractionDetector {
             val targets = candidates.mapNotNull { match ->
                 val old = keys.significant(match.old) ?: return@mapNotNull null
                 val new = keys.significant(match.new) ?: return@mapNotNull null
-                val added = removed(new.keys, old.keys, budget)
+                // relationships/05 R21: new code that matches the old version only in short scattered runs is added.
+                val added = removedOutsideRuns(new.keys, old.keys, budget)
                 if (added.none { it }) return@mapNotNull null
                 Changed(match, new, added)
             }
@@ -426,10 +427,11 @@ object ExtractionDetector {
     }
 
     /**
-     * R17: for an extraction source, a kept old token stays kept only in a diagonal run of at least [MIN_TILE] tokens;
-     * shorter kept runs count as removed too.
+     * Which of [old] an alignment with [new] deletes, where a kept old token stays kept only in a diagonal run of at
+     * least [MIN_TILE] tokens and shorter kept runs count as deleted too: an extraction source's removed code
+     * (declarations/05 R17), and, with the sides swapped, an inlining target's added code (relationships/05 R21).
      */
-    private fun removedForExtraction(old: IntArray, new: IntArray, budget: Budget): BooleanArray {
+    private fun removedOutsideRuns(old: IntArray, new: IntArray, budget: Budget): BooleanArray {
         val (deleted, alignedNew) = alignment(old, new, budget)
         var i = 0
         while (i < old.size) {
