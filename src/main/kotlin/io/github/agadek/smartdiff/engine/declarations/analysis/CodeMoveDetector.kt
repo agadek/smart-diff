@@ -162,9 +162,17 @@ internal object CodeMoveDetector {
     private fun tokensIn(declaration: Declaration, range: TextRange): List<Pair<Token, Int>> {
         val starts = declaration.ownTokenStarts
         val result = mutableListOf<Pair<Token, Int>>()
-        for (i in starts.indices) {
-            val start = starts[i]
-            if (start >= range.start && start < range.end) result += declaration.ownTokens[i] to start
+        // The starts ascend, the leading whitespace first, so the first token in range is found by binary search.
+        var low = 0
+        var high = starts.size
+        while (low < high) {
+            val mid = (low + high) ushr 1
+            if (starts[mid] < range.start) low = mid + 1 else high = mid
+        }
+        var i = low
+        while (i < starts.size && starts[i] < range.end) {
+            result += declaration.ownTokens[i] to starts[i]
+            i++
         }
         return result
     }
