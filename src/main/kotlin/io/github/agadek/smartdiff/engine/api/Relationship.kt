@@ -53,6 +53,13 @@ enum class RelationshipKind {
 
     /** The removed declaration's code now lies inside a new one. */
     INLINE,
+
+    /**
+     * Statements removed from one matched declaration and added to the same or another matched declaration
+     * (relationships/08). The endpoints are the source and the target declaration; the content evidence holds the moved
+     * statements on each side.
+     */
+    CODE_MOVE,
 }
 
 /** The ordinal strength of a relationship's evidence (relationships/02 R4). It is never shown as a percentage. */
@@ -72,7 +79,8 @@ sealed interface Evidence {
     /**
      * [shared] of the [total] tokens were tiled between the two sides: an extraction's target body from the extracted
      * code, or an inlining's removed body from the target's added code. [oldRange] and [newRange] are the tiled code's
-     * ranges on each side.
+     * ranges on each side. For a code move, they are the moved statements on each side, and [shared] of the move's
+     * [total] adjacent token pairs are the same on both sides (relationships/08).
      */
     data class Content(val shared: Int, val total: Int, val oldRange: TextRange, val newRange: TextRange) : Evidence
 

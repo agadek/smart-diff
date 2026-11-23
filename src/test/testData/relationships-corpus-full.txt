@@ -4,6 +4,10 @@ src/test/testData/java/relationships/ambiguous-rename-group-3
 src/test/testData/java/relationships/class-rename-1
 src/test/testData/java/relationships/class-rename-2
 src/test/testData/java/relationships/class-rename-3
+src/test/testData/java/relationships/code-move-1
+src/test/testData/java/relationships/code-move-2
+src/test/testData/java/relationships/code-move-3
+src/test/testData/java/relationships/code-move-4
 src/test/testData/java/relationships/comment-only-1
 src/test/testData/java/relationships/comment-only-2
 src/test/testData/java/relationships/comment-only-3
@@ -86,6 +90,10 @@ src/test/testData/kotlin/relationships/ambiguous-rename-group-3
 src/test/testData/kotlin/relationships/class-rename-1
 src/test/testData/kotlin/relationships/class-rename-2
 src/test/testData/kotlin/relationships/class-rename-3
+src/test/testData/kotlin/relationships/code-move-1
+src/test/testData/kotlin/relationships/code-move-2
+src/test/testData/kotlin/relationships/code-move-3
+src/test/testData/kotlin/relationships/code-move-4
 src/test/testData/kotlin/relationships/comment-only-1
 src/test/testData/kotlin/relationships/comment-only-2
 src/test/testData/kotlin/relationships/comment-only-3
@@ -169,6 +177,10 @@ src/test/testData/scala2/relationships/ambiguous-rename-group-3
 src/test/testData/scala2/relationships/class-rename-1
 src/test/testData/scala2/relationships/class-rename-2
 src/test/testData/scala2/relationships/class-rename-3
+src/test/testData/scala2/relationships/code-move-1
+src/test/testData/scala2/relationships/code-move-2
+src/test/testData/scala2/relationships/code-move-3
+src/test/testData/scala2/relationships/code-move-4
 src/test/testData/scala2/relationships/comment-only-1
 src/test/testData/scala2/relationships/comment-only-2
 src/test/testData/scala2/relationships/comment-only-3
@@ -252,6 +264,10 @@ src/test/testData/scala3/relationships/ambiguous-rename-group-3
 src/test/testData/scala3/relationships/class-rename-1
 src/test/testData/scala3/relationships/class-rename-2
 src/test/testData/scala3/relationships/class-rename-3
+src/test/testData/scala3/relationships/code-move-1
+src/test/testData/scala3/relationships/code-move-2
+src/test/testData/scala3/relationships/code-move-3
+src/test/testData/scala3/relationships/code-move-4
 src/test/testData/scala3/relationships/comment-only-1
 src/test/testData/scala3/relationships/comment-only-2
 src/test/testData/scala3/relationships/comment-only-3
@@ -338,6 +354,10 @@ src/test/testData/scala3/relationships/usage-grouping-rewrapped
 ../smartdiff-corpus/cats --no-walk 48526923b73f1ba31e8777390c4a7df6278a80b7 41d24a863d32d89ff8fafb9fc6b3ddd680ab5e74 b9b7e201ac10d3b7a164c57ee0bb511ea45b3ec9 5c06b8a074b315f6ed3f13f9759f68e6f297fe51 e74b3016ac1b350f5daf0e2e6abb2ca19bf33c46 c18c981f241efd3f9d86bc87af71e363785f197c 342996fbed56fb96b47b5e65a7af1297bba90144 0ba479bcc6cb4c24f5a173bc9f729fd2b0e9eb8a af45152a53e8331fbe5216adfbd422b9f9be83e8 62440f38ea3f6f3dedd409d11d186ea3e7f705fb 0a776c72d567caa9078721519888a6803ab0da6f 609a4f1958db09ca1781042d95a09dbc78d9e08b f62d98b181caeea721062ea2e0b12355d4644631 09972d809febf19fc97aad4015bfe087bd3c503d 9bd7dce35ff0b86f490b2dbd24f5210f9459fab7 004921a372359da4212815d6aa3d0698b4315fc9 344d6ed38a4ff8f420faadd786b7268d87a8505a 0b7a2d5f13b7bdaf0a6f9f7b16d9b73a21389ac5 843182c127bff0b892c5d74a7a95df9a121f71b2 ab9e4806dac3e6a9da03c1c20c87050ed1983897 410f5adefbb24c8e1bb3c98cb3f1ff24331f5ae7 76c737f902c0870d41daacfe60c3dd89cb780082 1f77f0e1bd43d96f6a84266fdda6b6c28e61b69c 9ee6a7add6cb883e1cabc0f229895af2ffe810c4 3ff86a36618bbf5711b192d0bd0b75c487ab9136 fe40b32fa9558fbf7478355de4bad43ae7d94730 0c642f63307351582c0da2bff2a2f1cd5b10b884 cdc49db43323df12d0d473fede1b54c6ae6ef6b7 e6493b0cd6f8f4f2ec1b018d4748e2d9e0c88000 2350003d6716f6c31ea0e8e08275c3676c316f1f
 ../smartdiff-corpus/scala3 --no-walk 198ecac41588b68e08ca40cf04a458d11265c69f a7a28f5a2a4df060b08c67238f0a77e1b5061b9b 0b4d1a2c69363fd82e5062799577a9eeebae3b48 8b20d3c27a57001d80ac24388d053c802bab7b87 e950e5c1bf2aa0fbf6e68868df09b9047042387e 3213b8832b2b950ebb87d2396793eb538815502f 5716d9f6337b217e3a4bbdea54d0ba5b53fc2eac 9e804a8f6292a464be99b9f6ebc0ee59fb9d53df 4658d688e9783e986c84b5e0b1b83ab367508a27 b5421a73bca0faa47f474a7d81d8f1cdb8768a14 772015327da39f4f4760f9fc1ff0c2dbba80a7cf 6665e30cb1d4fb09f182cedf10cba56962c57c10 060db95f584ffa5130b90eb0aa1528cebc35395b f3225b4938da56fc54f10be11efdc6d5d9eb682f 39987f7faa7f1fc78283d1e56cefc5d04d015746 1196ae3f00600115ce5bc4bf5d3cc8df62436efd d7a99af526976fcd670ddb43652d7ed16423a82e 3850230ddf1b7c634457b531cf7fdf6d6744de96 b62d70cffe4d4b6d0a595a1ee7f4860ac05fc92d ca1c0888ea09c536fc305c56435c525fa538db74 880aeab893e3e10940f09c332d557ebc0e2c8df0 82d2f3577fda7a5415d41c8b8ba73f9c1adca623 8ac251da9797c34826e87a42ed665985137abf42 2df7b80a7801e729adc1242eec519bdf46769160 270f3f274b9afdb2ff362bcc05f6997380b15872 7bec039ff4e0d8501301d2bbe25ead1e2e3d27ec f7cd8292039ca541d9ef04cdcb8fc8c2c2ae6c62 29497c036206d8cf4882b9b8374b2375c031adbc 1460be941da224c3c6cbe794f5409c62c73a0efc ddd651425943a4a23fae479dfea072903b31d433
 src/test/testData/python/relationships/class-rename-1
+src/test/testData/python/relationships/code-move-1
+src/test/testData/python/relationships/code-move-2
+src/test/testData/python/relationships/code-move-3
+src/test/testData/python/relationships/code-move-4
 src/test/testData/python/relationships/extraction-1
 src/test/testData/python/relationships/extraction-2
 src/test/testData/python/relationships/method-rename-2

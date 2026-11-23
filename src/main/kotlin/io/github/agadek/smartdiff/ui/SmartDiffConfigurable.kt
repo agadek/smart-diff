@@ -65,6 +65,11 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                     .bindSelected(settings::treeSitterLanguages)
                     .comment("Swift, C#, C and C++ files the IDE opens as plain text get a structural outline from grammars bundled with the plugin; the source never leaves this computer.")
             }
+            row {
+                checkBox("Detect code moved inside declarations")
+                    .bindSelected(settings::detectCodeMoves)
+                    .comment("List statements moved inside a method or between methods of the same file in the structural outline; the native diff always shows every changed line.")
+            }
             buttonsGroup("Formatting-only changes:") {
                 row { radioButton("Collapsed in a group", false) }
                 row { radioButton("Inline", true) }

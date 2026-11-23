@@ -8,6 +8,7 @@ import com.intellij.psi.PsiAnnotation
 import com.intellij.psi.PsiAnonymousClass
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiClassInitializer
+import com.intellij.psi.PsiCodeBlock
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiEnumConstant
 import com.intellij.psi.PsiField
@@ -19,6 +20,7 @@ import com.intellij.psi.PsiMethod
 import com.intellij.psi.PsiModifier
 import com.intellij.psi.PsiModifierList
 import com.intellij.psi.PsiParameter
+import com.intellij.psi.PsiStatement
 import com.intellij.psi.PsiTypeParameter
 import com.intellij.psi.util.JavaPsiRecordUtil
 import com.intellij.psi.util.PsiUtil
@@ -45,6 +47,13 @@ class JavaDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.INSIGNIF
         file.putUserData(PsiUtil.FILE_LANGUAGE_LEVEL_KEY, LanguageLevel.HIGHEST)
         return file
     }
+
+    // relationships/08 R22: the statements of code blocks, switch rule blocks included, can move.
+    override val findsStatements: Boolean get() = true
+
+    override fun isStatementBlock(element: PsiElement): Boolean = element is PsiCodeBlock
+
+    override fun isStatement(element: PsiElement): Boolean = element is PsiStatement
 
     // A class without a name identifier is implicitly declared (a file of top-level methods and fields, JEP 512), or its
     // name was not parsed; either way its members are top-level declarations.

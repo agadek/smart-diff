@@ -114,6 +114,10 @@ object RefactoringsModel {
             kinds == setOf(RelationshipKind.KIND_CHANGE) -> kindChangeTitle(relationship, oldName, newName)
             kinds == setOf(RelationshipKind.EXTRACT) -> if (oldName == newName) "extracted $oldName" else "extracted $newName from $oldName"
             kinds == setOf(RelationshipKind.INLINE) -> "inlined $oldName into $newName"
+            // relationships/08 R16: a move inside one declaration names it once.
+            kinds == setOf(RelationshipKind.CODE_MOVE) ->
+                if (relationship.old.first().subject == relationship.new.first().subject) "moved code in $newName"
+                else "moved code $oldName → $newName"
             else -> {
                 val words = kinds.joinToString(" and ") { kindWord(it) }
                 if (oldName == newName) "$words $oldName" else "$words $oldName → $newName"
@@ -139,6 +143,7 @@ object RefactoringsModel {
         RelationshipKind.KIND_CHANGE -> "kind change"
         RelationshipKind.EXTRACT -> "extraction"
         RelationshipKind.INLINE -> "inlining"
+        RelationshipKind.CODE_MOVE -> "moved code"
     }
 
     private fun name(subject: Subject): String = when (subject) {
@@ -164,18 +169,20 @@ object RefactoringsModel {
             )
         }
         val evidence = evidence(relationship)
+        // relationships/08 R16, R18: a code move frames the moved statements, with markers on them, and both declarations.
+        val codeMove = content.singleOrNull()?.takeIf { relationship.kinds == setOf(RelationshipKind.CODE_MOVE) }
         return OutlineItem(
             ItemKind.RELATIONSHIP,
             titleWithConfidence(relationship) + if (references.isEmpty()) "" else ", ${count(references.size)}",
-            oldRange = primaryOld,
-            newRange = primaryNew,
+            oldRange = codeMove?.oldRange ?: primaryOld,
+            newRange = codeMove?.newRange ?: primaryNew,
             details = details,
             children = usages + evidence,
             confidence = relationship.confidence,
-            frames = frames,
+            frames = if (codeMove == null) frames else frames + RangePair(primaryOld, primaryNew),
             colour = colour,
             endpoints = ReviewedMarks.endpointsOf(relationship, result),
-            moved = RelationshipKind.MOVE in relationship.kinds,
+            moved = RelationshipKind.MOVE in relationship.kinds || codeMove != null,
         )
     }
 
@@ -197,7 +204,8 @@ object RefactoringsModel {
                 is Evidence.Content -> add(
                     OutlineItem(
                         ItemKind.EVIDENCE,
-                        "content  ${item.shared} of ${item.total} tokens",
+                        "content  ${item.shared} of ${item.total} " +
+                            if (RelationshipKind.CODE_MOVE in relationship.kinds) "token pairs" else "tokens",
                         oldRange = item.oldRange,
                         newRange = item.newRange,
                     ),
@@ -227,6 +235,8 @@ object RefactoringsModel {
                 val coveredNew = HashSet<TextRange>()
                 for (relationship in relationships) {
                     if (relationship.confidence == Confidence.LOW) continue
+                    // A code move's declarations keep their own rows: the move is part of their change (relationships/08 R19).
+                    if (relationship.kinds == setOf(RelationshipKind.CODE_MOVE)) continue
                     relationship.old.forEach { coveredOld += it.range }
                     relationship.new.forEach { coveredNew += it.range }
                 }

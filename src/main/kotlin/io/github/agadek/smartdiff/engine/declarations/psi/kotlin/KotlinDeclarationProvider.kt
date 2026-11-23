@@ -16,7 +16,9 @@ import org.jetbrains.kotlin.psi.KtAnnotation
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtAnonymousInitializer
 import org.jetbrains.kotlin.psi.KtCallExpression
+import org.jetbrains.kotlin.psi.KtBlockExpression
 import org.jetbrains.kotlin.psi.KtCallableDeclaration
+import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtEnumEntry
 import org.jetbrains.kotlin.psi.KtExpression
@@ -59,6 +61,14 @@ class KotlinDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.KOTLIN
     }
 
     // A script's declarations are top-level declarations; its statements are part of the file region.
+    // relationships/08 R22: the statements of a block, local variables included; a local function or class is not one.
+    override val findsStatements: Boolean get() = true
+
+    override fun isStatementBlock(element: PsiElement): Boolean = element is KtBlockExpression
+
+    override fun isStatement(element: PsiElement): Boolean =
+        element is KtExpression && element !is KtNamedFunction && element !is KtClassOrObject
+
     override fun topLevel(file: PsiFile): List<PsiElement> =
         (file as KtFile).declarations.flatMap { if (it is KtScript) it.declarations else listOf(it) }
 

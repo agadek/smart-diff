@@ -63,6 +63,13 @@ class PythonDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.INDENT
 
     override fun topLevel(file: PsiFile): List<PsiElement> = members(file)
 
+    // relationships/08 R22: the statements of a statement list, such as a function's body.
+    override val findsStatements: Boolean get() = true
+
+    override fun isStatementBlock(element: PsiElement): Boolean = element is PyStatementList
+
+    override fun isStatement(element: PsiElement): Boolean = element is PyStatement
+
     override fun describe(element: PsiElement): DeclarationInfo? = when (element) {
         is PyClass -> element.name?.takeIf { it.isNotEmpty() }?.let {
             DeclarationInfo(

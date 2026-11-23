@@ -1,0 +1,11 @@
+class OrderService {
+    void process(Order order) {
+        audit.log(order);
+        double total = 0;
+        for (Item item : order.items()) {
+            total += item.price() * item.count();
+        }
+        order.setTotal(total);
+        repository.save(order);
+    }
+}

@@ -155,6 +155,25 @@ object RelationshipChecks {
         }
     }
 
+    /**
+     * relationships/08 details: a code move's content evidence, the moved statements, lies inside its endpoint
+     * declarations' ranges on each side.
+     */
+    fun codeMoveEvidenceInsideEndpoints(case: ContractCase, result: ComparisonResult) {
+        for (relationship in result.relationships) {
+            if (RelationshipKind.CODE_MOVE !in relationship.kinds) continue
+            val content = relationship.evidence.filterIsInstance<Evidence.Content>()
+            check(case, content.size == 1) { "CODE_MOVE $relationship has ${content.size} content evidence, not 1" }
+            val moved = content.single()
+            check(case, relationship.old.any { moved.oldRange.start >= it.range.start && moved.oldRange.end <= it.range.end }) {
+                "old moved code ${moved.oldRange} of $relationship lies outside its source"
+            }
+            check(case, relationship.new.any { moved.newRange.start >= it.range.start && moved.newRange.end <= it.range.end }) {
+                "new moved code ${moved.newRange} of $relationship lies outside its target"
+            }
+        }
+    }
+
     /** R19: the list, its kinds, its endpoints and its evidence come in the order the model fixes. */
     fun fixedOrder(case: ContractCase, result: ComparisonResult) {
         check(case, result.relationships == result.relationships.sortedWith(ORDER)) {

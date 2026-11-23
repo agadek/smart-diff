@@ -18,4 +18,5 @@ fun relationshipKindText(kind: RelationshipKind): String = when (kind) {
     RelationshipKind.KIND_CHANGE -> "Kind change"
     RelationshipKind.EXTRACT -> "Extraction"
     RelationshipKind.INLINE -> "Inlining"
+    RelationshipKind.CODE_MOVE -> "Moved code"
 }
