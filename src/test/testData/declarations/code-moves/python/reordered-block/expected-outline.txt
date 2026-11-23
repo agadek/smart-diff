@@ -1,0 +1,13 @@
+status: ANALYZED
+summary: 2 changed
+container tree:
+  File region  changed
+  class OrderService
+    function process(self, order)  changed
+      moved code lines 8–9 → 3–4  moved
+refactorings:
+  moved code in process  high
+code moves:
+  moved code in process  high
+    - "if order.customer is None or not order.items:\n            raise ValueError("invalid order " + str(order.id))"
+    + "if order.customer is None or not order.items:\n            raise ValueError("invalid order " + str(order.id))"

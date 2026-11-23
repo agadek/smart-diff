@@ -37,5 +37,8 @@ abstract class ComparisonEngineContractTest {
 
     @Test fun `relationships hide nothing`() = contract.`relationships hide nothing`()
 
+    // relationships/08-moves-inside-declarations details: the content evidence of a code move lies inside its endpoints
+    @Test fun `code moves lie inside their declarations`() = contract.`code moves lie inside their declarations`()
+
     @Test fun `cancellation propagates promptly`() = contract.`cancellation propagates promptly`()
 }

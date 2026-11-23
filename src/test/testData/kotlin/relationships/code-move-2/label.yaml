@@ -1,0 +1,19 @@
+case: code-move-2
+language: kotlin
+corpus: kotlin
+category: code-move
+split: tuning
+expected:
+  relationships:
+    - kinds: [CODE_MOVE]
+      old: { path: "class Report", kind: FUNCTION, name: "process", signature: "(List<Order>)" }
+      new: { path: "class Report", kind: FUNCTION, name: "finish", signature: "()" }
+  changes:
+    - subject: { path: "class Report", kind: FUNCTION, name: "process", signature: "(List<Order>)" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Report", kind: FUNCTION, name: "finish", signature: "()" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "A logging loop moves from process into finish."

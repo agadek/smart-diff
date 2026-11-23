@@ -108,6 +108,11 @@ class ComparisonEngineContract(private val newEngine: () -> ComparisonEngine) {
         }
     }
 
+    /** relationships/08 details: a code move's moved code lies inside its endpoint declarations. */
+    fun `code moves lie inside their declarations`() {
+        for (case in relationshipCases()) RelationshipChecks.codeMoveEvidenceInsideEndpoints(case, compare(case))
+    }
+
     /** R19: the list, its kinds, endpoints and evidence are in a fixed order. Two runs are equal by `results are deterministic`. */
     fun `relationships are in a fixed order`() {
         for (case in relationshipCases()) RelationshipChecks.fixedOrder(case, compare(case))
@@ -154,6 +159,7 @@ class ComparisonEngineContract(private val newEngine: () -> ComparisonEngine) {
         `extraction and inlining fields agree and no relationship repeats`()
         `relationships are in a fixed order`()
         `relationships hide nothing`()
+        `code moves lie inside their declarations`()
         `cancellation propagates promptly`()
     }
 

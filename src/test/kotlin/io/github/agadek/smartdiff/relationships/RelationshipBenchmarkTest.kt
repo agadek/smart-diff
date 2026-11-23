@@ -221,10 +221,11 @@ class RelationshipBenchmarkTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test R18 the full corpus has 422 cases and every labelled rename has a usages list`() {
-        // relationships/04-rename-grouping R18; relationships/01-relationship-benchmark R44
+    fun `test R18 the full corpus has 462 cases and every labelled rename has a usages list`() {
+        // relationships/04-rename-grouping R18; relationships/01-relationship-benchmark R44;
+        // relationships/08-moves-inside-declarations R23 (40 code-move cases)
         val entries = RelationshipBenchmark.parseCorpus(File("src/test/testData/relationships-corpus-full.txt"))
-        assertEquals("413 checked-in cases", 413, entries.count { it.path != null })
+        assertEquals("453 checked-in cases", 453, entries.count { it.path != null })
         assertEquals(
             "150 real commits",
             150,

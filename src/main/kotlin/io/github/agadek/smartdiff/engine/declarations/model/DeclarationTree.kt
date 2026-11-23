@@ -75,8 +75,31 @@ class Declaration(
      * break after a structure-view item (languages/06). Null for a dedicated provider, whose source ends at [range].
      */
     val layout: TextRange? = null,
+    /**
+     * The statements of the declaration's own code, outermost first in source order, for code move detection
+     * (relationships/08 details, Statements). Empty for a language whose provider has none, and statements inside a
+     * child declaration are the child's.
+     */
+    val statements: List<Statement> = emptyList(),
 ) {
     override fun toString(): String = "$kind $name" + (signature?.let { "($it)" } ?: "") + " $range"
+}
+
+/**
+ * One statement of a declaration's body (relationships/08 details, Statements): a direct child of a code block, at any
+ * depth of nesting. [kind] is the statement's syntax kind, such as the PSI class, so only statements of one kind pair.
+ * [parent] is the index, in the declaration's [Declaration.statements], of the statement that contains this one, null
+ * for a statement of the body's own block. [block] numbers the code block the statement is in, and [index] is its place
+ * among that block's statements, so two statements are adjacent when they share a block and their indices differ by one.
+ */
+class Statement(
+    val range: TextRange,
+    val kind: String,
+    val parent: Int?,
+    val block: Int,
+    val index: Int,
+) {
+    override fun toString(): String = "$kind $range"
 }
 
 /** Source outside all top-level declarations: package line, imports, top-level statements. */

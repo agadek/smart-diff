@@ -93,6 +93,9 @@ enum class ItemKind {
 
     /** One grouped usage under a rename row (relationships/06 R4). */
     USAGE,
+
+    /** Statements moved into a declaration, a row under its target declaration (relationships/08 R12). */
+    CODE_MOVE,
 }
 
 /** One row of the outline tree. Ranges are offsets into the compared texts; a null range means "not present on that side". */
@@ -185,7 +188,10 @@ object OutlineModel {
         val reviewedSet = identitySetOf(reviewed)
         val markable = markableNodes(result, oldText, newText, whitespacePolicy)
         val reviewedState = Reviewed(reviewedSet, markable, emptyMap(), emptyMap())
-        val builder = Builder(formattingInline, hidden, uncertain, Links(result), usages, markCommentOnly, reviewedState, hideReviewed, rewriteOnly)
+        val builder = Builder(
+            formattingInline, hidden, uncertain, Links(result), usages, markCommentOnly, reviewedState, hideReviewed, rewriteOnly,
+            oldText, newText,
+        )
         val rows = mutableListOf<OutlineItem>()
         result.fileRegion?.takeIf { it.isReported && !isHidden(it, hidden, markCommentOnly = markCommentOnly, hideReviewed = hideReviewed, reviewed = reviewedSet, rewriteOnly = rewriteOnly) }?.let { region ->
             rows += OutlineItem(
@@ -575,6 +581,8 @@ object OutlineModel {
         private val reviewed: Reviewed,
         private val hideReviewed: Boolean,
         private val rewriteOnly: Set<EquivalenceRule>,
+        private val oldText: CharSequence,
+        private val newText: CharSequence,
     ) {
 
         /** Sets a row's reviewed flag from its own and its children's markable nodes (outline/12 R4, R5). */
@@ -603,7 +611,7 @@ object OutlineModel {
          * hidden and its row frames the usages inside it as well.
          */
         private fun item(node: ChangeNode): OutlineItem? {
-            val children = children(node.children)
+            val children = children(node.children) + codeMoveRows(node)
             val grouped = usages.references(node)
             if (isHidden(node, hidden, grouped.isNotEmpty(), markCommentOnly, hideReviewed, reviewed.reviewed, rewriteOnly)) {
                 if (children.isEmpty()) return null
@@ -626,12 +634,49 @@ object OutlineModel {
             return marked(
                 OutlineItem(
                     ItemKind.CHANGE, title(node), tags, oldRange, newRange,
-                    details.distinct(), children, listOfNotNull(usageNote, links.note(node)).joinToString(", ").ifEmpty { null },
+                    details.distinct(), children,
+                    listOfNotNull(usageNote, links.note(node), codeMovedToNote(node)).joinToString(", ").ifEmpty { null },
                     node = node,
                     moved = Tag.MOVED in tags,
                 ),
             )
         }
+
+        /**
+         * The code moves into [node], after its child declarations, in new-side order (relationships/08 R12 to R15, R17).
+         * A row's tags are `moved`, and `changed` when its statements differ beyond formatting; the change type filter
+         * hides a row whose every tag it hides. A row names its target as its endpoint, so it follows the target's
+         * reviewed mark, and it has no change node of its own: the summary line does not count it (R20).
+         */
+        private fun codeMoveRows(node: ChangeNode): List<OutlineItem> {
+            if (node.codeMoves.isEmpty()) return emptyList()
+            val hiddenTags = hidden.flatMapTo(HashSet()) { it.tags }
+            return node.codeMoves.sortedBy { it.newRange.start }.mapNotNull { move ->
+                val tags = if (move.content == Content.CHANGED) listOf(Tag.MOVED, Tag.CHANGED) else listOf(Tag.MOVED)
+                if (hiddenTags.isNotEmpty() && tags.all { it in hiddenTags }) return@mapNotNull null
+                marked(
+                    OutlineItem(
+                        ItemKind.CODE_MOVE,
+                        codeMoveTitle(move.oldRange, move.newRange, oldText, newText),
+                        tags,
+                        move.oldRange,
+                        move.newRange,
+                        details = move.changedRuns,
+                        note = if (move.sourceRange != node.oldRange) "from ${shortLabel(move.source)}" else null,
+                        endpoints = listOf(node),
+                        moved = true,
+                    ),
+                )
+            }
+        }
+
+        /** The note of a declaration whose code moved to other declarations (relationships/08 R13). */
+        private fun codeMovedToNote(node: ChangeNode): String? =
+            node.codeMovedTo.takeIf { it.isNotEmpty() }?.let { targets ->
+                "code moved to " + targets.map(::shortLabel).let { names ->
+                    names.take(MAX_NAMES).joinToString(", ") + if (names.size > MAX_NAMES) ", +${names.size - MAX_NAMES} more" else ""
+                }
+            }
 
         private fun uncertainItem(node: ChangeNode): OutlineItem {
             val candidates = node.candidates.map { candidate ->
@@ -653,6 +698,33 @@ object OutlineModel {
         private fun isFormattingOnly(node: ChangeNode): Boolean =
             node.presence == Presence.MATCHED && !node.moved && !node.signatureChanged &&
                 node.content == Content.FORMATTING_ONLY && node.children.none { it.isReported } && !usages.hasUsages(node)
+    }
+
+    /**
+     * The title of a code move row (relationships/08 R12): `moved code lines 40–46 → 12–18`, the old side's lines first,
+     * counted from 1, or `line 40` for a move of one line.
+     */
+    internal fun codeMoveTitle(oldRange: TextRange, newRange: TextRange, oldText: CharSequence, newText: CharSequence): String {
+        fun span(range: TextRange, text: CharSequence): Pair<Int, Int> {
+            fun line(offset: Int): Int {
+                var line = 1
+                for (i in 0 until minOf(offset, text.length)) if (text[i] == '\n') line++
+                return line
+            }
+            val first = line(range.start)
+            return first to if (range.length == 0) first else line(range.end - 1)
+        }
+        val (oldFirst, oldLast) = span(oldRange, oldText)
+        val (newFirst, newLast) = span(newRange, newText)
+        fun lines(first: Int, last: Int) = if (first == last) "$first" else "$first–$last"
+        val word = if (oldFirst == oldLast && newFirst == newLast) "line" else "lines"
+        return "moved code $word ${lines(oldFirst, oldLast)} → ${lines(newFirst, newLast)}"
+    }
+
+    /** A declaration's name and signature as a note names it, such as `process(Order)`, or its title without a name. */
+    internal fun shortLabel(subject: Subject): String {
+        val declaration = subject as? Subject.Declaration ?: return title(subject)
+        return if (declaration.name.isEmpty()) title(declaration) else name(declaration) + (declaration.signature?.let { "($it)" } ?: "")
     }
 
     /** 1-based lines of [range]: `line 3` or `lines 3-5`. */

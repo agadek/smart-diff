@@ -1,0 +1,13 @@
+case: code-move-8
+language: Scala
+corpus: scala2
+category: code-move
+split: held-out
+expected:
+  relationships: []
+  changes:
+    - subject: { path: "class OrderService", kind: FUNCTION, name: "process", signature: "Order" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "One short statement moves to the start of process; it is under 12 tokens, so it is no code move."

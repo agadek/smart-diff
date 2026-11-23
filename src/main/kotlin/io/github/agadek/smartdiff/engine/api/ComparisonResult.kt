@@ -166,6 +166,17 @@ data class ChangeNode(
      * highlights, can be told from a node over the limits, which keeps them (declarations/10 R12, R13).
      */
     val comparedByTokens: Boolean = false,
+    /**
+     * Only for [Presence.MATCHED]: the code moved into this declaration, from itself or from another matched declaration,
+     * in new-side order (relationships/08 R12). Computed from the [RelationshipKind.CODE_MOVE] relationships whose target
+     * this is; a code move never changes the node's other fields (R19).
+     */
+    val codeMoves: List<CodeMove> = emptyList(),
+    /**
+     * Only for [Presence.MATCHED]: the other declarations that code moved out of this one went to, in new-side order
+     * (relationships/08 R13). A move inside this declaration is not listed.
+     */
+    val codeMovedTo: List<Subject> = emptyList(),
 ) {
     /** Whether this node is a change by itself, not only because of its children. */
     val isChangedItself: Boolean
@@ -234,6 +245,21 @@ data class Inlined(
     val oldRange: TextRange,
     /** The inlined code's range on the new side, inside the target. */
     val newRange: TextRange,
+)
+
+/**
+ * Statements moved into a declaration (relationships/08): [source] is the declaration they were removed from, which is
+ * the target itself for a move inside one declaration, and [sourceRange] its old-side range, which identifies its node.
+ * [oldRange] and [newRange] are the moved statements on each side. [content] compares them under the language's
+ * whitespace policy, and [changedRuns] are the tokens that differ, for highlighting (R11, R14, R15).
+ */
+data class CodeMove(
+    val source: Subject,
+    val sourceRange: TextRange,
+    val oldRange: TextRange,
+    val newRange: TextRange,
+    val content: Content,
+    val changedRuns: List<RangePair> = emptyList(),
 )
 
 /** A span on the old side, the new side, or both; null where it has no extent on that side. */

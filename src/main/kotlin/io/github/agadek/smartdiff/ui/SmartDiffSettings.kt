@@ -85,6 +85,9 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
 
         /** Compare files the IDE has no language support for with Tree-sitter (engines/05 R1, R31). */
         var treeSitterLanguages: Boolean = true
+
+        /** Detect code moved inside and between declarations in the outline (relationships/08 R1, settings/01 R24). */
+        var detectCodeMoves: Boolean = true
         var maxChars: Int = Limits.DEFAULT.maxChars
         var maxDeclarations: Int = Limits.DEFAULT.maxDeclarations
         var timeoutMillis: Long = Limits.DEFAULT.timeoutMillis
@@ -231,6 +234,11 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         get() = current.treeSitterLanguages
         set(value) = update { treeSitterLanguages = value }
 
+    /** Detect code moved inside and between declarations in the outline (relationships/08 R1, settings/01 R24). */
+    var detectCodeMoves: Boolean
+        get() = current.detectCodeMoves
+        set(value) = update { detectCodeMoves = value }
+
     /** The limits passed to engines; a stored value that is out of range falls back to its default. */
     var limits: Limits
         get() = Limits(
@@ -291,6 +299,7 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
             it.useStructureViewFallback = old.useStructureViewFallback
             it.compareLinesWithoutEngine = old.compareLinesWithoutEngine
             it.treeSitterLanguages = old.treeSitterLanguages
+            it.detectCodeMoves = old.detectCodeMoves
             it.maxChars = old.maxChars
             it.maxDeclarations = old.maxDeclarations
             it.timeoutMillis = old.timeoutMillis
