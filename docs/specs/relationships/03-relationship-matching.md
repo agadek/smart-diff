@@ -1,6 +1,6 @@
 # Relationship matching
 
-Status: implemented, 2026-11-04
+Status: implemented, 2026-11-04; R21 implemented, 2026-11-23
 
 **Description:** Improves how the declaration engine pairs renamed, reordered and kind-changed declarations, by scoring every option over the whole candidate graph and keeping ambiguous cases unpaired.
 
@@ -28,6 +28,7 @@ Status: implemented, 2026-11-04
 - **R18** The engine version changes.
 - **R19** Changing a confidence threshold never changes which declarations are paired.
 - **R20** The default high threshold is chosen on the tuning split only, and a failed held-out check does not change it.
+- **R21** A field, property, variable or constant too short for the content score still pairs by content when it has an initializer and is otherwise the same on both sides.
 
 ## Out of scope
 

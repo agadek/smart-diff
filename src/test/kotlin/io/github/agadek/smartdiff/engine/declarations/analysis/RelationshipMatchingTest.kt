@@ -417,6 +417,45 @@ class RelationshipMatchingTest {
         GlobalAssignment.solve(scores, 0.7, null, cancellation)
     }
 
+    @Test
+    fun `R21 a field whose short value is the same on both sides pairs as a rename`() {
+        // relationships/03-relationship-matching R21
+        val matched = match(
+            tree { cls("Order") { field("default_total", "= 42") } },
+            tree { cls("Order") { field("default_sum", "= 42") } },
+        )
+        assertSame(matched.newTree.named("default_sum"), matched.matching.ofOld(matched.oldTree.named("default_total"))!!.new)
+        assertTrue(matched.matching.relationships.any { RelationshipKind.RENAME in it.kinds })
+
+        val variable = match(
+            tree { cls("Invoice") { declaration(DeclarationKind.VARIABLE, "max_size", body = "= 7") } },
+            tree { cls("Invoice") { declaration(DeclarationKind.VARIABLE, "max_length", body = "= 7") } },
+        )
+        assertSame(variable.newTree.named("max_length"), variable.matching.ofOld(variable.oldTree.named("max_size"))!!.new)
+    }
+
+    @Test
+    fun `R21 a short value that differs, or a short method body, does not pair`() {
+        // relationships/03-relationship-matching R21
+        val values = match(
+            tree { cls("Order") { field("timeout", "= 10") } },
+            tree { cls("Order") { field("retries", "= 3") } },
+        )
+        assertNull(values.matching.ofOld(values.oldTree.named("timeout")))
+
+        val methods = match(
+            tree { cls("Order") { method("start", "", "{ x = 1 }") } },
+            tree { cls("Order") { method("begin", "", "{ x = 1 }") } },
+        )
+        assertNull("only field-like values pair on a short body", methods.matching.ofOld(methods.oldTree.named("start")))
+
+        val bare = match(
+            tree { cls("Order") { field("total", "") } },
+            tree { cls("Order") { field("sum", "") } },
+        )
+        assertNull("a field with no value has nothing to compare", bare.matching.ofOld(bare.oldTree.named("total")))
+    }
+
     private class Matched(val oldTree: DeclarationTree, val newTree: DeclarationTree, val matching: Matching)
 
     private fun match(old: DeclarationTree, new: DeclarationTree, confidence: ConfidencePolicy = ConfidencePolicy.DEFAULT): Matched =

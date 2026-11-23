@@ -1,6 +1,6 @@
 # Inlining detection: details
 
-Status: implemented, 2026-11-08
+Status: implemented, 2026-11-08; R21 implemented, 2026-11-23
 
 Feature: [Inlining detection](05-inlining-detection.md)
 
@@ -14,7 +14,15 @@ Feature: [Inlining detection](05-inlining-detection.md)
 - inlining: a removed declaration is tiled with the added tokens of changed targets.
 
 A target's **added tokens** are the new tokens that an alignment of its old and new tokens inserts; they are the
-deletion mask of the reversed alignment, `removed(new, old)`. Code the old version already had never counts (R3).
+deletion mask of the reversed alignment. Code the old version already had never counts (R3).
+
+As for an extraction source ([declarations/05](../declarations/05-extraction-detection.md) R17), a new token that the
+alignment keeps stays kept only in a run of at least `MIN_TILE` tokens aligned to consecutive old tokens; a kept token in
+a shorter run counts as added (R21). Without this, the call that the inlined code replaces lends the target scattered
+tokens such as `(`, `name` and `)` that the alignment matches inside the inlined code, and the added share falls under
+`MIN_REMOVED`: in the Python `inlining-2` case, `return self.heading(name, count) + "!"` becoming
+`text = "Invoice: " + str(name) + str(count) + " lines"` keeps six tokens of the inlined line. Code that the target
+already had in a run of five or more tokens still counts as kept, so R3 holds.
 
 The declaration analysis runs extraction first and inlining second, then builds the tree. Both passes write relationships
 (`EXTRACT` and `INLINE`) to the result, as [relationships/02](02-relationship-model.md) describes. The relationship is the
@@ -126,3 +134,4 @@ Java, Kotlin and Scala 2/3 providers already supply, so detection works the same
 | R18 | `RelationshipBenchmarkTest` `inlining` cases in all four corpora, `no-new-wrong-pairs` against the baseline |
 | R19 | `InliningDetectionTest` `a removed helper is linked to the changed caller it was inlined into`: the relationship is `HIGH` |
 | R20 | `InliningDetectionTest` `an inlining is its own relationship when the target moved`; `an inlining into a renamed declaration is a separate link` |
+| R21 | `PythonRecallTest` `R21 a helper inlined past the call's scattered tokens links both callers`; the Python `inlining-1` and `inlining-2` benchmark cases |

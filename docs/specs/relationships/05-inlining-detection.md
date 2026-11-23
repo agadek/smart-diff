@@ -1,6 +1,6 @@
 # Inlining detection
 
-Status: implemented, 2026-11-08
+Status: implemented, 2026-11-08; R21 implemented, 2026-11-23
 
 **Description:** Links a [removed](../../GLOSSARY.md#removed) method or function to the declaration its code was inlined into, the reverse of [extraction detection](../declarations/05-extraction-detection.md).
 
@@ -28,6 +28,7 @@ Status: implemented, 2026-11-08
 - **R18** The benchmark's inlining cases pass its gate.
 - **R19** An inlining has [high confidence](../../GLOSSARY.md#confidence).
 - **R20** An inlining is its own relationship when its target is also renamed or moved; the target keeps those labels and its notes.
+- **R21** Target code that matches the target's old version only in short scattered pieces counts as added.
 
 ## Out of scope
 
