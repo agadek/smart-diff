@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- A validation of the changed-token highlights against Difftastic and GumTree on the release corpus (`./gradlew fineGrainedBaselines`, run by hand with both tools installed): no edit was found outside the highlighted tokens in Java, Kotlin, Scala 2, Scala 3 or Python.
+
 ## [0.4.0] - 2026-11-19
 
 ### Added

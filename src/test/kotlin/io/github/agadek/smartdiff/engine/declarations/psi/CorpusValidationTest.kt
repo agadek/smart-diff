@@ -1,9 +1,5 @@
 package io.github.agadek.smartdiff.engine.declarations.psi
 
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ReadAction
-import com.intellij.openapi.project.ProjectManager
-import com.intellij.openapi.util.ThrowableComputable
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.ChangeNode
@@ -21,8 +17,6 @@ import io.github.agadek.smartdiff.engine.declarations.analysis.ExtractionDetecto
 import io.github.agadek.smartdiff.engine.declarations.analysis.Match
 import io.github.agadek.smartdiff.merge.MergeValidation
 import java.io.File
-import java.util.concurrent.Callable
-import java.util.concurrent.TimeUnit
 
 /**
  * Runs the declaration engine over real commits and writes what it reports, to find wrong and noisy results before a
@@ -67,21 +61,20 @@ class CorpusValidationTest : BasePlatformTestCase() {
         }
         val engine = DeclarationEngine(null)
         val rows = mutableListOf<Row>()
-        for (line in File(list).readLines().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("#") }) {
-            val words = line.split(Regex("\\s+"))
+        for (words in CorpusSupport.listLines(File(list))) {
             val repository = File(words.first())
-            val commits = git(repository, listOf("rev-list") + words.drop(1) + listOf("--", "*.java", "*.kt", "*.scala", "*.json", "*.yaml", "*.yml", "*.groovy", "*.gradle", "*.gvy", "*.sh", "*.py", "*.rs", "*.properties", "*.toml", "*.md", "*.markdown", "*.xml", "*.html", "*.htm", "*.xhtml")).lines().filter { it.isNotBlank() }
+            val commits = CorpusSupport.git(repository, listOf("rev-list") + words.drop(1) + listOf("--", "*.java", "*.kt", "*.scala", "*.json", "*.yaml", "*.yml", "*.groovy", "*.gradle", "*.gvy", "*.sh", "*.py", "*.rs", "*.properties", "*.toml", "*.md", "*.markdown", "*.xml", "*.html", "*.htm", "*.xhtml")).lines().filter { it.isNotBlank() }
             for ((index, commit) in commits.withIndex()) {
                 println("VALIDATION ${repository.name} commit ${index + 1} of ${commits.size}: ${commit.take(10)}")
-                val parent = git(repository, listOf("rev-parse", "--verify", "--quiet", "$commit^"), allowFailure = true).trim()
+                val parent = CorpusSupport.git(repository, listOf("rev-parse", "--verify", "--quiet", "$commit^"), allowFailure = true).trim()
                 if (parent.isEmpty()) continue
                 // --no-renames: a rename is a delete plus an add, so it is skipped here instead of vanishing from the run.
-                val paths = git(repository, listOf("diff", "--no-renames", "--name-only", "--diff-filter=M", parent, commit, "--", "*.java", "*.kt", "*.scala", "*.json", "*.yaml", "*.yml", "*.groovy", "*.gradle", "*.gvy", "*.sh", "*.py", "*.rs", "*.properties", "*.toml", "*.md", "*.markdown", "*.xml", "*.html", "*.htm", "*.xhtml"))
+                val paths = CorpusSupport.git(repository, listOf("diff", "--no-renames", "--name-only", "--diff-filter=M", parent, commit, "--", "*.java", "*.kt", "*.scala", "*.json", "*.yaml", "*.yml", "*.groovy", "*.gradle", "*.gvy", "*.sh", "*.py", "*.rs", "*.properties", "*.toml", "*.md", "*.markdown", "*.xml", "*.html", "*.htm", "*.xhtml"))
                     .lines().filter { it.isNotBlank() }
                 for (path in paths) {
-                    val old = git(repository, listOf("show", "$parent:$path")).replace("\r\n", "\n")
-                    val new = git(repository, listOf("show", "$commit:$path")).replace("\r\n", "\n")
-                    val hunks = git(repository, listOf("diff", "-U0", parent, commit, "--", path)).lines().filter { it.startsWith("@@") }
+                    val old = CorpusSupport.git(repository, listOf("show", "$parent:$path")).replace("\r\n", "\n")
+                    val new = CorpusSupport.git(repository, listOf("show", "$commit:$path")).replace("\r\n", "\n")
+                    val hunks = CorpusSupport.git(repository, listOf("diff", "-U0", parent, commit, "--", path)).lines().filter { it.startsWith("@@") }
                     val languageId = when {
                         path.endsWith(".kt") -> "kotlin"
                         path.endsWith(".py") -> "Python"
@@ -101,11 +94,11 @@ class CorpusValidationTest : BasePlatformTestCase() {
                     }
                     val request = ComparisonRequest(old, new, languageId, File(path).name)
                     val start = System.nanoTime()
-                    val result = onPooledThread { compareSafely(engine, request, Cancellation.NONE) }
+                    val result = CorpusSupport.onPooledThread { compareSafely(engine, request, Cancellation.NONE) }
                     val millis = (System.nanoTime() - start) / 1_000_000
-                    val dialect = dialect(languageId, old, new)
-                    val nearMisses = onPooledThread { nearMisses(engine, request, result) }
-                    val inliningNearMisses = onPooledThread { inliningNearMisses(engine, request, result) }
+                    val dialect = CorpusSupport.dialect(languageId, old, new)
+                    val nearMisses = CorpusSupport.onPooledThread { nearMisses(engine, request, result) }
+                    val inliningNearMisses = CorpusSupport.onPooledThread { inliningNearMisses(engine, request, result) }
                     val flags = flags(old, new, hunks.size, result, millis) +
                         listOfNotNull(
                             "extraction-near-miss".takeIf { nearMisses.isNotEmpty() },
@@ -139,13 +132,6 @@ class CorpusValidationTest : BasePlatformTestCase() {
         val flagged: Boolean get() = flags.isNotEmpty()
     }
 
-    /** The dialect a language with several, such as Scala, parses both sides in; null for the others. */
-    private fun dialect(languageId: String, old: String, new: String): String? {
-        val provider = DeclarationProvider.EP_NAME.extensionList.firstOrNull { it.supports(languageId) } ?: return null
-        return ReadAction.compute(ThrowableComputable<String?, RuntimeException> {
-            provider.dialect(ProjectManager.getInstance().defaultProject, listOf(old, new), null)?.id
-        })
-    }
 
     private fun flags(old: String, new: String, hunks: Int, result: ComparisonResult, millis: Long): List<String> = buildList {
         if (result.status != Status.ANALYZED) add("status")
@@ -265,14 +251,5 @@ class CorpusValidationTest : BasePlatformTestCase() {
         println("VALIDATION ${rows.size} files, ${rows.count { it.flagged }} flagged; report in ${directory.absolutePath}")
     }
 
-    private fun git(repository: File, arguments: List<String>, allowFailure: Boolean = false): String {
-        val process = ProcessBuilder(listOf("git", "-C", repository.absolutePath) + arguments).redirectError(ProcessBuilder.Redirect.DISCARD).start()
-        val output = process.inputStream.bufferedReader().readText()
-        val exit = process.waitFor()
-        if (exit != 0 && !allowFailure) error("git ${arguments.joinToString(" ")} failed in $repository with exit code $exit")
-        return output
-    }
 
-    private fun <T> onPooledThread(task: () -> T): T =
-        ApplicationManager.getApplication().executeOnPooledThread(Callable { task() }).get(10, TimeUnit.MINUTES)
 }
