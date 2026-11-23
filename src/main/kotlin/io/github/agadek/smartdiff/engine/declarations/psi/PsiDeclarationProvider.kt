@@ -3,9 +3,11 @@ package io.github.agadek.smartdiff.engine.declarations.psi
 import com.intellij.lang.LanguageParserDefinitions
 import com.intellij.lang.ParserDefinition
 import com.intellij.lexer.Lexer
+import com.intellij.psi.PsiComment
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiErrorElement
 import com.intellij.psi.PsiFile
+import com.intellij.psi.PsiWhiteSpace
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.TextRange
@@ -13,6 +15,7 @@ import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
 import io.github.agadek.smartdiff.engine.declarations.model.Declaration
 import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
 import io.github.agadek.smartdiff.engine.declarations.model.FileRegion
+import io.github.agadek.smartdiff.engine.declarations.model.Statement
 import io.github.agadek.smartdiff.engine.declarations.model.Token
 import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
 
@@ -81,6 +84,21 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
      */
     open fun significantWhitespace(file: PsiFile): List<TextRange> = emptyList()
 
+    /**
+     * Whether this provider lists statements for code move detection (relationships/08 R22); when false, which is the
+     * default, no declaration has statements and the PSI is not walked for them.
+     */
+    protected open val findsStatements: Boolean get() = false
+
+    /** Whether [element] is a code block whose direct children are statements (relationships/08 details, Statements). */
+    protected open fun isStatementBlock(element: PsiElement): Boolean = false
+
+    /**
+     * Whether [element], a direct child of a statement block that is neither whitespace, a comment nor a single token,
+     * is a statement. A child that is not, such as a Kotlin local function, still separates the statements around it.
+     */
+    protected open fun isStatement(element: PsiElement): Boolean = true
+
     /** Whether separators between top-level declarations are layout owned by the preceding declaration. */
     protected open fun trailingSeparatorsAreLayout(file: PsiFile): Boolean = false
 
@@ -96,7 +114,10 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
             val info = describe(element) ?: return null
             val range = info.range ?: element.textRange.let { TextRange(it.startOffset, it.endOffset) }
             if (range.length == 0) return null
-            return Node(info, range, info.members.mapNotNull(::node))
+            val children = info.members.mapNotNull(::node)
+            // A declaration written together with others shares their element, so it lists no statements of its own.
+            val statements = if (findsStatements && info.group == null) statements(element, range, children, cancellation) else emptyList()
+            return Node(info, range, children, statements)
         }
         val topLevel = topLevel(file).mapNotNull(::node)
 
@@ -136,6 +157,7 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
                 body = node.info.body?.let(::body),
                 nameRange = node.info.nameRange,
                 layout = node.trailing,
+                statements = node.statements,
             )
         }
         val whole = TextRange(0, text.length)
@@ -166,10 +188,58 @@ abstract class PsiDeclarationProvider(private val whitespacePolicy: WhitespacePo
         }
     }
 
+    /**
+     * The statements of [element]'s own code inside [range], in source order (relationships/08 details, Statements): the
+     * direct children of every statement block, at any depth, outside the [children]'s ranges. A statement block's other
+     * children, such as a local function or a child declaration, break the adjacency of the statements around them.
+     */
+    private fun statements(element: PsiElement, range: TextRange, children: List<Node>, cancellation: Cancellation): List<Statement> {
+        val excluded = children.map { it.range }
+        val statements = mutableListOf<Statement>()
+        var blocks = 0
+        fun rangeOf(e: PsiElement) = e.textRange.let { TextRange(it.startOffset, it.endOffset) }
+        fun inChild(r: TextRange) = excluded.any { r.start >= it.start && r.end <= it.end }
+        fun trivial(e: PsiElement) = e is PsiWhiteSpace || e is PsiComment || e.firstChild == null
+        fun walk(e: PsiElement, parent: Int?) {
+            cancellation.checkCanceled()
+            if (isStatementBlock(e)) {
+                val block = blocks++
+                var index = 0
+                var child = e.firstChild
+                while (child != null) {
+                    val r = rangeOf(child)
+                    when {
+                        trivial(child) -> Unit
+                        inChild(r) -> index++
+                        r.length == 0 || r.start < range.start || r.end > range.end -> walk(child, parent)
+                        isStatement(child) -> {
+                            statements += Statement(r, child.javaClass.simpleName, parent, block, index++)
+                            walk(child, statements.lastIndex)
+                        }
+                        else -> {
+                            index++
+                            walk(child, parent)
+                        }
+                    }
+                    child = child.nextSibling
+                }
+                return
+            }
+            var child = e.firstChild
+            while (child != null) {
+                if (!inChild(rangeOf(child))) walk(child, parent)
+                child = child.nextSibling
+            }
+        }
+        walk(element, null)
+        return statements
+    }
+
     private class Node(
         val info: DeclarationInfo,
         override val range: TextRange,
         override val children: List<Node>,
+        val statements: List<Statement> = emptyList(),
     ) : PsiDeclarationNode {
         override var parseError = false
         override var leading: TextRange? = null

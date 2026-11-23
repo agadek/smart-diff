@@ -171,6 +171,7 @@ class OutlineController internal constructor(
         val useStructureViewFallback: Boolean,
         val compareLinesWithoutEngine: Boolean,
         val treeSitterLanguages: Boolean,
+        val detectCodeMoves: Boolean,
     )
 
     private var displaySnapshot: DisplaySnapshot? = null
@@ -275,6 +276,7 @@ class OutlineController internal constructor(
         settings.useStructureViewFallback,
         settings.compareLinesWithoutEngine,
         settings.treeSitterLanguages,
+        settings.detectCodeMoves,
     )
 
     /**
@@ -424,6 +426,7 @@ class OutlineController internal constructor(
             limits = settings.limits,
             confidence = settings.confidence,
             useStructureViewFallback = settings.useStructureViewFallback,
+            detectCodeMoves = settings.detectCodeMoves,
         )
         val job = Job(engine, oldDocument.modificationStamp, newDocument.modificationStamp, request.limits.timeoutMillis)
         running = job

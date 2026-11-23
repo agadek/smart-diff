@@ -1,0 +1,19 @@
+case: code-move-2
+language: Python
+corpus: python
+category: code-move
+split: tuning
+expected:
+  relationships:
+    - kinds: [CODE_MOVE]
+      old: { path: "class Report", kind: FUNCTION, name: "process", signature: "self, orders" }
+      new: { path: "class Report", kind: FUNCTION, name: "finish", signature: "self" }
+  changes:
+    - subject: { path: "class Report", kind: FUNCTION, name: "process", signature: "self, orders" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Report", kind: FUNCTION, name: "finish", signature: "self" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "A logging loop moves from process into finish."

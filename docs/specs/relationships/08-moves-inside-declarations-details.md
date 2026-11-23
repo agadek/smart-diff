@@ -1,6 +1,6 @@
 # Moves inside declarations: details
 
-Status: proposed, 2026-11-17
+Status: implemented, 2026-11-23
 
 **Feature:** [Moves inside declarations](08-moves-inside-declarations.md)
 
@@ -56,7 +56,7 @@ The steps are deterministic: every sort has a total order on source offsets, so 
 
 ### Benchmark
 
-[RELATIONSHIP-BENCHMARK.md](../../RELATIONSHIP-BENCHMARK.md) gains the label `code-move` with the source declaration, the target declaration and the moved line ranges, and a case set per language of R22: a statement block reordered in one method, a block moved between two methods, a moved block with a renamed variable inside, a moved `if` with a changed condition, and the near misses that must give none: a duplicated block left in both places, two equal logging statements swapped, a block moved into a new method (an extraction), a short statement moved alone. The benchmark scores code moves as it scores other relationships: precision, recall and wrong pairs, and the gate is no wrong code move (R23).
+[RELATIONSHIP-BENCHMARK.md](../../RELATIONSHIP-BENCHMARK.md) gains the category `code-move`, whose labels name the source declaration and the target declaration, and a case set per language of R22: a statement block reordered in one method, a block moved between two methods, a moved block with a renamed variable inside, a moved `if` with a changed condition, and the near misses that must give none: a duplicated block left in both places, two equal logging statements swapped, a block moved into a new method (an extraction), a short statement moved alone. The benchmark scores code moves as it scores other relationships: precision, recall and wrong pairs, and the gate is no wrong code move (R23). The moved line ranges are checked by the golden fixtures, which list each move's moved text on both sides.
 
 ### Edge cases
 
@@ -85,6 +85,20 @@ Each test names its requirement, for example `// relationships/08-moves-inside-d
 - `MovedCodeMarkersTest`: a code move gets markers on both sides and clicking selects its row (R18).
 - `OutlineControllerTest`: the setting off gives the outline without code moves, and applying it compares again (R1, R24).
 - The relationship benchmark's code move cases (R23).
+
+## Implementation notes
+
+Recorded when the feature was implemented, 2026-11-23:
+
+- Statements come from the provider while it builds the declaration tree: `PsiDeclarationProvider` walks the PSI for the block kinds a provider names (`isStatementBlock`, `isStatement`) and stores them in `Declaration.statements`, so no PSI is held after the read action. A statement's kind is its PSI class name.
+- `CodeMove.sourceRange` names the source declaration's old range beside its subject, as `Origin.declarationRange` does for extractions, so the outline can tell a move inside one declaration from a move between two with the same name.
+- The global assignment runs per group of statements linked by a score above 0.7: a lower score can never be a rival of a pair at 0.8 or more, so the groups are independent and the result is the same as one assignment over all statements.
+- For Python, the move's changed runs are computed with the Scala 3 indentation shift, so a block moved one level deeper highlights only its real edits; its content is classified with the first-line indentation as step 8 says.
+- The refactorings view's code move row frames the moved statements as its primary ranges, with moved-code markers on them, and both declarations as further frames. Its declarations are not counted as covered, so they stay in `Other changes`.
+- The benchmark labels a code move by its source and target declarations, as it labels every other relationship; the moved line ranges are checked by the golden fixtures under `src/test/testData/declarations/code-moves/`. The category is `code-move`, with the eight cases per language that the Benchmark section lists: `code-move-1` to `code-move-3` are moves, `code-move-4`, `-6` and `-8` must give none, `code-move-5` is a move with a changed condition and `code-move-7` is an extraction.
+- The Changes tree and the merge outline send `detectCodeMoves = false`, since neither lists code moves.
+- `DeclarationEngine.VERSION` is 26.
+- The tests are `CodeMovesTest` (the detector's rules and the outline rows, for Java), `CodeMovesFixturesTest` (the golden fixtures of every language), `RefactoringsModelTest` (R16, R17) and `OutlineIntegrationTest` (R1, R18, R24: the marker click and applying the setting). A test makes the detector throw through `CodeMoveDetector.failureForTests` to check the Failure section.
 
 ## Open questions
 

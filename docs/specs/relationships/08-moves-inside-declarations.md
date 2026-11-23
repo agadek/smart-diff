@@ -1,6 +1,6 @@
 # Moves inside declarations
 
-Status: proposed, 2026-11-17
+Status: implemented, 2026-11-23
 
 **Description:** The [declaration engine](../../GLOSSARY.md#declaration-engine) finds [code moves](../../GLOSSARY.md#code-move): statements removed from one place in a [matched](../../GLOSSARY.md#match) [declaration](../../GLOSSARY.md#declaration) and added at another place in the same declaration or another matched declaration of the file. The [structural outline](../../GLOSSARY.md#structural-outline) lists each code move as a [relationship](../../GLOSSARY.md#relationship), frames both positions, and shows the edits made inside the moved code.
 

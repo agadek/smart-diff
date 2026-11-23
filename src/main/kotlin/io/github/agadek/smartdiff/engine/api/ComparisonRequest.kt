@@ -22,6 +22,11 @@ data class ComparisonRequest(
     val confidence: ConfidencePolicy = ConfidencePolicy.DEFAULT,
     /** Whether the declaration engine may use the structure-view fallback for a language with no dedicated provider. */
     val useStructureViewFallback: Boolean = true,
+    /**
+     * Whether the declaration engine looks for statements moved inside and between matched declarations
+     * (relationships/08 R1). Other engines ignore it.
+     */
+    val detectCodeMoves: Boolean = true,
 )
 
 /** Analysis limits (technical specification §9.3). */

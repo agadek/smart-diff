@@ -24,6 +24,8 @@ import org.jetbrains.plugins.scala.lang.psi.api.ScalaFile
 import org.jetbrains.plugins.scala.lang.psi.api.base.ScAnnotation
 import org.jetbrains.plugins.scala.lang.psi.api.base.ScFieldId
 import org.jetbrains.plugins.scala.lang.psi.api.base.patterns.ScPattern
+import org.jetbrains.plugins.scala.lang.psi.api.expr.ScBlock
+import org.jetbrains.plugins.scala.lang.psi.api.expr.ScBlockStatement
 import org.jetbrains.plugins.scala.lang.psi.api.statements.ScEnumCase
 import org.jetbrains.plugins.scala.lang.psi.api.statements.ScEnumCases
 import org.jetbrains.plugins.scala.lang.psi.api.statements.ScExtension
@@ -49,6 +51,7 @@ import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.ScGivenDefiniti
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.ScObject
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.ScTemplateDefinition
 import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.ScTrait
+import org.jetbrains.plugins.scala.lang.psi.api.toplevel.typedef.ScTypeDefinition
 import org.jetbrains.plugins.scala.lang.scaladoc.psi.api.ScDocComment
 
 /**
@@ -97,6 +100,15 @@ class ScalaDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.SCALA2_
 
     override fun whitespacePolicy(file: PsiFile): WhitespacePolicy =
         if (file.language == Scala3Language.INSTANCE) WhitespacePolicy.SCALA3_INDENTATION else WhitespacePolicy.SCALA2_LINE_BREAKS
+
+    // relationships/08 R22: the statements of a block, braced or a Scala 3 indented one, local values included; a local
+    // function or type is not one.
+    override val findsStatements: Boolean get() = true
+
+    override fun isStatementBlock(element: PsiElement): Boolean = element is ScBlock
+
+    override fun isStatement(element: PsiElement): Boolean =
+        element is ScBlockStatement && element !is ScFunction && element !is ScTypeDefinition
 
     // Definitions in package clauses, braced or not, are top-level declarations, like Scala 3 top-level definitions.
     override fun topLevel(file: PsiFile): List<PsiElement> = members(file)

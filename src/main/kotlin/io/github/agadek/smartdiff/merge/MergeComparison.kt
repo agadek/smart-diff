@@ -75,6 +75,8 @@ object MergeComparison {
             relatedTexts = listOf(other),
             confidence = request.confidence,
             useStructureViewFallback = request.useStructureViewFallback,
+            // relationships/08 out of scope: the merge outline does not list code moves.
+            detectCodeMoves = false,
         )
 
     private fun run(engine: ComparisonEngine, request: ComparisonRequest, cancellation: Cancellation, canceled: AtomicBoolean): ComparisonResult =

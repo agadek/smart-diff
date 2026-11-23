@@ -34,7 +34,7 @@ class RelationshipModelTest {
 
     @Test
     fun `R3 kinds are one or more, in the order of the enum`() {
-        assertEquals(listOf(RelationshipKind.RENAME, RelationshipKind.MOVE, RelationshipKind.KIND_CHANGE, RelationshipKind.EXTRACT, RelationshipKind.INLINE), RelationshipKind.entries)
+        assertEquals(listOf(RelationshipKind.RENAME, RelationshipKind.MOVE, RelationshipKind.KIND_CHANGE, RelationshipKind.EXTRACT, RelationshipKind.INLINE, RelationshipKind.CODE_MOVE), RelationshipKind.entries)
 
         val all = EnumSet.of(RelationshipKind.MOVE, RelationshipKind.RENAME, RelationshipKind.EXTRACT, RelationshipKind.KIND_CHANGE, RelationshipKind.INLINE)
         assertEquals(

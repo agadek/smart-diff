@@ -1,0 +1,13 @@
+status: ANALYZED
+summary: 2 changed
+container tree:
+  class Report
+    function process(self, orders)  changed, code moved to finish(self)
+    function finish(self)  changed
+      moved code lines 6–7 → 10–11  moved, from process(self, orders)
+refactorings:
+  moved code process → finish  high
+code moves:
+  moved code process → finish  high
+    - "for order in orders:\n            self.logger.info("processed order " + str(order.id) + " for " + order.customer)"
+    + "for order in orders:\n            self.logger.info("processed order " + str(order.id) + " for " + order.customer)"

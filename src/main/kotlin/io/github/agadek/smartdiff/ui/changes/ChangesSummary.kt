@@ -527,6 +527,8 @@ class ChangesSummaryService(private val project: Project) {
         val comparison = ComparisonRequest(
             oldText, newText, request.languageId, request.fileName, limits,
             confidence = settings.confidence, useStructureViewFallback = settings.useStructureViewFallback,
+            // relationships/08 out of scope: the Changes tree does not list code moves.
+            detectCodeMoves = false,
         )
         val deadline = Deadline(limits.timeoutMillis)
         val result = try {

@@ -400,6 +400,31 @@ class RefactoringsModelTest {
         }
     }
 
+    @Test
+    fun `relationships 08 R16 R17 a code move row names its declarations and the Moved code entry hides it`() {
+        // relationships/08-moves-inside-declarations R16, R17
+        val inOne = relationship(
+            EnumSet.of(RelationshipKind.CODE_MOVE), method("process"), 0, 24, method("process"), 0, 24,
+            evidence = listOf(Evidence.Content(9, 10, TextRange(18, 24), TextRange(6, 12)), Evidence.Score(1.0)),
+        )
+        val between = relationship(
+            EnumSet.of(RelationshipKind.CODE_MOVE), method("process"), 0, 24, method("finish"), 24, 36,
+            confidence = Confidence.MEDIUM,
+            evidence = listOf(Evidence.Content(8, 10, TextRange(12, 18), TextRange(30, 36)), Evidence.Score(0.85)),
+        )
+        val result = ComparisonResult(EngineId("e"), "1", Status.ANALYZED, relationships = listOf(inOne, between))
+
+        val rows = refactorings(result).children
+        assertEquals(listOf("moved code in process  high", "candidate moved code process → finish  medium"), rows.map { it.label })
+        assertEquals("the row frames the moved code", TextRange(18, 24), rows.first().oldRange)
+        assertEquals(TextRange(6, 12), rows.first().newRange)
+        assertTrue("a code move row gets moved-code markers", rows.all { it.moved })
+
+        assertEquals("Moved code", relationshipKindText(RelationshipKind.CODE_MOVE))
+        val hidden = RefactoringsModel.build(result, LINE_TEXT, LINE_TEXT, formattingInline = false, hiddenKinds = setOf(RelationshipKind.CODE_MOVE))
+        assertEquals(listOf(RefactoringsModel.NO_REFACTORINGS), refactorings(hidden).children.map { it.label })
+    }
+
     private fun refactorings(result: ComparisonResult) =
         RefactoringsModel.build(result, LINE_TEXT, LINE_TEXT, formattingInline = false).single { it.title == RefactoringsModel.REFACTORINGS }
 

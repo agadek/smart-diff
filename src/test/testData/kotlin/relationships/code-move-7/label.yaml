@@ -1,0 +1,19 @@
+case: code-move-7
+language: kotlin
+corpus: kotlin
+category: code-move
+split: held-out
+expected:
+  relationships:
+    - kinds: [EXTRACT]
+      old: { path: "class OrderService", kind: FUNCTION, name: "process", signature: "(Order)" }
+      new: { path: "class OrderService", kind: FUNCTION, name: "validate", signature: "(Order)" }
+  changes:
+    - subject: { path: "class OrderService", kind: FUNCTION, name: "process", signature: "(Order)" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class OrderService", kind: FUNCTION, name: "validate", signature: "(Order)" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "The validation block moves into a new method; that is an extraction, not a code move."

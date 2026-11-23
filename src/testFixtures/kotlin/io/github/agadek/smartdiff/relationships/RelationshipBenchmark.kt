@@ -95,6 +95,8 @@ object RelationshipBenchmark {
         "large-file",
         "ambiguous-rename-group",
         "usage-grouping",
+        // relationships/08 R23: statements moved inside or between declarations, with near misses that must give none.
+        "code-move",
     )
 
     /** R9, R44: the usage-grouping category needs at least four cases per language. */
@@ -109,7 +111,7 @@ object RelationshipBenchmark {
      */
     val NOT_APPLICABLE: Map<String, Map<String, String>> = emptyMap()
 
-    enum class Kind { RENAME, MOVE, KIND_CHANGE, EXTRACT, INLINE }
+    enum class Kind { RENAME, MOVE, KIND_CHANGE, EXTRACT, INLINE, CODE_MOVE }
     enum class Confidence { HIGH, MEDIUM, LOW }
     enum class Split { TUNING, HELD_OUT }
 

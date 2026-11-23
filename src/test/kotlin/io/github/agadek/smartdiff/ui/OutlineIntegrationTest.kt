@@ -2013,6 +2013,33 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         )
     }
 
+    fun `test relationships 08 R18 clicking a code move marker selects its row`() {
+        // relationships/08-moves-inside-declarations R18, outline/13 R7
+        val shown = open(history(CODE_MOVE_OLD, CODE_MOVE_NEW, "OrderService.java"))
+        val outline = shown.awaitResult()
+        assertEquals("one marker on each side", 2, outline.movedMarkers.shown.size)
+
+        clickMovedMarker(outline)
+
+        assertEquals(ItemKind.CODE_MOVE, outline.panel.selectedItem()?.kind)
+    }
+
+    fun `test relationships 08 R1 R24 applying the code move setting compares open outlines again`() {
+        // relationships/08-moves-inside-declarations R1, R24
+        val outline = open(history(CODE_MOVE_OLD, CODE_MOVE_NEW, "OrderService.java")).awaitResult()
+        assertTrue("a code move row is listed: ${rows(outline)}", rows(outline).any { "moved code lines" in it })
+
+        settings.detectCodeMoves = false
+        publishSettingsChanged()
+        awaitResult(outline) { shown -> shown.result.relationships.none { RelationshipKind.CODE_MOVE in it.kinds } }
+        assertTrue("no code move row with the setting off: ${rows(outline)}", rows(outline).none { "moved code" in it })
+
+        settings.detectCodeMoves = true
+        publishSettingsChanged()
+        awaitResult(outline) { shown -> shown.result.relationships.any { RelationshipKind.CODE_MOVE in it.kinds } }
+        assertTrue(rows(outline).any { "moved code lines" in it })
+    }
+
     fun `test outline 13 R8 clicking a marker while minimised shows the panel`() {
         // outline/13 R8
         maskEngines(MovedEngine())
@@ -2470,6 +2497,16 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
             repeat(60) { append("    int after$it() { return $it; }\n") }
             append("}\n")
         }
+        const val CODE_MOVE_REST = "        double total = 0;\n" +
+            "        for (Item item : order.items()) {\n" +
+            "            total += item.price() * item.count();\n" +
+            "        }\n" +
+            "        order.setTotal(total);\n"
+        const val CODE_MOVE_BLOCK = "        if (order.customer() == null || order.items().isEmpty()) {\n" +
+            "            throw new IllegalArgumentException(\"invalid order \" + order.id());\n" +
+            "        }\n"
+        const val CODE_MOVE_OLD = "class OrderService {\n    void process(Order order) {\n" + CODE_MOVE_REST + CODE_MOVE_BLOCK + "    }\n}\n"
+        const val CODE_MOVE_NEW = "class OrderService {\n    void process(Order order) {\n" + CODE_MOVE_BLOCK + CODE_MOVE_REST + "    }\n}\n"
         const val MOVED_METHOD = "    int moved() {\n        int value = 1;\n        return value;\n    }\n"
         const val MOVED_MARKER_NEW = "// changed\n" + MOVED_METHOD
 

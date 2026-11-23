@@ -1,0 +1,16 @@
+case: code-move-5
+language: Python
+corpus: python
+category: code-move
+split: tuning
+expected:
+  relationships:
+    - kinds: [CODE_MOVE]
+      old: { path: "class OrderService", kind: FUNCTION, name: "process", signature: "self, order" }
+      new: { path: "class OrderService", kind: FUNCTION, name: "process", signature: "self, order" }
+  changes:
+    - subject: { path: "class OrderService", kind: FUNCTION, name: "process", signature: "self, order" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "A validation if moves to the start of process and its condition changes."

@@ -3,6 +3,7 @@ package io.github.agadek.smartdiff.engine.declarations.analysis
 import io.github.agadek.smartdiff.engine.api.Cancellation
 import io.github.agadek.smartdiff.engine.api.Candidate
 import io.github.agadek.smartdiff.engine.api.ChangeNode
+import io.github.agadek.smartdiff.engine.api.CodeMove
 import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.Confidence
 import io.github.agadek.smartdiff.engine.api.ConfidencePolicy
@@ -51,6 +52,8 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
         confidence: ConfidencePolicy = ConfidencePolicy.DEFAULT,
         languageId: String? = null,
         equivalenceRules: List<EquivalenceRuleImpl> = emptyList(),
+        /** Whether code moved inside and between matched declarations is found (relationships/08 R1). */
+        detectCodeMoves: Boolean = true,
     ): ComparisonResult {
         val largest = maxOf(old.all.size, new.all.size)
         if (largest > maxDeclarations) {
@@ -62,6 +65,7 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
         val matching = DeclarationMatcher.match(old, new, confidence, languageId, cancellation)
         val tree = Tree(old, new, matching, cancellation, equivalenceRules)
         tree.detectLinks()
+        if (detectCodeMoves) tree.detectCodeMoves()
         val changes = tree.build()
         val fileRegion = fileRegion(old, new, equivalenceRules, cancellation)
         val partial = fileRegion?.content == Content.UNANALYZED || changes.any { it.hasUnanalyzed() }
@@ -186,6 +190,41 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
         var relationships: List<Relationship> = emptyList()
             private set
 
+        /** The changed runs of each match, compared once: classification's runs and code move detection share them. */
+        private val runs = IdentityHashMap<Match, List<RangePair>?>()
+
+        /** The code moves into each match's new declaration and out of each match's old one (relationships/08 R12, R13). */
+        private val movesInto = IdentityHashMap<Match, MutableList<CodeMoveDetector.Found>>()
+        private val movesOutOf = IdentityHashMap<Match, MutableList<CodeMoveDetector.Found>>()
+
+        /**
+         * Finds the code moves between the changed matches, after [detectLinks], so the code an extraction or an inlining
+         * links is left out (relationships/08 R10). A failure other than cancellation leaves the result without code
+         * moves and otherwise unchanged (relationships/08 details, Failure).
+         */
+        fun detectCodeMoves() {
+            val found = try {
+                val inputs = matching.matches.filter { content(it) == Content.CHANGED && !isLow(it) }.mapNotNull { match ->
+                    cancellation.checkCanceled()
+                    changedRuns(match, Content.CHANGED)?.let { CodeMoveDetector.Input(match, it) }
+                }
+                val excludedOld = usableExtractions.map { contentOf(it).oldRange }
+                val excludedNew = usableInlinings.map { contentOf(it).newRange }
+                CodeMoveDetector.detect(inputs, excludedOld, excludedNew, new.whitespacePolicy, cancellation)
+            } catch (e: java.util.concurrent.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (e.javaClass.name == PROCESS_CANCELED) throw e
+                emptyList()
+            }
+            if (found.isEmpty()) return
+            for (move in found) {
+                movesInto.getOrPut(move.target, ::mutableListOf) += move
+                movesOutOf.getOrPut(move.source, ::mutableListOf) += move
+            }
+            relationships = (relationships + found.map { it.relationship }).sortedWith(ORDER)
+        }
+
         /**
          * Links added declarations to the code they were extracted from, and removed declarations to the changed
          * declarations their code was inlined into, after matching and classification (relationships/05 R1, R12).
@@ -239,7 +278,9 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
         /** The high or medium matches; a low one stays in the list and sets no field (R13). */
         private val usableMatches: List<Relationship> by lazy {
             relationships.filter {
-                it.kinds.none { kind -> kind == RelationshipKind.EXTRACT || kind == RelationshipKind.INLINE } &&
+                it.kinds.none { kind ->
+                    kind == RelationshipKind.EXTRACT || kind == RelationshipKind.INLINE || kind == RelationshipKind.CODE_MOVE
+                } &&
                     it.confidence != Confidence.LOW
             }
         }
@@ -346,12 +387,29 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
                 details = node.details + extracted.map { RangePair(contentOf(it).oldRange, null) }.distinct(),
             )
             // The inlined code is highlighted on the new side, where it was added to this declaration.
-            return if (inlined.isEmpty()) withExtractions else withExtractions.copy(
+            val withInlinings = if (inlined.isEmpty()) withExtractions else withExtractions.copy(
                 inlinedFrom = inlined.map { link ->
                     val source = link.old.first()
                     Inlined(source.subject, source.range, contentOf(link).oldRange, contentOf(link).newRange)
                 },
                 details = withExtractions.details + inlined.map { RangePair(null, contentOf(it).newRange) }.distinct(),
+            )
+            // relationships/08 R12, R13, R19: code moves add their own fields and change no other.
+            val into = movesInto[match].orEmpty().sortedBy { it.newRange.start }
+            val outOf = movesOutOf[match].orEmpty().filter { it.target !== match }.sortedBy { it.newRange.start }
+            if (into.isEmpty() && outOf.isEmpty()) return withInlinings
+            return withInlinings.copy(
+                codeMoves = into.map { move ->
+                    CodeMove(
+                        source = declarationSubject(move.source.new),
+                        sourceRange = move.source.old.range,
+                        oldRange = move.oldRange,
+                        newRange = move.newRange,
+                        content = move.content,
+                        changedRuns = move.changedRuns,
+                    )
+                },
+                codeMovedTo = outOf.map { declarationSubject(it.target.new) }.distinct(),
             )
         }
 
@@ -494,6 +552,14 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
          * of the declaration on: its leading whitespace belongs to the line before (§6.1). Null when not compared.
          */
         private fun changedRuns(match: Match, content: Content): List<RangePair>? {
+            if (content == Content.CHANGED) {
+                if (runs.containsKey(match)) return runs[match]
+                return computeRuns(match, content).also { runs[match] = it }
+            }
+            return computeRuns(match, content)
+        }
+
+        private fun computeRuns(match: Match, content: Content): List<RangePair>? {
             val start = { declaration: Declaration -> declaration.range.start }
             fun own(declaration: Declaration, tokens: List<Token>): Pair<List<Token>, List<Int>> {
                 if (declaration.ownTokenStarts.size != tokens.size) return tokens to emptyList()
@@ -650,6 +716,9 @@ class DeclarationAnalysis(private val engineId: EngineId, private val engineVers
 
     companion object {
         const val FILE_REGION = "File region"
+
+        /** The platform's cancellation, which the engine module does not depend on, rethrown by name. */
+        private const val PROCESS_CANCELED = "com.intellij.openapi.progress.ProcessCanceledException"
 
         /** relationships/02 R19: old start, then new start, then the first kind in enum order. */
         private val ORDER = compareBy<Relationship>(
