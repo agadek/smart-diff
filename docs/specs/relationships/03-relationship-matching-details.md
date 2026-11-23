@@ -146,4 +146,4 @@ The host's cancellation stops the match at the next cancellation check, so a com
 | R18 | `DeclarationEngineTest`: the engine version is 9 |
 | R19 | `RelationshipMatchingTest`: the same pair set under a raised and a lowered `medium`, and under a raised `high`; a low container pair's members keep their pairs and get `MOVE` |
 | R20 | `RelationshipTuningTest`: the tuning run over the tuning split only; the held-out run uses the fixed value; a failed held-out check leaves the value unchanged |
-| R21 | `RelationshipMatchingTest` `R21 a field whose short value is the same on both sides pairs as a rename` and `R21 a short value that differs, or a short method body, does not pair`; the Python `field-rename-*` benchmark cases and the Kotlin `Exposed-865749f-ReplaceExamples` commit |
+| R21 | `RelationshipMatchingTest` `R21 a field whose short value is the same on both sides pairs as a rename` and `R21 a short value that differs, or a short method body, does not pair`; `PythonRecallTest` `R21 a renamed class variable with a short value is a rename`; the Python `field-rename-*` benchmark cases and the Kotlin `Exposed-865749f-ReplaceExamples` commit |

@@ -134,4 +134,4 @@ Java, Kotlin and Scala 2/3 providers already supply, so detection works the same
 | R18 | `RelationshipBenchmarkTest` `inlining` cases in all four corpora, `no-new-wrong-pairs` against the baseline |
 | R19 | `InliningDetectionTest` `a removed helper is linked to the changed caller it was inlined into`: the relationship is `HIGH` |
 | R20 | `InliningDetectionTest` `an inlining is its own relationship when the target moved`; `an inlining into a renamed declaration is a separate link` |
-| R21 | `InliningDetectionTest` `target code that matches the old version only in short scattered runs counts as added`; the Python `inlining-1` and `inlining-2` benchmark cases |
+| R21 | `PythonRecallTest` `R21 a helper inlined past the call's scattered tokens links both callers`; the Python `inlining-1` and `inlining-2` benchmark cases |
