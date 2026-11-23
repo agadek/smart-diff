@@ -31,12 +31,14 @@ Its report is written to `build/reports/smartdiff-fine-grained/`.
 
 ## 2026-11-23: fine-grained differencing against Difftastic and GumTree
 
-The validation of [declarations/10](specs/declarations/10-fine-grained-differencing.md) R21 and R22: the changed runs of engine `smartdiff.declarations` **25** compared with the native word highlights, Difftastic and GumTree, then a hand review. **R22 passes:** no reviewed declaration, and no declaration of the whole run, has a real edit outside its changed runs. Nothing in the engine changed, so `DeclarationEngine.VERSION` stays 25.
+The validation of [declarations/10](specs/declarations/10-fine-grained-differencing.md) R21 and R22: the changed runs of engine `smartdiff.declarations` **26** (with the moves inside declarations of [relationships/08](specs/relationships/08-moves-inside-declarations.md)) compared with the native word highlights, Difftastic and GumTree, then a hand review. **R22 passes:** no reviewed declaration, and no declaration of the whole run, has a real edit outside its changed runs. This validation changed nothing in the engine.
+
+The run was first made on engine 25 and repeated on engine 26 with the same corpus, pins and tools. **No number changed:** `declarations.tsv` is identical row for row, the review set is the same 150 declarations, and the check of the text outside the runs again finds no declaration with an edit outside its runs. The numbers below are from engine 26.
 
 ### Tools, corpus and command
 
 - Difftastic **0.72.0** (Homebrew), run as `DFT_UNSTABLE=yes difft --display json old new`. GumTree **4.1.0** (release zip), run as `gumtree textdiff -f JSON old new` with its default generators: `java-jdt` for Java and the tree-sitter generators for Kotlin and Python. GumTree has **no Scala parser**, so Scala 2 and Scala 3 are measured against Difftastic alone.
-- Corpus: the [2026-11-04 two-sided lists](#2026-11-04-two-sided-corpus-rerun) with the pins recorded there (okhttp `2b6399483639`, guava `b157643c41f9`, commons-lang `b9b30efb01e8`, Exposed `09f814c61c22`, moshi `889013ec2edb`, spring-petclinic `500158f73241`, cats `e28985fe2a0d`, zio `df4c5b29ddaa`, scala3 `3e003afbf385`), the last 40 (zio 80) non-merge commits touching `*.java *.kt *.scala *.py`, plus 30 Python commits picked for the Python corpus (15 flask, 15 attrs, the list `python-picks.txt` beside the clones) given to `git rev-list --no-walk`.
+- Corpus: the [2026-11-04 two-sided lists](#2026-11-04-two-sided-corpus-rerun) with the pins recorded there (okhttp `2b6399483639`, guava `b157643c41f9`, commons-lang `b9b30efb01e8`, Exposed `09f814c61c22`, moshi `889013ec2edb`, spring-petclinic `500158f73241`, cats `e28985fe2a0d`, zio `df4c5b29ddaa`, scala3 `3e003afbf385`), the last 40 (zio 80) non-merge commits touching `*.java *.kt *.scala *.py`, plus 30 Python commits (15 flask, 15 attrs) given to `git rev-list --no-walk`, listed with their SHAs in [validation/fine-grained-python-commits.txt](validation/fine-grained-python-commits.txt).
 - `./gradlew fineGrainedBaselines -Psmartdiff.fineGrained.corpus=<list>` with `difft` and `gumtree` on the `PATH`; the report is `build/reports/smartdiff-fine-grained/` (`declarations.tsv`, `report.md`, `review.md`). It ran in 8 minutes.
 
 ### Results
@@ -57,7 +59,7 @@ The validation of [declarations/10](specs/declarations/10-fine-grained-differenc
 
 ### Review (R22)
 
-`review.md` lists, per language, the 30 declarations with the most missed characters, then the largest gap between our share and the nearer baseline's (Python has only 8 with missed characters, so 22 are taken by gap). Each was checked against its old and new source:
+`review.md` lists, per language, the 30 declarations with the most missed characters, then the largest gap between our share and the nearer baseline's (Python has only 8 with missed characters, so 22 are taken by gap). Each was checked against its old and new source; [validation/fine-grained-review-2026-11-23.md](validation/fine-grained-review-2026-11-23.md) lists all 150 with their shares, classification and a note:
 
 | Language | Real edit outside runs | Alignment difference | Baseline noise | Rename | Agreement |
 | --- | --- | --- | --- | --- | --- |
