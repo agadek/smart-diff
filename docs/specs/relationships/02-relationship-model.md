@@ -10,12 +10,12 @@ Status: implemented, 2026-11-04; reference evidence (R5, R17, R19 and R34) arriv
 
 - **R1** A comparison result has a list of relationships, empty by default.
 - **R2** A relationship links one old-side declaration to one new-side declaration, or one declaration to several on the other side.
-- **R3** A relationship has one or more kinds: rename, move, kind change, extraction or inlining, and, with [moves inside declarations](08-moves-inside-declarations.md), code move.
+- **R3** A relationship has one or more kinds: rename, move, kind change, extraction, inlining or [code move](08-moves-inside-declarations.md).
 - **R4** A relationship has a confidence of high, medium or low.
 - **R5** (reference evidence with [rename grouping](04-rename-grouping.md)) A relationship has a list of evidence: name, content, structure, position, reference or score; content and reference evidence carry the old and new ranges they connect, and name, structure, position and score evidence carry no ranges.
 - **R6** The engine's numeric score is kept in the evidence and is never shown as a percentage.
 - **R7** The list of relationships is the only source for renames, moves, kind changes, extraction links and inlining links.
-- **R8** The rename, move, kind change, extraction and inlining fields of a change, and with [moves inside declarations](08-moves-inside-declarations.md) its code move fields, are computed from the relationships.
+- **R8** The rename, move, kind change, extraction, inlining and [code move](08-moves-inside-declarations.md) fields of a change are computed from the relationships.
 - **R9** With today's matcher, the outline, the Changes tree and the merge outline show the same rows and labels as before.
 - **R10** The golden fixtures pass unchanged.
 - **R11** A high-confidence relationship pairs its declarations.

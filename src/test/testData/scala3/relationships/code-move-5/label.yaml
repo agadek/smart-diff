@@ -1,0 +1,16 @@
+case: code-move-5
+language: Scala
+corpus: scala3
+category: code-move
+split: tuning
+expected:
+  relationships:
+    - kinds: [CODE_MOVE]
+      old: { path: "class OrderService", kind: FUNCTION, name: "process", signature: "Order" }
+      new: { path: "class OrderService", kind: FUNCTION, name: "process", signature: "Order" }
+  changes:
+    - subject: { path: "class OrderService", kind: FUNCTION, name: "process", signature: "Order" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "A validation if moves to the start of process and its condition changes."

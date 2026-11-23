@@ -60,7 +60,6 @@ class KotlinDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.KOTLIN
         return PsiFileFactory.getInstance(project).createFileFromText(name, KotlinLanguage.INSTANCE, text, false, false)
     }
 
-    // A script's declarations are top-level declarations; its statements are part of the file region.
     // relationships/08 R22: the statements of a block, local variables included; a local function or class is not one.
     override val findsStatements: Boolean get() = true
 
@@ -69,6 +68,7 @@ class KotlinDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.KOTLIN
     override fun isStatement(element: PsiElement): Boolean =
         element is KtExpression && element !is KtNamedFunction && element !is KtClassOrObject
 
+    // A script's declarations are top-level declarations; its statements are part of the file region.
     override fun topLevel(file: PsiFile): List<PsiElement> =
         (file as KtFile).declarations.flatMap { if (it is KtScript) it.declarations else listOf(it) }
 

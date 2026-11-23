@@ -24,6 +24,7 @@ In scope:
 - per-file comparisons;
 - Java, Kotlin, Scala 2, Scala 3 and Python in the case matrix and real-commit minimums; Rust has benchmark cases listed separately in `src/test/testData/relationships-corpus-rust.txt` and run by `RustRelationshipBenchmarkTest` in `:rust`, and is not held to the case matrix or the real-commit minimum;
 - declaration renames, moves, kind changes, signature changes, extraction and inlining;
+- code moves: statements moved inside or between matched declarations ([relationships/08](specs/relationships/08-moves-inside-declarations.md)), in the `code-move` category, eight cases per language;
 - duplicate bodies, overloads and ambiguous candidates;
 - formatting-only, comment-only and string changes;
 - malformed and partial source;
@@ -36,7 +37,7 @@ Later, after an explicit scope decision:
 
 - cross-file moves and commit-level refactoring groups;
 - local-variable renames;
-- statement-level moves;
+- statement-level moves other than the code moves of relationships/08, such as moved expressions;
 - reference-group precision across files.
 
 Out of scope:

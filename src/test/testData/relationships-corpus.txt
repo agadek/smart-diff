@@ -8,6 +8,10 @@ src/test/testData/java/relationships/code-move-1
 src/test/testData/java/relationships/code-move-2
 src/test/testData/java/relationships/code-move-3
 src/test/testData/java/relationships/code-move-4
+src/test/testData/java/relationships/code-move-5
+src/test/testData/java/relationships/code-move-6
+src/test/testData/java/relationships/code-move-7
+src/test/testData/java/relationships/code-move-8
 src/test/testData/java/relationships/comment-only-1
 src/test/testData/java/relationships/comment-only-2
 src/test/testData/java/relationships/comment-only-3
@@ -94,6 +98,10 @@ src/test/testData/kotlin/relationships/code-move-1
 src/test/testData/kotlin/relationships/code-move-2
 src/test/testData/kotlin/relationships/code-move-3
 src/test/testData/kotlin/relationships/code-move-4
+src/test/testData/kotlin/relationships/code-move-5
+src/test/testData/kotlin/relationships/code-move-6
+src/test/testData/kotlin/relationships/code-move-7
+src/test/testData/kotlin/relationships/code-move-8
 src/test/testData/kotlin/relationships/comment-only-1
 src/test/testData/kotlin/relationships/comment-only-2
 src/test/testData/kotlin/relationships/comment-only-3
@@ -181,6 +189,10 @@ src/test/testData/scala2/relationships/code-move-1
 src/test/testData/scala2/relationships/code-move-2
 src/test/testData/scala2/relationships/code-move-3
 src/test/testData/scala2/relationships/code-move-4
+src/test/testData/scala2/relationships/code-move-5
+src/test/testData/scala2/relationships/code-move-6
+src/test/testData/scala2/relationships/code-move-7
+src/test/testData/scala2/relationships/code-move-8
 src/test/testData/scala2/relationships/comment-only-1
 src/test/testData/scala2/relationships/comment-only-2
 src/test/testData/scala2/relationships/comment-only-3
@@ -268,6 +280,10 @@ src/test/testData/scala3/relationships/code-move-1
 src/test/testData/scala3/relationships/code-move-2
 src/test/testData/scala3/relationships/code-move-3
 src/test/testData/scala3/relationships/code-move-4
+src/test/testData/scala3/relationships/code-move-5
+src/test/testData/scala3/relationships/code-move-6
+src/test/testData/scala3/relationships/code-move-7
+src/test/testData/scala3/relationships/code-move-8
 src/test/testData/scala3/relationships/comment-only-1
 src/test/testData/scala3/relationships/comment-only-2
 src/test/testData/scala3/relationships/comment-only-3
@@ -350,6 +366,10 @@ src/test/testData/python/relationships/code-move-1
 src/test/testData/python/relationships/code-move-2
 src/test/testData/python/relationships/code-move-3
 src/test/testData/python/relationships/code-move-4
+src/test/testData/python/relationships/code-move-5
+src/test/testData/python/relationships/code-move-6
+src/test/testData/python/relationships/code-move-7
+src/test/testData/python/relationships/code-move-8
 src/test/testData/python/relationships/extraction-1
 src/test/testData/python/relationships/extraction-2
 src/test/testData/python/relationships/method-rename-2

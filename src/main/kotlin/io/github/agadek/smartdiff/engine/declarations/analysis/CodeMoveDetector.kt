@@ -39,6 +39,10 @@ internal object CodeMoveDetector {
     /** R21: a side with more removed or added statements than this has no code moves. */
     const val MAX_STATEMENTS = 2_000
 
+    /** Thrown by [detect] when a test sets it, to check that a failure gives no code moves (relationships/08, Failure). */
+    @Volatile
+    internal var failureForTests: RuntimeException? = null
+
     /** Step 9: how many similarity scores are computed between two cancellation checks. */
     private const val CHECK_EVERY = 1_000
 
@@ -85,6 +89,7 @@ internal object CodeMoveDetector {
         policy: WhitespacePolicy,
         cancellation: Cancellation,
     ): List<Found> {
+        failureForTests?.let { throw it }
         val removed = mutableListOf<Side>()
         val added = mutableListOf<Side>()
         for ((order, input) in inputs.withIndex()) {

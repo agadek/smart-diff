@@ -12,6 +12,7 @@ import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.Evidence
 import io.github.agadek.smartdiff.engine.api.RelationshipKind
 import io.github.agadek.smartdiff.engine.api.Subject
+import io.github.agadek.smartdiff.engine.declarations.analysis.CodeMoveDetector
 import io.github.agadek.smartdiff.ui.ChangeType
 import io.github.agadek.smartdiff.ui.HiddenLines
 import io.github.agadek.smartdiff.ui.ItemKind
@@ -142,6 +143,101 @@ class CodeMovesTest : BasePlatformTestCase() {
         val new = "{\n  \"a\": [9, 10, 11, 12, 13, 14, 15, 16],\n  \"b\": [1, 2, 3, 4, 5, 6, 7, 8]\n}\n"
         val result = DeclarationEngine(project).compare(ComparisonRequest(old, new, "JSON", "a.json"), Cancellation.NONE)
         assertTrue(codeMoves(result).isEmpty())
+    }
+
+    fun `test R4 a moved statement of 11 tokens is no code move and one of 12 is`() {
+        // relationships/08-moves-inside-declarations R4
+        val eleven = "        audit.log(order, user, id);\n"
+        assertTrue(codeMoves(compare(REORDER_OLD.replace(VALID, eleven), REORDER_NEW.replace(VALID, eleven))).isEmpty())
+        val twelve = "        audit.log(order.id(), user);\n"
+        assertEquals(1, codeMoves(compare(REORDER_OLD.replace(VALID, twelve), REORDER_NEW.replace(VALID, twelve))).size)
+    }
+
+    fun `test R5 a statement at similarity 0_8 is part of a move and one below is not`() {
+        // relationships/08-moves-inside-declarations R5. The first statement has 11 tokens, so it is no move alone (R4).
+        val first = "        double rate = order.rate() * factor;\n"
+        // 10 of its adjacent token pairs, 8 shared: 0.8.
+        val atOld = first + "        audit.log(order, user, id);\n"
+        val atNew = first + "        audit.log(order, admin, id);\n"
+        val at = compare(REORDER_OLD.replace(VALID, atOld), REORDER_NEW.replace(VALID, atNew))
+        val move = codeMoves(at).single()
+        assertEquals(0.8, move.evidence.filterIsInstance<Evidence.Score>().single().value, 1e-9)
+        assertEquals(Confidence.MEDIUM, move.confidence)
+        // 9 adjacent token pairs, 7 shared: 0.78.
+        val belowOld = first + "        audit.log(order, -id);\n"
+        val belowNew = first + "        audit.log(user, -id);\n"
+        assertTrue(codeMoves(compare(REORDER_OLD.replace(VALID, belowOld), REORDER_NEW.replace(VALID, belowNew))).isEmpty())
+    }
+
+    fun `test R7 a statement inside a moved statement is part of its move`() {
+        // relationships/08-moves-inside-declarations R7
+        val result = compare(REORDER_OLD, REORDER_NEW)
+        val move = node(result, "process").codeMoves.single()
+        assertEquals("the move starts at the if", REORDER_OLD.indexOf("if (order.customer()"), move.oldRange.start)
+        val inner = REORDER_OLD.indexOf("throw new")
+        assertTrue("the throw inside it is part of it", inner > move.oldRange.start && inner < move.oldRange.end)
+        assertEquals("no move of its own", 1, codeMoves(result).size)
+    }
+
+    fun `test R8 two blocks moved to two places are two moves that share no statement`() {
+        // relationships/08-moves-inside-declarations R2, R8
+        val audit = "        audit.log(order.id(), user);\n"
+        val old = "class OrderService {\n    void process(Order order) {\n" + REST + VALID + audit + "    }\n\n" +
+            "    void finish() {\n        writer.close();\n    }\n}\n"
+        val new = "class OrderService {\n    void process(Order order) {\n" + VALID + REST + "    }\n\n" +
+            "    void finish() {\n" + audit + "        writer.close();\n    }\n}\n"
+        val moves = codeMoves(compare(old, new)).map { it.evidence.filterIsInstance<Evidence.Content>().single() }
+        assertEquals(2, moves.size)
+        val (a, b) = moves
+        assertTrue("old sides apart", a.oldRange.end <= b.oldRange.start || b.oldRange.end <= a.oldRange.start)
+        assertTrue("new sides apart", a.newRange.end <= b.newRange.start || b.newRange.end <= a.newRange.start)
+    }
+
+    fun `test R9 code moved out of a removed method or into an added one is no code move`() {
+        // relationships/08-moves-inside-declarations R9
+        val removedOld = "class OrderService {\n    void process(Order order) {\n" + REST + "    }\n\n" +
+            "    void legacy(Order order) {\n" + VALID + "    }\n}\n"
+        val removedNew = "class OrderService {\n    void process(Order order) {\n" + VALID + REST + "    }\n}\n"
+        assertTrue(codeMoves(compare(removedOld, removedNew)).isEmpty())
+        val addedNew = "class OrderService {\n    void process(Order order) {\n" + REST + "    }\n\n" +
+            "    void check(Order order) {\n" + VALID + "    }\n}\n"
+        assertTrue(codeMoves(compare(REORDER_OLD, addedNew)).isEmpty())
+    }
+
+    fun `test R21 more than 2 000 removed statements give no code moves`() {
+        // relationships/08-moves-inside-declarations R21
+        fun methods(count: Int, swapped: Boolean) = buildString {
+            append("class Big {\n")
+            for (i in 0 until count) {
+                val save = "        repository$i.save$i(order$i, total$i, now$i, user$i, extra$i);\n"
+                val log = "        audit$i.log$i(order$i, user$i, id$i, at$i);\n"
+                append("    void m$i() {\n").append(if (swapped) save + log else log + save).append("    }\n")
+            }
+            append("}\n")
+        }
+        assertEquals("one move per method below the limit", 3, codeMoves(compare(methods(3, false), methods(3, true))).size)
+        assertTrue(codeMoves(compare(methods(2_001, false), methods(2_001, true))).isEmpty())
+    }
+
+    fun `test R25 a declaration over the token comparison's limit gives no code moves`() {
+        // relationships/08-moves-inside-declarations R25, declarations/10 R10
+        fun filler(count: Int) = (0 until count).joinToString("") { "        f$it.g$it(a$it, b$it, c$it);\n" }
+        fun pair(count: Int) = REORDER_OLD.replace(REST, REST + filler(count)) to REORDER_NEW.replace(REST, REST + filler(count))
+        val (smallOld, smallNew) = pair(10)
+        assertEquals(1, codeMoves(compare(smallOld, smallNew)).size)
+        val (bigOld, bigNew) = pair(2_000)
+        assertTrue(codeMoves(compare(bigOld, bigNew)).isEmpty())
+    }
+
+    fun `test a failure in code move detection gives no code moves and the same result otherwise`() {
+        // relationships/08-moves-inside-declarations, Failure
+        val off = compare(BETWEEN_OLD, BETWEEN_NEW, detect = false)
+        CodeMoveDetector.failureForTests = IllegalStateException("code move detection failed")
+        try {
+            assertEquals(off, compare(BETWEEN_OLD, BETWEEN_NEW))
+        } finally {
+            CodeMoveDetector.failureForTests = null
+        }
     }
 
     private fun compare(old: String, new: String, detect: Boolean = true): ComparisonResult =

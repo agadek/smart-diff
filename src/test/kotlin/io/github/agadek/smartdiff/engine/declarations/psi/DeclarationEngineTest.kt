@@ -406,9 +406,9 @@ def target():
     fun `test R24 the engine version names its own version, the IDE build and the Scala plugin`() {
         // relationships/02-relationship-model R24; relationships/03-relationship-matching R18; languages/08-groovy R11-R20;
         // languages/14-markdown §7
-        assertEquals("25", DeclarationEngine.VERSION)
-        assertEquals("25 (251.26927.53)", DeclarationEngine.formatVersion("251.26927.53", null))
-        assertEquals("25 (251.26927.53; Scala 2025.1.32)", DeclarationEngine.formatVersion("251.26927.53", "2025.1.32"))
+        assertEquals("26", DeclarationEngine.VERSION)
+        assertEquals("26 (251.26927.53)", DeclarationEngine.formatVersion("251.26927.53", null))
+        assertEquals("26 (251.26927.53; Scala 2025.1.32)", DeclarationEngine.formatVersion("251.26927.53", "2025.1.32"))
 
         // This IDE loads the Scala plugin, so its parser is named: it can change a result without a platform update.
         // The plugin manager is the independent source of truth; reading the descriptor through the shared test
