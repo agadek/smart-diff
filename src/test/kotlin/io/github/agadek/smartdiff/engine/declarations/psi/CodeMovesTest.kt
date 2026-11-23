@@ -206,11 +206,14 @@ class CodeMovesTest : BasePlatformTestCase() {
 
     fun `test R21 more than 2 000 removed statements give no code moves`() {
         // relationships/08-moves-inside-declarations R21
+        // The kept statement is much longer than the moved one and they share no names, so the token comparison keeps
+        // it in place and reports the other as removed and added.
         fun methods(count: Int, swapped: Boolean) = buildString {
             append("class Big {\n")
             for (i in 0 until count) {
-                val save = "        repository$i.save$i(order$i, total$i, now$i, user$i, extra$i);\n"
-                val log = "        audit$i.log$i(order$i, user$i, id$i, at$i);\n"
+                val args = listOf("order", "total", "now", "user", "extra", "a", "b", "c", "d", "e", "f", "g", "h", "k")
+                val save = "        repository$i.save$i(${args.joinToString(", ") { "$it$i" }});\n"
+                val log = "        audit$i.log$i(id$i, at$i, who$i, when$i);\n"
                 append("    void m$i() {\n").append(if (swapped) save + log else log + save).append("    }\n")
             }
             append("}\n")
