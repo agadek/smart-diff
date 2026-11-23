@@ -1,6 +1,6 @@
 # Moves inside declarations: details
 
-Status: proposed, 2026-11-17
+Status: implemented, 2026-11-23
 
 **Feature:** [Moves inside declarations](08-moves-inside-declarations.md)
 
@@ -85,6 +85,18 @@ Each test names its requirement, for example `// relationships/08-moves-inside-d
 - `MovedCodeMarkersTest`: a code move gets markers on both sides and clicking selects its row (R18).
 - `OutlineControllerTest`: the setting off gives the outline without code moves, and applying it compares again (R1, R24).
 - The relationship benchmark's code move cases (R23).
+
+## Implementation notes
+
+Recorded when the feature was implemented, 2026-11-23:
+
+- Statements come from the provider while it builds the declaration tree: `PsiDeclarationProvider` walks the PSI for the block kinds a provider names (`isStatementBlock`, `isStatement`) and stores them in `Declaration.statements`, so no PSI is held after the read action. A statement's kind is its PSI class name.
+- `CodeMove.sourceRange` names the source declaration's old range beside its subject, as `Origin.declarationRange` does for extractions, so the outline can tell a move inside one declaration from a move between two with the same name.
+- The global assignment runs per group of statements linked by a score above 0.7: a lower score can never be a rival of a pair at 0.8 or more, so the groups are independent and the result is the same as one assignment over all statements.
+- For Python, the move's changed runs are computed with the Scala 3 indentation shift, so a block moved one level deeper highlights only its real edits; its content is classified with the first-line indentation as step 8 says.
+- The refactorings view's code move row frames the moved statements as its primary ranges, with moved-code markers on them, and both declarations as further frames. Its declarations are not counted as covered, so they stay in `Other changes`.
+- The benchmark labels a code move by its source and target declarations, as it labels every other relationship; the moved line ranges are checked by the golden fixtures under `src/test/testData/declarations/code-moves/`. The category is `code-move`, with four cases per language: a reorder in one method, a move between two methods, a move with an edit, and a duplicated block that must give none.
+- The Changes tree and the merge outline send `detectCodeMoves = false`, since neither lists code moves.
 
 ## Open questions
 

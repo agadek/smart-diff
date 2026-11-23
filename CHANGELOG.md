@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Moved code inside declarations: statements moved within a method or between methods of the same file are listed in the structural outline as `moved code lines A–B → C–D` under their new place, with `from <method>` and `code moved to <method>` notes, moved-code markers in both editors, the edits inside the moved code highlighted, and a `Moved code` entry in the refactorings view. Java, Kotlin, Scala 2, Scala 3 and Python; on by default, with a setting to turn it off.
+
 ## [0.4.0] - 2026-11-19
 
 ### Added
