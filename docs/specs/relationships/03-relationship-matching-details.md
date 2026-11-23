@@ -1,6 +1,6 @@
 # Relationship matching: details
 
-Status: implemented, 2026-11-04
+Status: implemented, 2026-11-04; R21 implemented, 2026-11-23
 
 Feature: [Relationship matching](03-relationship-matching.md)
 
@@ -47,6 +47,8 @@ Each edge gets a score from 0 to 1:
 - **Context:** a sibling counts only when an earlier rule matched it: M1, M2, M3 or M4b. A sibling paired by M5, including by the same assignment, does not count, so the feature never depends on its own output. Within one group the container path is the same on both sides, so the container itself is not a score term.
 - **Order alone** is 0.06 and context plus order 0.09, both below every floor, so neither can pair two declarations by itself (R3).
 - **Weights** are tuned on the benchmark's tuning split only, never on the held-out split (R20). The 2026-11-05 tuning kept the content weight high: the 0.7 floor was calibrated to content, and the original rename-plus-reorder fixture pairs at content 0.75 with only parameter types and order to add. With `0.5, 0.15, 0.15, 0.1, 0.1` the tuning split loses 16 correct renames; with `0.83, 0.03, 0.05, 0.03, 0.06` it keeps all 57 correct renames and the original fixture pairs. Lower content weights lose between 2 and 28 of the tuning renames, and the higher content weights pair an unrelated removed and added property in the corpus validation. The tuning table is in the pull request and in [VALIDATION.md](../../VALIDATION.md#2026-11-04-relationship-matching).
+
+**Short initialized values (R21).** The content feature is 0 when either side has fewer than `MIN_CONTENT` (6) tokens, names masked, so an empty method cannot pair by its braces. That floor also hides short fields: Python's `max_size = 7` has two tokens, `=` and `7`, and Kotlin's `const val LIMIT = 3` has four, so a renamed class variable or constant shows as removed and added, while Java's `static final int LIMIT = 3;` has six and pairs. For a declaration of kind `FIELD`, `PROPERTY`, `VARIABLE` or `CONSTANT` on both sides, under the floor, content is 1 when the two bigram bags are equal and contain a pair that starts with `=` (an initializer with a value), and 0 otherwise. A partly similar short value never counts, and a field without an initializer, such as `private int count;` or Python's `name: str`, stays unpaired by content, because a field replaced by another of the same type is common. Same-body groups (R7) still apply: when two removed or two added fields in a group share the value, content is not used for them.
 
 **Same-body groups (R7).** When a declaration in a group has at least one other declaration on its own side with the same bigram bag — the same multiset of adjacent token pairs, names masked, that the content feature uses — content cannot tell the candidates apart. A single old and a single new declaration with the same body is not a duplicate: content does identify that one pair. For an edge that touches such a declaration the content weight becomes 0 and the other weights are renormalised to sum to 1: name 0.18, parameter types 0.29, context 0.18, order 0.35. Edges that touch no duplicated body keep the normal weights. Without the renormalisation the remaining evidence could reach only 0.17 and a duplicate body could never be paired, which contradicts today's behaviour and R7's "not by content alone". With it, a duplicate body pairs only when name, signature or position is clear.
 
@@ -121,7 +123,7 @@ The host's cancellation stops the match at the next cancellation check, so a com
 
 ### Engine version
 
-`DeclarationEngine.VERSION` goes from 8 to 9, because the assignment's work limit and a low container pair's members change the result (R18).
+`DeclarationEngine.VERSION` goes from 8 to 9, because the assignment's work limit and a low container pair's members change the result (R18). R21 raises it from 24 to 25.
 
 ## Tests
 
@@ -144,3 +146,4 @@ The host's cancellation stops the match at the next cancellation check, so a com
 | R18 | `DeclarationEngineTest`: the engine version is 9 |
 | R19 | `RelationshipMatchingTest`: the same pair set under a raised and a lowered `medium`, and under a raised `high`; a low container pair's members keep their pairs and get `MOVE` |
 | R20 | `RelationshipTuningTest`: the tuning run over the tuning split only; the held-out run uses the fixed value; a failed held-out check leaves the value unchanged |
+| R21 | `RelationshipMatchingTest` `R21 a field whose short value is the same on both sides pairs as a rename` and `R21 a short value that differs, or a short method body, does not pair`; the Python `field-rename-*` benchmark cases and the Kotlin `Exposed-865749f-ReplaceExamples` commit |

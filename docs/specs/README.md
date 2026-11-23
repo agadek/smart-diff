@@ -146,9 +146,9 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | --- | --- |
 | [01 Relationship benchmark](relationships/01-relationship-benchmark.md) | implemented, 2026-11-02 (usage labels and R44 with 04) |
 | [02 Relationship model](relationships/02-relationship-model.md) | implemented, 2026-11-04 (reference evidence with 04) |
-| [03 Relationship matching](relationships/03-relationship-matching.md) | implemented, 2026-11-04 |
+| [03 Relationship matching](relationships/03-relationship-matching.md) | implemented, 2026-11-04; R21 2026-11-23 |
 | [04 Rename grouping](relationships/04-rename-grouping.md) | implemented, 2026-11-07 |
-| [05 Inlining detection](relationships/05-inlining-detection.md) | implemented, 2026-11-08 |
+| [05 Inlining detection](relationships/05-inlining-detection.md) | implemented, 2026-11-08; R21 2026-11-23 |
 | [06 Refactorings view](relationships/06-refactorings-view.md) | implemented, 2026-11-09 |
 | [07 Relationship validation](relationships/07-relationship-validation.md) | implemented, 2026-11-19 |
 | [08 Moves inside declarations](relationships/08-moves-inside-declarations.md) | proposed, 2026-11-17 |

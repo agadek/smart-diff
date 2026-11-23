@@ -305,6 +305,24 @@ class InliningDetectionTest {
         assertEquals("make(Order,StringBuilder)", result.node("heading").inlinedInto.single().let { name(it.subject) })
     }
 
+    @Test
+    fun `target code that matches the old version only in short scattered runs counts as added`() {
+        // relationships/05-inlining-detection R21
+        val old = tree {
+            cls("A") {
+                method("render", "String,int", "{ return heading(name, count) + bang; }")
+                method("heading", "String,int", "{ String text = prefix + str(name) + str(count) + suffix; return text; }")
+            }
+        }
+        val new = tree {
+            cls("A") {
+                method("render", "String,int", "{ String text = prefix + str(name) + str(count) + suffix; return text + bang; }")
+            }
+        }
+
+        assertEquals("render(String,int) <- heading(String,int)\n", inlinings(compare(old, new)))
+    }
+
     private fun compare(old: DeclarationTree, new: DeclarationTree): ComparisonResult =
         DeclarationAnalysis(EngineId("smartdiff.test.declarations"), "1").compare(old, new, 5_000, Cancellation.NONE)
 
