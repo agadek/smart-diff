@@ -1,0 +1,13 @@
+status: ANALYZED
+summary: 2 changed
+container tree:
+  class Report
+    method process(List<Order>)  changed, code moved to finish()
+    method finish()  changed
+      moved code lines 7–9 → 12–14  moved, from process(List<Order>)
+refactorings:
+  moved code process → finish  high
+code moves:
+  moved code process → finish  high
+    - "for (Order order : orders) {\n            logger.info("processed order " + order.id() + " for " + order.customer());\n        }"
+    + "for (Order order : orders) {\n            logger.info("processed order " + order.id() + " for " + order.customer());\n        }"

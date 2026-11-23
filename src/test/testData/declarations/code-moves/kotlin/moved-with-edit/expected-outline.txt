@@ -1,0 +1,12 @@
+status: ANALYZED
+summary: 1 changed
+container tree:
+  class OrderService
+    function process(Order)  changed
+      moved code lines 9–11 → 3–5  moved, changed
+refactorings:
+  candidate moved code in process  medium
+code moves:
+  moved code in process  medium
+    - "if (order.customer == null || order.items.isEmpty()) {\n            throw IllegalArgumentException("invalid order " + order.id)\n        }"
+    + "if (order.customer == null || order.items.isEmpty()) {\n            throw IllegalArgumentException("order is invalid: " + order.id)\n        }"

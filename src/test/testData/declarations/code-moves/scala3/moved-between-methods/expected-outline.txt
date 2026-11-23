@@ -1,0 +1,13 @@
+status: ANALYZED
+summary: 2 changed
+container tree:
+  class Report
+    function process(List[Order])  changed, code moved to finish()
+    function finish()  changed
+      moved code lines 6–7 → 10–11  moved, from process(List[Order])
+refactorings:
+  moved code process → finish  high
+code moves:
+  moved code process → finish  high
+    - "for order <- orders do\n      logger.info("processed order " + order.id + " for " + order.customer)"
+    + "for order <- orders do\n      logger.info("processed order " + order.id + " for " + order.customer)"

@@ -1,0 +1,8 @@
+status: ANALYZED
+summary: 1 changed
+container tree:
+  class OrderService
+    function process(Order)  changed
+refactorings:
+  No refactorings found
+code moves:

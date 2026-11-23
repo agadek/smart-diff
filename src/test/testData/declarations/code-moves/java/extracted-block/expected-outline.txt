@@ -1,0 +1,9 @@
+status: ANALYZED
+summary: 1 changed · 1 extracted
+container tree:
+  class OrderService
+    method process(Order)  changed, code extracted to validate(Order)
+    method validate(Order)  added, extracted from process(Order)
+refactorings:
+  extracted validate from process  high
+code moves:
