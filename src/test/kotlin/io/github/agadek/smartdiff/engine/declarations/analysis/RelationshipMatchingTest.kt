@@ -444,8 +444,8 @@ class RelationshipMatchingTest {
         assertNull(values.matching.ofOld(values.oldTree.named("timeout")))
 
         val methods = match(
-            tree { cls("Order") { method("start", "", "{ go(); }") } },
-            tree { cls("Order") { method("begin", "", "{ go(); }") } },
+            tree { cls("Order") { method("start", "", "{ x = 1 }") } },
+            tree { cls("Order") { method("begin", "", "{ x = 1 }") } },
         )
         assertNull("only field-like values pair on a short body", methods.matching.ofOld(methods.oldTree.named("start")))
 
