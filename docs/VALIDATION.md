@@ -21,6 +21,27 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+## 2026-11-23: relationship recall
+
+[relationships/03](specs/relationships/03-relationship-matching.md) R21 pairs a field, property, variable or constant that is too short for the content score when it has an initializer and is otherwise the same on both sides, and [relationships/05](specs/relationships/05-inlining-detection.md) R21 counts an inlining target's kept tokens in runs shorter than `MIN_TILE` as added, as extraction sources already do. The engine is `smartdiff.declarations` **25**.
+
+`RelationshipBenchmarkTest` on `relationships-corpus-full.txt` (583 cases) with `no-new-wrong-pairs` against a report of the same corpus on main (engine 24): the gate **passes**, with no wrong pair, no new gate pair and 0 forced pairs.
+
+| | Main (engine 24) | Engine 25 |
+| --- | --- | --- |
+| Precision | 1.000 | 1.000 |
+| Recall | 0.943 (312 of 331) | 0.964 (319 of 331) |
+| RENAME tp/fn | 130/6 | 134/2 |
+| INLINE tp/fn | 27/3 | 30/0 |
+| Kotlin recall | 0.952 | 0.968 |
+| Python recall | 0.898 | 1.000 |
+| Usage tp/fn | 77/1 | 78/0 |
+| Classification mismatches | 50 | 44 |
+
+MOVE, KIND_CHANGE and EXTRACT and the Java, Scala 2 and Scala 3 rows are unchanged. The seven recovered pairs are the Python `field-rename-1` to `-3` renames and Kotlin `Exposed-865749f-ReplaceExamples` `LOW_RAITING_THRESHOLD` → `LOW_RATING_THRESHOLD` with its usage (R21 of relationships/03), and the Python `inlining-1` and both `inlining-2` links (R21 of relationships/05). The Python `inlining-1` case was a label error: its helper body had 7 tokens, under the 10-token floor of relationships/05 R5 that `inlining-5` checks, so its fixture was lengthened to the inlining it labels. This was measured on the corpus used to find the misses; no threshold was tuned.
+
+The 12 remaining misses are the same as on main and were not changed here: 6 commons-lang `CharRange` extractions, Kotlin `Exposed-deb65b9-H2` `isH2Oracle`, the moshi `skipTo` and okhttp `httpWithExcessiveHeaders` renames, and 3 cats moves (`IfApplyOps`, `ApplyOps`, `parReplicateA`).
+
 ## 2026-11-19: 0.4.0 release validation
 
 The release checks of [relationships/07](specs/relationships/07-relationship-validation.md) on `chore/release-0.4.0`, which includes the Tree-sitter Swift engine from PR #213 and the matcher fix from `fix/python-ambiguous-rename-pairing` (merged on 2026-11-19, commit `28c47ed`). Results below are from the branch's head after that merge.
