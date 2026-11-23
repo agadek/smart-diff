@@ -246,4 +246,33 @@ tasks.test {
         if (listOf("BENCHMARK ", "GOLDEN ", "RELATIONSHIPS ", "VALIDATION ").any { event.message.startsWith(it) }) logger.lifecycle(event.message.trimEnd())
     })
 }
+
+// declarations/10 R21: the fine-grained differencing validation against Difftastic and GumTree, run by hand on a
+// developer's machine with `-Psmartdiff.fineGrained.corpus=<list>`; not part of `check` or the release. Both tools are
+// found on the PATH (`difft`, `gumtree`) and are never dependencies of the plugin.
+// It runs the platform test task filtered to FineGrainedBaselinesTest, so the test gets the IDE set-up `test` has.
+val fineGrainedBaselines by tasks.registering {
+    group = "verification"
+    description = "Compares changed runs with the native diff, Difftastic and GumTree on a corpus (declarations/10 R21)."
+    dependsOn(tasks.test)
+}
+
+gradle.taskGraph.whenReady {
+    if (!hasTask(fineGrainedBaselines.get())) return@whenReady
+    val corpus = providers.gradleProperty("smartdiff.fineGrained.corpus").getOrElse("")
+    val path = System.getenv("PATH").orEmpty().split(File.pathSeparator)
+    fun onPath(name: String) = path.map { File(it, name) }.firstOrNull { it.canExecute() }?.absolutePath
+    if (corpus.isBlank()) throw GradleException("fineGrainedBaselines needs -Psmartdiff.fineGrained.corpus=<list of repositories and commits>")
+    val missing = listOf("difft" to "Difftastic (brew install difftastic)", "gumtree" to "GumTree (a release zip from github.com/GumTreeDiff/gumtree, its bin directory on the PATH)")
+        .filter { onPath(it.first) == null }
+    if (missing.isNotEmpty()) throw GradleException("fineGrainedBaselines needs ${missing.joinToString(" and ") { "`${it.first}`, from ${it.second}," }} on the PATH")
+    tasks.test {
+        filter { includeTestsMatching("*.FineGrainedBaselinesTest") }
+        outputs.upToDateWhen { false }
+        systemProperty("smartdiff.fineGrained.corpus", corpus)
+        systemProperty("smartdiff.fineGrained.difft", onPath("difft")!!)
+        systemProperty("smartdiff.fineGrained.gumtree", onPath("gumtree")!!)
+    }
+}
+
 apply(from = "gradle/treesitter-helper.gradle.kts")

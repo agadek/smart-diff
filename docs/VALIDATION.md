@@ -21,6 +21,61 @@ Merge validation uses the same list format. The merge mode adds `--merges` itsel
 
 Its report is written to `build/reports/smartdiff-validation/merge/`.
 
+The fine-grained differencing validation uses the same list format and needs Difftastic (`difft`) and GumTree (`gumtree`) on the `PATH`:
+
+```shell
+./gradlew fineGrainedBaselines -Psmartdiff.fineGrained.corpus=<list>
+```
+
+Its report is written to `build/reports/smartdiff-fine-grained/`.
+
+## 2026-11-23: fine-grained differencing against Difftastic and GumTree
+
+The validation of [declarations/10](specs/declarations/10-fine-grained-differencing.md) R21 and R22: the changed runs of engine `smartdiff.declarations` **26** (with the moves inside declarations of [relationships/08](specs/relationships/08-moves-inside-declarations.md)) compared with the native word highlights, Difftastic and GumTree, then a hand review. **R22 passes:** no reviewed declaration, and no declaration of the whole run, has a real edit outside its changed runs. This validation changed nothing in the engine.
+
+The run was first made on engine 25 and repeated on engine 26 with the same corpus, pins and tools. **No number changed:** `declarations.tsv` is identical row for row, the review set is the same 150 declarations, and the check of the text outside the runs again finds no declaration with an edit outside its runs. The numbers below are from engine 26.
+
+### Tools, corpus and command
+
+- Difftastic **0.72.0** (Homebrew), run as `DFT_UNSTABLE=yes difft --display json old new`. GumTree **4.1.0** (release zip), run as `gumtree textdiff -f JSON old new` with its default generators: `java-jdt` for Java and the tree-sitter generators for Kotlin and Python. GumTree has **no Scala parser**, so Scala 2 and Scala 3 are measured against Difftastic alone.
+- Corpus: the [2026-11-04 two-sided lists](#2026-11-04-two-sided-corpus-rerun) with the pins recorded there (okhttp `2b6399483639`, guava `b157643c41f9`, commons-lang `b9b30efb01e8`, Exposed `09f814c61c22`, moshi `889013ec2edb`, spring-petclinic `500158f73241`, cats `e28985fe2a0d`, zio `df4c5b29ddaa`, scala3 `3e003afbf385`), the last 40 (zio 80) non-merge commits touching `*.java *.kt *.scala *.py`, plus 30 Python commits (15 flask, 15 attrs) given to `git rev-list --no-walk`, listed with their SHAs in [validation/fine-grained-python-commits.txt](validation/fine-grained-python-commits.txt).
+- `./gradlew fineGrainedBaselines -Psmartdiff.fineGrained.corpus=<list>` with `difft` and `gumtree` on the `PATH`; the report is `build/reports/smartdiff-fine-grained/` (`declarations.tsv`, `report.md`, `review.md`). It ran in 8 minutes.
+
+### Results
+
+1540 modified files with **3546** declarations that are matched, changed and compared by tokens. Shares are the median, over declarations, of the share of each declaration's own non-whitespace characters (both sides together) that each tool highlights.
+
+| Language | Files | Declarations | Ours | Native | Difftastic | GumTree | Missed > 0 | Ours > every baseline | Text outside runs differs |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Java | 349 | 767 | 10.3% | 7.8% | 10.2% | 9.1% | 140 | 5 | 0 |
+| Kotlin | 552 | 1592 | 3.0% | 1.3% | 2.6% | 7.8% | 403 | 210 | 0 |
+| Scala 2 | 412 | 742 | 3.7% | 2.8% | 3.8% | not supported | 175 | 65 | 0 |
+| Scala 3 | 185 | 381 | 7.9% | 3.9% | 8.9% | not supported | 111 | 9 | 0 |
+| Python | 42 | 64 | 16.0% | 4.3% | 16.0% | 36.6% | 8 | 2 | 0 |
+
+- *Missed* characters are those every available baseline marks and the runs do not. They are mostly alignment and baseline effects, as the review below shows; the check that settles R22 for every declaration is the last column: the own text outside the runs is the same on both sides for all 3546, with rename candidates' names read as one placeholder. (The first run flagged three declarations here; all three were harness errors, a plain-text name replacement and a child moved under another parent, fixed before the run recorded here.)
+- Difftastic gave no tokens for 3 Java and 30 Kotlin files: it fell back to a line diff for 24 Kotlin files with parse errors and 7 files over its graph limit, and printed no output for two moshi Kotlin files. Those files are measured against GumTree alone.
+- The runs highlight more than every baseline in **291** declarations. 172 of the 210 Kotlin ones and 32 of the 65 Scala 2 ones mark at most 4 characters, nearly all from formatter commits: ktfmt and ktlint adding or removing trailing commas (moshi `fb33dde3a8`, `2894cd1539`) and `: _*` becoming `*` (cats `01a9f8d8b9`). These are real token edits that Difftastic and GumTree do not mark. The larger ones are declarations whose code moved to another declaration, such as moshi `bf16751535` splitting `generateFromJsonFun` and cats `bffd62344d` moving each `Deferred` class out of its `catsDefer…Cache` property: the runs follow the declaration match, while the baselines diff the file by position. The review did not settle the open question on widening runs to expressions; it stays open.
+
+### Review (R22)
+
+`review.md` lists, per language, the 30 declarations with the most missed characters, then the largest gap between our share and the nearer baseline's (Python has only 8 with missed characters, so 22 are taken by gap). Each was checked against its old and new source; [validation/fine-grained-review-2026-11-23.md](validation/fine-grained-review-2026-11-23.md) lists all 150 with their shares, classification and a note:
+
+| Language | Real edit outside runs | Alignment difference | Baseline noise | Rename | Agreement |
+| --- | --- | --- | --- | --- | --- |
+| Java | 0 | 14 | 8 | 8 | 0 |
+| Kotlin | 0 | 21 | 7 | 2 | 0 |
+| Scala 2 | 0 | 13 | 17 | 0 | 0 |
+| Scala 3 | 0 | 23 | 6 | 1 | 0 |
+| Python | 0 | 8 | 5 | 0 | 17 |
+
+- **Alignment difference:** Myers matched a different equal token than a baseline, for example the `)` of `f.toProperString()` or the `[Symbol]` of `new HashSet[Symbol]` → `Set.empty[Symbol]`; both cover the edit.
+- **Baseline noise:** a baseline marks unchanged code: GumTree or Difftastic marking a whole string literal or string concatenation whose parts our lexer compares separately (guava `PublicSuffixPatterns`, cats boilerplate templates, Scala interpolated strings, a Kotlin raw test string); a method moved in the file, which the baselines see as deleted and inserted while the engine pairs it by name (commons-lang `FastDatePrinter.isMonthOnlyPattern`); and code moved to another declaration (cats `catsDefer…Cache`, moshi `generateFromJsonFun`).
+- **Rename:** a rename candidate's name, which step 3 leaves out of the runs because its label and selection frame it (guava `testIdentityEntrySetIteratorRemove` → `testEntryNotAccessedAfterEntrySetIteratorRemove`).
+- **Agreement:** the runs equal both baselines, such as re-indented Python bodies, where indentation is significant.
+
+No real miss was found, so no fix, test or golden fixture was added. Our run was larger than the edit only where the declaration match differs from the file-level pairing, as recorded above.
+
 ## 2026-11-23: relationship recall
 
 [relationships/03](specs/relationships/03-relationship-matching.md) R21 pairs a field, property, variable or constant that is too short for the content score when it has an initializer and is otherwise the same on both sides, and [relationships/05](specs/relationships/05-inlining-detection.md) R21 counts an inlining target's kept tokens in runs shorter than `MIN_TILE` as added, as extraction sources already do. The engine is `smartdiff.declarations` **25**.

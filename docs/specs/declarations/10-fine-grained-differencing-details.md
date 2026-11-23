@@ -1,6 +1,6 @@
 # Fine-grained differencing: details
 
-Status: implemented, 2026-11-17, except the validation against Difftastic and GumTree (R21, R22), which is still proposed
+Status: implemented, 2026-11-23 (the validation against Difftastic and GumTree, R21 and R22, on 2026-11-23; the rest on 2026-11-17)
 
 **Feature:** [Fine-grained differencing](10-fine-grained-differencing.md)
 
@@ -56,6 +56,12 @@ A Gradle task `fineGrainedBaselines`, not part of `check` or the release, reads 
 
 A review of 30 declarations per language, chosen from the list where the tools disagree most, checks each by hand: a real edit outside the changed runs fails the validation (R22). A run that only highlights more than an edit is recorded but does not fail it.
 
+The task runs `FineGrainedBaselinesTest`, a platform test skipped without `-Psmartdiff.fineGrained.corpus=<list>`, in the list format of the corpus validation. For every modified Java, Kotlin, Scala and Python file it measures each declaration that is matched, changed and compared by tokens on its own characters: its range minus the range of every declaration inside it, whichever parent that declaration is reported under. Four character sets are counted there, non-whitespace characters only: the changed runs; the native word highlights, `ComparisonManager.compareLinesInner` with `ComparisonPolicy.DEFAULT` over the whole file, or a change's whole lines when it has no inner fragments; Difftastic's changed tokens from `DFT_UNSTABLE=yes difft --display json` (columns are UTF-8 byte offsets inside the line); and GumTree's changed nodes from `gumtree textdiff -f JSON`, where an inserted, deleted or updated node counts its own characters, its range minus the other nodes the output names inside it, and a tree action or a move its whole subtree. GumTree has no Scala parser, so Scala declarations are measured against Difftastic alone, and a file that Difftastic compares as text (a parse error or its graph limit) has no Difftastic set. A *missed* character is one every available baseline marks and the runs do not; the report lists the declarations with missed characters, and the review takes the 30 per language with the most, then with the largest gap between the runs' share and the nearer baseline's.
+
+Each declaration is also checked without the baselines: its own non-whitespace text outside the runs, in order, must be the same on both sides, with a rename candidate's old and new name read as one placeholder (step 3). Every edit lies in a run when this holds, so a difference is a real edit outside the runs whatever the baselines say. Two limits follow from the construction: whitespace is left out, so an edit that only joins or splits tokens by adding or removing whitespace, such as `a b` becoming `ab`, is not seen by this check; and the placeholder replaces every whole-word use of either name, in code, strings and comments alike, so a name changed from one of the two to the other outside the declaration's own name is not seen either. The baseline comparison and the review cover both. The parsing, offset and set code has unit tests on tiny inputs (`FineGrainedBaselinesParsingTest`), so CI tests it without the tools.
+
+Each reviewed declaration is classified as a real edit outside the runs (a failure), an alignment difference (Myers matched a different equal token than a baseline did, and both cover the edit), baseline noise (a baseline marks unchanged or moved code, such as a whole string literal, a declaration it pairs by position rather than by name, or code moved to another declaration), a rename (the name is left out of the runs by step 3 and framed by its label), or agreement. The 2026-11-23 run, on engine 26, found no real edit outside the runs, so this validation changed nothing in the engine ([validation record](../../VALIDATION.md#2026-11-23-fine-grained-differencing-against-difftastic-and-gumtree), [review table](../../validation/fine-grained-review-2026-11-23.md)).
+
 ### Edge cases
 
 - **A formatting-only declaration:** compared with no runs, so its native changes keep their line colour without word highlights, and fade when the filter hides formatting-only changes (R2, R12).
@@ -81,6 +87,7 @@ Each test names its requirement, for example `// declarations/10-fine-grained-di
 - `OutlineNavigatorTest`: selecting a changed row highlights its runs on both sides (R17).
 - `OutlineControllerTest`: turning the setting off and applying it restores native highlights without running the engine (R1, R18); the outline text, summary and Changes tree rows of the golden fixtures are unchanged with the setting on (R19).
 - `SmartDiffConfigurableTest`: the checkbox is on by default and stored in `SmartDiffSettings` (R1).
+- `FineGrainedBaselinesParsingTest`: Difftastic and GumTree JSON parsing, byte-to-character offsets, own characters, missed characters and the text-outside-the-runs check on tiny inputs (R21, R22).
 - The validation record for R21 and R22, written by `fineGrainedBaselines` and the manual review.
 
 ## Open questions
