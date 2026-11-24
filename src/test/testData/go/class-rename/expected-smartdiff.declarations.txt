@@ -1,0 +1,4 @@
+status: ANALYZED
+struct Purchase  rename candidate from struct Order  old 5-8  new 5-8
+method Purchase.Total()  changed  signature changed  old 10-16  new 10-16
+method Purchase.Describe()  changed  signature changed  old 18-20  new 18-20

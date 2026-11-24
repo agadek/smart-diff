@@ -1,0 +1,5 @@
+left: ANALYZED  right: ANALYZED
+struct Config  UNCHANGED  base 3-6  left 3-7  right 3-6
+  field Host  LEFT_ONLY  left: formatting-only  base 4  left 4  right 4
+  field Port  CHANGED_ON_BOTH_SIDES  left: formatting-only  right: changed  base 5  left 5  right 5
+  field Timeout  LEFT_ONLY  left: added  base -  left 6  right -

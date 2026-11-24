@@ -1,0 +1,6 @@
+status: ANALYZED
+struct Order  old 5-8  new 5-8
+  field ID  formatting-only  old 6  new 6
+  field Items  formatting-only  old 7  new 7
+method Order.Total()  formatting-only  old 10-16  new 10-16
+method Order.Describe()  formatting-only  old 18-20  new 18-20

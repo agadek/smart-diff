@@ -1,0 +1,4 @@
+status: ANALYZED
+function main()  changed  code inlined from a() old 11-12 new 6-7  code inlined from b() old 16-17 new 8-9  old 5-8  new 5-10
+function a()  removed  inlined into main()  old 10-13
+function b()  removed  inlined into main()  old 15-18

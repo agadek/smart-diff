@@ -9,7 +9,7 @@ import java.io.File
 
 /**
  * Runs the golden fixture cases in [testData]/[directory] with the declaration engine (technical specification §12).
- * Shared by the root tests and the Rust subproject's tests (languages/05-rust-details §2, §11).
+ * Shared by the root tests and the Rust and Go subprojects' tests (languages/05-rust-details §2, §11; languages/17-go-details §11).
  */
 object GoldenFixtures {
 

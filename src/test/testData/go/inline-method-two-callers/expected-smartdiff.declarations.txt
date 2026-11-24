@@ -1,0 +1,4 @@
+status: ANALYZED
+function a()  changed  code inlined from helper() old 10-12 new 6-8  old 5  new 5-9
+function b()  changed  code inlined from helper() old 10-12 new 12-14  old 7  new 11-15
+function helper()  removed  inlined into a(), b()  old 9-13

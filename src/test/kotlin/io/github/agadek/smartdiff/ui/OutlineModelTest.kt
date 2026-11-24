@@ -53,6 +53,12 @@ class OutlineModelTest {
     }
 
     @Test
+    fun `languages 17-go R13 R14 Go line breaks are significant and spaces are not`() {
+        assertEquals(WhitespacePolicy.LINE_BREAKS_SIGNIFICANT, OutlineController.whitespacePolicy("go"))
+        assertEquals("type", OutlineModel.kindName(DeclarationKind.TYPE))
+    }
+
+    @Test
     fun `titles name kind, name and signature, or a region's description`() {
         assertEquals("method parse(String,int)", OutlineModel.title(Subject.Declaration(DeclarationKind.METHOD, "parse", "String,int")))
         assertEquals("enum constant RED", OutlineModel.title(Subject.Declaration(DeclarationKind.ENUM_CONSTANT, "RED", null)))

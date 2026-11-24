@@ -724,6 +724,7 @@ object DeclarationMatcher {
         setOf(
             DeclarationKind.CLASS, DeclarationKind.TRAIT, DeclarationKind.INTERFACE, DeclarationKind.ENUM,
             DeclarationKind.RECORD, DeclarationKind.ANNOTATION_TYPE, DeclarationKind.STRUCT, DeclarationKind.UNION,
+            DeclarationKind.TYPE,
         ),
         setOf(DeclarationKind.METHOD, DeclarationKind.FUNCTION, DeclarationKind.FIELD, DeclarationKind.PROPERTY, DeclarationKind.VARIABLE),
     )

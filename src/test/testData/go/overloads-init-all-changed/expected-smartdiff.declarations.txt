@@ -1,0 +1,4 @@
+status: ANALYZED
+function init()  changed  old 5-7  new 5-7
+function init()  changed  old 9-11  new 9-11
+function init()  changed  old 13-15  new 13-15

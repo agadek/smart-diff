@@ -1,0 +1,2 @@
+status: ANALYZED
+method Order.String()  rename candidate from method Order.Describe()  old 18-20  new 18-20

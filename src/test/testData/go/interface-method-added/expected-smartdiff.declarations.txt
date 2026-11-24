@@ -1,0 +1,3 @@
+status: ANALYZED
+interface Store  old 3-6  new 3-7
+  method Delete(string)  added  new 6

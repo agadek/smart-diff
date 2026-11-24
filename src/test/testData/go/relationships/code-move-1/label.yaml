@@ -1,0 +1,16 @@
+case: code-move-1
+language: go
+corpus: go
+category: code-move
+split: tuning
+expected:
+  relationships:
+    - kinds: [CODE_MOVE]
+      old: { path: "", kind: FUNCTION, name: "Process", signature: "Order" }
+      new: { path: "", kind: FUNCTION, name: "Process", signature: "Order" }
+  changes:
+    - subject: { path: "", kind: FUNCTION, name: "Process", signature: "Order" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "A validation block moves from the end of Process to its start."

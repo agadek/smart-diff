@@ -22,7 +22,7 @@ Without a labelled benchmark, matcher changes are judged by anecdote and fixture
 In scope:
 
 - per-file comparisons;
-- Java, Kotlin, Scala 2, Scala 3 and Python in the case matrix and real-commit minimums; Rust has benchmark cases listed separately in `src/test/testData/relationships-corpus-rust.txt` and run by `RustRelationshipBenchmarkTest` in `:rust`, and is not held to the case matrix or the real-commit minimum;
+- Java, Kotlin, Scala 2, Scala 3 and Python in the case matrix and real-commit minimums; Rust has benchmark cases listed separately in `src/test/testData/relationships-corpus-rust.txt` and run by `RustRelationshipBenchmarkTest` in `:rust`, and is not held to the case matrix or the real-commit minimum; Go has benchmark cases listed in `src/test/testData/relationships-corpus-go.txt` and run by `GoRelationshipBenchmarkTest` in `:go`, on the same terms;
 - declaration renames, moves, kind changes, signature changes, extraction and inlining;
 - code moves: statements moved inside or between matched declarations ([relationships/08](specs/relationships/08-moves-inside-declarations.md)), in the `code-move` category, eight cases per language;
 - duplicate bodies, overloads and ambiguous candidates;
@@ -32,6 +32,8 @@ In scope:
 - the existing golden fixtures, contract corpus and corpus validation as inputs.
 
 Rust relationship benchmark (2026-11-15, `:rust` run, `src/test/testData/relationships-corpus-rust.txt`): 6 cases, tp=6, fp=0, fn=0, precision=1.000, recall=1.000 (`rust` row, `no-new-wrong-pairs` gate; smoke run relative to core matrix/commit minimums).
+
+Go relationship benchmark (2026-11-24, `:go` run, `src/test/testData/relationships-corpus-go.txt`): 8 cases, tp=8, fp=0, fn=0, precision=1.000, recall=1.000 (`go` row, `no-new-wrong-pairs` gate; smoke run relative to core matrix/commit minimums).
 
 Later, after an explicit scope decision:
 
@@ -244,7 +246,7 @@ The report must contain:
 
 ## 10. Acceptance criteria
 
-- The labelled corpus covers every case category in §3 for Java and Kotlin, the Scala categories the provider supports, and the Rust cases the provider supports.
+- The labelled corpus covers every case category in §3 for Java and Kotlin, the Scala categories the provider supports, and the Rust and Go cases their providers support.
 - Every expected relationship is identified by endpoints, not just names.
 - The baseline report exists before the matcher changes start.
 - Every matcher change reports precision, recall, incorrect-match, ambiguity and latency against that baseline.
