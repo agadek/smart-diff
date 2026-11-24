@@ -1,0 +1,6 @@
+<!-- Loaded when the PHP plugin is present. The PHP declaration provider registers here. -->
+<idea-plugin>
+    <extensions defaultExtensionNs="io.github.agadek.smartdiff">
+        <declarationProvider implementation="io.github.agadek.smartdiff.engine.declarations.psi.php.PhpDeclarationProvider"/>
+    </extensions>
+</idea-plugin>
