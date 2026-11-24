@@ -912,6 +912,7 @@ class OutlineController internal constructor(
             "Markdown" -> WhitespacePolicy.SIGNIFICANT
             "Python" -> WhitespacePolicy.INDENTATION_SIGNIFICANT
             "Rust" -> WhitespacePolicy.INSIGNIFICANT
+            "go" -> WhitespacePolicy.LINE_BREAKS_SIGNIFICANT
             else -> WhitespacePolicy.SIGNIFICANT
         }
 

@@ -1,0 +1,6 @@
+<!-- Loaded when the Go plugin is present. The Go declaration provider registers here. -->
+<idea-plugin>
+    <extensions defaultExtensionNs="io.github.agadek.smartdiff">
+        <declarationProvider implementation="io.github.agadek.smartdiff.engine.declarations.psi.go.GoDeclarationProvider"/>
+    </extensions>
+</idea-plugin>

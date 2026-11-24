@@ -11,6 +11,7 @@ enum class GuardedFeature(val displayName: String, val api: String) {
     SCALA_PROVIDER("the Scala declaration provider", "the Scala plugin PSI"),
     PYTHON_PROVIDER("the Python declaration provider", "the Python plugin PSI"),
     RUST_PROVIDER("the Rust declaration provider", "the Rust plugin PSI"),
+    GO_PROVIDER("the Go declaration provider", "the Go plugin PSI"),
     MARKDOWN_PROVIDER("the Markdown declaration provider", "the experimental Markdown front matter PSI"),
     KOTLIN_REFERENCES("Kotlin rename usages", "the Kotlin plugin PSI"),
     SCALA_REFERENCES("Scala rename usages", "the Scala plugin PSI"),
