@@ -29,6 +29,37 @@ The fine-grained differencing validation uses the same list format and needs Dif
 
 Its report is written to `build/reports/smartdiff-fine-grained/`.
 
+## 2026-11-24: PHP provider, fixtures, benchmark cases and corpus validation
+
+[PHP](specs/languages/19-php.md) R1 to R14 are implemented in the `php/` subproject, built on IntelliJ IDEA Ultimate
+2025.1.3 with the PHP plugin `251.26927.70`. `PhpDeclarationProviderTest` (R1 to R13, LF and CRLF offsets), 42 golden
+fixtures in `src/test/testData/php/` and 13 merge fixtures in `src/test/testData/php/merge/` (every case of merge/05 R11
+and four PHP cases) pass in `:php:test`; every expected file was read and matches the spec. `CorpusValidationTest` and the
+benchmark's real-commit lines accept `.php` files. The engine is `smartdiff.declarations` 26 (unchanged): PHP adds no
+declaration kind and no matcher rule.
+
+**Relationship benchmark.** Eight PHP cases (`extraction`, `inlining`, `kind-change`, `move-in-file`, `method-rename`,
+`rename-with-body-change`, `class-rename`, `code-move`) are in `src/test/testData/php/relationships/`, listed in
+`src/test/testData/relationships-corpus-php.txt` with `corpus: php` and run by `PhpRelationshipBenchmarkTest` in
+`:php:test`. PHP has benchmark cases but is not held to the case matrix or the real-commit minimum. The run passed with
+the `no-new-wrong-pairs` gate: 8 cases, tp=8, fp=0, fn=0, precision=1.000, recall=1.000.
+
+**Corpus validation.** `PhpCorpusValidationTest` ran on the 20 most recent non-merge commits of two open-source PHP
+projects of different styles, cloned shallowly outside the repository: `symfony/console` (a library, head `ea18602770`,
+2026-11-24) and `slimphp/Slim` (a web framework, head `e257f61f94`, 2026-11-20). The run covered 102 modified `.php`
+files from 39 commits that touch PHP files (57 files in console, 45 in Slim). All 102 were `ANALYZED`, none was
+`PARTIAL` or fell back, and none had a `hidden`, `empty` or `slow` flag; the slowest file took 304 ms. No
+machine-specific paths were recorded.
+
+**Plugin Verifier.** `verifyPlugin` passed for every family, run one family at a time on the macOS IDE builds: PhpStorm
+2025.1.3 (`PS-251.26927.60`) and 2026.3 (`PS-263.7307.352`), both `Compatible` with 12 and 13 experimental-API usages,
+and the PHP plugin resolved as bundled on both; IntelliJ IDEA (`IC-251.26927.53`, `IU-263.7307.353`) `Compatible` with
+50 and 51, PyCharm (`PY-251.26927.74`, `PY-263.7307.351`) with 25 and 50, RustRover (`RR-251.25410.170`,
+`RR-263.7307.349`) with 49 and 50, WebStorm (`WS-251.26927.40`, `WS-263.7307.348`) with 49 and 50, and GoLand
+(`GO-251.26927.50`, `GO-263.7307.354`) with 49 and 50. None of the usages is in the PHP provider: the verifier reports
+no internal, experimental or deprecated `com.jetbrains.php` use, so [PLATFORM-API.md](PLATFORM-API.md) gains only the
+`com.jetbrains.php..` package row. `checkPlatformApiInventory` passed after each family.
+
 ## 2026-11-24: Go provider, fixtures, benchmark cases and corpus validation
 
 [Go](specs/languages/17-go.md) R1 to R17 are implemented in the `go/` subproject, built on IntelliJ IDEA Ultimate
