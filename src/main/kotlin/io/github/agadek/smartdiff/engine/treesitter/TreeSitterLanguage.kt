@@ -17,6 +17,13 @@ internal class Found(
     val members: Int? = null,
     /** The code of a function's body; null without one. */
     val body: TextRange? = null,
+    /** Whether [members] are a type's members, such as methods, or a namespace's, such as functions. */
+    val membersInType: Boolean = true,
+    /**
+     * Whether the declarations after the node, up to its container's end, are its members, as in a C# file-scoped
+     * namespace; the declaration's range then runs to the last of them.
+     */
+    val ownsFollowingSiblings: Boolean = false,
 )
 
 /** What one Tree-sitter language adds to the tree builder: its grammar, whitespace rule and declaration table. */
@@ -42,6 +49,15 @@ internal interface TreeSitterLanguage {
 
     /** Whether the comment [text] is a doc comment that belongs to the declaration below it (R15). */
     fun isDocComment(text: String): Boolean
+
+    /** The end of the declaration at [node], such as after the `;` that follows a C struct; the node's end by default. */
+    fun declarationEnd(node: Int, syntax: TreeSitterSyntax): Int = syntax.end(node)
+
+    /** Offsets of the line breaks that are content, not whitespace, such as those ending a C directive (R18). */
+    fun significantLineBreaks(syntax: TreeSitterSyntax): Set<Int> = emptySet()
+
+    /** Symbol names of leaves whose text is split into words and whitespace, such as a C macro's body (§7). */
+    val splitLeaves: Set<String> get() = emptySet()
 }
 
 /** Swift, with `tree-sitter-swift` (engines/05 R8, R16, R19). */

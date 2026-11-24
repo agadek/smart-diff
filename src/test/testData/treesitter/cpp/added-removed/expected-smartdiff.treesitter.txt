@@ -1,0 +1,6 @@
+status: ANALYZED
+class Cart  old 1-5  new 1-6
+  method size()  removed  old 4
+  destructor ~Cart()  added  new 4
+  method empty()  added  new 5
+type alias Basket  added  new 8

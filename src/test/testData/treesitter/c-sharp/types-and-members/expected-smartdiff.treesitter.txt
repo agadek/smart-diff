@@ -1,0 +1,12 @@
+status: ANALYZED
+namespace Shop  old 1-10  new 1-12
+  interface IPriced  old 3  new 3
+    property Tax  added  new 3
+  record Item  changed  old 5  new 5
+  struct Point  changed  old 7  new 7
+    field Y  changed  old 7  new 7
+    field Z  added  new 7
+  delegate Handler(object, EventArgs)  changed  signature changed  old 9  new 9
+  enum Mode  added  new 11
+    enum constant On  added  new 11
+    enum constant Off  added  new 11

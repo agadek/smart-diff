@@ -1,0 +1,3 @@
+status: PARTIAL
+reason: some source could not be parsed and was not analyzed
+function other()  unanalyzed  old 3  new 3

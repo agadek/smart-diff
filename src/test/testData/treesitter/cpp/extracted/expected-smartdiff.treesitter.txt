@@ -1,0 +1,3 @@
+status: ANALYZED
+function body(const std::vector<std::string>&)  added  extracted from render(const std::vector<std::string>&) old 5-10  new 4-11
+function render(const std::vector<std::string>&)  changed  code extracted to body(const std::vector<std::string>&)  old 4-11  new 13-17

@@ -14,4 +14,13 @@ class TreeSitterGoldenTest {
 
     @Test
     fun swift() = GoldenFixtures.checkFixtures("treesitter/swift", LanguageIds.TREE_SITTER_SWIFT, "swift", engine = engine)
+
+    @Test
+    fun cSharp() = GoldenFixtures.checkFixtures("treesitter/c-sharp", LanguageIds.TREE_SITTER_C_SHARP, "cs", engine = engine)
+
+    @Test
+    fun c() = GoldenFixtures.checkFixtures("treesitter/c", LanguageIds.TREE_SITTER_C, "c", engine = engine)
+
+    @Test
+    fun cpp() = GoldenFixtures.checkFixtures("treesitter/cpp", LanguageIds.TREE_SITTER_CPP, "cpp", engine = engine)
 }
