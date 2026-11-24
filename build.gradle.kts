@@ -68,6 +68,13 @@ dependencies {
     testImplementation("org.yaml:snakeyaml:2.3")
 }
 
+// languages/17-go-details §3: the verifier's ignored problems for the requested families.
+val verifierIgnoredProblems by tasks.registering(VerifierIgnoredProblems::class) {
+    val families = verifierFamilies(providers.gradleProperty("smartdiff.verifier.ides").orNull)
+    sources.from(verifierIgnoredProblemFiles(families).map { file("gradle/verifier/$it") })
+    output = layout.buildDirectory.file("verifier/ignored-problems.txt")
+}
+
 intellijPlatform {
     pluginConfiguration {
         ideaVersion {
@@ -100,8 +107,13 @@ intellijPlatform {
     }
 
     pluginVerification {
+        val verifierIdes = verifierFamilies(providers.gradleProperty("smartdiff.verifier.ides").orNull)
+        // languages/17-go-details §3: each family's false positives for an absent bundled-only optional dependency,
+        // chosen by the requested families and still listed in the reports as ignored.
+        if (verifierIgnoredProblemFiles(verifierIdes).isNotEmpty()) {
+            ignoredProblemsFile = verifierIgnoredProblems.flatMap { it.output }
+        }
         ides {
-            val verifierIdes = verifierFamilies(providers.gradleProperty("smartdiff.verifier.ides").orNull)
             if ("idea" in verifierIdes) {
                 create(IntelliJPlatformType.IntellijIdeaCommunity, providers.gradleProperty("platformVersion"))
                 // IntelliJ IDEA is a single product from 2025.3, so the latest release is of the unified type.
@@ -164,6 +176,29 @@ fun verifierFamilies(value: String?): Set<String> {
     }
 }
 
+/**
+ * The ignored-problems files under gradle/verifier for the requested verifier [families]: `idea` ignores the unresolved
+ * Go plugin PSI (languages/17-go-details §3). CI runs one family per invocation, so each family gets only its own file;
+ * a run over several families gets them all.
+ */
+fun verifierIgnoredProblemFiles(families: Set<String>): List<String> =
+    listOf("idea").filter { it in families }.map { "ignored-problems-$it.txt" }
+
+/** Joins the requested families' ignored-problems files into the one file the verifier takes. */
+abstract class VerifierIgnoredProblems : DefaultTask() {
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val sources: ConfigurableFileCollection
+
+    @get:OutputFile
+    abstract val output: RegularFileProperty
+
+    @TaskAction
+    fun join() {
+        output.get().asFile.writeText(sources.files.joinToString("") { it.readText().trimEnd() + "\n" })
+    }
+}
+
 /** The branch of an IDE notation: `IU-271.1234.5` is 271, `IU-2026.3.1` is 263. */
 fun branchOf(notation: String): Int {
     val parts = notation.substringAfter('-').split('.')
@@ -197,6 +232,17 @@ val verifierFamiliesTest by tasks.registering {
         check(earlyAccessOrRelease("IU-271.1234.5", "IU-2026.3.1") == "IU-271.1234.5") { "a newer EAP build is verified" }
         check(earlyAccessOrRelease("IU-263.100.1", "IU-2026.3.1") == "IU-2026.3.1") { "an EAP build on the release's branch is not newer" }
         check(earlyAccessOrRelease(null, "IU-2026.3.1") == "IU-2026.3.1") { "no EAP build verifies the release" }
+        // languages/17-go-details §3: each family gets only its own ignored problems.
+        check(verifierIgnoredProblemFiles(setOf("idea")) == listOf("ignored-problems-idea.txt")) { "idea ignores the Go PSI" }
+        check(verifierIgnoredProblemFiles(setOf("pycharm", "rustrover", "goland", "eap")).isEmpty()) { "the other families ignore nothing" }
+        val ignoredIdea = file("gradle/verifier/ignored-problems-idea.txt").readLines().filter { it.isNotBlank() && !it.startsWith("//") }
+        check(ignoredIdea.isNotEmpty()) { "idea has ignored problems" }
+        ignoredIdea.forEach { line ->
+            val pattern = line.removePrefix("io.github.agadek.smartdiff:")
+            check(pattern != line && ':' !in pattern) { "idea: '$line' is scoped to the plugin and has one pattern" }
+            Regex(pattern)
+        }
+        check(ignoredIdea.all { "com\\.goide" in it }) { "idea ignores only Go plugin packages" }
     }
 }
 

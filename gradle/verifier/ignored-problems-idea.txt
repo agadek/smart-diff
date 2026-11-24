@@ -1,0 +1,8 @@
+// Plugin Verifier ignored problems for the idea family (languages/17-go-details §3).
+// IntelliJ IDEA Community has no Go plugin, and the plugin's Go support loads only through the optional smartdiff-go.xml
+// descriptor, which never loads there. On the Linux IDE builds the verifier still reports the Go PSI that the Go
+// provider references as unresolved. Only the Go plugin's package is ignored; the verifier lists every ignored problem
+// in ignored-problems.txt next to the verdict.
+// Format: <plugin id>:<regular expression matched against the whole short problem description>.
+io.github.agadek.smartdiff:Package 'com\.goide(\.[\w.]+)?' is not found
+io.github.agadek.smartdiff:Access to unresolved class com\.goide\.[\w.$]+
