@@ -40,3 +40,14 @@ The `rust` subproject's own architecture test checks the `org.rust..` row and th
 ## Not listed
 
 The reports also name experimental Python AST interfaces and `com.intellij.psi` interfaces that other plugins' own classes reference, such as `PyAstTupleExpression` referenced in `PyTupleExpression`. They are not uses by a plugin class, so the inventory check ignores them.
+
+## Ignored verifier problems
+
+An optional dependency that an IDE does not bundle and the Marketplace does not offer leaves its descriptor's classes unresolved. On the Linux IDE builds Plugin Verifier reports them as compatibility problems, although that descriptor never loads there. Each verifier family ignores only its own such problems, through an ignored-problems file under [gradle/verifier](../gradle/verifier) ([languages/16 details §3](specs/languages/16-javascript-typescript-details.md#3-plugin-verifier)):
+
+| Family | Absent dependency | Ignored |
+| --- | --- | --- |
+| `idea` | JavaScript plugin, in IntelliJ IDEA Community | Unresolved packages and classes under `com.intellij.lang.javascript`, `com.intellij.lang.ecmascript6` and `com.intellij.lang.typescript` |
+| `webstorm` | Java plugin, in WebStorm | The Java plugin classes `JavaDeclarationProvider` and `JavaReferenceResolver` use, each by name, and the `com.intellij.lang.java` and `com.intellij.pom.java` packages |
+
+Ignored problems are not uses of the API this inventory lists. They stay in each target's report, in `ignored-problems.txt`. A new class in an ignored family fails verification until it is reviewed and added to the file.
