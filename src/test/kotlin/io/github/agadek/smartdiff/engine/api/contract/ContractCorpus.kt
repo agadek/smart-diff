@@ -20,8 +20,77 @@ object ContractCorpus {
 
     /** engines/05: a Tree-sitter language id (ADR 0015). */
     const val SWIFT = "tree-sitter.swift"
+    const val C_SHARP = "tree-sitter.c-sharp"
+    const val C = "tree-sitter.c"
+    const val CPP = "tree-sitter.cpp"
 
-    val languages: List<String> = listOf(JAVA, KOTLIN, TEXT, SWIFT)
+    val languages: List<String> = listOf(JAVA, KOTLIN, TEXT, SWIFT, C_SHARP, C, CPP)
+
+    private val cSharpBase = """
+        using System;
+
+        namespace Shapes
+        {
+            /// <summary>Shapes.</summary>
+            public sealed class Shapes
+            {
+                private int count;
+
+                public Shapes(int count) { this.count = count; }
+
+                public int Area(int side) { return side * side; }
+
+                public int Area(int width, int height) { return width * height; }
+
+                public string Name() => "shapes";
+
+                public struct Inner { public void Helper() {} }
+            }
+        }
+
+    """.trimIndent()
+
+    private val cBase = """
+        #include <stdio.h>
+        #define SIDES 4
+
+        /** Shapes. */
+        struct shape { int width; int height; };
+
+        int area(int side) {
+            return side * side;
+        }
+
+        int area2(int width, int height) {
+            return width * height;
+        }
+
+        const char *name(void) { return "shapes"; }
+
+    """.trimIndent()
+
+    private val cppBase = """
+        #include <string>
+
+        namespace shapes {
+
+        /// Shapes.
+        class Shapes {
+        public:
+            explicit Shapes(int count) : count_(count) {}
+            int area(int side) const { return side * side; }
+            int area(int width, int height) const { return width * height; }
+            std::string name() const;
+
+        private:
+            int count_;
+        };
+
+        std::string Shapes::name() const { return "shapes"; }
+
+        }
+
+    """.trimIndent()
 
     private val swiftBase = """
         import Foundation
@@ -163,6 +232,20 @@ object ContractCorpus {
         swift("string literal changed", swiftBase.replace("\"shapes\"", "\"fig  ures\"")),
         swift("parse error on new side", swiftBase.replace("func area(side: Int) -> Int {", "func area(side: Int -> Int {"), malformed = true),
         swift("unbalanced garbage", "}}} class { ( \"unterminated\n", malformed = true),
+        cSharp("method body changed", cSharpBase.replace("return side * side;", "return side * side * 1;")),
+        cSharp("method added", cSharpBase.replace("        public struct Inner", "        public void Reset() {}\n\n        public struct Inner")),
+        cSharp("line break inside parentheses", cSharpBase.replace("Area(int width, int height)", "Area(\n            int width,\n            int height)")),
+        cSharp("string literal changed", cSharpBase.replace("\"shapes\"", "\"fig  ures\"")),
+        cSharp("parse error on new side", cSharpBase.replace("Area(int side) {", "Area(int side {"), malformed = true),
+        c("function body changed", cBase.replace("return side * side;", "return side * side * 1;")),
+        c("functions reordered", cBase.replace("const char *name(void) { return \"shapes\"; }\n", "").replace("int area(int side)", "const char *name(void) { return \"shapes\"; }\n\nint area(int side)")),
+        c("macro continued on a new line", cBase.replace("#define SIDES 4", "#define SIDES \\\n    4")),
+        c("parse error on new side", cBase.replace("int area(int side) {", "int area(int side {"), malformed = true),
+        cpp("method body changed", cppBase.replace("return side * side;", "return side * side * 1;")),
+        cpp("method added", cppBase.replace("    std::string name() const;", "    std::string name() const;\n    void reset();")),
+        cpp("qualified definition changed", cppBase.replace("return \"shapes\";", "return \"figures\";")),
+        cpp("parse error on new side", cppBase.replace("int area(int side) const {", "int area(int side const {"), malformed = true),
+        cpp("unbalanced garbage", "}}} class { ( \"unterminated\n", malformed = true),
         text("one line changed", textBase.replace("second", "2nd")),
         text("lines added and removed", "zeroth line\nfirst line\nthird line\nfourth line\n"),
         text("missing final line break", textBase.removeSuffix("\n")),
@@ -171,7 +254,7 @@ object ContractCorpus {
     )
 
     /** Pairs with an empty side, for every language. */
-    val emptyCases: List<ContractCase> = listOf(JAVA to javaBase, KOTLIN to kotlinBase, TEXT to textBase, SWIFT to swiftBase).flatMap { (language, text) ->
+    val emptyCases: List<ContractCase> = listOf(JAVA to javaBase, KOTLIN to kotlinBase, TEXT to textBase, SWIFT to swiftBase, C_SHARP to cSharpBase, C to cBase, CPP to cppBase).flatMap { (language, text) ->
         listOf(
             ContractCase("both empty", language, "", ""),
             ContractCase("old side empty", language, "", text),
@@ -182,7 +265,7 @@ object ContractCorpus {
 
     /** Each well-formed side of the corpus compared with itself. */
     val identicalCases: List<ContractCase> =
-        (listOf(java("base", javaBase), kotlin("base", kotlinBase), text("base", textBase), swift("base", swiftBase)) + cases.filterNot { it.malformed })
+        (listOf(java("base", javaBase), kotlin("base", kotlinBase), text("base", textBase), swift("base", swiftBase), cSharp("base", cSharpBase), c("base", cBase), cpp("base", cppBase)) + cases.filterNot { it.malformed })
             .map { ContractCase("identical: ${it.name}", it.languageId, it.newText, it.newText) }
 
     /** A large pair in [languageId], for cancellation: [size] members, every tenth changed on the new side. */
@@ -191,6 +274,8 @@ object ContractCorpus {
             append(
                 when (languageId) {
                     KOTLIN, SWIFT -> "class Large {\n"
+                    C -> ""
+                    CPP -> "class Large {\npublic:\n"
                     else -> "public class Large {\n"
                 },
             )
@@ -200,7 +285,13 @@ object ContractCorpus {
                 else if (languageId == SWIFT) append("    func m$i(i: Int) -> Int {\n        return $body\n    }\n\n")
                 else append("    int m$i(int i) {\n        return $body;\n    }\n\n")
             }
-            append("}\n")
+            append(
+                when (languageId) {
+                    C -> ""
+                    CPP -> "};\n"
+                    else -> "}\n"
+                },
+            )
         }
         return ContractCase("large", languageId, side(changed = false), side(changed = true))
     }
@@ -209,4 +300,7 @@ object ContractCorpus {
     private fun kotlin(name: String, newText: String, malformed: Boolean = false) = ContractCase(name, KOTLIN, kotlinBase, newText, malformed)
     private fun text(name: String, newText: String) = ContractCase(name, TEXT, textBase, newText)
     private fun swift(name: String, newText: String, malformed: Boolean = false) = ContractCase(name, SWIFT, swiftBase, newText, malformed)
+    private fun cSharp(name: String, newText: String, malformed: Boolean = false) = ContractCase(name, C_SHARP, cSharpBase, newText, malformed)
+    private fun c(name: String, newText: String, malformed: Boolean = false) = ContractCase(name, C, cBase, newText, malformed)
+    private fun cpp(name: String, newText: String, malformed: Boolean = false) = ContractCase(name, CPP, cppBase, newText, malformed)
 }

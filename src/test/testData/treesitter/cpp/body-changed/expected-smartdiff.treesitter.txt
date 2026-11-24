@@ -1,0 +1,5 @@
+status: ANALYZED
+namespace shapes  old 1-11  new 1-11
+  class Square  old 3-7  new 3-7
+    method area(int)  changed  old 5  new 5
+  function Square::count()  changed  old 9  new 9

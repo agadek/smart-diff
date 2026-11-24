@@ -1,0 +1,3 @@
+status: ANALYZED
+class Labels  old 1-4  new 1-4
+  method Title()  changed  old 3  new 3

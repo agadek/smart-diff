@@ -1,0 +1,9 @@
+status: ANALYZED
+File region  formatting-only  old 3  new 1
+struct point  old 1  new 1
+  field z  added  new 1
+function origin_x()  removed  old 3
+enum color  added  new 3
+  enum constant RED  added  new 3
+  enum constant GREEN  added  new 3
+macro MAX_POINTS  added  new 5
