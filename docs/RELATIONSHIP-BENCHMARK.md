@@ -22,7 +22,7 @@ Without a labelled benchmark, matcher changes are judged by anecdote and fixture
 In scope:
 
 - per-file comparisons;
-- Java, Kotlin, Scala 2, Scala 3 and Python in the case matrix and real-commit minimums; Rust has benchmark cases listed separately in `src/test/testData/relationships-corpus-rust.txt` and run by `RustRelationshipBenchmarkTest` in `:rust`, and is not held to the case matrix or the real-commit minimum; Go has benchmark cases listed in `src/test/testData/relationships-corpus-go.txt` and run by `GoRelationshipBenchmarkTest` in `:go`, on the same terms; PHP has benchmark cases listed in `src/test/testData/relationships-corpus-php.txt` and run by `PhpRelationshipBenchmarkTest` in `:php`, on the same terms;
+- Java, Kotlin, Scala 2, Scala 3 and Python in the case matrix and real-commit minimums; Rust has benchmark cases listed separately in `src/test/testData/relationships-corpus-rust.txt` and run by `RustRelationshipBenchmarkTest` in `:rust`, and is not held to the case matrix or the real-commit minimum; Go has benchmark cases listed in `src/test/testData/relationships-corpus-go.txt` and run by `GoRelationshipBenchmarkTest` in `:go`, on the same terms; PHP has benchmark cases listed in `src/test/testData/relationships-corpus-php.txt` and run by `PhpRelationshipBenchmarkTest` in `:php`, on the same terms; Swift, C#, C and C++ have benchmark cases listed in `src/test/testData/relationships-corpus-treesitter.txt` and run by `TreeSitterRelationshipBenchmarkTest` with the Tree-sitter engine, on the same terms;
 - declaration renames, moves, kind changes, signature changes, extraction and inlining;
 - code moves: statements moved inside or between matched declarations ([relationships/08](specs/relationships/08-moves-inside-declarations.md)), in the `code-move` category, eight cases per language;
 - duplicate bodies, overloads and ambiguous candidates;
@@ -34,6 +34,8 @@ In scope:
 Rust relationship benchmark (2026-11-15, `:rust` run, `src/test/testData/relationships-corpus-rust.txt`): 6 cases, tp=6, fp=0, fn=0, precision=1.000, recall=1.000 (`rust` row, `no-new-wrong-pairs` gate; smoke run relative to core matrix/commit minimums).
 
 Go relationship benchmark (2026-11-24, `:go` run, `src/test/testData/relationships-corpus-go.txt`): 8 cases, tp=8, fp=0, fn=0, precision=1.000, recall=1.000 (`go` row, `no-new-wrong-pairs` gate; smoke run relative to core matrix/commit minimums).
+
+Tree-sitter relationship benchmark (2026-11-24, `src/test/testData/relationships-corpus-treesitter.txt`): 7 cases per language, tp=7, fp=0, fn=0, precision=1.000, recall=1.000 in each of the `swift`, `c-sharp`, `c` and `cpp` rows (`no-new-wrong-pairs` gate; smoke run relative to core matrix/commit minimums).
 
 Later, after an explicit scope decision:
 

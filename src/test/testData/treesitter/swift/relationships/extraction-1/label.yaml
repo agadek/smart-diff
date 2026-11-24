@@ -1,0 +1,19 @@
+case: extraction-1
+language: tree-sitter.swift
+corpus: swift
+category: extraction
+split: tuning
+expected:
+  relationships:
+    - kinds: [EXTRACT]
+      old: { path: "class Report", kind: METHOD, name: "render", signature: "lines: [String]" }
+      new: { path: "class Report", kind: METHOD, name: "body", signature: "lines: [String]" }
+  changes:
+    - subject: { path: "class Report", kind: METHOD, name: "render", signature: "lines: [String]" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Report", kind: METHOD, name: "body", signature: "lines: [String]" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A helper method is extracted from a changed method."

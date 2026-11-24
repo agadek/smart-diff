@@ -1,0 +1,19 @@
+case: rename-with-body-change-1
+language: tree-sitter.c-sharp
+corpus: c-sharp
+category: rename-with-body-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Format", kind: METHOD, name: "Price", signature: "int" }
+      new: { path: "class Format", kind: METHOD, name: "Amount", signature: "int" }
+  changes:
+    - subject: { path: "class Format", kind: METHOD, name: "Amount", signature: "int" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Format", kind: METHOD, name: "Count", signature: "int" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A method is renamed and one line of its body changes."

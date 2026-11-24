@@ -1,0 +1,19 @@
+case: rename-with-body-change-1
+language: tree-sitter.cpp
+corpus: cpp
+category: rename-with-body-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "", kind: FUNCTION, name: "formatPrice", signature: "int" }
+      new: { path: "", kind: FUNCTION, name: "formatAmount", signature: "int" }
+  changes:
+    - subject: { path: "", kind: FUNCTION, name: "formatAmount", signature: "int" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: FUNCTION, name: "formatCount", signature: "int" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A function is renamed and one line of its body changes."

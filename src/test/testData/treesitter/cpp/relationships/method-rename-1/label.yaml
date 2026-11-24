@@ -1,0 +1,19 @@
+case: method-rename-1
+language: tree-sitter.cpp
+corpus: cpp
+category: method-rename
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Stats", kind: METHOD, name: "total", signature: "const std::vector<int>&" }
+      new: { path: "class Stats", kind: METHOD, name: "sum", signature: "const std::vector<int>&" }
+  changes:
+    - subject: { path: "class Stats", kind: METHOD, name: "sum", signature: "const std::vector<int>&" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Stats", kind: METHOD, name: "largest", signature: "const std::vector<int>&" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A method is renamed with the same body."

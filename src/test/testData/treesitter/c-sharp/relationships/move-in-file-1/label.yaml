@@ -1,0 +1,20 @@
+case: move-in-file-1
+language: tree-sitter.c-sharp
+corpus: c-sharp
+category: move-in-file
+split: tuning
+expected:
+  relationships:
+    - kinds: [MOVE]
+      old: { path: "class Picker", kind: METHOD, name: "Third", signature: "int[]" }
+      new: { path: "class Picker", kind: METHOD, name: "Third", signature: "int[]" }
+  changes:
+    - subject: { path: "class Picker", kind: METHOD, name: "Third", signature: "int[]" }
+      presence: MATCHED
+      content: FORMATTING_ONLY
+      moved: true
+    - subject: { path: "class Picker", kind: METHOD, name: "First", signature: "int[]" }
+      presence: MATCHED
+      content: FORMATTING_ONLY
+  ambiguous: []
+notes: "The blank lines around the moved declarations change, so both are formatting-only. The last method moves to the top of the class."

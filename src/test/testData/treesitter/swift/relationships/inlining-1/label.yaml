@@ -1,0 +1,19 @@
+case: inlining-1
+language: tree-sitter.swift
+corpus: swift
+category: inlining
+split: tuning
+expected:
+  relationships:
+    - kinds: [INLINE]
+      old: { path: "class Report", kind: METHOD, name: "body", signature: "lines: [String]" }
+      new: { path: "class Report", kind: METHOD, name: "render", signature: "lines: [String]" }
+  changes:
+    - subject: { path: "class Report", kind: METHOD, name: "render", signature: "lines: [String]" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Report", kind: METHOD, name: "body", signature: "lines: [String]" }
+      presence: REMOVED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A helper method is inlined into its caller."

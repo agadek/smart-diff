@@ -1,0 +1,2 @@
+left: ANALYZED  right: ANALYZED
+function second()  CHANGED_ON_BOTH_SIDES  left: removed  right: changed  base 7-9  left -  right 7-9

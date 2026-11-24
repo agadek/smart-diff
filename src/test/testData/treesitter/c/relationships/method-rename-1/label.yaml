@@ -1,0 +1,19 @@
+case: method-rename-1
+language: tree-sitter.c
+corpus: c
+category: method-rename
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "", kind: FUNCTION, name: "total", signature: "const int*, int" }
+      new: { path: "", kind: FUNCTION, name: "sum_values", signature: "const int*, int" }
+  changes:
+    - subject: { path: "", kind: FUNCTION, name: "sum_values", signature: "const int*, int" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "largest", signature: "const int*, int" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A function is renamed with the same body."

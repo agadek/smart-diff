@@ -1,0 +1,17 @@
+case: kind-change-1
+language: tree-sitter.c-sharp
+corpus: c-sharp
+category: kind-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [KIND_CHANGE]
+      old: { path: "", kind: CLASS, name: "Money", signature: null }
+      new: { path: "", kind: STRUCT, name: "Money", signature: null }
+  changes:
+    - subject: { path: "", kind: STRUCT, name: "Money", signature: null }
+      presence: MATCHED
+      content: CHANGED
+      kindChangedFrom: CLASS
+  ambiguous: []
+notes: "A class becomes a struct with the same members."

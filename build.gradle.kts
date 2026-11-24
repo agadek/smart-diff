@@ -337,6 +337,8 @@ tasks.test {
     systemProperty("smartdiff.limits.corpus", providers.gradleProperty("smartdiff.limits.corpus").getOrElse(""))
     systemProperty("smartdiff.validation.corpus", providers.gradleProperty("smartdiff.validation.corpus").getOrElse(""))
     systemProperty("smartdiff.validation.merges", providers.gradleProperty("smartdiff.validation.merges").getOrElse(""))
+    // -Psmartdiff.validation.treesitter.corpus=<list> runs the Tree-sitter corpus validation (engines/05 R30).
+    systemProperty("smartdiff.validation.treesitter.corpus", providers.gradleProperty("smartdiff.validation.treesitter.corpus").getOrElse(""))
     systemProperty("smartdiff.relationships.corpus", providers.gradleProperty("smartdiff.relationships.corpus").getOrElse(""))
     systemProperty("smartdiff.relationships.gate", providers.gradleProperty("smartdiff.relationships.gate").getOrElse("no-new-wrong-pairs"))
     systemProperty("smartdiff.relationships.baseline", providers.gradleProperty("smartdiff.relationships.baseline").getOrElse(""))

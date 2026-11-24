@@ -1,6 +1,6 @@
 # Tree-sitter engine
 
-Status: proposed, 2026-11-17
+Status: implemented, 2026-11-24 (Swift 2026-11-18; C#, C and C++, and the validation of T3, 2026-11-24)
 
 **Description:** A [comparison engine](../../GLOSSARY.md#comparison-engine) that parses Swift, C#, C and C++ files with bundled Tree-sitter grammars when the IDE has no language support for them, and gives them the same [structural outline](../../GLOSSARY.md#structural-outline) as the languages the IDE parses. These files are [Tree-sitter languages](../../GLOSSARY.md#tree-sitter-language).
 
@@ -47,7 +47,7 @@ Status: proposed, 2026-11-17
 - Grouping renames with their usages, which needs reference resolution that Tree-sitter does not provide.
 - Choosing between C and C++ for a `.h` file by its contents.
 - Expanding macros, or declarations that only a macro generates.
-- Fine-grained differencing with Tree-sitter, and Tree-sitter for languages the IDE parses.
+- Fine-grained differencing with Tree-sitter, and with it [moves inside declarations](../relationships/08-moves-inside-declarations.md), which read the changed runs; and Tree-sitter for languages the IDE parses.
 
 ## References
 

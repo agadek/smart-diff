@@ -1,0 +1,4 @@
+left: ANALYZED  right: ANALYZED
+class Shop  UNCHANGED  base 3-12  left 3-16  right 3-16
+  method leftAdded()  LEFT_ONLY  left: added  base -  left 13-15  right -
+  method rightAdded()  RIGHT_ONLY  right: added  base -  left -  right 13-15

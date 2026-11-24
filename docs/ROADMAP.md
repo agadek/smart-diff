@@ -140,7 +140,7 @@ Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.
 | [Moves inside declarations](#moves-inside-declarations) | [relationships/08](specs/relationships/08-moves-inside-declarations.md) (implemented, 2026-11-23) |
 | [Fine-grained differencing](#fine-grained-differencing) | [declarations/10](specs/declarations/10-fine-grained-differencing.md) (implemented, 2026-11-23) |
 | [Platform API stability](#platform-api-stability) | [platform/01](specs/platform/01-platform-api-stability.md) (implemented 2026-11-17) |
-| [Tree-sitter support](#tree-sitter-support) | [engines/05](specs/engines/05-tree-sitter.md) (Swift implemented 2026-11-18; C#, C and C++ 2026-11-24) |
+| [Tree-sitter support](#tree-sitter-support) | [engines/05](specs/engines/05-tree-sitter.md) (implemented: Swift 2026-11-18; C#, C and C++ and the T3 validation 2026-11-24) |
 | [More languages](#more-languages) | [Format coverage plan](FORMAT-COVERAGE.md); feature specs with each phase |
 | Every other item below | Not specified yet |
 
@@ -243,6 +243,8 @@ Implemented 2026-11-24 ([languages/19](specs/languages/19-php.md), [details](spe
 ### Tree-sitter support
 
 A Tree-sitter provider or engine for languages the host IDE cannot parse, after native packaging and grammar licence review ([research](RESEARCH.md#difftastic-and-alternatives)). Specified in [engines/05](specs/engines/05-tree-sitter.md) (proposed, 2026-11-17) and [ADR 0015](adr/0015-tree-sitter-languages-are-chosen-by-file-name.md): a `Declarations (Tree-sitter)` engine with bundled grammars for Swift, C#, C and C++ in files the IDE opens as plain text or TextMate files, chosen by the file name's extension, reusing the declaration engine's matching and classification. Spike S12 chose the runtime on 2026-11-17 ([ADR 0016](adr/0016-tree-sitter-runs-in-a-native-helper-process.md)): one native helper executable per platform with all four grammars, run as a child process, which parses both sides of a 1 MB file in 0.3 to 0.5 s, keeps the IDE running when it fails and adds about 7.5 MB for six platforms. The JNI binding, WebAssembly grammars and the Java binding were ruled out. Rider and CLion Nova stay out of scope until S12 records what they offer.
+
+Swift was implemented on 2026-11-18 and C#, C and C++ on 2026-11-24. Phase T3 (2026-11-24) added merge fixtures, relationship benchmark cases and a corpus validation for the four languages ([VALIDATION.md](VALIDATION.md#2026-11-24-tree-sitter-merge-fixtures-benchmark-cases-and-corpus-validation)): no wrong or missed relationship and no hidden change, but about a third of the changed C and C++ files were partly unanalyzed, because the grammars' error recovery around macros moves declaration boundaries. Possible follow-ups: better recovery around macros in C and C++, and moves inside declarations, which need changed runs from this engine.
 
 ### Fine-grained differencing
 

@@ -1,0 +1,2 @@
+left: ANALYZED  right: ANALYZED
+function first()  CHANGED_ON_BOTH_SIDES  left: changed  right: changed  base 3-5  left 3-5  right 3-5

@@ -1,0 +1,16 @@
+case: class-rename-1
+language: tree-sitter.c
+corpus: c
+category: class-rename
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "", kind: STRUCT, name: "point", signature: null }
+      new: { path: "", kind: STRUCT, name: "coordinate", signature: null }
+  changes:
+    - subject: { path: "", kind: STRUCT, name: "coordinate", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A struct is renamed with the same fields."
