@@ -1,0 +1,8 @@
+src/test/testData/go/relationships/class-rename-1
+src/test/testData/go/relationships/code-move-1
+src/test/testData/go/relationships/extraction-1
+src/test/testData/go/relationships/inlining-1
+src/test/testData/go/relationships/kind-change-1
+src/test/testData/go/relationships/method-rename-1
+src/test/testData/go/relationships/move-in-file-1
+src/test/testData/go/relationships/rename-with-body-change-1

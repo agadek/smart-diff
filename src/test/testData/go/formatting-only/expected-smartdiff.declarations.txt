@@ -1,0 +1,2 @@
+status: ANALYZED
+method Order.Total()  formatting-only  old 10-16  new 10-16

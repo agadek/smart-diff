@@ -116,6 +116,8 @@ class ArchitectureTest {
         }
         val rust = inventory.remove("org.rust..")
         assertEquals("the rust subproject checks this row", setOf("io.github.agadek.smartdiff.engine.declarations.psi.rust.."), rust)
+        val go = inventory.remove("com.goide..")
+        assertEquals("the go subproject checks this row", setOf("io.github.agadek.smartdiff.engine.declarations.psi.go.."), go)
         assertEquals(
             inventory.mapValues { it.value.toSet() },
             ArchitectureRules("io.github.agadek.smartdiff").platformApiAdapters.mapValues { it.value.toSet() },

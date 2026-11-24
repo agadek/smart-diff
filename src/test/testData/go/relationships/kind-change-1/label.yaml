@@ -1,0 +1,17 @@
+case: kind-change-1
+language: go
+corpus: go
+category: kind-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [KIND_CHANGE]
+      old: { path: "", kind: TYPE, name: "ID", signature: null }
+      new: { path: "", kind: STRUCT, name: "ID", signature: null }
+  changes:
+    - subject: { path: "", kind: STRUCT, name: "ID", signature: null }
+      presence: MATCHED
+      content: CHANGED
+      kindChangedFrom: TYPE
+  ambiguous: []
+notes: "A defined type becomes a struct."

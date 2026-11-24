@@ -1,0 +1,8 @@
+status: ANALYZED
+struct Point  old 3-7  new 3-6
+  field X  formatting-only  old 4  new 4
+  field Y  formatting-only  old 5  new 5
+struct Line  old 9-12  new 8-12
+  field From  formatting-only  old 10  new 9
+  field To  formatting-only  old 11  new 10
+  field Label  moved  old 6  new 11

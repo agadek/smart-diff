@@ -1,0 +1,2 @@
+left: ANALYZED  right: ANALYZED
+function Total()  CHANGED_ON_BOTH_SIDES  left: formatting-only  right: changed  base 3-6  left 3-6  right 3-6

@@ -1,0 +1,4 @@
+status: ANALYZED
+struct Point  old 3-6  new 3-6
+  field X, Y  removed  old 4
+  field X, Z  added  new 4

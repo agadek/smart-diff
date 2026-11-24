@@ -1,0 +1,12 @@
+package orders
+
+func Process(o Order) error {
+	if o.Total <= 0 || len(o.Items) == 0 {
+		return errInvalid
+	}
+	if err := save(o); err != nil {
+		return err
+	}
+	notify(o.Customer, o.ID, "processed")
+	return nil
+}

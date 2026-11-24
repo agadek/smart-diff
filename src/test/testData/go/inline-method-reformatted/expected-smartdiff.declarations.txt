@@ -1,0 +1,3 @@
+status: ANALYZED
+function main()  changed  code inlined from helper() old 10-12 new 6-8  old 5-7  new 5-9
+function helper()  removed  inlined into main()  old 9-13

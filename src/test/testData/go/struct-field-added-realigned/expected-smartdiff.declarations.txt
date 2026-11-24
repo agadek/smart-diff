@@ -1,0 +1,5 @@
+status: ANALYZED
+struct Config  old 3-6  new 3-7
+  field Host  formatting-only  old 4  new 4
+  field Port  formatting-only  old 5  new 5
+  field Timeout  added  new 6

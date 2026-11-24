@@ -1,0 +1,3 @@
+status: ANALYZED
+function Render([]int)  changed  code extracted to sumItems([]int)  old 3-9  new 3-5
+function sumItems([]int)  added  extracted from Render([]int) old 4-8  new 7-13

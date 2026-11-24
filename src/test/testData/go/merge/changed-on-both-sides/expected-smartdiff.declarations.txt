@@ -1,0 +1,2 @@
+left: ANALYZED  right: ANALYZED
+method Order.Total()  CHANGED_ON_BOTH_SIDES  left: changed  right: changed  base 7-9  left 7-9  right 7-9

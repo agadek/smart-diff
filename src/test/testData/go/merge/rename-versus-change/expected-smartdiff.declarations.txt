@@ -1,0 +1,2 @@
+left: ANALYZED  right: ANALYZED
+function Total([]int)  CHANGED_ON_BOTH_SIDES  left: rename candidate → function Sum([]int)  right: changed  base 3-9  left 3-9  right 3-9

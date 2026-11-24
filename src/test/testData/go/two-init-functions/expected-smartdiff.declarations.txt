@@ -1,0 +1,2 @@
+status: ANALYZED
+function init()  added  new 7-9

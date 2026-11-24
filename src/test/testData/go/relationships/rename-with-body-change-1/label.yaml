@@ -1,0 +1,20 @@
+case: rename-with-body-change-1
+language: go
+corpus: go
+category: rename-with-body-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "", kind: FUNCTION, name: "First", signature: "[]int" }
+      new: { path: "", kind: FUNCTION, name: "Sum", signature: "[]int" }
+      usages: []
+  changes:
+    - subject: { path: "", kind: FUNCTION, name: "Sum", signature: "[]int" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: FUNCTION, name: "Second", signature: "[]int" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A function is renamed and its body changes a little."
