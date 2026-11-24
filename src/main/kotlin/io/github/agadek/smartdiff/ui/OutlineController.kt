@@ -914,6 +914,7 @@ class OutlineController internal constructor(
             "Rust" -> WhitespacePolicy.INSIGNIFICANT
             "JavaScript", "ECMAScript 6", "JSX Harmony", "Flow JS", "TypeScript", "TypeScript JSX" -> WhitespacePolicy.INSIGNIFICANT
             "go" -> WhitespacePolicy.LINE_BREAKS_SIGNIFICANT
+            "CSS", "SCSS", "LESS" -> WhitespacePolicy.INSIGNIFICANT
             "PHP" -> WhitespacePolicy.INSIGNIFICANT
             else -> WhitespacePolicy.SIGNIFICANT
         }

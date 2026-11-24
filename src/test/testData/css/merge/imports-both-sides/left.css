@@ -1,0 +1,18 @@
+@import url("reset.css");
+@import url("grid.css");
+
+.header {
+  color: black;
+  padding: 8px 16px;
+}
+
+.footer {
+  color: gray;
+  margin-top: 24px;
+}
+
+@media print {
+  .header {
+    display: none;
+  }
+}

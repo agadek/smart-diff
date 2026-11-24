@@ -215,11 +215,13 @@ enum class DeclarationKind {
     STRUCT, UNION, VARIANT, IMPL, MODULE, CONSTANT, STATIC, MACRO,
     PROTOCOL, ACTOR, DESTRUCTOR, SUBSCRIPT,
     NAMESPACE, DELEGATE, OPERATOR, INDEXER, EVENT,
-    TYPE;
+    TYPE,
+    RULE, AT_RULE, MIXIN;
 
-    /** The label shown in the outline and in declaration paths (languages/05-rust-details §4). */
+    /** The label shown in the outline and in declaration paths (languages/05-rust-details §4, languages/18-css-details §4). */
     fun label(): String = when (this) {
         CONSTANT -> "const"
+        AT_RULE -> "at-rule"
         else -> name.lowercase().replace('_', ' ')
     }
 }

@@ -30,10 +30,17 @@ The API column names a class, a class and member as `Class#member`, or a package
 | `org.rust..` | non-public plugin PSI | `io.github.agadek.smartdiff.engine.declarations.psi.rust..` | `RUST_PROVIDER` | Rust files get the analysis fallback (R11) | None: the Rust plugin publishes no stable PSI API |
 | `com.intellij.lang.javascript..`, `com.intellij.lang.ecmascript6..` | non-public plugin PSI | `io.github.agadek.smartdiff.engine.declarations.psi.javascript..` | `JAVASCRIPT_PROVIDER` | JavaScript and TypeScript files get the analysis fallback (R11) | None: the JavaScript plugin is closed source and publishes no stable PSI API |
 | `com.goide..` | non-public plugin PSI | `io.github.agadek.smartdiff.engine.declarations.psi.go..` | `GO_PROVIDER` | Go files get the analysis fallback (R11) | None: the Go plugin is closed source and publishes no stable PSI API |
+| `com.intellij.psi.css..` | non-public plugin PSI | `io.github.agadek.smartdiff.engine.declarations.psi.css..` | `CSS_PROVIDER` | CSS, SCSS and Less files get the analysis fallback (R11) | None: the CSS plugin is closed source and publishes no stable PSI API; the SCSS and Less constructs are read by element type name, so no Sass or Less class is used ([languages/18 details §1](specs/languages/18-css-details.md#1-packaging-and-ide-versions)) |
 | `com.jetbrains.php..` | non-public plugin PSI | `io.github.agadek.smartdiff.engine.declarations.psi.php..` | `PHP_PROVIDER` | PHP files get the analysis fallback (R11) | None: the PHP plugin is closed source and publishes no stable PSI API |
 | `org.jetbrains.kotlin.analysis..` | Kotlin Analysis API, not used | `io.github.agadek.smartdiff.references.KotlinReferenceResolver` | `KOTLIN_REFERENCES` | Kotlin renames without grouped usages (R12) | Not needed: the resolver uses `PsiReference.resolve()` only |
 
-The `rust` subproject's own architecture test checks the `org.rust..` row, the `javascript` subproject's checks the JavaScript plugin row and the `go` subproject's checks the `com.goide..` row and the `php` subproject's checks the `com.jetbrains.php..` row; the root's checks the others.
+Each optional plugin subproject's own architecture test checks its plugin's row, and the root's checks the others:
+
+- `rust`: the `org.rust..` row;
+- `javascript`: the JavaScript plugin row;
+- `go`: the `com.goide..` row;
+- `css`: the `com.intellij.psi.css..` row;
+- `php`: the `com.jetbrains.php..` row.
 
 ## Replaced
 
@@ -49,7 +56,7 @@ An optional dependency that an IDE does not bundle and the Marketplace does not 
 
 | Family | Absent dependency | Ignored |
 | --- | --- | --- |
-| `idea` | JavaScript plugin, in IntelliJ IDEA Community | Unresolved packages and classes under `com.intellij.lang.javascript`, `com.intellij.lang.ecmascript6` and `com.intellij.lang.typescript` |
+| `idea` | JavaScript, Go and CSS plugins, in IntelliJ IDEA Community | Unresolved packages and classes under `com.intellij.lang.javascript`, `com.intellij.lang.ecmascript6` and `com.intellij.lang.typescript`, `com.goide` ([languages/17 details §3](specs/languages/17-go-details.md#3-plugin-verifier)) and `com.intellij.psi.css` ([languages/18 details §3](specs/languages/18-css-details.md#3-plugin-verifier)) |
 | `webstorm` | Java plugin, in WebStorm | The Java plugin classes `JavaDeclarationProvider` and `JavaReferenceResolver` use, each by name, and the `com.intellij.lang.java` and `com.intellij.pom.java` packages |
 
 Ignored problems are not uses of the API this inventory lists. They stay in each target's report, in `ignored-problems.txt`. A new class in an ignored family fails verification until it is reviewed and added to the file.

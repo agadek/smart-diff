@@ -1,0 +1,2 @@
+left: ANALYZED  right: ANALYZED
+rule .footer  CHANGED_ON_BOTH_SIDES  left: changed  right: changed  note: same change on both sides  base 6-9  left 6-9  right 6-9

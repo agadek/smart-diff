@@ -1,0 +1,15 @@
+.header {
+  color: black;
+  padding: 8px 16px;
+}
+
+.footer {
+  color: gray;
+  margin-top: 24px;
+}
+
+@media print, screen and (max-width: 400px) {
+  .header {
+    display: none;
+  }
+}

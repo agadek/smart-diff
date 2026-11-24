@@ -1,0 +1,2 @@
+status: ANALYZED
+rule .card  changed  old 1-5  new 1-5

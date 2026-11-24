@@ -1,0 +1,2 @@
+status: ANALYZED
+rule .nav.item  rename candidate from rule .nav .item  changed  old 1-3  new 1-3

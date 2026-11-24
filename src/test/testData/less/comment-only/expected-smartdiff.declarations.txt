@@ -1,0 +1,2 @@
+status: ANALYZED
+variable @primary  changed  old 3-4  new 3-4

@@ -1,0 +1,21 @@
+@import "variables";
+
+// The brand colour.
+@primary: #0a66c2;
+
+.bordered(@width; @style: solid) {
+  border: @width @style @primary;
+}
+
+.card {
+  .bordered(1px);
+  padding: 16px;
+
+  .title {
+    font-weight: bold;
+  }
+
+  &:hover {
+    background: lighten(@primary, 30%);
+  }
+}

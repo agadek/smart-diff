@@ -56,15 +56,17 @@ visible.
 
 - Java, Kotlin (including `.gradle.kts` scripts), Scala 2 and Scala 3, Groovy and Gradle scripts, Python, Rust,
   JavaScript and TypeScript (JSX and TSX included), Go, PHP
+- CSS, SCSS and Less: rule sets, at-rules such as `@media` and `@keyframes`, custom properties, variables and mixins
 - Swift, through a bundled Tree-sitter grammar when the IDE has no Swift support
 - Shell scripts, JSON, JSON with comments and JSON5, YAML, TOML, Java properties, XML and HTML, Markdown; for JSON and
   YAML, keys are declarations, including keys inside identified array items
 - Other languages get an outline from the IDE's structure view; plain text and unsupported files list moved lines as
   `lines A–B → C–D`
 
-Scala, Python, Rust, JavaScript, TypeScript, Go and PHP need their IDE plugins (Python and Rust are bundled in PyCharm
-and RustRover, JavaScript and TypeScript in WebStorm, IntelliJ IDEA Ultimate and the other paid IDEs, Go in GoLand, PHP
-in PhpStorm); the other formats use language support bundled with the IDE. Unsupported, malformed or oversized files stay in the plain
+Scala, Python, Rust, JavaScript, TypeScript, Go, the stylesheet languages and PHP need their IDE plugins (Python and
+Rust are bundled in PyCharm and RustRover, JavaScript, TypeScript, CSS, SCSS and Less in WebStorm, IntelliJ IDEA
+Ultimate and the other paid IDEs, Go in GoLand, PHP in PhpStorm); the other formats use language support bundled
+with the IDE. Unsupported, malformed or oversized files stay in the plain
 native diff with the reason shown.
 
 ### Settings

@@ -1,0 +1,3 @@
+status: ANALYZED
+mixin button($color, $size)  formatting-only  old 6-9  new 6-10
+rule .card  formatting-only  old 15-26  new 16-27

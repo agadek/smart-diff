@@ -59,6 +59,14 @@ class OutlineModelTest {
     }
 
     @Test
+    fun `languages 18-css R14 stylesheet whitespace is insignificant and the kinds read rule, at-rule and mixin`() {
+        for (id in listOf("CSS", "SCSS", "LESS")) assertEquals(WhitespacePolicy.INSIGNIFICANT, OutlineController.whitespacePolicy(id))
+        assertEquals("rule", OutlineModel.kindName(DeclarationKind.RULE))
+        assertEquals("at-rule", OutlineModel.kindName(DeclarationKind.AT_RULE))
+        assertEquals("mixin", OutlineModel.kindName(DeclarationKind.MIXIN))
+    }
+
+    @Test
     fun `languages 19-php R10 PHP whitespace is insignificant`() {
         assertEquals(WhitespacePolicy.INSIGNIFICANT, OutlineController.whitespacePolicy("PHP"))
     }
