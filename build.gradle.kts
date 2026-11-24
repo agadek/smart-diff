@@ -53,6 +53,8 @@ dependencies {
         pluginModule(runtimeOnly(project(":javascript")))
         // The Go provider is built the same way in :go (languages/17-go-details §2).
         pluginModule(runtimeOnly(project(":go")))
+        // The CSS, SCSS and Less provider is built the same way in :css (languages/18-css-details §2).
+        pluginModule(runtimeOnly(project(":css")))
         // S9 spike and structure-view fallback tests: bundled with IntelliJ IDEA, test-only (languages/06); JSON and
         // Markdown are already on the classpath above.
         testBundledPlugin("com.intellij.properties")

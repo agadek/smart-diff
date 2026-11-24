@@ -28,7 +28,7 @@ class PlatformApiInventoryTest {
     @Test
     fun `the inventory lists the optional plugins' PSI and the Kotlin Analysis API`() {
         val apis = inventory.flatMap { it.apis }
-        listOf("org.jetbrains.plugins.scala..", "com.jetbrains.python..", "org.rust..", "com.intellij.lang.javascript..", "com.intellij.lang.ecmascript6..", "com.goide..", "org.jetbrains.kotlin.analysis..", "com.intellij.openapi.vcs.changes.ChangesViewNodeAction")
+        listOf("org.jetbrains.plugins.scala..", "com.jetbrains.python..", "org.rust..", "com.intellij.lang.javascript..", "com.intellij.lang.ecmascript6..", "com.goide..", "com.intellij.psi.css..", "org.jetbrains.kotlin.analysis..", "com.intellij.openapi.vcs.changes.ChangesViewNodeAction")
             .forEach { assertTrue("$it in $apis", it in apis) }
     }
 

@@ -122,6 +122,8 @@ class ArchitectureTest {
         }
         val go = inventory.remove("com.goide..")
         assertEquals("the go subproject checks this row", setOf("io.github.agadek.smartdiff.engine.declarations.psi.go.."), go)
+        val css = inventory.remove("com.intellij.psi.css..")
+        assertEquals("the css subproject checks this row", setOf("io.github.agadek.smartdiff.engine.declarations.psi.css.."), css)
         assertEquals(
             inventory.mapValues { it.value.toSet() },
             ArchitectureRules("io.github.agadek.smartdiff").platformApiAdapters.mapValues { it.value.toSet() },

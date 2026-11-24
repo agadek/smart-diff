@@ -727,6 +727,8 @@ object DeclarationMatcher {
             DeclarationKind.TYPE,
         ),
         setOf(DeclarationKind.METHOD, DeclarationKind.FUNCTION, DeclarationKind.FIELD, DeclarationKind.PROPERTY, DeclarationKind.VARIABLE),
+        // languages/18-css R17: a Less rule set and a mixin of the same name are one construct, with or without output.
+        setOf(DeclarationKind.RULE, DeclarationKind.MIXIN),
     )
 
     /** A matching key; a null [path] or [signature] is left out of the key. */
