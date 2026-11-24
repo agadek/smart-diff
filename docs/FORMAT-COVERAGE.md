@@ -127,7 +127,7 @@ Each phase is one pull request, or a spec pull request and a code pull request, 
 | M2 | Groovy provider and build-script sections, Groovy and Kotlin | Nothing | Part 1 (Groovy declarations) implemented 2026-11-14; part 2 (build-script sections, M2b) implemented 2026-11-15 |
 | M3 | Shell provider | Nothing | Implemented 2026-11-14 |
 | B3 | CSS, SCSS and Less provider | B1 | Implemented 2026-11-24 in [languages/18](specs/languages/18-css.md) |
-| B4 | PHP provider | B0 | Not started |
+| B4 | PHP provider | B0 | Implemented 2026-11-24 in [languages/19](specs/languages/19-php.md), with the `phpstorm` verifier family |
 | B5 | Ruby provider | B0 | Not started |
 | B6 | SQL provider | B0, or a raised build target (§6) | Not started |
 

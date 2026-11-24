@@ -1,0 +1,3 @@
+status: ANALYZED
+function total(array $items)  changed  code inlined from weigh(array $items) old 10-14 new 5-7  old 3-6  new 3-8
+function weigh(array $items)  removed  inlined into total(array $items)  old 8-15

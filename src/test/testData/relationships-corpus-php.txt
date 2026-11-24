@@ -1,0 +1,8 @@
+src/test/testData/php/relationships/class-rename-1
+src/test/testData/php/relationships/code-move-1
+src/test/testData/php/relationships/extraction-1
+src/test/testData/php/relationships/inlining-1
+src/test/testData/php/relationships/kind-change-1
+src/test/testData/php/relationships/method-rename-1
+src/test/testData/php/relationships/move-in-file-1
+src/test/testData/php/relationships/rename-with-body-change-1

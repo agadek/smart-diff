@@ -1,0 +1,4 @@
+status: ANALYZED
+constant B  added  new 4
+class Limits  old 5-8  new 6-10
+  constant MAX  added  new 9

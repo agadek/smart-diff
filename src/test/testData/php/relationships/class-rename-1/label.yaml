@@ -1,0 +1,17 @@
+case: class-rename-1
+language: PHP
+corpus: php
+category: class-rename
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "", kind: CLASS, name: "Point", signature: null }
+      new: { path: "", kind: CLASS, name: "Coordinate", signature: null }
+      usages: []
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Coordinate", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A class is renamed with the same constructor."

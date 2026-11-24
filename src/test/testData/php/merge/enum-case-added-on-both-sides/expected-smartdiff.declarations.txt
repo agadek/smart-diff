@@ -1,0 +1,4 @@
+left: ANALYZED  right: ANALYZED
+enum Suit  UNCHANGED  base 3-7  left 3-8  right 3-8
+  enum constant Clubs  LEFT_ONLY  left: added  base -  left 7  right -
+  enum constant Diamonds  RIGHT_ONLY  right: added  base -  left -  right 7

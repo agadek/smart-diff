@@ -1,0 +1,5 @@
+left: ANALYZED  right: ANALYZED
+namespace Svc  UNCHANGED  base 3-20  left 3-19  right 3-20
+  class Service  UNCHANGED  base 5-20  left 5-19  right 5-20
+    method a()  LEFT_ONLY  left: formatting-only  base 11-14  left 11-13  right 11-14
+    method b()  RIGHT_ONLY  right: changed  base 16-19  left 15-18  right 16-19

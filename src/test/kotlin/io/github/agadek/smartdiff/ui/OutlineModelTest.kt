@@ -67,6 +67,11 @@ class OutlineModelTest {
     }
 
     @Test
+    fun `languages 19-php R10 PHP whitespace is insignificant`() {
+        assertEquals(WhitespacePolicy.INSIGNIFICANT, OutlineController.whitespacePolicy("PHP"))
+    }
+
+    @Test
     fun `titles name kind, name and signature, or a region's description`() {
         assertEquals("method parse(String,int)", OutlineModel.title(Subject.Declaration(DeclarationKind.METHOD, "parse", "String,int")))
         assertEquals("enum constant RED", OutlineModel.title(Subject.Declaration(DeclarationKind.ENUM_CONSTANT, "RED", null)))

@@ -1,0 +1,2 @@
+left: ANALYZED  right: ANALYZED
+namespace Svc  CHANGED_ON_BOTH_SIDES  left: changed  right: changed  base 3-22  left 3-23  right 3-23

@@ -128,6 +128,7 @@ Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.
 | [Rust](#rust) | [languages/05](specs/languages/05-rust.md) |
 | [Go](#go) | [languages/17](specs/languages/17-go.md) (implemented 2026-11-24) |
 | [CSS, SCSS and Less](#css-scss-and-less) | [languages/18](specs/languages/18-css.md) (implemented 2026-11-24) |
+| [PHP](#php) | [languages/19](specs/languages/19-php.md) (implemented 2026-11-24) |
 | [Hide comment-only changes](#hide-comment-only-changes) | [outline/11](specs/outline/11-comment-only-changes.md) |
 | [Formatting-only recall in Kotlin and Scala](#formatting-only-recall-in-kotlin-and-scala) | [declarations/07](specs/declarations/07-kotlin-scala-formatting.md) |
 | [Reviewed marks in the outline](#reviewed-marks-in-the-outline) | [outline/12](specs/outline/12-reviewed-marks.md) (implemented 2026-11-16) |
@@ -181,7 +182,7 @@ Add declaration-engine providers for further languages and file formats the host
 Proposed 2026-11-13: the [format coverage plan](FORMAT-COVERAGE.md) covers every typical format of the JetBrains platform, grouped by what each needs:
 
 - **Free PSI on the current build target:** Groovy and Gradle build scripts, Kotlin build scripts, Markdown, shell scripts and HTML. Groovy declarations and build-script sections for `.gradle` and `.gradle.kts` files are implemented (M2, 2026-11-14/2026-11-15).
-- **Paid or closed plugins, tied to another IDE:** JavaScript and TypeScript, Go, CSS, PHP, Ruby and SQL, built with the pattern spike S8 chooses for Rust. JavaScript and TypeScript, JSX and TSX included, are implemented (B0, B1, 2026-11-24) in [languages/16](specs/languages/16-javascript-typescript.md), with the `javascript/` subproject on IntelliJ IDEA Ultimate and a `webstorm` verifier family as the build pattern for the other paid IDEs. Go is implemented (B2, 2026-11-24) in [languages/17](specs/languages/17-go.md), with a `goland` verifier family. CSS, SCSS and Less are implemented (B3, 2026-11-24) in [languages/18](specs/languages/18-css.md).
+- **Paid or closed plugins, tied to another IDE:** JavaScript and TypeScript, Go, CSS, PHP, Ruby and SQL, built with the pattern spike S8 chooses for Rust. JavaScript and TypeScript, JSX and TSX included, are implemented (B0, B1, 2026-11-24) in [languages/16](specs/languages/16-javascript-typescript.md), with the `javascript/` subproject on IntelliJ IDEA Ultimate and a `webstorm` verifier family as the build pattern for the other paid IDEs. Go is implemented (B2, 2026-11-24) in [languages/17](specs/languages/17-go.md), with a `goland` verifier family. CSS, SCSS and Less are implemented (B3, 2026-11-24) in [languages/18](specs/languages/18-css.md). PHP is implemented (B4, 2026-11-24) in [languages/19](specs/languages/19-php.md), with a `phpstorm` verifier family.
 - **Structured data:** JSON, YAML, TOML, properties and XML, with keys as declarations ([ADR 0009](adr/0009-structured-data-keys-are-declarations.md), accepted). JSON (including JSON with comments and JSON5) is implemented (D0, D1, 2026-11-13). YAML is implemented (D2, 2026-11-14). Properties and TOML are implemented (D3, 2026-11-15) in [languages/11](specs/languages/11-properties.md) and [languages/12](specs/languages/12-toml.md). XML is implemented (D4, 2026-11-16) in [languages/13](specs/languages/13-xml.md); HTML on the same provider is implemented (D4b, 2026-11-16) in [languages/15](specs/languages/15-html.md).
 - **Every other language:** a provider built on the IDE's structure view, used when no dedicated provider exists ([ADR 0010](adr/0010-structure-view-provider-for-languages-without-their-own.md), accepted).
 - **Not supported through PSI:** C# and the other Rider languages, C and C++ in CLion Nova, and Swift, whose language support is not in IntelliJ PSI; they wait for [Tree-sitter support](#tree-sitter-support).
@@ -227,6 +228,17 @@ Implemented 2026-11-24 ([languages/18](specs/languages/18-css.md), [details](spe
 - **Declaration kinds:** rule sets named by their selectors (a new `RULE` kind), at-rules with a block, such as `@media`, `@supports`, `@layer`, `@container` and `@keyframes`, named by their prelude (`AT_RULE`), custom properties and SCSS and Less variables, SCSS mixins (`MIXIN`) and functions and Less mixins; nested rule sets are members of their rule set, and a declaration's range includes the comment lines above it.
 - **Whitespace:** formatting-only, except a descendant combinator's whitespace and whitespace next to a `+` or `-` operator.
 - **Not yet:** grouping a renamed selector with its usages, rule sets inside SCSS control directives, the indented Sass syntax, and a relationship benchmark corpus.
+
+### PHP
+
+Implemented 2026-11-24 ([languages/19](specs/languages/19-php.md), [details](specs/languages/19-php-details.md)), phase B4 of the [format coverage plan](FORMAT-COVERAGE.md#5-phases). A PHP provider for the declaration engine, using the JetBrains PHP plugin's PSI (`com.jetbrains.php`), bundled in PhpStorm and a free Marketplace plugin in IntelliJ IDEA Ultimate.
+
+- **Packaging:** an optional descriptor, `META-INF/smartdiff-php.xml`, on `com.jetbrains.php`, built in a `php/` subproject on IntelliJ IDEA Ultimate 2025.1.3 as Go is (spike S15).
+- **Declaration kinds:** namespaces as containers, classes, interfaces, traits, enums and their cases, functions, methods and constructors, properties, class constants and top-level constants, one per name of a statement that declares several; a declaration's range includes the PHPDoc and comments above it and its attributes. No new kind.
+- **Signatures:** parameter types, `&` and `...` markers and names, since PHP 8 calls can name their arguments; promoted constructor properties are part of the constructor.
+- **Whitespace:** insignificant, as in Java, except inside string literals, heredocs and nowdocs.
+- **Verifier:** adds PhpStorm 2025.1 and the latest PhpStorm; the PHP PSI is closed source and reviewed in the internal-API report, behind one adapter class.
+- **Not yet:** grouping renames with their usages; S15 showed in-file references resolve without an interpreter, so it can follow as its own change. Blade and Twig templates are out of scope.
 
 ### Tree-sitter support
 

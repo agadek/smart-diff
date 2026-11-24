@@ -1,0 +1,2 @@
+status: ANALYZED
+class → trait Cache  changed  signature changed  old 3-9  new 3-9
