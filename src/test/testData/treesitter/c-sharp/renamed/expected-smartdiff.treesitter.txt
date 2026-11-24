@@ -1,0 +1,3 @@
+status: ANALYZED
+class Cart  old 1-9  new 1-9
+  method ComputeTotal(int[])  rename candidate from method Total(int[])  old 3-8  new 3-8

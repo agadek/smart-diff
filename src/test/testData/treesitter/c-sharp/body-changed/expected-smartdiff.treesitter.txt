@@ -1,0 +1,4 @@
+status: ANALYZED
+namespace Shop  old 1-14  new 1-14
+  class Cart  old 3-13  new 3-13
+    method Total(int)  changed  old 7-10  new 7-10

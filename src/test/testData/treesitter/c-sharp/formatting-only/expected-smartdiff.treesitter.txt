@@ -1,0 +1,3 @@
+status: ANALYZED
+class Shapes  old 1-6  new 1-11
+  method Area(int, int)  formatting-only  old 3  new 3-8
