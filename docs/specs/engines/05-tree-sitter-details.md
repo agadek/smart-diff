@@ -14,7 +14,7 @@ Status: proposed, 2026-11-17
 | T1a | The helper build for six platforms (§9), the helper client and manager (§8), notices and size checks | Done 2026-11-18: `TreeSitterHelperTest` and the checks pass, and CI builds and starts the helper on every platform it has a runner for |
 | T1b | The language resolver of [ADR 0015](../../adr/0015-tree-sitter-languages-are-chosen-by-file-name.md), the setting, the engine, the tree builder and Swift (§3 to §7, §10) | Done 2026-11-18 for Swift: `SwiftTreeTest`, the Swift golden fixtures, `TreeSitterEngineContractTest`, `EngineLanguageTest` and `TreeSitterOutlineTest` pass with the helper of this platform |
 | T2 | C#, C and C++ | Done 2026-11-24: `CSharpTreeTest`, `CTreeTest`, `CppTreeTest`, their golden fixtures and the engine contract suite on the three languages pass, and the archive size check holds (R28) |
-| T3 | Merge and benchmark fixtures, and a corpus validation | R30 holds, the benchmark's `no-new-wrong-pairs` gate passes, and the results are in [VALIDATION.md](../../VALIDATION.md) |
+| T3 | Merge and benchmark fixtures, and a corpus validation | Done 2026-11-24: `TreeSitterMergeFixturesTest` and `TreeSitterRelationshipBenchmarkTest` pass (R30), the benchmark's `no-new-wrong-pairs` gate passes, and the corpus run is in [VALIDATION.md](../../VALIDATION.md#2026-11-24-tree-sitter-merge-fixtures-benchmark-cases-and-corpus-validation) |
 
 T1b builds on T1a. T2's three languages are independent of each other.
 
@@ -174,9 +174,11 @@ Each test names its requirement, for example `// engines/05-tree-sitter R14`.
 - `TreeSitterHelperTest` (unit test, with the helper the build made): each grammar's names and fields, a Swift parse with offsets in the text's `char` units, C#, C and C++ samples without errors, a parse error marked in the tree (R20), a killed helper failing one comparison and starting again (R24), a cancellation that stops the helper without counting as a failure (R25), and a missing helper or one that keeps answering garbage turning Tree-sitter off after 3 failures in a row (R23, R24). T1b adds the engine-level fallback: a disabled helper makes Tree-sitter languages behave as with the setting off and logs one warning.
 - Gradle checks in `check`: `checkTreeSitterNotices`, every pinned source has its `THIRD-PARTY-NOTICES.md` entry with the same version (R27); `checkTreeSitterArchiveSize`, the archive is at most 25 MB larger than `treeSitterArchiveBaselineBytes` (R28). The engine version test that names each grammar version (R29) comes with the engine in T1b.
 - The `treesitter-helper.yml` workflow, called by Build and Release, builds the helper on Linux, macOS and Windows runners on x64 and arm64 and runs `smokeTestTreeSitterHelper` there (the Intel Mac helper is cross-built on the Apple silicon runner and not started); Build and Release package all six (R22, R26). The engine contract suite and golden fixtures run on the Linux build job with that platform's helper.
-- Merge fixtures and relationship benchmark fixtures for each language, added to the existing suites (R30).
+- `TreeSitterMergeFixturesTest` (platform test): the nine merge cases of merge/05 R11 for each language under `src/test/testData/treesitter/<language>/merge/`, with nothing hidden on either side (R6, R30).
+- `TreeSitterRelationshipBenchmarkTest` (platform test): the cases in `relationships-corpus-treesitter.txt`, a method rename, a class rename, a rename with a body change, a kind change, a move, an extraction and an inlining per language, run through the benchmark with this engine; every labelled relationship is found and the `no-new-wrong-pairs` gate passes (R21, R30).
+- `TreeSitterCorpusValidationTest`: real commits from `-Psmartdiff.validation.treesitter.corpus=<list>`, skipped without it, flagging fallbacks, hidden or empty results, same-name pairs, unanalyzed ranges, noisy and slow files (R30).
 
 ## Open questions
 
 - **Default for `.h`.** C++ (the default above), or C when the same change has `.c` files and no C++ files. The second needs the Changes tree's other files and stays out of scope until a corpus run shows C headers failing.
-- **The setting's default.** On, as here, if ADR 0016 picks a runtime that cannot crash the IDE; off by default until the corpus validation of T3 if it can.
+- **The setting's default (decided 2026-11-24).** On. ADR 0016 runs the parser in a child process, and the T3 corpus validation found no hidden change and no failure outside one comparison.

@@ -29,6 +29,67 @@ The fine-grained differencing validation uses the same list format and needs Dif
 
 Its report is written to `build/reports/smartdiff-fine-grained/`.
 
+The Tree-sitter languages have their own run, with the same list format and the helper the build makes:
+
+```shell
+./gradlew :test --tests '*TreeSitterCorpusValidationTest*' -Psmartdiff.validation.treesitter.corpus=<list>
+```
+
+Its report is written to `build/reports/smartdiff-treesitter-validation/`.
+
+## 2026-11-24: Tree-sitter merge fixtures, benchmark cases and corpus validation
+
+Phase T3 of the [Tree-sitter engine](specs/engines/05-tree-sitter.md) (R30) for Swift, C#, C and C++, on the engine
+`smartdiff.treesitter` 2 (tree-sitter v0.25.3; swift 0.7.4; c-sharp v0.23.1; c v0.23.2; cpp v0.23.4), unchanged by this
+run. The tests run with the helper the build makes, as the golden fixtures do.
+
+**Merge fixtures.** `TreeSitterMergeFixturesTest` runs 36 merge fixtures, the nine cases of merge/05 R11 for each
+language, in `src/test/testData/treesitter/<language>/merge/`. Every expected file was read: both sides are `ANALYZED`,
+nothing is hidden, a rename on one side is a rename candidate, a formatting-only side beside a changed one is
+`CHANGED_ON_BOTH_SIDES`, and changed imports and `#include` lines are the file region on both sides.
+
+**Relationship benchmark.** Seven cases per language (`method-rename`, `class-rename`, `rename-with-body-change`,
+`kind-change`, `move-in-file`, `extraction`, `inlining`) are in `src/test/testData/treesitter/<language>/relationships/`,
+listed in `src/test/testData/relationships-corpus-treesitter.txt` and run by `TreeSitterRelationshipBenchmarkTest`, which
+gives the benchmark the Tree-sitter engine for the four language ids. The kind changes are a Swift and a C# class
+becoming a struct, a C struct becoming a union and a C++ class becoming a struct. The run passed the
+`no-new-wrong-pairs` gate with, in every language, tp=7, fp=0, fn=0, precision 1.000, recall 1.000 and presence
+accuracy 1.000; every relationship is high confidence except one Swift rename, which is medium. Moves inside
+declarations are not in the cases: their detection reads fine-grained changed runs, which the Tree-sitter engine does
+not compute (engines/05, out of scope), and four draft `code-move` cases, one per language, reported the changed method
+with no code move.
+
+**Corpus validation.** `TreeSitterCorpusValidationTest` ran on the 40 most recent non-merge commits touching a
+Tree-sitter extension in each of four open-source projects, cloned outside the repository: `apple/swift-argument-parser`
+(Swift, head `d225b6fe`), `App-vNext/Polly` (C#, head `ad7d87bf`), `jqlang/jq` (C, head `5c001b18`) and `fmtlib/fmt`
+(C++, head `3be6709f`). jq's `.h` files are compared as C++, as R3 says.
+
+| Language | Files | ANALYZED | PARTIAL | FAILED | hidden | empty |
+| --- | --- | --- | --- | --- | --- | --- |
+| Swift | 206 | 206 | 0 | 0 | 0 | 0 |
+| C# | 176 | 168 | 6 | 2 | 0 | 0 |
+| C | 51 | 33 | 18 | 0 | 0 | 0 |
+| C++ | 89 | 54 | 34 | 1 | 0 | 0 |
+
+No file had a nothing-hidden violation or an empty result, and none was slow: the slowest, fmt's `format.h`, took
+145 ms. The flags were 61 `status` (the `PARTIAL` and `FAILED` files), 20 `noisy` and 5 `same-name`, all reviewed:
+
+- The two C# failures are Polly's `cake.cs`, a Cake build script whose old side the C# grammar could not parse; the
+  C++ failure is jq's `opcode_list.h`, a file of macro invocations. Each shows the native diff with `Analysis failed`,
+  as R20 and R24 allow.
+- `PARTIAL` C and C++ files sit where the grammars meet macros they cannot parse: jq's `builtin.c` and fmt's `ranges.h`
+  became one unanalyzed file region, and single functions such as jq's `f_match` were unanalyzed while the rest of the
+  file was analyzed (R20). In jq's `jv_print.c` the unanalyzed function is `jv_dump_term`, next to the changed
+  `jv_dump_string_trunc`, and in fmt's `format.h` the unanalyzed `format_dragon` sits under a `struct size_padding` whose
+  range runs far past its end, so error recovery appears to move declaration boundaries. In fmt's `os.cc` a
+  `FMT_CATCH(...) { … }` macro block is an added function. None of them hid a change.
+- The 20 `noisy` files (9 in Swift tests, 3 in C#, 8 in C and C++) and the 5 `same-name` files (4 in Swift tests, 1 in
+  fmt's `format.h`) are listed in the report for review; none hid a change.
+
+Partly unanalyzed C and C++ files are the main weakness found: about a third of the changed C and C++ files were `PARTIAL`,
+against none in Swift. It is recorded as a [roadmap](ROADMAP.md#tree-sitter-support) follow-up, and the setting stays
+on by default, since every failure stays inside one comparison.
+
 ## 2026-11-24: Go provider, fixtures, benchmark cases and corpus validation
 
 [Go](specs/languages/17-go.md) R1 to R17 are implemented in the `go/` subproject, built on IntelliJ IDEA Ultimate

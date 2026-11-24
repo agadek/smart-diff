@@ -11,10 +11,10 @@ expected:
   changes:
     - subject: { path: "", kind: FUNCTION, name: "third", signature: "const std::vector<int>&" }
       presence: MATCHED
-      content: UNCHANGED
+      content: FORMATTING_ONLY
       moved: true
     - subject: { path: "", kind: FUNCTION, name: "first", signature: "const std::vector<int>&" }
       presence: MATCHED
-      content: UNCHANGED
+      content: FORMATTING_ONLY
   ambiguous: []
-notes: "The last function moves to the top of the file."
+notes: "The blank lines around the moved declarations change, so both are formatting-only. The last function moves to the top of the file."

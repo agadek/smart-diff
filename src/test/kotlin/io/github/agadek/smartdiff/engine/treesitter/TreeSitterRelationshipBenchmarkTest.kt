@@ -34,21 +34,28 @@ class TreeSitterRelationshipBenchmarkTest : BasePlatformTestCase() {
             ),
         )
         assertTrue("no wrong or forced pairs: ${report.gateFailures}", report.gateFailures.isEmpty())
+        // Every language is counted before any assertion, so one run shows them all.
+        val problems = mutableListOf<String>()
         for (corpus in LANGUAGES.values) {
             val metrics = report.metricsByLanguage[corpus]
-            assertNotNull("$corpus row present", metrics)
-            val tp = metrics!!.perKind.values.sumOf { it.tp }
+            if (metrics == null) {
+                problems += "$corpus: no row"
+                continue
+            }
+            val tp = metrics.perKind.values.sumOf { it.tp }
             val fp = metrics.perKind.values.sumOf { it.fp }
             val fn = metrics.perKind.values.sumOf { it.fn }
             println("TREE-SITTER BENCHMARK $corpus tp=$tp fp=$fp fn=$fn report=${output.absolutePath}")
-            assertEquals("$corpus: no wrong relationships", 0, fp)
-            assertEquals("$corpus: every labelled relationship found", 0, fn)
-            assertTrue("$corpus: at least one relationship found", tp > 0)
+            if (fp != 0) problems += "$corpus: $fp wrong relationships"
+            if (fn != 0) problems += "$corpus: $fn labelled relationships not found"
+            if (tp == 0) problems += "$corpus: no relationship found"
         }
+        assertTrue(problems.joinToString("; "), problems.isEmpty())
     }
 
     fun `test every Tree-sitter language covers the relationship categories`() {
-        // engines/05 R21, R30: renames, a kind change, moves, extraction and inlining, for each language.
+        // engines/05 R21, R30: renames, a kind change, a move, extraction and inlining, for each language. Moves inside
+        // declarations (relationships/08) read changed runs, which the Tree-sitter engine does not compute.
         val labels = RelationshipBenchmark.parseCorpus(File(CORPUS)).mapNotNull { it.path }
             .map { RelationshipBenchmark.parseLabel(File(it, "label.yaml")) }
         for (corpus in LANGUAGES.values) {
@@ -85,7 +92,6 @@ class TreeSitterRelationshipBenchmarkTest : BasePlatformTestCase() {
             "rename-with-body-change",
             "kind-change",
             "move-in-file",
-            "code-move",
             "extraction",
             "inlining",
         )
