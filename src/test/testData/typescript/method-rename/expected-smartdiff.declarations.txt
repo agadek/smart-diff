@@ -1,0 +1,3 @@
+status: ANALYZED
+class UserService  old 3-17  new 3-17
+  method persist(User)  rename candidate from method save(User)  old 13-16  new 13-16

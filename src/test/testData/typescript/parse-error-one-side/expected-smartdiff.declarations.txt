@@ -1,0 +1,4 @@
+status: PARTIAL
+reason: some source could not be parsed and was not analyzed
+class UserService  old 3-17  new 3-17
+  method save(User)  unanalyzed  old 13-16  new 13-16

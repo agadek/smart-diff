@@ -1,0 +1,4 @@
+status: ANALYZED
+class → interface Point  changed  signature changed  old 1-4  new 1-4
+  field → property x  changed  signature changed  old 2  new 2
+  field → property y  changed  signature changed  old 3  new 3

@@ -1,0 +1,3 @@
+status: ANALYZED
+module "legacy-lib"  old 9-11  new 9-12
+  function dispose()  added  new 11

@@ -1,0 +1,3 @@
+status: ANALYZED
+class ListComponent  old 1-10  new 1-11
+  method pick(string)  changed  old 7-9  new 7-10

@@ -1,0 +1,10 @@
+status: ANALYZED
+File region  formatting-only  old 1-22  new 1-15
+class UserService  formatting-only  old 3-17  new 3-13
+  field cache  formatting-only  old 5  new 6
+  constructor constructor(Repository)  formatting-only  old 7  new 7
+  method find(string)  formatting-only  old 9-11  new 8
+  method save(User)  formatting-only  old 13-16  new 9-12
+interface User  formatting-only  old 19-22  new 15
+  property id  formatting-only  old 20  new 15
+  property name  formatting-only  old 21  new 15

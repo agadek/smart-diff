@@ -1,0 +1,4 @@
+left: ANALYZED  right: ANALYZED
+interface Options  CHANGED_ON_BOTH_SIDES  left: changed  right: changed  base 1-4  left 1-5  right 1-5
+  property verbose  LEFT_ONLY  left: added  base -  left 4  right -
+  property signal  RIGHT_ONLY  right: added  base -  left -  right 4

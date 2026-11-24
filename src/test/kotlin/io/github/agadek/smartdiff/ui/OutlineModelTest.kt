@@ -45,6 +45,14 @@ class OutlineModelTest {
     }
 
     @Test
+    fun `languages 16-javascript-typescript R13 JavaScript and TypeScript whitespace is insignificant`() {
+        for (id in listOf("JavaScript", "ECMAScript 6", "JSX Harmony", "Flow JS", "TypeScript", "TypeScript JSX")) {
+            assertEquals(id, WhitespacePolicy.INSIGNIFICANT, OutlineController.whitespacePolicy(id))
+        }
+        assertEquals("namespace", OutlineModel.kindName(DeclarationKind.NAMESPACE))
+    }
+
+    @Test
     fun `languages 17-go R13 R14 Go line breaks are significant and spaces are not`() {
         assertEquals(WhitespacePolicy.LINE_BREAKS_SIGNIFICANT, OutlineController.whitespacePolicy("go"))
         assertEquals("type", OutlineModel.kindName(DeclarationKind.TYPE))

@@ -50,3 +50,13 @@ The root's Plugin Verifier gains RustRover 2025.1.3 and the latest RustRover rel
 - The verifier targets for RustRover are added to the root; whether IPGP 2.15.0 resolves the RustRover verifier IDE is checked by `verifyPlugin`, not by `check`, and a failure there is a build-configuration problem, not a provider result.
 - The Rust plugin needs `org.toml.lang` and `com.intellij.modules.json`. Any other project that tests against it needs the same two bundled plugins, or the plugin stays unloaded and its extensions are missing.
 - In-file references resolving on a light copy means [relationships/04](../specs/relationships/04-rename-grouping.md) can add a `RustReferenceResolver` as its own change; Rust renames still show no usage count until it does.
+
+## Amendment, 2026-11-24: the pattern for paid IDEs (format coverage B0)
+
+Option B is the build pattern for every language whose plugin is paid, closed source or tied to another IDE ([format coverage plan](../FORMAT-COVERAGE.md#2-inventory), phase B0): JavaScript and TypeScript first ([languages/16](../specs/languages/16-javascript-typescript.md)), then Go, CSS, PHP, Ruby and SQL.
+
+- Each such language gets its own Gradle subproject, named after the language (`javascript/`, `go/`, …), that targets **IntelliJ IDEA Ultimate 2025.1.3** and is laid out as `rust/` is: `compileOnly(project(":"))` for main code, `testImplementation(project(":"))` and the root's test fixtures for tests, and `pluginModule(runtimeOnly(project(":<language>")))` in the root.
+- When Ultimate bundles the language's plugin, as it bundles `JavaScript`, the subproject declares it as `bundledPlugin` and `testBundledPlugin` with no version pin. When it does not, as for Rust, the subproject pins a Marketplace release with `plugin(…)`.
+- Each subproject adds the bundled plugins the language plugin requires in the test sandbox, and any test-only stand-in it needs, and records them in its language's details file, as §2 of the Rust details does.
+- Each language adds one verifier family for the IDE that bundles its plugin, with its lowest supported release and its latest one, to the default families and the build workflow's matrix: `webstorm` for JavaScript and TypeScript, `goland` for Go.
+- One subproject per language, rather than one shared Ultimate subproject, keeps each language's plugin dependencies out of the others' test sandboxes, so a plugin that fails to load in tests breaks only its own language.

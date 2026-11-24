@@ -1,0 +1,6 @@
+status: ANALYZED
+class Cart  old 3-13  new 3-12
+  field items  formatting-only  old 4  new 4
+  method add(item)  formatting-only  old 6-8  new 5
+  method total()  formatting-only  old 10-12  new 6-11
+function describe(cart)  formatting-only  old 15-17  new 14

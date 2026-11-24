@@ -1,0 +1,3 @@
+status: ANALYZED
+class ListComponent  old 1-10  new 1-10
+  field items  changed  old 3  new 3

@@ -116,6 +116,10 @@ class ArchitectureTest {
         }
         val rust = inventory.remove("org.rust..")
         assertEquals("the rust subproject checks this row", setOf("io.github.agadek.smartdiff.engine.declarations.psi.rust.."), rust)
+        for (api in listOf("com.intellij.lang.javascript..", "com.intellij.lang.ecmascript6..")) {
+            val javascript = inventory.remove(api)
+            assertEquals("the javascript subproject checks this row", setOf("io.github.agadek.smartdiff.engine.declarations.psi.javascript.."), javascript)
+        }
         val go = inventory.remove("com.goide..")
         assertEquals("the go subproject checks this row", setOf("io.github.agadek.smartdiff.engine.declarations.psi.go.."), go)
         assertEquals(

@@ -59,10 +59,10 @@ jobs:
         run: ./gradlew buildPlugin check
 
       # One family per invocation, as in CI, so each family gets only its own ignored problems
-      # (languages/17-go-details §3).
+      # (languages/16-javascript-typescript-details §3, languages/17-go-details §3).
       - name: Verify plugin
         run: |
-          for family in idea pycharm rustrover goland; do
+          for family in idea pycharm rustrover webstorm goland; do
             ./gradlew verifyPlugin -Psmartdiff.verifier.ides="$family"
           done
 

@@ -31,9 +31,12 @@ object GoldenFixtures {
         assertTrue("no fixtures in ${File(testData, directory).absolutePath}", cases.isNotEmpty())
         val failures = mutableListOf<String>()
         for (case in cases) {
-            val old = read(File(case, "old.$extension"))
-            val new = read(File(case, "new.$extension"))
-            val result = engine.compare(ComparisonRequest(old, new, languageId, "${case.name}.$extension"), Cancellation.NONE)
+            // A case may use another extension of the language, such as `old.tsx` among `.ts` fixtures.
+            val ext = if (File(case, "old.$extension").isFile) extension else
+                case.listFiles { file -> file.name.startsWith("old.") }?.singleOrNull()?.extension ?: extension
+            val old = read(File(case, "old.$ext"))
+            val new = read(File(case, "new.$ext"))
+            val result = engine.compare(ComparisonRequest(old, new, languageId, "${case.name}.$ext"), Cancellation.NONE)
             if (result.status == Status.ANALYZED || result.status == Status.PARTIAL) {
                 NothingHidden.violation(old, new, result)?.let { failures += "${case.name}: $it" }
             }

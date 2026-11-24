@@ -1,6 +1,6 @@
 # Format Coverage Plan
 
-Status: proposal, 2026-11-13, with open question F1 decided the same day and F4 decided 2026-11-16 (§6); G0/G1 and D0/D1 implemented 2026-11-13; D2 (YAML) and M2 implemented 2026-11-14/2026-11-15; D3 (properties, TOML) implemented 2026-11-15; D4 (XML) implemented 2026-11-16; D4b (HTML) implemented 2026-11-16. It expands the roadmap's [more languages](ROADMAP.md#more-languages) entry into a programme: which languages and file formats of the JetBrains platform SMART Diff covers, what each one needs, and in which order. Section numbers (§) refer to the [technical specification](TECHNICAL-SPECIFICATION.md), and terms follow the [glossary](GLOSSARY.md). [Python](specs/languages/04-python.md) and [Rust](specs/languages/05-rust.md) are specified separately and are not repeated here; this plan builds on their pattern and their build-target decision (spike S8). Each phase below gets its own feature spec and details file, written as the [specification guide](SPEC-GUIDE.md) asks, in the first pull request of that phase.
+Status: proposal, 2026-11-13, with open question F1 decided the same day and F4 decided 2026-11-16 (§6); G0/G1 and D0/D1 implemented 2026-11-13; D2 (YAML) and M2 implemented 2026-11-14/2026-11-15; D3 (properties, TOML) implemented 2026-11-15; D4 (XML) implemented 2026-11-16; D4b (HTML) implemented 2026-11-16; B0 and B1 (JavaScript and TypeScript) implemented 2026-11-24. It expands the roadmap's [more languages](ROADMAP.md#more-languages) entry into a programme: which languages and file formats of the JetBrains platform SMART Diff covers, what each one needs, and in which order. Section numbers (§) refer to the [technical specification](TECHNICAL-SPECIFICATION.md), and terms follow the [glossary](GLOSSARY.md). [Python](specs/languages/04-python.md) and [Rust](specs/languages/05-rust.md) are specified separately and are not repeated here; this plan builds on their pattern and their build-target decision (spike S8). Each phase below gets its own feature spec and details file, written as the [specification guide](SPEC-GUIDE.md) asks, in the first pull request of that phase.
 
 ## 1. Problem
 
@@ -120,9 +120,9 @@ Each phase is one pull request, or a spec pull request and a code pull request, 
 | D3 | Properties and TOML providers | D1 | Implemented 2026-11-15 in [languages/11](specs/languages/11-properties.md) and [languages/12](specs/languages/12-toml.md) |
 | D4 | XML provider, with POM and Spring naming | D1 | Implemented 2026-11-16 in [languages/13](specs/languages/13-xml.md) |
 | D4b | HTML on the XML provider | D4 | Implemented 2026-11-16 in [languages/15](specs/languages/15-html.md) |
-| B0 | Build pattern for paid IDEs, as an amendment to the S8 ADR; verifier jobs for WebStorm and GoLand | R0 | Not started |
-| B1 | JavaScript and TypeScript provider | B0 | Not started |
-| B2 | Go provider | B0 | Implemented 2026-11-24 in [languages/17](specs/languages/17-go.md) |
+| B0 | Build pattern for paid IDEs, as an amendment to the S8 ADR; verifier jobs for WebStorm and GoLand | R0 | Implemented 2026-11-24 ([ADR 0011 amendment](adr/0011-rust-provider-build-target-spike.md), [languages/16](specs/languages/16-javascript-typescript.md)); the GoLand job came with B2 |
+| B1 | JavaScript and TypeScript provider | B0 | Implemented 2026-11-24 ([languages/16](specs/languages/16-javascript-typescript.md)) |
+| B2 | Go provider | B0 | Implemented 2026-11-24 in [languages/17](specs/languages/17-go.md), with the `goland` verifier family |
 | M1 | Markdown provider | D0 (the `SECTION` kind) | Implemented 2026-11-16 in [languages/14](specs/languages/14-markdown.md) |
 | M2 | Groovy provider and build-script sections, Groovy and Kotlin | Nothing | Part 1 (Groovy declarations) implemented 2026-11-14; part 2 (build-script sections, M2b) implemented 2026-11-15 |
 | M3 | Shell provider | Nothing | Implemented 2026-11-14 |
