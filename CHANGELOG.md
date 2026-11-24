@@ -4,6 +4,7 @@
 
 ### Added
 
+- Go in the structural outline (with the Go plugin, bundled in GoLand): functions, methods shown as `Type.Name`, structs and their fields, interfaces and their methods, type aliases, defined types, constants and variables, with comments above a declaration as part of it. Extraction, inlining, rename candidates, kind changes, moved code, merges and the review trees work for Go as for the other languages.
 - Moved code inside declarations: statements moved within a method or between methods of the same file are listed in the structural outline as `moved code lines A–B → C–D` under their new place, with `from <method>` and `code moved to <method>` notes, moved-code markers in both editors, the edits inside the moved code highlighted, and a `Moved code` entry in the refactorings view. Java, Kotlin, Scala 2, Scala 3 and Python; on by default, with a setting to turn it off.
 - A validation of the changed-token highlights against Difftastic and GumTree on the release corpus (`./gradlew fineGrainedBaselines`, run by hand with both tools installed): no edit was found outside the highlighted tokens in Java, Kotlin, Scala 2, Scala 3 or Python.
 

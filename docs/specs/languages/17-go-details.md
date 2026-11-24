@@ -1,6 +1,6 @@
 # Go: details
 
-Status: proposed, 2026-11-24
+Status: implemented, 2026-11-24
 
 **Feature:** [Go](17-go.md)
 
@@ -26,7 +26,7 @@ Go follows the paid-IDE build pattern of [ADR 0011](../../adr/0011-rust-provider
 ## 3. Plugin Verifier
 
 - `verifyPlugin` gains the `goland` family: GoLand 2025.1.3 (`IntelliJPlatformType.GoLand`) and the latest GoLand release. It is in the default set and is one more job of the `verify` matrix in `.github/workflows/build.yml`.
-- S13 (2026-11-24) ran `verifyPlugin -Psmartdiff.verifier.ides=goland`: GoLand 2025.1.3 and GoLand 2026.3 resolved, and both were `Compatible`, with 49 experimental-API usages and only optional dependencies unresolved, before the provider existed. The run with the provider records its own counts.
+- S13 (2026-11-24) ran `verifyPlugin -Psmartdiff.verifier.ides=goland`: GoLand 2025.1.3 and GoLand 2026.3 resolved, and both were `Compatible`, with 49 experimental-API usages and only optional dependencies unresolved, before the provider existed. The run with the provider (2026-11-24) resolved GoLand `GO-251.26927.50` and `GO-263.7307.211`, both `Compatible` with the same 49 experimental-API usages, none of them in the Go provider: the verifier reports no internal or experimental `com.goide` use ([VALIDATION.md](../../VALIDATION.md)).
 - On IntelliJ IDEA Community the optional dependency stays unresolved, which the verifier reports as a missing optional dependency, not a failure.
 - Every Go PSI use the verifier reports as internal or experimental is listed in [PLATFORM-API.md](../../PLATFORM-API.md) and reviewed there. A `NoClassDefFoundError` or `NoSuchMethodError` from the Go plugin turns the provider off through `ApiGuard` (`GuardedFeature.GO_PROVIDER`) and shows the native diff, never an exception in the diff window ([product scope](../README.md#product-scope) P5).
 
@@ -50,7 +50,7 @@ S13 confirmed these classes, all in `com.goide.psi` (interfaces) with `Impl` cla
 - **New kind:** `TYPE`, shown as `type`, for a defined type such as `type ID int64`. It is not an alias (`type A = B`), which keeps `TYPE_ALIAS`, and no other kind reads right. It is added on its own line at the end of `DeclarationKind`. The matcher's type kinds for rule M4b gain `TYPE`, so a defined type turned into a struct of the same name is a kind change (R15).
 - **Containers:** structs (fields) and interfaces (methods). The struct or interface is reached through `GoTypeSpec.getSpecType().getType()`. A type whose underlying type is a pointer, slice or map of a struct has no members.
 - **Groups (R7):** `type (…)`, `const (…)` and `var (…)` are one `GoTypeDeclaration`, `GoConstDeclaration` or `GoVarDeclaration` holding several specs. Each spec is a top-level declaration; the keyword, the parentheses and anything between the specs belong to the file region. A single `type Point struct {…}` is one declaration with one spec; its range is the whole `GoTypeDeclaration`, so the `type` keyword is the declaration's own token. The same holds for single `const` and `var` declarations.
-- **Several names (R8):** `X, Y int`, `const a, b = 1, 2` and `var x, y = f()` are one declaration named `X, Y`, as Python names a tuple target. Renaming one of the names renames the declaration. A struct tag is part of its field.
+- **Several names (R8):** `X, Y int`, `const a, b = 1, 2` and `var x, y = f()` are one declaration named `X, Y`, as Python names a tuple target. Renaming one of the names renames the declaration: a constant or variable with a value becomes a rename candidate, while a field, which has no value, shows as removed and added, as any field without a value does ([relationships/03](../relationships/03-relationship-matching.md) R21). A struct tag is part of its field.
 - **Embedded fields (R6):** `fmt.Stringer` or `*Base` in a struct is a field named by its Go field name, `Stringer` or `Base`. In an interface, an embedded interface or a type set term (`fmt.Stringer`, `~int | ~string`) is a `GoMethodSpec` with no identifier, or a constraint element; it is not a declaration and belongs to the interface's own tokens, so adding one changes the interface.
 - **Not declarations (R9):** the provider never looks inside a function or method body, so local `type`, `const` and `var` declarations, short variable declarations and `GoFunctionLit` are content of their function. The package clause and the import list belong to the file region. A spec whose names are all `_` (`var _ io.Reader = (*T)(nil)`) and a function named `_` are content of the file region; a spec with another name next to `_` (`a, _ = f()`) is a declaration named `a, _`.
 - **Repeated keys (R12):** several `func init()` in one file share a key and follow the matcher's rules for repeated keys, as Rust's `#[cfg]` twins do.
@@ -89,7 +89,7 @@ S13 confirmed these classes, all in `com.goide.psi` (interfaces) with `Impl` cla
 
 - `PsiFileFactory.createFileFromText("file.go", GoLanguage, text, false, false)`, inside the engine's read action. A text-built file has no module or SDK; S13 found that the parser accepts generics, type sets and `~` terms on it with no `PsiErrorElement`.
 - Offsets are checked on LF and on CRLF content, as for the other languages.
-- Parse errors follow technical specification §6.7.
+- Parse errors follow technical specification §6.7. An empty side, as of a new or deleted file, has no package clause; that missing clause is no parse error, so the file is `ANALYZED` with every declaration added or removed. Any error in a file with code is one.
 
 ## 10. Relationships, merges and the Changes tree
 

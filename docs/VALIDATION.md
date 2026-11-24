@@ -29,6 +29,39 @@ The fine-grained differencing validation uses the same list format and needs Dif
 
 Its report is written to `build/reports/smartdiff-fine-grained/`.
 
+## 2026-11-24: Go provider, fixtures, benchmark cases and corpus validation
+
+[Go](specs/languages/17-go.md) R1 to R17 are implemented in the `go/` subproject, built on IntelliJ IDEA Ultimate
+2025.1.3 with the Go plugin `251.26927.53`. `GoDeclarationProviderTest` (R1 to R16, LF and CRLF offsets), 39 golden
+fixtures in `src/test/testData/go/` and 13 merge fixtures in `src/test/testData/go/merge/` (every case of merge/05 R11
+and four Go cases) pass in `:go:test`; every expected file was read and matches the spec. `CorpusValidationTest` and the
+benchmark's real-commit lines accept `.go` files. The engine is `smartdiff.declarations` 26 (unchanged): the new `TYPE`
+kind and its place in the M4b type family only reach Go trees.
+
+**Relationship benchmark.** Eight Go cases (`extraction`, `inlining`, `kind-change`, `move-in-file`, `method-rename`,
+`rename-with-body-change`, `class-rename`, `code-move`) are in `src/test/testData/go/relationships/`, listed in
+`src/test/testData/relationships-corpus-go.txt` with `corpus: go` and run by `GoRelationshipBenchmarkTest` in `:go:test`.
+Go has benchmark cases but is not held to the case matrix or the real-commit minimum. The run passed with the
+`no-new-wrong-pairs` gate: 8 cases, tp=8, fp=0, fn=0, precision=1.000, recall=1.000. The root benchmark on
+`relationships-corpus-full.txt` (623 cases) gave the same report on this branch as on main (`3b0a6ca`), and the gate
+against main's report passed with no new pair: tuning precision 1.000 and recall 1.000, held-out precision 0.993 and
+recall 0.924, as before.
+
+**Corpus validation.** `GoCorpusValidationTest` ran on the 20 most recent non-merge commits touching `.go` files in each
+of two open-source Go projects of different styles, cloned shallowly outside the repository: `spf13/cobra` (a CLI
+library, head `adbc881390`, 2026-07-11) and `gin-gonic/gin` (a web framework, head `0f09c3a9b4`, 2026-10-10). The run
+covered 82 modified `.go` files from 40 commits (38 in cobra, 44 in gin). All 82 were `ANALYZED`, none was `PARTIAL` or
+fell back, and none had a `hidden`, `empty` or `slow` flag; the slowest file took 205 ms. No machine-specific paths
+were recorded.
+
+**Plugin Verifier.** `verifyPlugin` passed for every family, run one family at a time: GoLand 2025.1.3
+(`GO-251.26927.50`) and 2026.3 (`GO-263.7307.211`), both `Compatible` with 49 experimental-API usages, and the Go plugin
+resolved as bundled on both; IntelliJ IDEA (`IC-251.26927.53`, `IU-263.7307.200`) `Compatible` with 50, PyCharm
+(`PY-251.26927.74`, `PY-263.7307.329`) with 25 and 49, and RustRover (`RR-251.25410.170`, `RR-263.7307.313`) with 49.
+None of the usages is in the Go provider: the verifier reports no internal, experimental or deprecated `com.goide` use,
+so [PLATFORM-API.md](PLATFORM-API.md) gains only the `com.goide..` package row. `checkPlatformApiInventory` passed after
+each family.
+
 ## 2026-11-23: fine-grained differencing against Difftastic and GumTree
 
 The validation of [declarations/10](specs/declarations/10-fine-grained-differencing.md) R21 and R22: the changed runs of engine `smartdiff.declarations` **26** (with the moves inside declarations of [relationships/08](specs/relationships/08-moves-inside-declarations.md)) compared with the native word highlights, Difftastic and GumTree, then a hand review. **R22 passes:** no reviewed declaration, and no declaration of the whole run, has a real edit outside its changed runs. This validation changed nothing in the engine.
