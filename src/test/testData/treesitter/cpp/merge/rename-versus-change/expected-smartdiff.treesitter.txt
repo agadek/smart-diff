@@ -1,0 +1,4 @@
+left: ANALYZED  right: ANALYZED
+class Shop  UNCHANGED  base 3-12  left 3-12  right 3-12
+  method first()  LEFT_ONLY  left: rename candidate → method primary()  base 5-7  left 5-7  right 5-7
+  method second()  RIGHT_ONLY  right: changed  base 9-11  left 9-11  right 9-11
