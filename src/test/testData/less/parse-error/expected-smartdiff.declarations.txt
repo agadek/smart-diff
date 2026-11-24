@@ -1,0 +1,6 @@
+status: PARTIAL
+reason: some source could not be parsed and was not analyzed
+File region  unanalyzed  old 1-21  new 1-21
+rule .card  unanalyzed  old 10-21  new 10-12
+rule .title  moved  old 14-16  new 14-16
+rule &:hover  moved  old 18-20  new 18-20

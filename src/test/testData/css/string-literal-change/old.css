@@ -1,0 +1,4 @@
+.icon::before {
+  content: "\2192";
+  font-family: "Icons";
+}

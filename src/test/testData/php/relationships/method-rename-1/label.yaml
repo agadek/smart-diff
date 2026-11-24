@@ -1,0 +1,20 @@
+case: method-rename-1
+language: PHP
+corpus: php
+category: method-rename
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Stats", kind: METHOD, name: "first", signature: "array $values" }
+      new: { path: "class Stats", kind: METHOD, name: "sum", signature: "array $values" }
+      usages: []
+  changes:
+    - subject: { path: "class Stats", kind: METHOD, name: "sum", signature: "array $values" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Stats", kind: METHOD, name: "second", signature: "array $values" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A method is renamed with the same body."

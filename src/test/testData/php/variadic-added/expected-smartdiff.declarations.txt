@@ -1,0 +1,2 @@
+status: ANALYZED
+function tags(string ...$tags)  changed  signature changed  old 3-6  new 3-6

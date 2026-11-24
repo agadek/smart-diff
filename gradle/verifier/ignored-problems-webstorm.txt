@@ -1,9 +1,9 @@
-// Plugin Verifier ignored problems for the webstorm family (languages/16-javascript-typescript-details §3).
-// WebStorm has no Java plugin, and the plugin's Java support loads only through the optional smartdiff-java.xml
-// descriptor, which never loads there. On the Linux IDE builds the verifier still reports the Java PSI that
-// JavaDeclarationProvider and JavaReferenceResolver reference as unresolved. Only these Java plugin classes and packages
-// are ignored, by name; a new Java PSI class fails the WebStorm targets until it is added here. The verifier lists every
-// ignored problem in ignored-problems.txt next to the verdict.
+// Plugin Verifier ignored problems for the webstorm and phpstorm families (languages/16-javascript-typescript-details §3,
+// languages/19-php-details §3). WebStorm and PhpStorm have no Java plugin, and the plugin's Java support loads only
+// through the optional smartdiff-java.xml descriptor, which never loads there. On the Linux IDE builds the verifier still
+// reports the Java PSI that JavaDeclarationProvider and JavaReferenceResolver reference as unresolved. Only these Java
+// plugin classes and packages are ignored, by name; a new Java PSI class fails the WebStorm and PhpStorm targets until it
+// is added here. The verifier lists every ignored problem in ignored-problems.txt next to the verdict.
 // Format: <plugin id>:<regular expression matched against the whole short problem description>.
 io.github.agadek.smartdiff:Package 'com\.intellij\.lang\.java' is not found
 io.github.agadek.smartdiff:Package 'com\.intellij\.pom\.java' is not found

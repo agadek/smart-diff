@@ -1,0 +1,2 @@
+status: ANALYZED
+mixin .bordered(@width, @style)  changed  old 6-8  new 6-9

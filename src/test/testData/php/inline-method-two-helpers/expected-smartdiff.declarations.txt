@@ -1,0 +1,4 @@
+status: ANALYZED
+function run(array $items)  changed  code inlined from second(array $items) old 21-25 new 9-13  code inlined from first(array $items) old 12-15 new 5-8  old 3-8  new 3-14
+function first(array $items)  removed  inlined into run(array $items)  old 10-17
+function second(array $items)  removed  inlined into run(array $items)  old 19-26

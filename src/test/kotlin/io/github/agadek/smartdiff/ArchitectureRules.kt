@@ -68,7 +68,8 @@ class ArchitectureRules(private val root: String) {
 
     /**
      * platform/01 R7: each API of `docs/PLATFORM-API.md` (a class, or a package ending in `..`) and the adapters that
-     * alone may use it (classes, or packages ending in `..`). The Rust and Go plugins' rows are checked by the `rust` and `go` subprojects.
+     * alone may use it (classes, or packages ending in `..`). The Rust, Go, CSS and PHP plugins' rows are checked by the
+     * `rust`, `go`, `css` and `php` subprojects.
      */
     val platformApiAdapters: Map<String, List<String>> = mapOf(
         "com.intellij.openapi.vcs.changes.ChangesViewNodeAction" to listOf("$root.ui.changes.DeclarationNodeAction"),

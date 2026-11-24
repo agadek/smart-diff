@@ -1,0 +1,8 @@
+status: ANALYZED
+namespace Shop  old 3-31  new 3-31
+  class Order  old 7-31  new 7-31
+    property id  formatting-only  old 9  new 9
+    property items  formatting-only  old 11  new 11
+    constructor __construct(int $id)  formatting-only  old 13-16  new 13-16
+    method total()  formatting-only  old 18-25  new 18-25
+    method describe()  formatting-only  old 27-30  new 27-30

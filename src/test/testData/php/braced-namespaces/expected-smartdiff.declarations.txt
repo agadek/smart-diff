@@ -1,0 +1,4 @@
+status: ANALYZED
+namespace App\Cli  old 7-9  new 7-9
+  function handle()  changed  old 8  new 8
+function boot()  changed  old 12  new 12

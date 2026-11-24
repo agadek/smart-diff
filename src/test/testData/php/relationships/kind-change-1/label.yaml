@@ -1,0 +1,17 @@
+case: kind-change-1
+language: PHP
+corpus: php
+category: kind-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [KIND_CHANGE]
+      old: { path: "", kind: CLASS, name: "Cache", signature: null }
+      new: { path: "", kind: TRAIT, name: "Cache", signature: null }
+  changes:
+    - subject: { path: "", kind: TRAIT, name: "Cache", signature: null }
+      presence: MATCHED
+      content: CHANGED
+      kindChangedFrom: CLASS
+  ambiguous: []
+notes: "A class becomes a trait."

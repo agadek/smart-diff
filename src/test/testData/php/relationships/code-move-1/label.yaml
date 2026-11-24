@@ -1,0 +1,16 @@
+case: code-move-1
+language: PHP
+corpus: php
+category: code-move
+split: tuning
+expected:
+  relationships:
+    - kinds: [CODE_MOVE]
+      old: { path: "", kind: FUNCTION, name: "process", signature: "Order $order" }
+      new: { path: "", kind: FUNCTION, name: "process", signature: "Order $order" }
+  changes:
+    - subject: { path: "", kind: FUNCTION, name: "process", signature: "Order $order" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "A validation block moves from the end of process to its start."

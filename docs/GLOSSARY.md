@@ -108,6 +108,11 @@ _Avoid_: element, node
 A named container of a structured data file, such as a TOML table, a YAML document or a Markdown heading.
 _Avoid_: block, group, header
 
+### Rule set
+
+A block of a CSS, SCSS or Less stylesheet named by its selectors, such as `.button { … }`.
+_Avoid_: ruleset, style rule, selector block
+
 ### Parse error
 
 Source that the language's parser could not read. Code with a parse error that changed is unanalyzed.

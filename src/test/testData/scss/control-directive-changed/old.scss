@@ -1,0 +1,9 @@
+@each $name in primary, secondary {
+  .text-#{$name} {
+    color: $name;
+  }
+}
+
+.a {
+  color: red;
+}

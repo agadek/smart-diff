@@ -1,0 +1,7 @@
+.nav .item {
+  color: gray;
+}
+
+.nav > .active {
+  color: black;
+}

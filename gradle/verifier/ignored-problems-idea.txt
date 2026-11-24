@@ -1,11 +1,16 @@
-// Plugin Verifier ignored problems for the idea family (languages/16-javascript-typescript-details §3 and
-// languages/17-go-details §3). IntelliJ IDEA Community has no JavaScript or Go plugin, and the plugin's JavaScript and Go
-// support loads only through the optional smartdiff-javascript.xml and smartdiff-go.xml descriptors, which never load
-// there. On the Linux IDE builds the verifier still reports the JavaScript and Go PSI that those providers reference as
-// unresolved. Only these packages are ignored; the verifier lists every ignored problem in ignored-problems.txt next to
-// the verdict.
+// Plugin Verifier ignored problems for the idea family (languages/16-javascript-typescript-details §3,
+// languages/17-go-details §3, languages/18-css-details §3 and languages/19-php-details §3). IntelliJ IDEA Community has
+// no JavaScript, Go, CSS or PHP plugin, and the plugin's JavaScript, Go, CSS and PHP support loads only through the
+// optional smartdiff-javascript.xml, smartdiff-go.xml, smartdiff-css.xml and smartdiff-php.xml descriptors, which never
+// load there. On the Linux IDE builds the verifier still reports the JavaScript, Go, CSS and PHP PSI that those providers
+// reference as unresolved. Only these packages are ignored; the verifier lists every ignored problem in
+// ignored-problems.txt next to the verdict.
 // Format: <plugin id>:<regular expression matched against the whole short problem description>.
 io.github.agadek.smartdiff:Package 'com\.intellij\.lang\.(javascript|ecmascript6|typescript)(\.[\w.]+)?' is not found
 io.github.agadek.smartdiff:Access to unresolved class com\.intellij\.lang\.(javascript|ecmascript6|typescript)\.[\w.$]+
 io.github.agadek.smartdiff:Package 'com\.goide(\.[\w.]+)?' is not found
 io.github.agadek.smartdiff:Access to unresolved class com\.goide\.[\w.$]+
+io.github.agadek.smartdiff:Package 'com\.intellij\.psi\.css(\.[\w.]+)?' is not found
+io.github.agadek.smartdiff:Access to unresolved class com\.intellij\.psi\.css\.[\w.$]+
+io.github.agadek.smartdiff:Package 'com\.jetbrains\.php(\.[\w.]+)?' is not found
+io.github.agadek.smartdiff:Access to unresolved class com\.jetbrains\.php\.[\w.$]+

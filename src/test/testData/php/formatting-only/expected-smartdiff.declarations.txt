@@ -1,0 +1,4 @@
+status: ANALYZED
+namespace Shop  old 3-31  new 3-30
+  class Order  old 7-31  new 7-30
+    method describe()  formatting-only  old 27-30  new 27-29

@@ -1,0 +1,3 @@
+status: ANALYZED
+class Line  old 10-14  new 9-14
+  property label  moved  old 7  new 13

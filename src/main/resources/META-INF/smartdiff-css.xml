@@ -1,0 +1,8 @@
+<!-- Loaded when the CSS plugin is present. The CSS, SCSS and Less declaration provider registers here; it references no
+     class of the Sass or Less plugins, so SCSS and Less files are read whenever those plugins register their languages
+     (languages/18-css-details §1). -->
+<idea-plugin>
+    <extensions defaultExtensionNs="io.github.agadek.smartdiff">
+        <declarationProvider implementation="io.github.agadek.smartdiff.engine.declarations.psi.css.CssDeclarationProvider"/>
+    </extensions>
+</idea-plugin>

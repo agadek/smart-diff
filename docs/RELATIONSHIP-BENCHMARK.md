@@ -22,7 +22,7 @@ Without a labelled benchmark, matcher changes are judged by anecdote and fixture
 In scope:
 
 - per-file comparisons;
-- Java, Kotlin, Scala 2, Scala 3 and Python in the case matrix and real-commit minimums; Rust has benchmark cases listed separately in `src/test/testData/relationships-corpus-rust.txt` and run by `RustRelationshipBenchmarkTest` in `:rust`, and is not held to the case matrix or the real-commit minimum; Go has benchmark cases listed in `src/test/testData/relationships-corpus-go.txt` and run by `GoRelationshipBenchmarkTest` in `:go`, on the same terms; Swift, C#, C and C++ have benchmark cases listed in `src/test/testData/relationships-corpus-treesitter.txt` and run by `TreeSitterRelationshipBenchmarkTest` with the Tree-sitter engine, on the same terms;
+- Java, Kotlin, Scala 2, Scala 3 and Python in the case matrix and real-commit minimums; Rust has benchmark cases listed separately in `src/test/testData/relationships-corpus-rust.txt` and run by `RustRelationshipBenchmarkTest` in `:rust`, and is not held to the case matrix or the real-commit minimum; Go has benchmark cases listed in `src/test/testData/relationships-corpus-go.txt` and run by `GoRelationshipBenchmarkTest` in `:go`, on the same terms; PHP has benchmark cases listed in `src/test/testData/relationships-corpus-php.txt` and run by `PhpRelationshipBenchmarkTest` in `:php`, on the same terms; Swift, C#, C and C++ have benchmark cases listed in `src/test/testData/relationships-corpus-treesitter.txt` and run by `TreeSitterRelationshipBenchmarkTest` with the Tree-sitter engine, on the same terms;
 - declaration renames, moves, kind changes, signature changes, extraction and inlining;
 - code moves: statements moved inside or between matched declarations ([relationships/08](specs/relationships/08-moves-inside-declarations.md)), in the `code-move` category, eight cases per language;
 - duplicate bodies, overloads and ambiguous candidates;
@@ -248,7 +248,7 @@ The report must contain:
 
 ## 10. Acceptance criteria
 
-- The labelled corpus covers every case category in §3 for Java and Kotlin, the Scala categories the provider supports, and the Rust and Go cases their providers support.
+- The labelled corpus covers every case category in §3 for Java and Kotlin, the Scala categories the provider supports, and the Rust, Go and PHP cases their providers support.
 - Every expected relationship is identified by endpoints, not just names.
 - The baseline report exists before the matcher changes start.
 - Every matcher change reports precision, recall, incorrect-match, ambiguity and latency against that baseline.

@@ -1,0 +1,3 @@
+status: ANALYZED
+rule .card  old 15-26  new 15-30
+  rule &__footer  added  new 23-25

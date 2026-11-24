@@ -1,0 +1,4 @@
+status: ANALYZED
+namespace Shop  old 3-31  new 3-31
+  class Order  old 7-31  new 7-31
+    method describe()  changed  old 27-30  new 27-30

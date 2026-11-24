@@ -1,0 +1,4 @@
+left: ANALYZED  right: ANALYZED
+namespace Svc  UNCHANGED  base 3-20  left 3-20  right 3-20
+  class Service  UNCHANGED  base 5-20  left 5-20  right 5-20
+    method a()  CHANGED_ON_BOTH_SIDES  left: rename candidate → method first()  right: changed  base 11-14  left 11-14  right 11-14

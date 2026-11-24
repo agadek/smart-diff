@@ -1,0 +1,20 @@
+case: move-in-file-1
+language: PHP
+corpus: php
+category: move-in-file
+split: tuning
+expected:
+  relationships:
+    - kinds: [MOVE]
+      old: { path: "", kind: FUNCTION, name: "second", signature: "array $values" }
+      new: { path: "", kind: FUNCTION, name: "second", signature: "array $values" }
+  changes:
+    - subject: { path: "", kind: FUNCTION, name: "second", signature: "array $values" }
+      presence: MATCHED
+      content: UNCHANGED
+      moved: true
+    - subject: { path: "", kind: FUNCTION, name: "first", signature: "array $values" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Two functions swap places; the second one is the one that moved."

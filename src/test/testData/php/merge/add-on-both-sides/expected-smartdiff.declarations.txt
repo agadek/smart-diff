@@ -1,0 +1,5 @@
+left: ANALYZED  right: ANALYZED
+namespace Svc  UNCHANGED  base 3-20  left 3-25  right 3-25
+  class Service  UNCHANGED  base 5-20  left 5-25  right 5-25
+    method c()  LEFT_ONLY  left: added  base -  left 21-24  right -
+    method d()  RIGHT_ONLY  right: added  base -  left -  right 21-24

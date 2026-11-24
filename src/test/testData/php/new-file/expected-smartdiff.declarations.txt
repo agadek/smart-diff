@@ -1,0 +1,9 @@
+status: ANALYZED
+File region  changed  old 1  new 1-31
+namespace Shop  added  new 3-31
+  class Order  added  new 7-31
+    property id  added  new 9
+    property items  added  new 11
+    constructor __construct(int $id)  added  new 13-16
+    method total()  added  new 18-25
+    method describe()  added  new 27-30
