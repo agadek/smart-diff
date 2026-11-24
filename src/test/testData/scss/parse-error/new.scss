@@ -1,0 +1,26 @@
+@use "sass:math";
+
+// The brand colour.
+$primary: #0a66c2;
+
+@mixin button($color, $size: 1rem) {
+  color: $color;
+  font-size: $size;
+}
+
+@function rem($px) {
+  @return math.div($px, 16px) * 1rem;
+}
+
+.card {
+  padding: rem(16px);
+
+  &__title {
+    @include button($primary);
+    font-weight: bold;
+  }
+
+  > .body {
+    margin: 0;;; }}
+  }
+}

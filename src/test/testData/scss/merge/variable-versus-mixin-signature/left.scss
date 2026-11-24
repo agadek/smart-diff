@@ -1,0 +1,16 @@
+$primary: #004182;
+
+@mixin button($color) {
+  color: $color;
+  padding: 4px 8px;
+}
+
+.card {
+  &__title {
+    font-weight: bold;
+  }
+
+  &__body {
+    margin: 0;
+  }
+}

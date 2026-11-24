@@ -1,0 +1,4 @@
+left: ANALYZED  right: ANALYZED
+mixin button($color)  LEFT_ONLY  left: changed  base 3-6  left 3-6  right 3-6
+rule .card  UNCHANGED  base 8-16  left 8-16  right 8-16
+  rule &__body  RIGHT_ONLY  right: changed  base 13-15  left 13-15  right 13-15

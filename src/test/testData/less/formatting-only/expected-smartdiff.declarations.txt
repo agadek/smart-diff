@@ -1,0 +1,3 @@
+status: ANALYZED
+mixin .bordered(@width, @style)  formatting-only  old 6-8  new 6-9
+rule .card  formatting-only  old 10-21  new 11-22

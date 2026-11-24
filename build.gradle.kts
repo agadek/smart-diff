@@ -53,6 +53,8 @@ dependencies {
         pluginModule(runtimeOnly(project(":javascript")))
         // The Go provider is built the same way in :go (languages/17-go-details §2).
         pluginModule(runtimeOnly(project(":go")))
+        // The CSS, SCSS and Less provider is built the same way in :css (languages/18-css-details §2).
+        pluginModule(runtimeOnly(project(":css")))
         // S9 spike and structure-view fallback tests: bundled with IntelliJ IDEA, test-only (languages/06); JSON and
         // Markdown are already on the classpath above.
         testBundledPlugin("com.intellij.properties")
@@ -189,8 +191,8 @@ fun verifierFamilies(value: String?): Set<String> {
 
 /**
  * The ignored-problems files under gradle/verifier for the requested verifier [families]: `idea` ignores the unresolved
- * JavaScript and Go plugin PSI, `webstorm` the unresolved Java plugin PSI (languages/16-javascript-typescript-details §3,
- * languages/17-go-details §3).
+ * JavaScript, Go and CSS plugin PSI, `webstorm` the unresolved Java plugin PSI (languages/16-javascript-typescript-details §3,
+ * languages/17-go-details §3, languages/18-css-details §3).
  * CI runs one family per invocation, so each family gets only its own file; a run over several families gets them all.
  */
 fun verifierIgnoredProblemFiles(families: Set<String>): List<String> =
@@ -246,7 +248,7 @@ val verifierFamiliesTest by tasks.registering {
         check(earlyAccessOrRelease("IU-263.100.1", "IU-2026.3.1") == "IU-2026.3.1") { "an EAP build on the release's branch is not newer" }
         check(earlyAccessOrRelease(null, "IU-2026.3.1") == "IU-2026.3.1") { "no EAP build verifies the release" }
         // languages/16-javascript-typescript-details §3: each family gets only its own ignored problems.
-        check(verifierIgnoredProblemFiles(setOf("idea")) == listOf("ignored-problems-idea.txt")) { "idea ignores the JavaScript and Go PSI" }
+        check(verifierIgnoredProblemFiles(setOf("idea")) == listOf("ignored-problems-idea.txt")) { "idea ignores the JavaScript, Go and CSS PSI" }
         check(verifierIgnoredProblemFiles(setOf("webstorm")) == listOf("ignored-problems-webstorm.txt")) { "webstorm ignores the Java PSI" }
         check(verifierIgnoredProblemFiles(setOf("pycharm", "rustrover", "goland", "eap")).isEmpty()) { "the other families ignore nothing" }
         val ignored = listOf("idea", "webstorm").associateWith { family ->
@@ -260,8 +262,11 @@ val verifierFamiliesTest by tasks.registering {
                 Regex(pattern)
             }
         }
-        check(ignored.getValue("idea").all { "com\\.intellij\\.lang\\.(javascript|ecmascript6|typescript)" in it || "com\\.goide" in it }) { "idea ignores only JavaScript and Go plugin packages" }
+        check(ignored.getValue("idea").all { "com\\.intellij\\.lang\\.(javascript|ecmascript6|typescript)" in it || "com\\.goide" in it || "com\\.intellij\\.psi\\.css" in it }) { "idea ignores only JavaScript, Go and CSS plugin packages" }
         check(ignored.getValue("idea").any { "com\\.goide" in it }) { "idea ignores the Go PSI" }
+        // languages/18-css-details §3: the CSS PSI, and nothing of the Sass or Less plugins, which no class uses.
+        check(ignored.getValue("idea").any { "com\\.intellij\\.psi\\.css" in it }) { "idea ignores the CSS PSI" }
+        check(ignored.values.flatten().none { Regex("plugins\\\\\\.(sass|scss|less)").containsMatchIn(it) }) { "no family ignores the Sass or Less plugins" }
         check(ignored.getValue("webstorm").none { "javascript" in it || "ecmascript" in it || "typescript" in it }) { "webstorm keeps every JavaScript check" }
         check(ignored.getValue("webstorm").none { it.endsWith("com\\.intellij\\.psi") || ".*" in it || "[" in it }) { "webstorm ignores Java classes by name, not a com.intellij.psi prefix" }
     }

@@ -37,7 +37,7 @@ Plugin ids and licensing are as known on 2026-11-13. The first phase of each gro
 | PHP | `com.jetbrains.php` | PhpStorm, IntelliJ IDEA Ultimate | Closed source; paid | A PhpStorm submodule; verifier on PhpStorm | Classes, interfaces, traits, enums, functions, methods, properties, constants |
 | Ruby | `org.jetbrains.plugins.ruby` | RubyMine, IntelliJ IDEA Ultimate | Closed source; RubyMine's licensing to be confirmed | A RubyMine submodule; verifier on RubyMine | Modules, classes, methods, singleton methods, constants; `attr_*` and DSL calls stay content |
 | SQL | `com.intellij.database` | DataGrip, IntelliJ IDEA (SQL is in the free tier from 2025.3), the other paid IDEs | Closed source | IntelliJ IDEA 2025.3 or a DataGrip submodule; the 2025.1.3 Community target has no SQL plugin | `CREATE` statements named by object (`table orders`, `view`, `function`, `procedure`, `index`); each table column as a member; other statements stay content of the file region |
-| CSS, SCSS, Less | `com.intellij.css` and its dialect plugins | WebStorm, IntelliJ IDEA Ultimate and the other paid IDEs | Closed source; paid outside WebStorm | Same target as JavaScript | Rule sets named by selector, at-rules (`@media`, `@supports`, `@layer`) as containers, custom properties at top level, mixins and functions in SCSS and Less |
+| CSS, SCSS, Less | `com.intellij.css` and its dialect plugins | WebStorm, IntelliJ IDEA Ultimate and the other paid IDEs | Closed source; paid outside WebStorm | Same target as JavaScript | Rule sets named by selector, at-rules (`@media`, `@supports`, `@layer`) as containers, custom properties, mixins and functions in SCSS and Less; implemented in [languages/18](specs/languages/18-css.md), where custom properties and SCSS and Less variables are members of the rule set or at-rule that holds them |
 | Python, Rust | Specified in [languages/04](specs/languages/04-python.md) and [languages/05](specs/languages/05-rust.md) | | | | |
 
 - **One pattern for every paid IDE.** S8 decides how Rust is compiled and tested. The same choice applies to WebStorm, GoLand, PhpStorm, RubyMine and DataGrip: if S8 picks a submodule per IDE, each language above is one more submodule with its own optional descriptor; if it picks the Ultimate target, they share it. Phase B0 (§5) records this as an amendment to the S8 ADR, so the decision is made once.
@@ -126,7 +126,7 @@ Each phase is one pull request, or a spec pull request and a code pull request, 
 | M1 | Markdown provider | D0 (the `SECTION` kind) | Implemented 2026-11-16 in [languages/14](specs/languages/14-markdown.md) |
 | M2 | Groovy provider and build-script sections, Groovy and Kotlin | Nothing | Part 1 (Groovy declarations) implemented 2026-11-14; part 2 (build-script sections, M2b) implemented 2026-11-15 |
 | M3 | Shell provider | Nothing | Implemented 2026-11-14 |
-| B3 | CSS, SCSS and Less provider | B1 | Not started |
+| B3 | CSS, SCSS and Less provider | B1 | Implemented 2026-11-24 in [languages/18](specs/languages/18-css.md) |
 | B4 | PHP provider | B0 | Not started |
 | B5 | Ruby provider | B0 | Not started |
 | B6 | SQL provider | B0, or a raised build target (§6) | Not started |

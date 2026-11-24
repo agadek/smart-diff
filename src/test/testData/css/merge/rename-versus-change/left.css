@@ -1,0 +1,15 @@
+.header {
+  color: black;
+  padding: 8px 16px;
+}
+
+.page-footer {
+  color: gray;
+  margin-top: 24px;
+}
+
+@media print {
+  .header {
+    display: none;
+  }
+}

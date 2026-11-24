@@ -1,0 +1,13 @@
+@primary: #0a66c2;
+
+.bordered(@width) {
+  border: @width solid @primary;
+}
+
+.card {
+  .bordered(1px);
+
+  .title {
+    font-weight: 600;
+  }
+}

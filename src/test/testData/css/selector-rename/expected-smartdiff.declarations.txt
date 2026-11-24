@@ -1,0 +1,2 @@
+status: ANALYZED
+rule .btn-primary  rename candidate from rule .button-primary  changed  old 8-11  new 8-11

@@ -1,0 +1,4 @@
+left: ANALYZED  right: ANALYZED
+at-rule @media print  LEFT_ONLY  left: removed  base 11-15  left -  right 11-15
+  rule .header  CHANGED_ON_BOTH_SIDES  left: moved  right: changed  base 12-14  left 12-14  right 12-14
+at-rule @media print, screen and (max-width: 400px)  LEFT_ONLY  left: added  base -  left 11-15  right -

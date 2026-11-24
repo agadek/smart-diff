@@ -1,0 +1,12 @@
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.9;
+  }
+}
+
+.toast {
+  animation: fade 200ms ease-in;
+}

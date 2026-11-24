@@ -1,0 +1,2 @@
+status: ANALYZED
+rule .button  changed  old 1-6  new 1-6

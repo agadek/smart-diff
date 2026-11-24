@@ -1,0 +1,2 @@
+left: ANALYZED  right: ANALYZED
+rule .header  CHANGED_ON_BOTH_SIDES  left: formatting-only  right: changed  base 1-4  left 1  right 1-4

@@ -1,0 +1,19 @@
+.header {
+  color: black;
+  padding: 8px 16px;
+}
+
+.footer {
+  color: gray;
+  margin-top: 24px;
+}
+
+.aside {
+  float: right;
+}
+
+@media print {
+  .header {
+    display: none;
+  }
+}

@@ -1,0 +1,2 @@
+status: ANALYZED
+at rule @media screen and (max-width: 720px)  rename candidate from at rule @media screen and (max-width: 600px)  changed  old 13-18  new 13-18

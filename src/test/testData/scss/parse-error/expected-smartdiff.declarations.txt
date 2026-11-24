@@ -1,0 +1,5 @@
+status: PARTIAL
+reason: some source could not be parsed and was not analyzed
+File region  unanalyzed  old 1-26  new 1-26
+rule .card  formatting-only  old 15-26  new 15-24
+  rule > .body  changed  old 23-25  new 23-24
