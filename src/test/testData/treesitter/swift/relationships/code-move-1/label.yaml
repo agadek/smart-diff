@@ -1,0 +1,16 @@
+case: code-move-1
+language: tree-sitter.swift
+corpus: swift
+category: code-move
+split: tuning
+expected:
+  relationships:
+    - kinds: [CODE_MOVE]
+      old: { path: "class OrderService", kind: METHOD, name: "process", signature: "order: Order" }
+      new: { path: "class OrderService", kind: METHOD, name: "process", signature: "order: Order" }
+  changes:
+    - subject: { path: "class OrderService", kind: METHOD, name: "process", signature: "order: Order" }
+      presence: MATCHED
+      content: CHANGED
+  ambiguous: []
+notes: "A validation block moves from the end of process to its start."

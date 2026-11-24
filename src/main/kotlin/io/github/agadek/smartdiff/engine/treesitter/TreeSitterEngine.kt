@@ -10,6 +10,7 @@ import io.github.agadek.smartdiff.engine.api.ComparisonResult
 import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.api.TreeSitterSetting
 import io.github.agadek.smartdiff.engine.declarations.analysis.DeclarationAnalysis
+import io.github.agadek.smartdiff.engine.declarations.model.DeclarationTree
 import io.github.agadek.smartdiff.engine.registry.ComparisonEngineFactory
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ConcurrentHashMap
@@ -37,16 +38,7 @@ class TreeSitterEngine internal constructor(
         val language = languages.firstOrNull { it.id == request.languageId }
             ?: return ComparisonResult.unsupported(this, "no Tree-sitter grammar for language ${request.languageId}")
         return try {
-            val (oldSyntax, newSyntax) = helpers.use(cancellation) { helper ->
-                // One check whether or not the names are cached, so every comparison checks cancellation equally often.
-                cancellation.checkCanceled()
-                val grammarNames = names.getOrPut(language.grammar) { helper.names(language.grammar) }
-                val old = helper.parse(language.grammar, request.oldText, cancellation)
-                val new = helper.parse(language.grammar, request.newText, cancellation)
-                TreeSitterSyntax(old, grammarNames, request.oldText) to TreeSitterSyntax(new, grammarNames, request.newText)
-            }
-            val oldTree = TreeSitterTreeBuilder.build(oldSyntax, language, cancellation)
-            val newTree = TreeSitterTreeBuilder.build(newSyntax, language, cancellation)
+            val (oldTree, newTree) = trees(language, request, cancellation)
             DeclarationAnalysis(id, version)
                 .compare(oldTree, newTree, request.limits.maxDeclarations, cancellation, request.confidence, request.languageId)
                 .copy(analysisNote = AnalysisNote.TREE_SITTER)
@@ -59,6 +51,32 @@ class TreeSitterEngine internal constructor(
             if (e.javaClass.name == "com.intellij.openapi.progress.ProcessCanceledException") throw e
             ComparisonResult.threw(this, e.message ?: e.javaClass.simpleName)
         }
+    }
+
+    /**
+     * Both sides' declaration trees, as [compare] builds them, or null for a language without a grammar. The relationship
+     * benchmark reads the old tree to name a relationship's old endpoint (R30); it throws what [compare] catches.
+     */
+    internal fun trees(request: ComparisonRequest, cancellation: Cancellation): Pair<DeclarationTree, DeclarationTree>? {
+        val language = languages.firstOrNull { it.id == request.languageId } ?: return null
+        return trees(language, request, cancellation)
+    }
+
+    private fun trees(
+        language: TreeSitterLanguage,
+        request: ComparisonRequest,
+        cancellation: Cancellation,
+    ): Pair<DeclarationTree, DeclarationTree> {
+        val (oldSyntax, newSyntax) = helpers.use(cancellation) { helper ->
+            // One check whether or not the names are cached, so every comparison checks cancellation equally often.
+            cancellation.checkCanceled()
+            val grammarNames = names.getOrPut(language.grammar) { helper.names(language.grammar) }
+            val old = helper.parse(language.grammar, request.oldText, cancellation)
+            val new = helper.parse(language.grammar, request.newText, cancellation)
+            TreeSitterSyntax(old, grammarNames, request.oldText) to TreeSitterSyntax(new, grammarNames, request.newText)
+        }
+        return TreeSitterTreeBuilder.build(oldSyntax, language, cancellation) to
+            TreeSitterTreeBuilder.build(newSyntax, language, cancellation)
     }
 
     companion object {

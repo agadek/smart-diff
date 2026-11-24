@@ -1,0 +1,17 @@
+case: kind-change-1
+language: tree-sitter.c
+corpus: c
+category: kind-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [KIND_CHANGE]
+      old: { path: "", kind: STRUCT, name: "value", signature: null }
+      new: { path: "", kind: UNION, name: "value", signature: null }
+  changes:
+    - subject: { path: "", kind: UNION, name: "value", signature: null }
+      presence: MATCHED
+      content: CHANGED
+      kindChangedFrom: STRUCT
+  ambiguous: []
+notes: "A struct becomes a union with the same fields."

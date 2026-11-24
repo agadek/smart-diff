@@ -15,6 +15,7 @@ import io.github.agadek.smartdiff.engine.api.ConfidencePolicy
 import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.Evidence
+import io.github.agadek.smartdiff.engine.api.LanguageIds
 import io.github.agadek.smartdiff.engine.api.Presence
 import io.github.agadek.smartdiff.engine.api.Relationship
 import io.github.agadek.smartdiff.engine.api.Status
@@ -59,10 +60,16 @@ object RelationshipBenchmark {
     const val DEFAULT_LABEL_ROOT = "src/test/testData"
 
     /** The corpora of R33; Scala 2 and Scala 3 are separate languages in every count. */
-    val CORPORA = listOf("java", "kotlin", "scala2", "scala3", "python", "rust", "go")
+    val CORPORA = listOf("java", "kotlin", "scala2", "scala3", "python", "rust", "go", "swift", "c-sharp", "c", "cpp")
 
     /** The corpora held to the R8 case matrix and the R10 real-commit minimum. */
     val MATRIX_CORPORA = listOf("java", "kotlin", "scala2", "scala3")
+
+    /** engines/05 R3: the C++ extensions; `.h` files are C++, as the language resolver has them. */
+    private val TREE_SITTER_CPP_EXTENSIONS = listOf(".cpp", ".cc", ".cxx", ".c++", ".h", ".hpp", ".hh", ".hxx")
+
+    /** The `git` path globs of the Tree-sitter languages' extensions (engines/05 R3). */
+    private val TREE_SITTER_GLOBS = arrayOf("*.swift", "*.cs", "*.c") + TREE_SITTER_CPP_EXTENSIONS.map { "*$it" }
 
     /**
      * The case matrix of R8, as kebab-case categories a label names in `category:` (the details file lists them as
@@ -378,6 +385,10 @@ object RelationshipBenchmark {
     private fun defaultCorpus(language: String, file: File): String = when (language.uppercase()) {
         "JAVA" -> "java"
         "KOTLIN" -> "kotlin"
+        "TREE-SITTER.SWIFT" -> "swift"
+        "TREE-SITTER.C-SHARP" -> "c-sharp"
+        "TREE-SITTER.C" -> "c"
+        "TREE-SITTER.CPP" -> "cpp"
         else -> error("label ${file.path}: corpus is required for $language, so Scala 2 and Scala 3 stay apart")
     }
 
@@ -819,8 +830,10 @@ object RelationshipBenchmark {
         confidence: ConfidencePolicy = ConfidencePolicy.DEFAULT,
         /** Only score cases of this split; null scores every split. The tuning run uses [Split.TUNING] only (R20). */
         split: Split? = null,
+        /** Engines other than the declaration engine, for the languages they compare (engines/05 R30). */
+        engines: List<BenchmarkEngine> = emptyList(),
     ): Report {
-        val engine = DeclarationEngine(null)
+        val engine = Engines(DeclarationEngine(null), engines)
         val entries = parseCorpus(corpus)
         val repositories = entries.mapNotNull { it.repository }.distinctBy { it.name }
         validateCommitLabels(labelRoot, repositories)
@@ -890,7 +903,7 @@ object RelationshipBenchmark {
         return report
     }
 
-    private fun runCase(engine: DeclarationEngine, directory: File, confidence: ConfidencePolicy, split: Split?): CaseResult? {
+    private fun runCase(engine: Engines, directory: File, confidence: ConfidencePolicy, split: Split?): CaseResult? {
         val labelFile = File(directory, "label.yaml")
         require(labelFile.isFile) { "case ${directory.path} has no label.yaml" }
         val label = parseLabel(labelFile)
@@ -917,7 +930,7 @@ object RelationshipBenchmark {
     }
 
     private fun runCommitLine(
-        engine: DeclarationEngine,
+        engine: Engines,
         entry: CorpusEntry,
         labelRoot: File,
         draft: Boolean,
@@ -927,7 +940,7 @@ object RelationshipBenchmark {
         val repository = entry.repository ?: error("corpus line '${entry.line}' is not a case folder")
         if (!repository.isDirectory) error("real-commit repository not found: ${repository.path}")
         val result = CommitLine()
-        val commits = git(repository, listOf("rev-list") + entry.arguments + listOf("--", "*.java", "*.kt", "*.scala", "*.py", "*.rs", "*.go"))
+        val commits = git(repository, listOf("rev-list") + entry.arguments + listOf("--", "*.java", "*.kt", "*.scala", "*.py", "*.rs", "*.go", *TREE_SITTER_GLOBS))
             .lines().map { it.trim() }.filter { it.isNotEmpty() }
         if (commits.isEmpty()) result.skippedCommitLines++
         for (commit in commits) {
@@ -940,7 +953,7 @@ object RelationshipBenchmark {
             val changes = git(
                 repository,
                 // A rename is a delete plus an add, so it is listed as skipped instead of vanishing from the run.
-                listOf("diff", "--no-renames", "--name-status", "--diff-filter=ADM", parent, commit, "--", "*.java", "*.kt", "*.scala", "*.py", "*.rs", "*.go"),
+                listOf("diff", "--no-renames", "--name-status", "--diff-filter=ADM", parent, commit, "--", "*.java", "*.kt", "*.scala", "*.py", "*.rs", "*.go", *TREE_SITTER_GLOBS),
             ).lines().map { it.trim() }.filter { it.isNotEmpty() }
             val files = mutableListOf<CommitFile>()
             for (change in changes) {
@@ -1022,14 +1035,37 @@ object RelationshipBenchmark {
     private data class Draft(val corpus: String, val repository: String, val commit: String, val path: String, val text: String)
 
     /** The old-side tree, only when a relationship has an old endpoint, so a run without relationships does not parse twice. */
-    private fun oldTree(engine: DeclarationEngine, request: ComparisonRequest, result: ComparisonResult): DeclarationTree? {
+    private fun oldTree(engine: Engines, request: ComparisonRequest, result: ComparisonResult): DeclarationTree? {
         if (result.relationships.isEmpty()) return null
         // The old side is parsed a second time, deliberately outside Outcome.millis: the comparison's time is what the
         // report measures. A provider error here must not abort the run, so the new-side path fallback is used instead.
-        return runCatching { onPooledThread { engine.trees(request, Cancellation.NONE)?.first } }.getOrNull()
+        return runCatching { onPooledThread { engine.trees(request) } }.getOrNull()
     }
 
-    private fun compare(engine: ComparisonEngine, request: ComparisonRequest): Outcome {
+    /**
+     * An engine other than the declaration engine for the [languages] it compares, with the old side's declaration tree
+     * that its relationships' old endpoints point into (engines/05 R30).
+     */
+    class BenchmarkEngine(
+        val engine: ComparisonEngine,
+        val languages: Set<String>,
+        val oldTree: (ComparisonRequest) -> DeclarationTree?,
+    )
+
+    /** The declaration engine, or the [BenchmarkEngine] that compares the request's language. */
+    private class Engines(val declarations: DeclarationEngine, val others: List<BenchmarkEngine>) {
+        fun of(request: ComparisonRequest): ComparisonEngine = other(request)?.engine ?: declarations
+
+        fun trees(request: ComparisonRequest): DeclarationTree? {
+            val other = other(request) ?: return declarations.trees(request, Cancellation.NONE)?.first
+            return other.oldTree(request)
+        }
+
+        private fun other(request: ComparisonRequest): BenchmarkEngine? = others.firstOrNull { request.languageId in it.languages }
+    }
+
+    private fun compare(engines: Engines, request: ComparisonRequest): Outcome {
+        val engine = engines.of(request)
         val started = System.nanoTime()
         return try {
             val result = onPooledThread { compareSafely(engine, request, Cancellation.NONE) }
@@ -1075,6 +1111,10 @@ object RelationshipBenchmark {
         "PYTHON" -> "py"
         "RUST" -> "rs"
         "GO" -> "go"
+        "TREE-SITTER.SWIFT" -> "swift"
+        "TREE-SITTER.C-SHARP" -> "cs"
+        "TREE-SITTER.C" -> "c"
+        "TREE-SITTER.CPP" -> "cpp"
         else -> "scala"
     }
 
@@ -1084,6 +1124,10 @@ object RelationshipBenchmark {
         path.endsWith(".scala") -> "Scala"
         path.endsWith(".rs") -> "Rust"
         path.endsWith(".go") -> "go"
+        path.endsWith(".swift") -> LanguageIds.TREE_SITTER_SWIFT
+        path.endsWith(".cs") -> LanguageIds.TREE_SITTER_C_SHARP
+        path.endsWith(".c") -> LanguageIds.TREE_SITTER_C
+        TREE_SITTER_CPP_EXTENSIONS.any { path.endsWith(it) } -> LanguageIds.TREE_SITTER_CPP
         else -> "JAVA"
     }
 
@@ -1093,6 +1137,10 @@ object RelationshipBenchmark {
         path.endsWith(".py") -> listOf("python")
         path.endsWith(".rs") -> listOf("rust")
         path.endsWith(".go") -> listOf("go")
+        path.endsWith(".swift") -> listOf("swift")
+        path.endsWith(".cs") -> listOf("c-sharp")
+        path.endsWith(".c") -> listOf("c")
+        TREE_SITTER_CPP_EXTENSIONS.any { path.endsWith(it) } -> listOf("cpp")
         else -> listOf("scala2", "scala3")
     }
 

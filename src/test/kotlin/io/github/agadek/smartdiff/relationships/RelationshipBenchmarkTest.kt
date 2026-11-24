@@ -1446,7 +1446,9 @@ notes: "Built inside the test."
                 file.isFile && file.name == "label.yaml" &&
                     !file.path.replace(File.separatorChar, '/').contains("/commits/") &&
                     !file.path.replace(File.separatorChar, '/').contains("/rust/relationships/") &&
-                    !file.path.replace(File.separatorChar, '/').contains("/go/relationships/")
+                    !file.path.replace(File.separatorChar, '/').contains("/go/relationships/") &&
+                    // engines/05 R30: the Tree-sitter cases run in TreeSitterRelationshipBenchmarkTest, with that engine.
+                    !file.path.replace(File.separatorChar, '/').contains("/treesitter/")
             }
             .map { it.parentFile }
             .sortedBy { it.path }

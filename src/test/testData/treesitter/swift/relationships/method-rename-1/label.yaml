@@ -1,0 +1,19 @@
+case: method-rename-1
+language: tree-sitter.swift
+corpus: swift
+category: method-rename
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Stats", kind: METHOD, name: "total", signature: "values: [Int]" }
+      new: { path: "class Stats", kind: METHOD, name: "sum", signature: "values: [Int]" }
+  changes:
+    - subject: { path: "class Stats", kind: METHOD, name: "sum", signature: "values: [Int]" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Stats", kind: METHOD, name: "largest", signature: "values: [Int]" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A method is renamed with the same body."

@@ -1,0 +1,19 @@
+case: method-rename-1
+language: tree-sitter.c-sharp
+corpus: c-sharp
+category: method-rename
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "class Stats", kind: METHOD, name: "Total", signature: "int[]" }
+      new: { path: "class Stats", kind: METHOD, name: "Sum", signature: "int[]" }
+  changes:
+    - subject: { path: "class Stats", kind: METHOD, name: "Sum", signature: "int[]" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Stats", kind: METHOD, name: "Largest", signature: "int[]" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A method is renamed with the same body."

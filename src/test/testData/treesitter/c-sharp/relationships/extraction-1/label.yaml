@@ -1,0 +1,19 @@
+case: extraction-1
+language: tree-sitter.c-sharp
+corpus: c-sharp
+category: extraction
+split: tuning
+expected:
+  relationships:
+    - kinds: [EXTRACT]
+      old: { path: "class Report", kind: METHOD, name: "Render", signature: "string[]" }
+      new: { path: "class Report", kind: METHOD, name: "Body", signature: "string[]" }
+  changes:
+    - subject: { path: "class Report", kind: METHOD, name: "Render", signature: "string[]" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Report", kind: METHOD, name: "Body", signature: "string[]" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A helper method is extracted from a changed method."

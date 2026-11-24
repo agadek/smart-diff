@@ -1,0 +1,19 @@
+case: inlining-1
+language: tree-sitter.cpp
+corpus: cpp
+category: inlining
+split: tuning
+expected:
+  relationships:
+    - kinds: [INLINE]
+      old: { path: "", kind: FUNCTION, name: "body", signature: "const std::vector<std::string>&" }
+      new: { path: "", kind: FUNCTION, name: "render", signature: "const std::vector<std::string>&" }
+  changes:
+    - subject: { path: "", kind: FUNCTION, name: "render", signature: "const std::vector<std::string>&" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: FUNCTION, name: "body", signature: "const std::vector<std::string>&" }
+      presence: REMOVED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A helper function is inlined into its caller."

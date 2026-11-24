@@ -1,0 +1,19 @@
+case: rename-with-body-change-1
+language: tree-sitter.c
+corpus: c
+category: rename-with-body-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "", kind: FUNCTION, name: "format_price", signature: "char*, int" }
+      new: { path: "", kind: FUNCTION, name: "format_amount", signature: "char*, int" }
+  changes:
+    - subject: { path: "", kind: FUNCTION, name: "format_amount", signature: "char*, int" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: FUNCTION, name: "format_count", signature: "char*, int" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A function is renamed and one line of its body changes."

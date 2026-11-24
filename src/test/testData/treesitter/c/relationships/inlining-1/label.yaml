@@ -1,0 +1,19 @@
+case: inlining-1
+language: tree-sitter.c
+corpus: c
+category: inlining
+split: tuning
+expected:
+  relationships:
+    - kinds: [INLINE]
+      old: { path: "", kind: FUNCTION, name: "body", signature: "const char**, int" }
+      new: { path: "", kind: FUNCTION, name: "report", signature: "const char**, int" }
+  changes:
+    - subject: { path: "", kind: FUNCTION, name: "report", signature: "const char**, int" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: FUNCTION, name: "body", signature: "const char**, int" }
+      presence: REMOVED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A helper function is inlined into its caller."

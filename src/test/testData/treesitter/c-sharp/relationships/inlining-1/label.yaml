@@ -1,0 +1,19 @@
+case: inlining-1
+language: tree-sitter.c-sharp
+corpus: c-sharp
+category: inlining
+split: tuning
+expected:
+  relationships:
+    - kinds: [INLINE]
+      old: { path: "class Report", kind: METHOD, name: "Body", signature: "string[]" }
+      new: { path: "class Report", kind: METHOD, name: "Render", signature: "string[]" }
+  changes:
+    - subject: { path: "class Report", kind: METHOD, name: "Render", signature: "string[]" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Report", kind: METHOD, name: "Body", signature: "string[]" }
+      presence: REMOVED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A helper method is inlined into its caller."
