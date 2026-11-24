@@ -1,0 +1,5 @@
+status: ANALYZED
+rule .button  formatting-only  old 1-6  new 1-6
+rule .button-primary  formatting-only  old 8-11  new 8-11
+at rule @media screen and (max-width: 600px)  old 13-18  new 13-18
+  rule .button  formatting-only  old 14-17  new 14-17

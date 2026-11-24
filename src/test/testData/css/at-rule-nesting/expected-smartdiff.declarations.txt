@@ -1,0 +1,3 @@
+status: ANALYZED
+at rule @media screen and (max-width: 600px)  old 13-18  new 13-19
+  rule .button  changed  old 14-17  new 14-18

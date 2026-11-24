@@ -1,0 +1,6 @@
+status: ANALYZED
+File region  formatting-only  old 1  new 18
+rule .button  added  new 1-6
+rule .button-primary  added  new 8-11
+at rule @media screen and (max-width: 600px)  added  new 13-18
+  rule .button  added  new 14-17

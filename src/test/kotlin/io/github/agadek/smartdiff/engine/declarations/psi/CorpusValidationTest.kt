@@ -63,13 +63,13 @@ class CorpusValidationTest : BasePlatformTestCase() {
         val rows = mutableListOf<Row>()
         for (words in CorpusSupport.listLines(File(list))) {
             val repository = File(words.first())
-            val commits = CorpusSupport.git(repository, listOf("rev-list") + words.drop(1) + listOf("--", "*.java", "*.kt", "*.scala", "*.json", "*.yaml", "*.yml", "*.groovy", "*.gradle", "*.gvy", "*.sh", "*.py", "*.rs", "*.go", "*.properties", "*.toml", "*.md", "*.markdown", "*.xml", "*.html", "*.htm", "*.xhtml")).lines().filter { it.isNotBlank() }
+            val commits = CorpusSupport.git(repository, listOf("rev-list") + words.drop(1) + listOf("--", "*.java", "*.kt", "*.scala", "*.json", "*.yaml", "*.yml", "*.groovy", "*.gradle", "*.gvy", "*.sh", "*.py", "*.rs", "*.go", "*.css", "*.scss", "*.less", "*.properties", "*.toml", "*.md", "*.markdown", "*.xml", "*.html", "*.htm", "*.xhtml")).lines().filter { it.isNotBlank() }
             for ((index, commit) in commits.withIndex()) {
                 println("VALIDATION ${repository.name} commit ${index + 1} of ${commits.size}: ${commit.take(10)}")
                 val parent = CorpusSupport.git(repository, listOf("rev-parse", "--verify", "--quiet", "$commit^"), allowFailure = true).trim()
                 if (parent.isEmpty()) continue
                 // --no-renames: a rename is a delete plus an add, so it is skipped here instead of vanishing from the run.
-                val paths = CorpusSupport.git(repository, listOf("diff", "--no-renames", "--name-only", "--diff-filter=M", parent, commit, "--", "*.java", "*.kt", "*.scala", "*.json", "*.yaml", "*.yml", "*.groovy", "*.gradle", "*.gvy", "*.sh", "*.py", "*.rs", "*.go", "*.properties", "*.toml", "*.md", "*.markdown", "*.xml", "*.html", "*.htm", "*.xhtml"))
+                val paths = CorpusSupport.git(repository, listOf("diff", "--no-renames", "--name-only", "--diff-filter=M", parent, commit, "--", "*.java", "*.kt", "*.scala", "*.json", "*.yaml", "*.yml", "*.groovy", "*.gradle", "*.gvy", "*.sh", "*.py", "*.rs", "*.go", "*.css", "*.scss", "*.less", "*.properties", "*.toml", "*.md", "*.markdown", "*.xml", "*.html", "*.htm", "*.xhtml"))
                     .lines().filter { it.isNotBlank() }
                 for (path in paths) {
                     val old = CorpusSupport.git(repository, listOf("show", "$parent:$path")).replace("\r\n", "\n")
@@ -85,6 +85,9 @@ class CorpusValidationTest : BasePlatformTestCase() {
                         path.endsWith(".groovy") || path.endsWith(".gradle") || path.endsWith(".gvy") -> "Groovy"
                         path.endsWith(".rs") -> "Rust"
                         path.endsWith(".go") -> "go"
+                        path.endsWith(".css") -> "CSS"
+                        path.endsWith(".scss") -> "SCSS"
+                        path.endsWith(".less") -> "LESS"
                         path.endsWith(".properties") -> "Properties"
                         path.endsWith(".toml") -> "TOML"
                         path.endsWith(".md") || path.endsWith(".markdown") -> "Markdown"

@@ -1,0 +1,14 @@
+@primary: #0a66c2;
+@accent: #f90;
+
+.bordered(@width) {
+  border: @width solid @primary;
+}
+
+.card {
+  .bordered(1px);
+
+  .title {
+    font-weight: bold;
+  }
+}

@@ -1,0 +1,9 @@
+:root {
+  --brand: #0a66c2;
+  --gap: 8px;
+}
+
+.card {
+  color: var(--brand);
+  margin: var(--gap);
+}
