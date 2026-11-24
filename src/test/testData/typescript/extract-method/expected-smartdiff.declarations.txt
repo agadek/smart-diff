@@ -1,0 +1,4 @@
+status: ANALYZED
+class Report  old 1-10  new 1-14
+  method render(Row[])  changed  code extracted to total(Row[])  old 2-9  new 2-5
+  method total(Row[])  added  extracted from render(Row[]) old 3-6  new 7-13

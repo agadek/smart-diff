@@ -1,0 +1,4 @@
+status: PARTIAL
+reason: some source could not be parsed and was not analyzed
+class Cart  old 3-13  new 3-13
+  method add(item)  unanalyzed  old 6-8  new 6-8

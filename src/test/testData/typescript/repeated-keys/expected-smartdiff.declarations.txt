@@ -1,0 +1,2 @@
+status: ANALYZED
+function log(any)  changed  old 2-4  new 2-4

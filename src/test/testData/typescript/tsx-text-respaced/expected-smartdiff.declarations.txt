@@ -1,0 +1,2 @@
+status: ANALYZED
+function Counter(Props)  changed  old 5-12  new 5-12

@@ -1,0 +1,7 @@
+status: ANALYZED
+File region  changed  old 1  new 1-17
+class Cart  added  new 3-13
+  field items  added  new 4
+  method add(item)  added  new 6-8
+  method total()  added  new 10-12
+function describe(cart)  added  new 15-17

@@ -1,0 +1,4 @@
+status: ANALYZED
+function parse(string, number)  changed  signature changed  old 1  new 1
+function parse(number, number)  changed  signature changed  old 2  new 2
+function parse(string | number, number)  changed  signature changed  old 3-5  new 3-5

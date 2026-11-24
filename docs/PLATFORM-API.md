@@ -28,9 +28,10 @@ The API column names a class, a class and member as `Class#member`, or a package
 | `org.jetbrains.plugins.scala..` | non-public plugin PSI | `io.github.agadek.smartdiff.engine.declarations.psi.scala..`, `io.github.agadek.smartdiff.references.ScalaReferenceResolver` | `SCALA_PROVIDER`, `SCALA_REFERENCES` | Scala files get the analysis fallback; Scala renames without grouped usages (R11, R12) | None: the Scala plugin publishes no stable PSI API |
 | `com.jetbrains.python..` | non-public plugin PSI | `io.github.agadek.smartdiff.engine.declarations.psi.python..`, `io.github.agadek.smartdiff.references.PythonReferenceResolver` | `PYTHON_PROVIDER`, `PYTHON_REFERENCES` | Python files get the analysis fallback; Python renames without grouped usages (R11, R12) | None: the Python plugin publishes no stable PSI API |
 | `org.rust..` | non-public plugin PSI | `io.github.agadek.smartdiff.engine.declarations.psi.rust..` | `RUST_PROVIDER` | Rust files get the analysis fallback (R11) | None: the Rust plugin publishes no stable PSI API |
+| `com.intellij.lang.javascript..`, `com.intellij.lang.ecmascript6..` | non-public plugin PSI | `io.github.agadek.smartdiff.engine.declarations.psi.javascript..` | `JAVASCRIPT_PROVIDER` | JavaScript and TypeScript files get the analysis fallback (R11) | None: the JavaScript plugin is closed source and publishes no stable PSI API |
 | `org.jetbrains.kotlin.analysis..` | Kotlin Analysis API, not used | `io.github.agadek.smartdiff.references.KotlinReferenceResolver` | `KOTLIN_REFERENCES` | Kotlin renames without grouped usages (R12) | Not needed: the resolver uses `PsiReference.resolve()` only |
 
-The `rust` subproject's own architecture test checks the `org.rust..` row; the root's checks the others.
+The `rust` subproject's own architecture test checks the `org.rust..` row and the `javascript` subproject's checks the JavaScript plugin row; the root's checks the others.
 
 ## Replaced
 
@@ -39,3 +40,14 @@ The `rust` subproject's own architecture test checks the `org.rust..` row; the r
 ## Not listed
 
 The reports also name experimental Python AST interfaces and `com.intellij.psi` interfaces that other plugins' own classes reference, such as `PyAstTupleExpression` referenced in `PyTupleExpression`. They are not uses by a plugin class, so the inventory check ignores them.
+
+## Ignored verifier problems
+
+An optional dependency that an IDE does not bundle and the Marketplace does not offer leaves its descriptor's classes unresolved. On the Linux IDE builds Plugin Verifier reports them as compatibility problems, although that descriptor never loads there. Each verifier family ignores only its own such problems, through an ignored-problems file under [gradle/verifier](../gradle/verifier) ([languages/16 details §3](specs/languages/16-javascript-typescript-details.md#3-plugin-verifier)):
+
+| Family | Absent dependency | Ignored |
+| --- | --- | --- |
+| `idea` | JavaScript plugin, in IntelliJ IDEA Community | Unresolved packages and classes under `com.intellij.lang.javascript`, `com.intellij.lang.ecmascript6` and `com.intellij.lang.typescript` |
+| `webstorm` | Java plugin, in WebStorm | The Java plugin classes `JavaDeclarationProvider` and `JavaReferenceResolver` use, each by name, and the `com.intellij.lang.java` and `com.intellij.pom.java` packages |
+
+Ignored problems are not uses of the API this inventory lists. They stay in each target's report, in `ignored-problems.txt`. A new class in an ignored family fails verification until it is reviewed and added to the file.

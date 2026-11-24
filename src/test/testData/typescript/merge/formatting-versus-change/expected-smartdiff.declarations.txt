@@ -1,0 +1,4 @@
+left: ANALYZED  right: ANALYZED
+class Timer  UNCHANGED  base 3-13  left 3-15  right 3-13
+  method start(Clock)  CHANGED_ON_BOTH_SIDES  left: formatting-only  right: changed  base 6-8  left 6-9  right 6-8
+  method elapsed(Clock)  LEFT_ONLY  left: formatting-only  base 10-12  left 11-14  right 10-12
