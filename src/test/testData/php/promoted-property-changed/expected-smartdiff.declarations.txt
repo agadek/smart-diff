@@ -1,0 +1,3 @@
+status: ANALYZED
+class User  old 3-10  new 3-10
+  constructor __construct(string $name, int $age)  changed  old 5-9  new 5-9

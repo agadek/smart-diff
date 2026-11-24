@@ -1,0 +1,22 @@
+case: extraction-1
+language: PHP
+corpus: php
+category: extraction
+split: tuning
+expected:
+  relationships:
+    - kinds: [EXTRACT]
+      old: { path: "class Order", kind: METHOD, name: "render", signature: "" }
+      new: { path: "class Order", kind: METHOD, name: "sumItems", signature: "" }
+  changes:
+    - subject: { path: "", kind: CLASS, name: "Order", signature: null }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "class Order", kind: METHOD, name: "render", signature: "" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "class Order", kind: METHOD, name: "sumItems", signature: "" }
+      presence: ADDED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A helper method is extracted from a changed method."

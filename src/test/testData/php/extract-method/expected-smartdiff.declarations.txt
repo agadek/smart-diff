@@ -1,0 +1,4 @@
+status: ANALYZED
+class Report  old 3-13  new 3-18
+  method render(array $items)  changed  code extracted to sumItems(array $items)  old 5-12  new 5-8
+  method sumItems(array $items)  added  extracted from render(array $items) old 7-11  new 10-17

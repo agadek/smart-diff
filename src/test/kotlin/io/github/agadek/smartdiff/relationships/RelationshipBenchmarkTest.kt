@@ -1446,7 +1446,8 @@ notes: "Built inside the test."
                 file.isFile && file.name == "label.yaml" &&
                     !file.path.replace(File.separatorChar, '/').contains("/commits/") &&
                     !file.path.replace(File.separatorChar, '/').contains("/rust/relationships/") &&
-                    !file.path.replace(File.separatorChar, '/').contains("/go/relationships/")
+                    !file.path.replace(File.separatorChar, '/').contains("/go/relationships/") &&
+                    !file.path.replace(File.separatorChar, '/').contains("/php/relationships/")
             }
             .map { it.parentFile }
             .sortedBy { it.path }

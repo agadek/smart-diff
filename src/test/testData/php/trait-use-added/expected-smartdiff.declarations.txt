@@ -1,0 +1,2 @@
+status: ANALYZED
+class Post  changed  old 3-8  new 3-8

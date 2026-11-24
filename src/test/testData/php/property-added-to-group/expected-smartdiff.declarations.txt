@@ -1,0 +1,4 @@
+status: ANALYZED
+class Box  old 3-6  new 3-6
+  property height  changed  old 5  new 5
+  property depth  added  new 5

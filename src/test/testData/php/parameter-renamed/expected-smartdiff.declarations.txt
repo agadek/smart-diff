@@ -1,0 +1,4 @@
+status: ANALYZED
+namespace Shop  old 3-31  new 3-31
+  class Order  old 7-31  new 7-31
+    constructor __construct(int $orderId)  changed  signature changed  old 13-16  new 13-16

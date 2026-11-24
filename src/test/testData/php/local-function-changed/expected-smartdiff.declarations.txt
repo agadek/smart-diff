@@ -1,0 +1,2 @@
+status: ANALYZED
+function outer()  changed  old 3-7  new 3-7

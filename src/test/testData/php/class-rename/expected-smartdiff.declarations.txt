@@ -1,0 +1,3 @@
+status: ANALYZED
+namespace Shop  old 3-31  new 3-31
+  class Purchase  rename candidate from class Order  old 7-31  new 7-31

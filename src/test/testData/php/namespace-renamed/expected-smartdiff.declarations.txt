@@ -1,0 +1,2 @@
+status: ANALYZED
+namespace Store  rename candidate from namespace Shop  old 3-31  new 3-31

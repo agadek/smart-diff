@@ -1,0 +1,4 @@
+status: ANALYZED
+namespace Shop  old 3-31  new 3-36
+  class Order  old 7-31  new 7-36
+    method count()  added  new 27-30

@@ -1,0 +1,3 @@
+status: ANALYZED
+interface Shape  old 3-6  new 3-8
+  method perimeter()  added  new 7
