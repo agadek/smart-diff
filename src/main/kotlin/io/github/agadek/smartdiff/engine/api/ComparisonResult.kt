@@ -214,7 +214,7 @@ enum class DeclarationKind {
     VARIABLE,
     STRUCT, UNION, VARIANT, IMPL, MODULE, CONSTANT, STATIC, MACRO,
     PROTOCOL, ACTOR, DESTRUCTOR, SUBSCRIPT,
-    NAMESPACE;
+    NAMESPACE, DELEGATE, OPERATOR, INDEXER, EVENT;
 
     /** The label shown in the outline and in declaration paths (languages/05-rust-details §4). */
     fun label(): String = when (this) {

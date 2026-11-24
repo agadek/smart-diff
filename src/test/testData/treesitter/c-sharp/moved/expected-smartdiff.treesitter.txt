@@ -1,0 +1,3 @@
+status: ANALYZED
+namespace Shop  old 1-7  new 1-7
+  class Second  moved  old 7  new 3

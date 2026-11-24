@@ -190,7 +190,7 @@ val verifierFamiliesTest by tasks.registering {
     doLast {
         check(verifierFamilies("eap") == setOf("eap")) { "eap is an accepted family" }
         check("eap" !in verifierFamilies(null)) { "eap is not in the default set" }
-        check(verifierFamilies(null) == setOf("idea", "pycharm", "rustrover", "webstorm")) { "the default set is unchanged" }
+        check(verifierFamilies(null) == setOf("idea", "pycharm", "rustrover", "webstorm")) { "the default set adds webstorm" }
         check(verifierFamilies("webstorm") == setOf("webstorm")) { "webstorm is an accepted family" }
         check(runCatching { verifierFamilies("idea,nope") }.isFailure) { "an unknown family still fails" }
         check(branchOf("IU-2026.3.1") == 263 && branchOf("IU-271.1234.5") == 271 && branchOf("IC-2025.1") == 251) { "branches compare" }

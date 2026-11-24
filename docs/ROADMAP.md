@@ -90,6 +90,7 @@ Decided in [releases/0.4.0-plan.md](releases/0.4.0-plan.md). Rename grouping wit
 | Refactorings view | [relationships/06](specs/relationships/06-refactorings-view.md) | Implemented and merged |
 | Validation and release | [relationships/07](specs/relationships/07-relationship-validation.md) | Implemented, 2026-11-19; [2026-11-19 validation](VALIDATION.md#2026-11-19-040-release-validation) recorded. The `no-new-wrong-pairs` gate passes with 0 wrong and 0 forced pairs. |
 | Tree-sitter Swift engine | [engines/05](specs/engines/05-tree-sitter.md) | Implemented and merged (PR #213) |
+| Tree-sitter C#, C and C++ | [engines/05](specs/engines/05-tree-sitter.md) | Implemented (phase T2) |
 
 The benchmark reports 583 cases, precision 1.000 and recall 0.943; the two-sided and merge corpora have no new wrong link or `join-mismatch` and all limits hold with the reference pass on. Plugin Verifier is compatible on all six IDE families with no internal or deprecated API use. The physical manual checks on IC 2025.1.3 and IU 2026.3 are pending, maintainer.
 
@@ -136,7 +137,7 @@ Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.
 | [Moves inside declarations](#moves-inside-declarations) | [relationships/08](specs/relationships/08-moves-inside-declarations.md) (implemented, 2026-11-23) |
 | [Fine-grained differencing](#fine-grained-differencing) | [declarations/10](specs/declarations/10-fine-grained-differencing.md) (implemented, 2026-11-23) |
 | [Platform API stability](#platform-api-stability) | [platform/01](specs/platform/01-platform-api-stability.md) (implemented 2026-11-17) |
-| [Tree-sitter support](#tree-sitter-support) | [engines/05](specs/engines/05-tree-sitter.md) (Swift implemented 2026-11-18) |
+| [Tree-sitter support](#tree-sitter-support) | [engines/05](specs/engines/05-tree-sitter.md) (Swift implemented 2026-11-18; C#, C and C++ 2026-11-24) |
 | [More languages](#more-languages) | [Format coverage plan](FORMAT-COVERAGE.md); feature specs with each phase |
 | Every other item below | Not specified yet |
 

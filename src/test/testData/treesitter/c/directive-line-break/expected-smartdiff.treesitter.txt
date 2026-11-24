@@ -1,0 +1,3 @@
+status: ANALYZED
+macro AREA  changed  old 1  new 1-2
+macro NAME  formatting-only  old 2  new 3

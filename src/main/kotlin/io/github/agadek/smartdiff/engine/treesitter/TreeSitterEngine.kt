@@ -68,9 +68,9 @@ class TreeSitterEngine internal constructor(
          * The engine version and the version of each grammar and the runtime (R29). Raise the leading number when the
          * tree builder or a language table changes; the build checks that the grammar versions match the pinned sources.
          */
-        const val VERSION = "1 (tree-sitter v0.25.3; swift 0.7.4-with-generated-files; c-sharp v0.23.1; c v0.23.2; cpp v0.23.4)"
+        const val VERSION = "2 (tree-sitter v0.25.3; swift 0.7.4-with-generated-files; c-sharp v0.23.1; c v0.23.2; cpp v0.23.4)"
 
-        internal val LANGUAGES: List<TreeSitterLanguage> = listOf(SwiftLanguage)
+        internal val LANGUAGES: List<TreeSitterLanguage> = listOf(SwiftLanguage, CSharpLanguage, CLanguage, CppLanguage)
 
         /** The setting, read through the API interface the UI registers; on while no service is registered. */
         internal fun settingEnabled(): Boolean =

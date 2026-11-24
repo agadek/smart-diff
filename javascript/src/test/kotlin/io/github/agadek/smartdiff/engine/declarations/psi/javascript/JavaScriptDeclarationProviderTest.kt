@@ -201,7 +201,6 @@ class JavaScriptDeclarationProviderTest : BasePlatformTestCase() {
             shape(tree),
         )
         assertEquals("namespace", DeclarationKind.NAMESPACE.label())
-        assertEquals("the new kind is last, so later kinds add after it", DeclarationKind.NAMESPACE, DeclarationKind.entries.last())
     }
 
     fun `test R6 declare module and declare global are modules with their items as members`() {

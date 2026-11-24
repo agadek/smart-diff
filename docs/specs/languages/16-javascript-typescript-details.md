@@ -48,7 +48,7 @@ This follows [ADR 0011](../../adr/0011-rust-provider-build-target-spike.md), who
 | `TypeScriptModule` written `namespace` or `module` with a name | NAMESPACE | the dotted name, `A.B` | — |
 | `TypeScriptModule` written `declare module "x"` or `declare global` | MODULE | the quoted name as written, or `global` | — |
 
-- **New kind:** `NAMESPACE`, labelled `namespace`, added at the end of `DeclarationKind`. A TypeScript namespace is not a module, and `module` would read wrongly for the common `namespace` form. The matcher's type kinds for rule M4b gain no new kind: a class turned into an interface of the same name is already a kind change between two type kinds.
+- **Namespace kind:** the provider reuses `NAMESPACE`, labelled `namespace`, which the [Tree-sitter engine](../engines/05-tree-sitter-details.md) added to `DeclarationKind` for C# and C++; it adds no kind of its own. A TypeScript namespace is not a module, and `module` would read wrongly for the common `namespace` form. The matcher's type kinds for rule M4b gain no new kind: a class turned into an interface of the same name is already a kind change between two type kinds.
 - **Containers:** classes (methods, constructors, accessors, fields), interfaces (properties, methods), enums (members), namespaces and `declare` modules (every item of this table). A class expression or object literal is not a container, except the class of an `export default` (R7).
 - **PSI shapes:** a class field is a `JSField` inside a field statement, and the field statement, with its decorators, modifiers and semicolon, is the declaration's range. Enum members share one field statement, so the commas between them belong to the enum. `namespace A.B { }` is a `TypeScriptModule` inside an implicit module of the same range, which the provider reads through. `TypeScriptInterface`, `TypeScriptEnum` and `TypeScriptTypeAlias` are `JSClass` subtypes and `TypeScriptFunctionSignature` is a `JSFunction`, so the provider tests the TypeScript types first.
 - **Several names (R4):** `const a = 1, b = 2` is two declarations sharing their statement, as Python's `a = b = 0` is, with the `group` and `range` of `DeclarationInfo`: the first takes the statement's start, with its JSDoc, `export` and keyword, the last takes its end and the semicolon, and the commas between them belong to the container. A single name owns the whole statement.
@@ -96,7 +96,7 @@ This follows [ADR 0011](../../adr/0011-rust-provider-build-target-spike.md), who
 | Phase | Content | Done when |
 | --- | --- | --- |
 | B0 | The ADR 0011 amendment, the `javascript/` subproject, `smartdiff-javascript.xml` and the `webstorm` verifier family | `buildPlugin check` runs a JavaScript platform test; the verifier passes on all targets |
-| B1 | `JavaScriptDeclarationProvider`, `JavaScriptInterop`, the `NAMESPACE` kind, the whitespace rules, provider tests, golden fixtures and merge fixtures | R1 to R19 pass in tests named after them |
+| B1 | `JavaScriptDeclarationProvider`, `JavaScriptInterop` (reusing the `NAMESPACE` kind of the Tree-sitter engine), the whitespace rules, provider tests, golden fixtures and merge fixtures | R1 to R19 pass in tests named after them |
 | B1b | Relationship benchmark fixtures and a corpus validation on two active open-source TypeScript projects | The benchmark keeps its `no-new-wrong-pairs` gate; a corpus run is in [VALIDATION.md](../../VALIDATION.md) |
 
 B0 and B1 ship in one change. B1b follows as its own change.

@@ -1,0 +1,2 @@
+status: ANALYZED
+function area(int, int)  changed  old 3-5  new 3-5
