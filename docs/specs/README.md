@@ -85,7 +85,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [13 XML](languages/13-xml.md) | implemented, 2026-11-16 |
 | [14 Markdown](languages/14-markdown.md) | implemented, 2026-11-16 |
 | [15 HTML](languages/15-html.md) | implemented, 2026-11-16 |
-| [16 JavaScript and TypeScript](languages/16-javascript-typescript.md) | proposed, 2026-11-24 |
+| [16 JavaScript and TypeScript](languages/16-javascript-typescript.md) | implemented, 2026-11-24 |
 
 ## Outline
 

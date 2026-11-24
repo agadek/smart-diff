@@ -1,6 +1,6 @@
 # JavaScript and TypeScript
 
-Status: proposed, 2026-11-24
+Status: implemented, 2026-11-24
 
 **Description:** The [declaration engine](../../GLOSSARY.md#declaration-engine) supports JavaScript and TypeScript files, JSX and TSX included, through the IDE's JavaScript plugin, when the IDE has it.
 

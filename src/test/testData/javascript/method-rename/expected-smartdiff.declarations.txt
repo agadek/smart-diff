@@ -1,0 +1,3 @@
+status: ANALYZED
+class Cart  old 3-13  new 3-13
+  method sum()  rename candidate from method total()  old 10-12  new 10-12

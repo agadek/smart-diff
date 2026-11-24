@@ -1,0 +1,2 @@
+status: ANALYZED
+function greet(string)  changed  old 3-5  new 3-5

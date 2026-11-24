@@ -28,9 +28,10 @@ The API column names a class, a class and member as `Class#member`, or a package
 | `org.jetbrains.plugins.scala..` | non-public plugin PSI | `io.github.agadek.smartdiff.engine.declarations.psi.scala..`, `io.github.agadek.smartdiff.references.ScalaReferenceResolver` | `SCALA_PROVIDER`, `SCALA_REFERENCES` | Scala files get the analysis fallback; Scala renames without grouped usages (R11, R12) | None: the Scala plugin publishes no stable PSI API |
 | `com.jetbrains.python..` | non-public plugin PSI | `io.github.agadek.smartdiff.engine.declarations.psi.python..`, `io.github.agadek.smartdiff.references.PythonReferenceResolver` | `PYTHON_PROVIDER`, `PYTHON_REFERENCES` | Python files get the analysis fallback; Python renames without grouped usages (R11, R12) | None: the Python plugin publishes no stable PSI API |
 | `org.rust..` | non-public plugin PSI | `io.github.agadek.smartdiff.engine.declarations.psi.rust..` | `RUST_PROVIDER` | Rust files get the analysis fallback (R11) | None: the Rust plugin publishes no stable PSI API |
+| `com.intellij.lang.javascript..`, `com.intellij.lang.ecmascript6..` | non-public plugin PSI | `io.github.agadek.smartdiff.engine.declarations.psi.javascript..` | `JAVASCRIPT_PROVIDER` | JavaScript and TypeScript files get the analysis fallback (R11) | None: the JavaScript plugin is closed source and publishes no stable PSI API |
 | `org.jetbrains.kotlin.analysis..` | Kotlin Analysis API, not used | `io.github.agadek.smartdiff.references.KotlinReferenceResolver` | `KOTLIN_REFERENCES` | Kotlin renames without grouped usages (R12) | Not needed: the resolver uses `PsiReference.resolve()` only |
 
-The `rust` subproject's own architecture test checks the `org.rust..` row; the root's checks the others.
+The `rust` subproject's own architecture test checks the `org.rust..` row and the `javascript` subproject's checks the JavaScript plugin row; the root's checks the others.
 
 ## Replaced
 

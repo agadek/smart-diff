@@ -45,6 +45,14 @@ class OutlineModelTest {
     }
 
     @Test
+    fun `languages 16-javascript-typescript R13 JavaScript and TypeScript whitespace is insignificant`() {
+        for (id in listOf("JavaScript", "ECMAScript 6", "JSX Harmony", "Flow JS", "TypeScript", "TypeScript JSX")) {
+            assertEquals(id, WhitespacePolicy.INSIGNIFICANT, OutlineController.whitespacePolicy(id))
+        }
+        assertEquals("namespace", OutlineModel.kindName(DeclarationKind.NAMESPACE))
+    }
+
+    @Test
     fun `titles name kind, name and signature, or a region's description`() {
         assertEquals("method parse(String,int)", OutlineModel.title(Subject.Declaration(DeclarationKind.METHOD, "parse", "String,int")))
         assertEquals("enum constant RED", OutlineModel.title(Subject.Declaration(DeclarationKind.ENUM_CONSTANT, "RED", null)))

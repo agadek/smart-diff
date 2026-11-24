@@ -1,0 +1,10 @@
+status: ANALYZED
+File region  changed  old 1  new 1-22
+class UserService  added  new 3-17
+  field cache  added  new 5
+  constructor constructor(Repository)  added  new 7
+  method find(string)  added  new 9-11
+  method save(User)  added  new 13-16
+interface User  added  new 19-22
+  property id  added  new 20
+  property name  added  new 21

@@ -1,0 +1,2 @@
+status: ANALYZED
+type alias ShapeKind  changed  old 6  new 6

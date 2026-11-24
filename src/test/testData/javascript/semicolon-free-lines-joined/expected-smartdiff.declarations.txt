@@ -1,0 +1,2 @@
+status: ANALYZED
+function next(state)  changed  old 1-6  new 1-5

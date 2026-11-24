@@ -1,0 +1,2 @@
+status: ANALYZED
+class Basket  rename candidate from class Cart  old 3-13  new 3-13

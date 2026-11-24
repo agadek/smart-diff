@@ -1,0 +1,6 @@
+<!-- Loaded when the JavaScript plugin is present. The JavaScript and TypeScript declaration provider registers here. -->
+<idea-plugin>
+    <extensions defaultExtensionNs="io.github.agadek.smartdiff">
+        <declarationProvider implementation="io.github.agadek.smartdiff.engine.declarations.psi.javascript.JavaScriptDeclarationProvider"/>
+    </extensions>
+</idea-plugin>

@@ -1,0 +1,2 @@
+status: ANALYZED
+function slugify(title)  changed  old 1  new 1
