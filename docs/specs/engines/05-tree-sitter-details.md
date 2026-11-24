@@ -13,7 +13,7 @@ Status: proposed, 2026-11-17
 | T0 | Spike S12 (§2) and ADR 0016 for the parser runtime | Done 2026-11-17: S12's questions 1 and 2 are answered, question 3 is a recorded manual check, and [ADR 0016](../../adr/0016-tree-sitter-runs-in-a-native-helper-process.md) is accepted |
 | T1a | The helper build for six platforms (§9), the helper client and manager (§8), notices and size checks | Done 2026-11-18: `TreeSitterHelperTest` and the checks pass, and CI builds and starts the helper on every platform it has a runner for |
 | T1b | The language resolver of [ADR 0015](../../adr/0015-tree-sitter-languages-are-chosen-by-file-name.md), the setting, the engine, the tree builder and Swift (§3 to §7, §10) | Done 2026-11-18 for Swift: `SwiftTreeTest`, the Swift golden fixtures, `TreeSitterEngineContractTest`, `EngineLanguageTest` and `TreeSitterOutlineTest` pass with the helper of this platform |
-| T2 | C#, C and C++ | Their golden fixtures pass, and the archive size check holds (R28) |
+| T2 | C#, C and C++ | Done 2026-11-24: `CSharpTreeTest`, `CTreeTest`, `CppTreeTest`, their golden fixtures and the engine contract suite on the three languages pass, and the archive size check holds (R28) |
 | T3 | Merge and benchmark fixtures, and a corpus validation | R30 holds, the benchmark's `no-new-wrong-pairs` gate passes, and the results are in [VALIDATION.md](../../VALIDATION.md) |
 
 T1b builds on T1a. T2's three languages are independent of each other.
@@ -93,6 +93,8 @@ A Swift signature is each parameter's external label and type, `(from: Int, to: 
 | `method_declaration`, `constructor_declaration`, `destructor_declaration`, `operator_declaration`, `conversion_operator_declaration` | `METHOD`, `CONSTRUCTOR`, `DESTRUCTOR`, `OPERATOR` |
 | `property_declaration`, `indexer_declaration`, `event_declaration`, `event_field_declaration`, `field_declaration` | `PROPERTY`, `INDEXER`, `EVENT`, `FIELD`; one per variable in a multi-variable field |
 
+A C# signature is the parameter types with their `ref`, `out`, `in`, `this` and `params` modifiers, which tell overloads apart, as `(ref int, params int[])`. A destructor is named `~Type`, an operator `operator +`, a conversion `implicit operator int` and an indexer `this`, with the indexer's parameter types as its signature. Accessor, block and expression bodies are opaque (R13).
+
 **C** (`tree-sitter-c`), `INSIGNIFICANT` with the directive rule of §7:
 
 | Node | Kind |
@@ -118,8 +120,11 @@ A Swift signature is each parameter's external label and type, `(from: Int, to: 
 | `alias_declaration` | `TYPE_ALIAS` |
 | `template_declaration` | the kind of the declaration it wraps, whose range it takes; the template parameters are part of its own tokens |
 | `access_specifier` | not a declaration; part of the class's own tokens |
+| `friend_declaration` | not a declaration; part of the class's own tokens |
 
-A C or C++ signature is the parameter types with names removed, normalized as Java's are ([technical specification §6.6](../../TECHNICAL-SPECIFICATION.md#66-signatures)); `(void)` is `()`. `.h` files use the C++ table (R3): the C++ grammar accepts nearly all C headers, and a C-only header that fails to parse becomes unanalyzed source (R20) rather than a wrong declaration.
+In a class body, a function without a return type whose name is the plain identifier is a `CONSTRUCTOR`, one named `~Type` a `DESTRUCTOR` and the others `METHOD`, whether written as a `function_definition`, a prototype `declaration` or a `field_declaration`. A qualified definition outside the class is in the namespace that holds it, so it is a `FUNCTION`, or a `CONSTRUCTOR` or `DESTRUCTOR` when its last part names its scope's type, as `Cart::Cart` and `Cart::~Cart` (R12). An operator is named without spaces after `operator`, as `operator=`, and a conversion as `operator bool`. A `struct`, `union`, `enum` or `class` ends after the `;` that follows it, and one without a name but with a body is named `(anonymous)`. A `typedef` with a struct, union or enum body holds that body's members. A function pointer variable such as `int (*f)(int)` is a `VARIABLE`, not a function.
+
+A C or C++ signature is the parameter types with names and default values removed, written without spaces around punctuation, as `(const std::vector<int>&, int)`, and normalized as Java's are ([technical specification §6.6](../../TECHNICAL-SPECIFICATION.md#66-signatures)); `(void)` is `()`. `.h` files use the C++ table (R3): the C++ grammar accepts nearly all C headers, and a C-only header that fails to parse becomes unanalyzed source (R20) rather than a wrong declaration.
 
 New `DeclarationKind` values: `PROTOCOL`, `ACTOR`, `DESTRUCTOR`, `SUBSCRIPT`, `NAMESPACE`, `DELEGATE`, `OPERATOR`, `INDEXER` and `EVENT`, with labels in lower case. T1 changes [kind changes](../declarations/04-kind-changes.md) so that class, struct, actor and record (Swift and C#) are one family, and protocol and interface another; that spec changes first, in T1.
 
@@ -138,7 +143,7 @@ New `DeclarationKind` values: `PROTOCOL`, `ACTOR`, `DESTRUCTOR`, `SUBSCRIPT`, `N
 
 ### 7. Preprocessor directives
 
-In C and C++, the line break at the end of a `preproc_*` directive, and a backslash line continuation inside one, are `OTHER` tokens instead of whitespace (R18), because they end or extend the directive. Other whitespace inside a directive stays `WHITESPACE`, which `INSIGNIFICANT` ignores except between two tokens that it separates. Directive lines inside a declaration's range are its own tokens; those outside are the file region or their transparent conditional's container.
+In C and C++, the line break at the end of a `preproc_*` directive, and a backslash line continuation inside one, are `OTHER` tokens instead of whitespace (R18), because they end or extend the directive. Other whitespace inside a directive stays `WHITESPACE`, which `INSIGNIFICANT` ignores except between two tokens that it separates. The grammar gives a macro's body as one `preproc_arg` leaf, so the tokens split it into runs of whitespace and runs of other characters: respacing a macro's body is formatting-only, and continuing it on a new line is not. Directive lines inside a declaration's range are its own tokens; those outside are the file region or their transparent conditional's container.
 
 Two declarations with the same name and signature in the two branches of an `#if … #else` are both kept, as two declarations with a repeated key; the matcher pairs them by order, as it does other repeated keys ([declarations/01](../declarations/01-declaration-matching.md)).
 

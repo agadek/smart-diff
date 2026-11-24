@@ -15,26 +15,39 @@ internal object TreeSitterTreeBuilder {
     private const val CHECK_EVERY = 1000
 
     fun build(syntax: TreeSitterSyntax, language: TreeSitterLanguage, cancellation: Cancellation): DeclarationTree {
-        val tokens = TreeSitterTokens.of(syntax.tree, syntax.names, syntax.text, language.comments, language.strings)
+        val tokens = TreeSitterTokens.of(
+            syntax.tree, syntax.names, syntax.text, language.comments, language.strings,
+            language.significantLineBreaks(syntax), language.splitLeaves,
+        )
         var visited = 0
 
-        fun find(node: Int, inType: Boolean): List<Node> = buildList {
-            for (child in syntax.children(node)) {
+        fun find(nodes: List<Int>, inType: Boolean): List<Node> = buildList {
+            for ((index, child) in nodes.withIndex()) {
                 if (++visited % CHECK_EVERY == 0) cancellation.checkCanceled()
                 if (language.isOpaque(syntax.type(child))) continue
                 val found = language.describe(child, syntax, inType)
                 if (found == null) {
-                    addAll(find(child, inType))
+                    addAll(find(syntax.children(child), inType))
                     continue
                 }
                 for (declaration in found) {
-                    val range = declaration.range ?: TextRange(withDocComment(child, syntax, language), syntax.end(child))
-                    val members = declaration.members?.let { find(it, inType = true) }.orEmpty()
+                    if (declaration.ownsFollowingSiblings) {
+                        // A C# file-scoped namespace holds every declaration after it.
+                        val rest = nodes.drop(index + 1)
+                        val members = find(rest, declaration.membersInType)
+                        val end = maxOf(syntax.end(child), rest.maxOfOrNull { syntax.end(it) } ?: 0)
+                        add(Node(declaration, TextRange(withDocComment(child, syntax, language), end), members))
+                        return@buildList
+                    }
+                    val range = declaration.range?.let { own ->
+                        if (own.start == syntax.start(child)) TextRange(withDocComment(child, syntax, language), own.end) else own
+                    } ?: TextRange(withDocComment(child, syntax, language), language.declarationEnd(child, syntax))
+                    val members = declaration.members?.let { find(syntax.children(it), declaration.membersInType) }.orEmpty()
                     add(Node(declaration, range, members))
                 }
             }
         }
-        val topLevel = find(syntax.root, inType = false)
+        val topLevel = find(syntax.children(syntax.root), inType = false)
         val fileRegionError = markParseErrors(syntax, topLevel)
         assignLeading(topLevel, tokens, containerStart = 0)
 

@@ -53,7 +53,8 @@ internal class TreeSitterTokens private constructor(private val starts: IntArray
          * The tokens of [text] as [tree] covers it. [comments] and [strings] are symbol names: a comment leaf is a
          * comment token, and a string node is one token, so whitespace inside a string literal is content (R17).
          * Text between leaves is whitespace; any other text there, which a grammar should never leave, is one content
-         * token, so it is never ignored.
+         * token, so it is never ignored. A line break at an offset in [lineBreaks] is a content token of its own, and a
+         * leaf whose symbol is in [splitLeaves] is split into words and whitespace (engines/05-tree-sitter-details §7).
          */
         fun of(
             tree: TreeSitterTree,
@@ -61,24 +62,64 @@ internal class TreeSitterTokens private constructor(private val starts: IntArray
             text: CharSequence,
             comments: Set<String>,
             strings: Set<String>,
+            lineBreaks: Set<Int> = emptySet(),
+            splitLeaves: Set<String> = emptySet(),
         ): TreeSitterTokens {
             val starts = mutableListOf<Int>()
             val tokens = mutableListOf<Token>()
             var position = 0
+            fun add(start: Int, token: Token) {
+                starts += start
+                tokens += token
+            }
+            /** Whitespace from [position] to [end], with each line break of [lineBreaks] as a content token. */
+            fun whitespace(end: Int) {
+                var from = position
+                for (at in position until end) {
+                    if (at !in lineBreaks) continue
+                    if (at > from) add(from, Token("WHITE_SPACE", text.substring(from, at), TokenKind.WHITESPACE))
+                    add(at, Token(LINE_BREAK, "\n", TokenKind.OTHER))
+                    from = at + 1
+                }
+                if (end > from) add(from, Token("WHITE_SPACE", text.substring(from, end), TokenKind.WHITESPACE))
+                position = end
+            }
             fun gap(end: Int) {
                 if (end > position) {
                     val gap = text.substring(position, end)
-                    starts += position
-                    tokens += if (gap.isBlank()) Token("WHITE_SPACE", gap, TokenKind.WHITESPACE) else Token("TEXT", gap, TokenKind.OTHER)
-                    position = end
+                    if (gap.isBlank()) {
+                        whitespace(end)
+                    } else {
+                        add(position, Token("TEXT", gap, TokenKind.OTHER))
+                        position = end
+                    }
+                }
+            }
+            /** A leaf of [splitLeaves]: each run of whitespace is whitespace and each other run one content token. */
+            fun split(start: Int, end: Int, type: String) {
+                var at = start
+                while (at < end) {
+                    var next = at
+                    if (text[at].isWhitespace()) {
+                        while (next < end && text[next].isWhitespace()) next++
+                        whitespace(next)
+                    } else {
+                        while (next < end && !text[next].isWhitespace()) next++
+                        add(at, Token(type, text.substring(at, next), TokenKind.OTHER))
+                        position = next
+                    }
+                    at = next
                 }
             }
             fun token(start: Int, end: Int, type: String, kind: TokenKind) {
                 if (start < position) return
                 gap(start)
                 if (end > start) {
-                    starts += start
-                    tokens += Token(type, text.substring(start, end), kind)
+                    if (type in splitLeaves) {
+                        split(start, end, type)
+                        return
+                    }
+                    add(start, Token(type, text.substring(start, end), kind))
                     position = end
                 }
             }
@@ -105,5 +146,8 @@ internal class TreeSitterTokens private constructor(private val starts: IntArray
             gap(text.length)
             return TreeSitterTokens(starts.toIntArray(), tokens)
         }
+
+        /** The type of a line break that is content (§7). */
+        const val LINE_BREAK = "LINE_BREAK"
     }
 }

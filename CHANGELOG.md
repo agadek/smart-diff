@@ -5,6 +5,7 @@
 ### Added
 
 - Moved code inside declarations: statements moved within a method or between methods of the same file are listed in the structural outline as `moved code lines A–B → C–D` under their new place, with `from <method>` and `code moved to <method>` notes, moved-code markers in both editors, the edits inside the moved code highlighted, and a `Moved code` entry in the refactorings view. Java, Kotlin, Scala 2, Scala 3 and Python; on by default, with a setting to turn it off.
+- C#, C and C++ files get a structural outline through bundled Tree-sitter grammars when the IDE has no language support for them, as Swift files already do: namespaces, types, members, functions, macros and `typedef`s, with C++ methods defined outside their class named `Type::name`, and a line break that ends or continues a preprocessor directive treated as a change.
 - A validation of the changed-token highlights against Difftastic and GumTree on the release corpus (`./gradlew fineGrainedBaselines`, run by hand with both tools installed): no edit was found outside the highlighted tokens in Java, Kotlin, Scala 2, Scala 3 or Python.
 
 ## [0.4.0] - 2026-11-19
