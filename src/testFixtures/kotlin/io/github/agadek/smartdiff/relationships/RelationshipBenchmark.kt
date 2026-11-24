@@ -68,9 +68,6 @@ object RelationshipBenchmark {
     /** engines/05 R3: the C++ extensions; `.h` files are C++, as the language resolver has them. */
     private val TREE_SITTER_CPP_EXTENSIONS = listOf(".cpp", ".cc", ".cxx", ".c++", ".h", ".hpp", ".hh", ".hxx")
 
-    /** The `git` path globs of the Tree-sitter languages' extensions (engines/05 R3). */
-    private val TREE_SITTER_GLOBS = arrayOf("*.swift", "*.cs", "*.c") + TREE_SITTER_CPP_EXTENSIONS.map { "*$it" }
-
     /**
      * The case matrix of R8, as kebab-case categories a label names in `category:` (the details file lists them as
      * "method rename", "move in the file" and so on).
@@ -940,7 +937,7 @@ object RelationshipBenchmark {
         val repository = entry.repository ?: error("corpus line '${entry.line}' is not a case folder")
         if (!repository.isDirectory) error("real-commit repository not found: ${repository.path}")
         val result = CommitLine()
-        val commits = git(repository, listOf("rev-list") + entry.arguments + listOf("--", "*.java", "*.kt", "*.scala", "*.py", "*.rs", "*.go", *TREE_SITTER_GLOBS))
+        val commits = git(repository, listOf("rev-list") + entry.arguments + listOf("--", "*.java", "*.kt", "*.scala", "*.py", "*.rs", "*.go"))
             .lines().map { it.trim() }.filter { it.isNotEmpty() }
         if (commits.isEmpty()) result.skippedCommitLines++
         for (commit in commits) {
@@ -953,7 +950,7 @@ object RelationshipBenchmark {
             val changes = git(
                 repository,
                 // A rename is a delete plus an add, so it is listed as skipped instead of vanishing from the run.
-                listOf("diff", "--no-renames", "--name-status", "--diff-filter=ADM", parent, commit, "--", "*.java", "*.kt", "*.scala", "*.py", "*.rs", "*.go", *TREE_SITTER_GLOBS),
+                listOf("diff", "--no-renames", "--name-status", "--diff-filter=ADM", parent, commit, "--", "*.java", "*.kt", "*.scala", "*.py", "*.rs", "*.go"),
             ).lines().map { it.trim() }.filter { it.isNotEmpty() }
             val files = mutableListOf<CommitFile>()
             for (change in changes) {

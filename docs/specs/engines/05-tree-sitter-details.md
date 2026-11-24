@@ -1,6 +1,6 @@
 # Tree-sitter engine: details
 
-Status: proposed, 2026-11-17
+Status: implemented, 2026-11-24 (Swift 2026-11-18; C#, C and C++, and the validation of T3, 2026-11-24)
 
 **Feature:** [Tree-sitter engine](05-tree-sitter.md)
 
