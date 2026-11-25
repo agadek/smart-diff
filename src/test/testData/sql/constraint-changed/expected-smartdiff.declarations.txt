@@ -1,0 +1,2 @@
+status: ANALYZED
+table orders  changed  old 8-16  new 8-16

@@ -1,0 +1,5 @@
+status: ANALYZED
+File region  changed  old 27-29  new 27-29
+table clients  rename candidate from table customers  old 1-6  new 1-6
+table orders  old 8-16  new 8-16
+  column customer_id  changed  old 11-12  new 11-12

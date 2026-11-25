@@ -60,7 +60,7 @@ object RelationshipBenchmark {
     const val DEFAULT_LABEL_ROOT = "src/test/testData"
 
     /** The corpora of R33; Scala 2 and Scala 3 are separate languages in every count. */
-    val CORPORA = listOf("java", "kotlin", "scala2", "scala3", "python", "rust", "go", "php", "swift", "c-sharp", "c", "cpp")
+    val CORPORA = listOf("java", "kotlin", "scala2", "scala3", "python", "rust", "go", "php", "sql", "swift", "c-sharp", "c", "cpp")
 
     /** The corpora held to the R8 case matrix and the R10 real-commit minimum. */
     val MATRIX_CORPORA = listOf("java", "kotlin", "scala2", "scala3")
@@ -937,7 +937,7 @@ object RelationshipBenchmark {
         val repository = entry.repository ?: error("corpus line '${entry.line}' is not a case folder")
         if (!repository.isDirectory) error("real-commit repository not found: ${repository.path}")
         val result = CommitLine()
-        val commits = git(repository, listOf("rev-list") + entry.arguments + listOf("--", "*.java", "*.kt", "*.scala", "*.py", "*.rs", "*.go", "*.php"))
+        val commits = git(repository, listOf("rev-list") + entry.arguments + listOf("--", "*.java", "*.kt", "*.scala", "*.py", "*.rs", "*.go", "*.php", "*.sql"))
             .lines().map { it.trim() }.filter { it.isNotEmpty() }
         if (commits.isEmpty()) result.skippedCommitLines++
         for (commit in commits) {
@@ -950,7 +950,7 @@ object RelationshipBenchmark {
             val changes = git(
                 repository,
                 // A rename is a delete plus an add, so it is listed as skipped instead of vanishing from the run.
-                listOf("diff", "--no-renames", "--name-status", "--diff-filter=ADM", parent, commit, "--", "*.java", "*.kt", "*.scala", "*.py", "*.rs", "*.go", "*.php"),
+                listOf("diff", "--no-renames", "--name-status", "--diff-filter=ADM", parent, commit, "--", "*.java", "*.kt", "*.scala", "*.py", "*.rs", "*.go", "*.php", "*.sql"),
             ).lines().map { it.trim() }.filter { it.isNotEmpty() }
             val files = mutableListOf<CommitFile>()
             for (change in changes) {
@@ -1109,6 +1109,7 @@ object RelationshipBenchmark {
         "RUST" -> "rs"
         "GO" -> "go"
         "PHP" -> "php"
+        "SQL" -> "sql"
         "TREE-SITTER.SWIFT" -> "swift"
         "TREE-SITTER.C-SHARP" -> "cs"
         "TREE-SITTER.C" -> "c"
@@ -1123,6 +1124,7 @@ object RelationshipBenchmark {
         path.endsWith(".rs") -> "Rust"
         path.endsWith(".go") -> "go"
         path.endsWith(".php") -> "PHP"
+        path.endsWith(".sql") -> "SQL"
         path.endsWith(".swift") -> LanguageIds.TREE_SITTER_SWIFT
         path.endsWith(".cs") -> LanguageIds.TREE_SITTER_C_SHARP
         path.endsWith(".c") -> LanguageIds.TREE_SITTER_C
@@ -1137,6 +1139,7 @@ object RelationshipBenchmark {
         path.endsWith(".rs") -> listOf("rust")
         path.endsWith(".go") -> listOf("go")
         path.endsWith(".php") -> listOf("php")
+        path.endsWith(".sql") -> listOf("sql")
         path.endsWith(".swift") -> listOf("swift")
         path.endsWith(".cs") -> listOf("c-sharp")
         path.endsWith(".c") -> listOf("c")

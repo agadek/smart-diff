@@ -726,9 +726,15 @@ object DeclarationMatcher {
             DeclarationKind.RECORD, DeclarationKind.ANNOTATION_TYPE, DeclarationKind.STRUCT, DeclarationKind.UNION,
             DeclarationKind.TYPE,
         ),
-        setOf(DeclarationKind.METHOD, DeclarationKind.FUNCTION, DeclarationKind.FIELD, DeclarationKind.PROPERTY, DeclarationKind.VARIABLE),
+        // languages/20-sql R12: an SQL function turned into a procedure of the same name is a kind change.
+        setOf(
+            DeclarationKind.METHOD, DeclarationKind.FUNCTION, DeclarationKind.FIELD, DeclarationKind.PROPERTY, DeclarationKind.VARIABLE,
+            DeclarationKind.PROCEDURE,
+        ),
         // languages/18-css R17: a Less rule set and a mixin of the same name are one construct, with or without output.
         setOf(DeclarationKind.RULE, DeclarationKind.MIXIN),
+        // languages/20-sql R12: a table and a view of the same name are one relation.
+        setOf(DeclarationKind.TABLE, DeclarationKind.VIEW),
     )
 
     /** A matching key; a null [path] or [signature] is left out of the key. */

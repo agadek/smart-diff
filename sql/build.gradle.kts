@@ -1,0 +1,68 @@
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+
+plugins {
+    id("org.jetbrains.kotlin.jvm")
+    id("org.jetbrains.intellij.platform.module")
+}
+
+repositories {
+    mavenCentral()
+    intellijPlatform {
+        defaultRepositories()
+    }
+}
+
+dependencies {
+    // Compile against the root plugin's engine API and PSI base; the root packages this module as
+    // pluginModule(runtimeOnly(project(":sql"))) so compileOnly avoids a root-compile <-> :sql-jar task cycle
+    // while the packaged plugin still contains these classes once (languages/20-sql-details §3).
+    compileOnly(project(":"))
+
+    intellijPlatform {
+        intellijIdeaUltimate("2025.1.3")
+        // IntelliJ IDEA Ultimate bundles the Database Tools and SQL plugin (languages/20-sql-details §1).
+        // Its plugin.xml (IU 2025.1.3, plugins/DatabaseTools/lib/database-plugin.jar) depends on JSON, the Grid
+        // plugin and Images, and on the Grid plugin's content module intellij.grid.charts.impl, which needs the
+        // Charts plugin. The test sandbox loads only declared plugins, so without these it is present but disabled.
+        val sqlPluginDependencies = listOf(
+            "com.intellij.database",
+            "com.intellij.modules.json",
+            "intellij.grid.plugin",
+            "com.intellij.platform.images",
+            "intellij.charts",
+        )
+        bundledPlugins(sqlPluginDependencies)
+        testBundledPlugins(sqlPluginDependencies)
+        testFramework(TestFrameworkType.Platform)
+    }
+
+    testImplementation(project(":"))
+    testImplementation(testFixtures(project(":")))
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.opentest4j:opentest4j:1.3.0")
+    testImplementation("com.tngtech.archunit:archunit:1.5.1")
+}
+
+kotlin {
+    jvmToolchain(21)
+}
+
+tasks.test {
+    // The fixtures live in the root's test data, so a change to them reruns these tests.
+    inputs.dir(rootProject.file("src/test/testData/sql")).withPropertyName("sqlTestData")
+    inputs.file(rootProject.file("src/test/testData/relationships-corpus-sql.txt")).withPropertyName("sqlRelationshipCorpus")
+    systemProperty("smartdiff.updateGolden", providers.gradleProperty("smartdiff.updateGolden").getOrElse("false"))
+    systemProperty(
+        "smartdiff.validation.sql.corpus",
+        providers.gradleProperty("smartdiff.validation.sql.corpus").getOrElse(""),
+    )
+    systemProperty("smartdiff.spike.out", rootProject.layout.buildDirectory.dir("sql-spike").get().asFile.absolutePath)
+    // Spike S16 prints "S16 ..." lines; golden fixtures print "GOLDEN ..." lines; validation prints "SQL VALIDATION ...";
+    // the benchmark prints "SQL BENCHMARK ...".
+    addTestOutputListener(TestOutputListener { _, event ->
+        val message = event.message.trimEnd()
+        if (message.startsWith("S16 ") || message.startsWith("GOLDEN ") || message.startsWith("SQL VALIDATION ") || message.startsWith("SQL BENCHMARK ")) {
+            logger.lifecycle(message)
+        }
+    })
+}

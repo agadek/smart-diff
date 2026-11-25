@@ -15,6 +15,7 @@ enum class GuardedFeature(val displayName: String, val api: String) {
     GO_PROVIDER("the Go declaration provider", "the Go plugin PSI"),
     CSS_PROVIDER("the CSS, SCSS and Less declaration provider", "the CSS plugin PSI"),
     PHP_PROVIDER("the PHP declaration provider", "the PHP plugin PSI"),
+    SQL_PROVIDER("the SQL declaration provider", "the Database Tools and SQL plugin PSI"),
     MARKDOWN_PROVIDER("the Markdown declaration provider", "the experimental Markdown front matter PSI"),
     KOTLIN_REFERENCES("Kotlin rename usages", "the Kotlin plugin PSI"),
     SCALA_REFERENCES("Scala rename usages", "the Scala plugin PSI"),

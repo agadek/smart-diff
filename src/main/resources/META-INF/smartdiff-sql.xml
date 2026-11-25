@@ -1,0 +1,6 @@
+<!-- Loaded when the Database Tools and SQL plugin is present. The SQL declaration provider registers here. -->
+<idea-plugin>
+    <extensions defaultExtensionNs="io.github.agadek.smartdiff">
+        <declarationProvider implementation="io.github.agadek.smartdiff.engine.declarations.psi.sql.SqlDeclarationProvider"/>
+    </extensions>
+</idea-plugin>

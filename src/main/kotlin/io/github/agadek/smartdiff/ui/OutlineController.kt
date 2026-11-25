@@ -924,6 +924,7 @@ class OutlineController internal constructor(
             "go" -> WhitespacePolicy.LINE_BREAKS_SIGNIFICANT
             "CSS", "SCSS", "LESS" -> WhitespacePolicy.INSIGNIFICANT
             "PHP" -> WhitespacePolicy.INSIGNIFICANT
+            "SQL" -> WhitespacePolicy.INSIGNIFICANT
             else -> WhitespacePolicy.SIGNIFICANT
         }
 

@@ -1,0 +1,4 @@
+status: ANALYZED
+view → table big_orders  changed  signature changed  old 20-21  new 20-23
+  column id  added  new 21
+  column total  added  new 22

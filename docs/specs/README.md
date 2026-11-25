@@ -89,6 +89,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [17 Go](languages/17-go.md) | implemented, 2026-11-24 |
 | [18 CSS, SCSS and Less](languages/18-css.md) | implemented, 2026-11-24 |
 | [19 PHP](languages/19-php.md) | implemented, 2026-11-24 |
+| [20 SQL](languages/20-sql.md) | implemented, 2026-11-25 |
 
 ## Outline
 

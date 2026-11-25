@@ -1448,6 +1448,7 @@ notes: "Built inside the test."
                     !file.path.replace(File.separatorChar, '/').contains("/rust/relationships/") &&
                     !file.path.replace(File.separatorChar, '/').contains("/go/relationships/") &&
                     !file.path.replace(File.separatorChar, '/').contains("/php/relationships/") &&
+                    !file.path.replace(File.separatorChar, '/').contains("/sql/relationships/") &&
                     // engines/05 R30: the Tree-sitter cases run in TreeSitterRelationshipBenchmarkTest, with that engine.
                     !file.path.replace(File.separatorChar, '/').contains("/treesitter/")
             }

@@ -1,0 +1,2 @@
+left: ANALYZED  right: ANALYZED
+index accounts_owner  CHANGED_ON_BOTH_SIDES  left: removed  right: changed  base 18  left -  right 18

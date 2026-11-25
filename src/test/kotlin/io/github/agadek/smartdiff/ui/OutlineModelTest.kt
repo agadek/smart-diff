@@ -67,6 +67,18 @@ class OutlineModelTest {
     }
 
     @Test
+    fun `languages 20-sql R10 SQL whitespace is insignificant`() {
+        assertEquals(WhitespacePolicy.INSIGNIFICANT, OutlineController.whitespacePolicy("SQL"))
+    }
+
+    @Test
+    fun `languages 20-sql kinds are labelled by their object`() {
+        assertEquals("table", OutlineModel.kindName(DeclarationKind.TABLE))
+        assertEquals("column", OutlineModel.kindName(DeclarationKind.COLUMN))
+        assertEquals("procedure", OutlineModel.kindName(DeclarationKind.PROCEDURE))
+    }
+
+    @Test
     fun `languages 19-php R10 PHP whitespace is insignificant`() {
         assertEquals(WhitespacePolicy.INSIGNIFICANT, OutlineController.whitespacePolicy("PHP"))
     }

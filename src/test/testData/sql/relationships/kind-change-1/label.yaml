@@ -1,0 +1,17 @@
+case: kind-change-1
+language: SQL
+corpus: sql
+category: kind-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [KIND_CHANGE]
+      old: { path: "", kind: TABLE, name: "totals", signature: null }
+      new: { path: "", kind: VIEW, name: "totals", signature: null }
+  changes:
+    - subject: { path: "", kind: VIEW, name: "totals", signature: null }
+      presence: MATCHED
+      content: CHANGED
+      kindChangedFrom: TABLE
+  ambiguous: []
+notes: "A table becomes a view of the same name."

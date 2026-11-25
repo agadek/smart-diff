@@ -1,0 +1,2 @@
+status: ANALYZED
+function order_total(BIGINT)  changed  signature changed  old 23-27  new 23-27

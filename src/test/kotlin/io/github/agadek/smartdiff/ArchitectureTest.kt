@@ -126,6 +126,8 @@ class ArchitectureTest {
         assertEquals("the css subproject checks this row", setOf("io.github.agadek.smartdiff.engine.declarations.psi.css.."), css)
         val php = inventory.remove("com.jetbrains.php..")
         assertEquals("the php subproject checks this row", setOf("io.github.agadek.smartdiff.engine.declarations.psi.php.."), php)
+        val sql = inventory.remove("com.intellij.sql..")
+        assertEquals("the sql subproject checks this row", setOf("io.github.agadek.smartdiff.engine.declarations.psi.sql.."), sql)
         assertEquals(
             inventory.mapValues { it.value.toSet() },
             ArchitectureRules("io.github.agadek.smartdiff").platformApiAdapters.mapValues { it.value.toSet() },

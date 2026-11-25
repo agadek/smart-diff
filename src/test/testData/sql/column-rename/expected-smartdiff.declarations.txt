@@ -1,0 +1,4 @@
+status: ANALYZED
+table customers  old 1-6  new 1-6
+  column email  removed  old 5
+  column email_address  added  new 5

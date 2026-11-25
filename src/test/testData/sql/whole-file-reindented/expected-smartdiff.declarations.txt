@@ -1,0 +1,14 @@
+status: ANALYZED
+File region  formatting-only  old 27-29  new 27-29
+table customers  formatting-only  old 1-6  new 1-6
+  column id  formatting-only  old 3  new 3
+  column name  formatting-only  old 4  new 4
+  column email  formatting-only  old 5  new 5
+table orders  formatting-only  old 8-16  new 8-16
+  column id  formatting-only  old 10  new 10
+  column customer_id  formatting-only  old 11-12  new 11-12
+  column total  formatting-only  old 13  new 13
+  column note  formatting-only  old 14  new 14
+index orders_customer  formatting-only  old 18  new 18
+view big_orders  formatting-only  old 20-21  new 20-21
+function order_total(INTEGER)  changed  old 23-27  new 23-27

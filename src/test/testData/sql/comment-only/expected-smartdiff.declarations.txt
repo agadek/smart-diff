@@ -1,0 +1,3 @@
+status: ANALYZED
+table orders  old 8-16  new 8-16
+  column customer_id  changed  old 11-12  new 11-12

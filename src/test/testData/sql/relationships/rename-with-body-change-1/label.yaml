@@ -1,0 +1,20 @@
+case: rename-with-body-change-1
+language: SQL
+corpus: sql
+category: rename-with-body-change
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "", kind: FUNCTION, name: "order_total", signature: "INTEGER" }
+      new: { path: "", kind: FUNCTION, name: "order_sum", signature: "INTEGER" }
+      usages: []
+  changes:
+    - subject: { path: "", kind: FUNCTION, name: "order_sum", signature: "INTEGER" }
+      presence: MATCHED
+      content: CHANGED
+    - subject: { path: "", kind: FUNCTION, name: "order_count", signature: "INTEGER" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A function is renamed and its body changes a little."

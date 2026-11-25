@@ -216,7 +216,8 @@ enum class DeclarationKind {
     PROTOCOL, ACTOR, DESTRUCTOR, SUBSCRIPT,
     NAMESPACE, DELEGATE, OPERATOR, INDEXER, EVENT,
     TYPE,
-    RULE, AT_RULE, MIXIN;
+    RULE, AT_RULE, MIXIN,
+    TABLE, VIEW, COLUMN, INDEX, SEQUENCE, PROCEDURE, TRIGGER, SCHEMA;
 
     /** The label shown in the outline and in declaration paths (languages/05-rust-details §4, languages/18-css-details §4). */
     fun label(): String = when (this) {

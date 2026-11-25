@@ -1,0 +1,14 @@
+status: ANALYZED
+File region  changed  old 1  new 27-29
+table customers  added  new 1-6
+  column id  added  new 3
+  column name  added  new 4
+  column email  added  new 5
+table orders  added  new 8-16
+  column id  added  new 10
+  column customer_id  added  new 11-12
+  column total  added  new 13
+  column note  added  new 14
+index orders_customer  added  new 18
+view big_orders  added  new 20-21
+function order_total(INTEGER)  added  new 23-27

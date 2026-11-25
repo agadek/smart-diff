@@ -1,0 +1,2 @@
+status: ANALYZED
+index orders_customer  changed  old 18  new 18-19
