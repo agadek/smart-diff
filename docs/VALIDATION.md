@@ -37,6 +37,38 @@ The Tree-sitter languages have their own run, with the same list format and the 
 
 Its report is written to `build/reports/smartdiff-treesitter-validation/`.
 
+## 2026-11-25: SQL provider, fixtures, benchmark cases and corpus validation
+
+[SQL](specs/languages/20-sql.md) R1 to R14 are implemented in the `sql/` subproject, built on IntelliJ IDEA Ultimate
+2025.1.3 with its bundled Database Tools and SQL plugin `251.26927.53`, without raising the build target.
+`SqlDeclarationProviderTest` (R1 to R13, LF and CRLF offsets), 31 golden fixtures in `src/test/testData/sql/` and 12
+merge fixtures in `src/test/testData/sql/merge/` (every case of merge/05 R11 and three SQL cases) pass in `:sql:test`;
+every expected file was read and matches the spec. `CorpusValidationTest` and the benchmark's real-commit lines accept
+`.sql` files. The engine is `smartdiff.declarations` 26 (unchanged): SQL adds declaration kinds and two kind-family
+entries that only SQL declarations have, so no other language's results change.
+
+**Relationship benchmark.** Five SQL cases (`class-rename` for a table, `method-rename` and `rename-with-body-change`
+for a function, `move-in-file`, `kind-change` for a table turned into a view) are in
+`src/test/testData/sql/relationships/`, listed in `src/test/testData/relationships-corpus-sql.txt` with `corpus: sql`
+and run by `SqlRelationshipBenchmarkTest` in `:sql:test`, which passed with the `no-new-wrong-pairs` gate and no wrong
+or missed pair. A sixth case, a column renamed with only its type, was dropped: such a column is too short to be a rename
+candidate (languages/20 details §10).
+
+**Corpus validation.** `SqlCorpusValidationTest` ran on the 20 most recent non-merge commits that touch `.sql` files
+of two open-source projects, cloned shallowly outside the repository: `sqlc-dev/sqlc` (a code generator with schemas
+and queries in several dialects, head `3ad8b20f`, 2026-10-22) and `pgvector/pgvector` (a PostgreSQL extension, head
+`e8f84dc`, 2026-11-24). The run covered 94 modified `.sql` files from 26 commits: 89 `ANALYZED`, 2 `PARTIAL` and 3 that
+fell back, with no `hidden` or `empty` flag. All 5 flagged files are sqlc test data for GoogleSQL and ClickHouse, dialects
+outside the list of details §2; every pgvector file was `ANALYZED`.
+
+**Plugin Verifier.** `verifyPlugin` passed for every family, run one family at a time on the macOS IDE builds,
+including the new `datagrip` family (DataGrip 2025.1.3 and 2026.3.0.1, `DB-263.7307.336`): all 14 IDE builds
+`Compatible`, with no problems and no internal API use, and 12 to 52 experimental-API usages per build, none of them in
+the SQL provider. The latest IntelliJ IDEA (`IU-263.7307.353`) and DataGrip bundle `com.intellij.database`
+(`263.7307.353` and `263.7307.336`), and the optional dependency that loads `smartdiff-sql.xml` resolves in both.
+`checkPlatformApiInventory` passed after each family, so [PLATFORM-API.md](PLATFORM-API.md) gains only the
+`com.intellij.sql..` package row.
+
 ## 2026-11-24: Tree-sitter merge fixtures, benchmark cases and corpus validation
 
 Phase T3 of the [Tree-sitter engine](specs/engines/05-tree-sitter.md) (R30) for Swift, C#, C and C++, on the engine
