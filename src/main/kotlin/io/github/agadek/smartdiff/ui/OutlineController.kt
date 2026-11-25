@@ -793,15 +793,17 @@ class OutlineController internal constructor(
     }
 
     /**
-     * The innermost shown row for [offset] on [side], or null (outline/07 R1-R3, R6, R7). With [skipContainers], a row
-     * shown only as the container of its changed children never matches, so following keeps the selection (outline/07 R11).
+     * The innermost shown row for [offset] on [side], or null (outline/07 R1-R3, R6, R7). With [skipContainers], a
+     * container row matches only where [OutlineItem.followsCaretAt] allows, so a caret on an unchanged line of a container
+     * keeps the selection or selects a changed member instead of framing the whole container (outline/07 R11, R12).
      */
     private fun matchingItem(items: List<OutlineItem>, side: CaretSide, offset: Int, skipContainers: Boolean = false): OutlineItem? {
         val matches = mutableListOf<Match>()
+        val lines = lineOf(side)
         fun visit(level: List<OutlineItem>, index: IntArray) {
             for (item in level) {
                 val i = index[0]++
-                if (item.isGroup || (skipContainers && item.isContainerOnly)) {
+                if (item.isGroup || (skipContainers && !item.followsCaretAt(side == CaretSide.OLD, offset, lines))) {
                     visit(item.children, index)
                     continue
                 }
@@ -815,6 +817,12 @@ class OutlineController internal constructor(
         visit(items, intArrayOf(0))
         if (matches.isEmpty()) return null
         return matches.minWith(compareBy<Match> { it.length }.thenByDescending { it.prefer }.thenBy { it.order }).item
+    }
+
+    /** The line of an offset in the document of [side], clamped to the document. */
+    private fun lineOf(side: CaretSide): (Int) -> Int {
+        val document = if (side == CaretSide.OLD) oldDocument else newDocument
+        return { offset -> document.getLineNumber(offset.coerceIn(0, document.textLength)) }
     }
 
     private data class Match(val item: OutlineItem, val length: Int, val prefer: Boolean, val order: Int)

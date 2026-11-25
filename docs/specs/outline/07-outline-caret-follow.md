@@ -33,7 +33,13 @@ does not stay on a method they have left.
 - **R11** A row shown only as the container of its changed members, with no change label of its own, is never selected
   by following. A caret on an unchanged line of such a container, such as a field or a blank line between methods of a
   class whose only changes are in its methods, keeps the selection as R3 does. A container with a change of its own is
-  still followed.
+  still followed, as R12 limits.
+- **R12** A matched declaration that contains other declarations and did not move, with a change of its own, is selected
+  by following only when the caret is on a line its own change touches: a line of its changed tokens or detail spans, or
+  its first line when it was renamed. A caret on any other line of it, such as a field or an unchanged method of a class
+  whose header was reformatted, keeps the selection as R3 does, so the whole class is not framed for unchanged code. An
+  added, removed or moved container, or one whose own source was not compared by tokens, is followed anywhere in its
+  range.
 
 ## Out of scope
 

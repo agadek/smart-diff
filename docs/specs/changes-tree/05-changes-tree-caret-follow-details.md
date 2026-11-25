@@ -121,7 +121,9 @@ All of this runs on the EDT, except the summary comparison that already runs in 
    even when the `Fresh` summary names a declaration.
 5. **Find the innermost changed declaration.** Walk the summary's `OutlineItem` tree, from the top level down, with the
    source offset. A row is a candidate only when it is a change itself (`kind == ItemKind.CHANGE` and `tags.isNotEmpty()`);
-   groups, candidates, container-only rows and the `File region` row are not. A row contains the caret when its side range
+   groups, candidates, container-only rows and the `File region` row are not, and a container whose own change lies on
+   other lines than the caret's is not either (`OutlineItem.followsCaretAt`, the outline's rule, with lines from the
+   editor's document, R13). A row contains the caret when its side range
    contains the offset: `item.newRange` on the new side, `item.oldRange` on the old side; a null range does not contain.
    The check is `offset in range`, the same half-open check as `TextRange.contains`, so a zero-length range contains no
    offset. Recurse through all children, including a container that is not a candidate, so a changed method inside an
@@ -299,6 +301,7 @@ language, a file over the size limit and a file with a timed-out or failed summa
 | R8 | `ChangesCaretFollowTest` `test a file without a summary selects only the file row` (unsupported file); `test a one-sided diff of an added file selects the declaration under the caret`, `test a one-sided diff of a deleted file selects the declaration under the caret` and `test the platform preview of an added file selects the file row` (changes-tree/06; a real `SimpleOnesideDiffViewer` whose content has a null `highlightFile` as the platform's does); `test a pending file selects only the file row`; `test a fresh summary with no items clears the pending retry`; `test a not analyzed file selects only the file row`; `test a file after the 500-file limit selects only its file row` |
 | R9 | `ChangesCaretFollowTest` `test following reads no revision content on the UI thread`: a `ContentRevision` whose `content` fails when read on the EDT is never read; `test a caret event and start from a background thread are marshalled to the EDT`; Plugin Verifier report: no new internal, experimental, deprecated or override-only usage from the follower, and the existing usages stay unchanged |
 | R12 | `ChangesCaretFollowTest` `test the splitter unified viewer lookup reads one data context and reports no read-access error`: a real `UnifiedDiffViewer` in a `PreviewDiffSplitterComponent` is the editor's ancestor, one follow reads one data context, and the lookup logs no error |
+| R13 | `ChangesCaretFollowTest` `test an unchanged line of a class whose own change is elsewhere selects the file row`: with the class's changed tokens only on its header, a blank line between its methods selects the file row and the header line selects the class |
 | Failure logging | `ChangesCaretFollowTest` `test a mapping failure is logged once and leaves the tree unchanged` |
 | R10 | `ChangesCaretFollowTest` `test the tree filter hides the caret row and selects the nearest shown row above`: with the changed method's own label hidden, the shown class container or file row is selected, and with Declarations off the file row is selected |
 | R11 | `ChangesCaretFollowTest` `test a preview caret event does not replace a pending summary follow` and `test an unfocused editor's caret event does not replace a pending summary follow`: while a summary is pending, a caret event from the Local Changes splitter or from an editor without focus leaves the remembered editor and offset in place, and the declaration under the original caret is selected once the summary arrives |

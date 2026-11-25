@@ -78,6 +78,7 @@ import io.github.agadek.smartdiff.engine.api.Content
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.EngineId
 import io.github.agadek.smartdiff.engine.api.Presence
+import io.github.agadek.smartdiff.engine.api.RangePair
 import io.github.agadek.smartdiff.engine.api.Status
 import io.github.agadek.smartdiff.engine.api.Subject
 import io.github.agadek.smartdiff.engine.api.TextRange
@@ -187,6 +188,33 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
 
         assertSame("the file row is selected", fileRow, tree.selectionPath?.lastPathComponent)
         assertFalse("no declaration row is selected", tree.selectionPath?.lastPathComponent is DeclarationNode)
+    }
+
+    fun `test an unchanged line of a class whose own change is elsewhere selects the file row`() {
+        // changes-tree/05-changes-tree-caret-follow R13, outline/07 R12
+        maskEngines(
+            RangeEngine { request ->
+                val result = cartResultFor(request.oldText.toString(), request.newText.toString())
+                val header = { text: String -> TextRange(text.indexOf("class Cart"), text.indexOf("class Cart") + "class Cart".length) }
+                val cart = result.changes.single().copy(
+                    comparedByTokens = true,
+                    changedRuns = listOf(RangePair(header(request.oldText.toString()), header(request.newText.toString()))),
+                )
+                result.copy(changes = listOf(cart))
+            },
+        )
+        val (editor, file) = configuredFile("Cart.java", NEW_TEXT)
+        val tree = summarizedTree(change(file))
+        val fileRow = summaryRow(tree, file)
+        val follower = follower(tree) { editor.contentComponent }
+
+        val blank = NEW_TEXT.indexOf("\n\n") + 1
+        follower.followNow(editor, blank)
+        assertSame("the blank line between the methods selects the file row, not the class", fileRow, tree.selectionPath?.lastPathComponent)
+
+        follower.followNow(editor, NEW_TEXT.indexOf("class Cart") + 2)
+        val type = tree.selectionPath?.lastPathComponent as? DeclarationNode
+        assertEquals("the changed header line still selects the class", "class Cart  changed", type?.item?.label)
     }
 
     fun `test a plain editor maps to the new side range`() {

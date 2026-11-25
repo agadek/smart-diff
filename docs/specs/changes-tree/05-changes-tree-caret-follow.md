@@ -40,6 +40,10 @@ the tree. This is the reverse of opening a declaration from the tree.
   replace a pending follow from another editor.
 - **R12** Following logs no read-access error while it finds the diff viewer, including the platform's unified viewer in
   the Local Changes splitter.
+- **R13** A changed declaration that contains other declarations counts as under the caret only where the outline
+  follows it ([outline/07](../outline/07-outline-caret-follow.md) R12): a caret on an unchanged line of a class whose
+  own change is on other lines selects the innermost changed declaration elsewhere around it, or the file row, not the
+  class.
 
 ## Out of scope
 

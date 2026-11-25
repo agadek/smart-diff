@@ -14,6 +14,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.CaretListener
@@ -397,7 +398,7 @@ class ChangesTreeCaretFollower internal constructor(
                 if (summaryRow == null) {
                     return Target.FileRow(fileRow, retry = settings.showChangesSummary || settings.showChangesDeclarations)
                 }
-                val path = innermost(summary.items, side, offset)
+                val path = innermost(summary.items, side, offset, editor.document)
                     ?: return Target.FileRow(summaryRow, retry = false)
                 val filtered = ChangesTreeFilter.filter(summary.items, settings.hiddenChangesTreeChangeTypes)
                 val shown = OutlinePath.of(path).find(filtered.items)
@@ -474,13 +475,20 @@ class ChangesTreeCaretFollower internal constructor(
     private fun samePath(left: FilePath?, right: VirtualFile): Boolean =
         left != null && left.path == right.path && left.isDirectory == right.isDirectory
 
-    /** The rows from the top level to the innermost changed declaration containing [offset], or null. */
-    private fun innermost(items: List<OutlineItem>, side: Side, offset: Int): List<OutlineItem>? {
+    /**
+     * The rows from the top level to the innermost changed declaration containing [offset], or null. A container counts
+     * only where its own change is, as in the outline (outline/07 R12), so an unchanged line of a reformatted class gives
+     * the file row rather than the class (R13).
+     */
+    private fun innermost(items: List<OutlineItem>, side: Side, offset: Int, document: Document): List<OutlineItem>? {
         var best: List<OutlineItem>? = null
+        val lineOf = { at: Int -> document.getLineNumber(at.coerceIn(0, document.textLength)) }
         fun visit(item: OutlineItem, path: List<OutlineItem>) {
             val next = path + item
             val range = if (side == Side.NEW) item.newRange else item.oldRange
-            if (item.kind == ItemKind.CHANGE && item.tags.isNotEmpty() && range?.contains(offset) == true) {
+            if (item.kind == ItemKind.CHANGE && item.tags.isNotEmpty() && range?.contains(offset) == true &&
+                item.followsCaretAt(side == Side.OLD, offset, lineOf)
+            ) {
                 if (best == null || next.size > best!!.size) best = next
             }
             item.children.forEach { visit(it, next) }
