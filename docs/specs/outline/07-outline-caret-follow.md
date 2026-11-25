@@ -36,7 +36,8 @@ does not stay on a method they have left.
   still followed, as R12 limits.
 - **R12** A matched declaration that contains other declarations and did not move, with a change of its own, is selected
   by following only when the caret is on a line its own change touches: a line of its changed tokens or detail spans, or
-  its first line when it was renamed. A caret on any other line of it, such as a field or an unchanged method of a class
+  its first line when it was renamed. A container whose own change has no changed tokens or detail spans, such as a
+  formatting-only one, is never selected by following, not even on its reformatted lines. A caret on any other line of it, such as a field or an unchanged method of a class
   whose header was reformatted, keeps the selection as R3 does, so the whole class is not framed for unchanged code. An
   added, removed or moved container, or one whose own source was not compared by tokens, is followed anywhere in its
   range.

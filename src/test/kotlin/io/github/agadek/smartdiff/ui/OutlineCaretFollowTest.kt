@@ -256,6 +256,11 @@ class OutlineCaretFollowTest : BasePlatformTestCase() {
         assertNull("a field of the class selects nothing", outline.panel.selectedItem())
         assertTrue("nothing is framed", outline.navigator.shown.isEmpty())
 
+        moveCaret(outline, OutlineController.CaretSide.NEW, new.indexOf("\n{") + 1)
+        outline.fireCaretFollow()
+        assertNull("the reformatted brace line of the class selects nothing either", outline.panel.selectedItem())
+        assertTrue("nothing is framed", outline.navigator.shown.isEmpty())
+
         moveCaret(outline, OutlineController.CaretSide.NEW, new.indexOf("return 0") + 2)
         outline.fireCaretFollow()
         assertNull("an unchanged method of the class selects nothing", outline.panel.selectedItem())

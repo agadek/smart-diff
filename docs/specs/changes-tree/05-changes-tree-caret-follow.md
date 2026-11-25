@@ -43,7 +43,8 @@ the tree. This is the reverse of opening a declaration from the tree.
 - **R13** A changed declaration that contains other declarations counts as under the caret only where the outline
   follows it ([outline/07](../outline/07-outline-caret-follow.md) R12): a caret on an unchanged line of a class whose
   own change is on other lines selects the innermost changed declaration elsewhere around it, or the file row, not the
-  class.
+  class. A container whose own change has no changed tokens or detail spans, such as a formatting-only one, is never
+  selected by following.
 
 ## Out of scope
 

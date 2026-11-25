@@ -26,7 +26,8 @@ closing the diff removes them. Only the caret of these two editors is followed; 
 3. It walks the rows the tree shows, depth first in tree order, and keeps every row that is not a group, is not a
    container shown only for its changed children (a `CHANGE` row with no labels and with children, R11), is not a
    container whose own change lies on other lines (`OutlineItem.followsCaretAt`: the caret's line against the lines of
-   the node's `changedRuns` and the row's `details` on that side, plus the first line for a rename, R12), and whose range
+   the node's `changedRuns` and the row's `details` on that side, plus the first line for a rename; a container with neither, such as a formatting-only one, never matches, R12), and
+   whose range
    on the caret's side contains the offset: `oldRange` for the old side, `newRange` for the new side (R2). A range
    contains the offset when `start <= offset < end`, or `offset == end` for the last character of the document.
 4. Among the matches it picks the one with the shortest range on that side, the innermost declaration (R1). On a tie
