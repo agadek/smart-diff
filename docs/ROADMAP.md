@@ -1,12 +1,12 @@
 # SMART Diff Roadmap
 
-Status: 2026-11-19. Items after the shipped baseline are candidates, not commitments; their order is a proposal. Scope details live in the [product scope](specs/README.md#product-scope), the [feature specifications](specs/README.md) and the [technical specification](TECHNICAL-SPECIFICATION.md).
+Status: 2026-11-25. Items after the shipped baseline are candidates, not commitments; their order is a proposal. Scope details live in the [product scope](specs/README.md#product-scope), the [feature specifications](specs/README.md) and the [technical specification](TECHNICAL-SPECIFICATION.md).
 
-0.4.0 is prepared on the release branch with version `0.4.0` and a dated [changelog](../CHANGELOG.md) section; its [plan](releases/0.4.0-plan.md) records the merged work. 0.3.0 was released on 2026-11-10; the [0.3.0 plan](releases/0.3.0-plan.md) records its remaining manual rows. Agent prompts for 0.4.0 are in [agent-prompts/0.4.0/](agent-prompts/0.4.0/README.md).
+0.5.0 is prepared on the release branch with version `0.5.0` and a dated [changelog](../CHANGELOG.md) section; see [0.5.0](#050-more-languages-and-moves-inside-declarations-prepared-2026-11-25). 0.4.0 was released on 2026-11-20; its [plan](releases/0.4.0-plan.md) records the merged work. 0.3.0 was released on 2026-11-10; the [0.3.0 plan](releases/0.3.0-plan.md) records its remaining manual rows.
 
 ## Shipped baseline
 
-0.1.0, 0.1.1 and 0.2.0 (2026-11-05) are released. 0.3.0 was released on 2026-11-10; see [0.3.0](#030-changes-tree-in-the-ide-released-2026-11-10). 0.4.0 is prepared with version `0.4.0` on 2026-11-19; see [0.4.0](#040-structural-relationships-prepared-2026-11-19).
+0.1.0, 0.1.1 and 0.2.0 (2026-11-05) are released. 0.3.0 was released on 2026-11-10; see [0.3.0](#030-changes-tree-in-the-ide-released-2026-11-10). 0.4.0 was released on 2026-11-20; see [0.4.0](#040-structural-relationships-released-2026-11-20). 0.5.0 is prepared with version `0.5.0` on 2026-11-25; see [0.5.0](#050-more-languages-and-moves-inside-declarations-prepared-2026-11-25).
 
 - Structural outline for two-sided diffs, attached to the native diff, per file only. It opens by default, with a setting to turn it off and a toolbar button in every diff to switch to the plain native diff.
 - Comparison engine interface, registry, per-language default, and engine dropdown ([ADR 0004](adr/0004-pluggable-comparison-engines.md)).
@@ -79,7 +79,28 @@ Decided 2026-11-07 in [releases/0.3.0-plan.md](releases/0.3.0-plan.md). The rele
 
 The [2026-11-08 release checks](VALIDATION.md#2026-11-08-030-release-checks) pass: the two-sided corpus and the merge validation reproduce the 2026-11-04 results with every flagged file reviewed, the relationship benchmark reports no new wrong pair, and Plugin Verifier is compatible on both target IDEs with the same experimental API usages as 0.2.0 and no internal or deprecated usage. `pluginVersion` is 0.3.0 and the changelog section is dated. The 2026-11-09 release-head re-check on `f912d8c` passes caret-follow R7 and R8 (PR #137 is merged at `afc7457`); main now carries #132 (relationships/04 step 2) as 0.4.0 work. The remaining manual rows are listed in the [manual runIde checklist](releases/0.3.0-manual-check.md): R3 splitter, R5 inclusion/count, R11, #111 R16, #144 splitter/control, the section A/B partials, and #112 M3's no-arrow detail, M6 and the IC 2025.1 M8 comparison. M7 and M9 pass on both IDEs. #108 is verified and accepted from its 2026-11-09 record. The `v0.3.0` GitHub release was published on 2026-11-10 from tag `v0.3.0` (`bff3a35`), with the signed zip attached; the remaining manual rows are documented as partial or inconclusive.
 
-## 0.4.0: structural relationships, prepared 2026-11-19
+## 0.5.0: more languages and moves inside declarations, prepared 2026-11-25
+
+The work merged on main after 0.4.0, listed in the [0.5.0 changelog section](../CHANGELOG.md#050---2026-11-25). No separate plan: each item has its own spec and roadmap section.
+
+| Work | Spec | State |
+| --- | --- | --- |
+| Moves inside declarations | [relationships/08](specs/relationships/08-moves-inside-declarations.md) | Implemented and merged (PR #217) |
+| Relationship recall: short initialized fields, inlining past scattered tokens | [relationships/03](specs/relationships/03-relationship-matching.md) R21, [relationships/05](specs/relationships/05-inlining-detection.md) R21 | Implemented and merged (PR #218) |
+| Fine-grained differencing validation | [declarations/10](specs/declarations/10-fine-grained-differencing.md) R21, R22 | Recorded (PR #219) |
+| Tree-sitter C#, C and C++, with merge fixtures, benchmark cases and corpus validation | [engines/05](specs/engines/05-tree-sitter.md) | Implemented and merged (PRs #220, #225) |
+| JavaScript and TypeScript | [languages/16](specs/languages/16-javascript-typescript.md) | Implemented and merged (PR #221) |
+| Go | [languages/17](specs/languages/17-go.md) | Implemented and merged (PR #222) |
+| CSS, SCSS and Less | [languages/18](specs/languages/18-css.md) | Implemented and merged (PR #223) |
+| PHP | [languages/19](specs/languages/19-php.md) | Implemented and merged (PR #224) |
+| SQL | [languages/20](specs/languages/20-sql.md) | Implemented and merged (PR #226) |
+| Caret follow on unchanged code of a changed container | [outline/07](specs/outline/07-outline-caret-follow.md) R12, [changes-tree/05](specs/changes-tree/05-changes-tree-caret-follow.md) R13 | Fixed and merged (PR #227) |
+| One change type filter for the outline and the Changes tree | [outline/03](specs/outline/03-change-type-filter.md) | Implemented and merged (PR #228) |
+| Release validation | [RELEASING.md](RELEASING.md) | [2026-11-25 validation](VALIDATION.md#2026-11-25-050-release-validation) recorded |
+
+The benchmark reports 623 cases, precision 1.000 and recall 0.966 with 0 wrong and 0 forced pairs (one held-out label that predated code moves was corrected); the two-sided and merge corpora have no new wrong link, hidden change or `join-mismatch`, and all limits hold with the reference pass on. Plugin Verifier is compatible on all seven IDE families. The physical manual checks are pending, maintainer. `pluginVersion` is 0.5.0 and the changelog section is dated; the tag and GitHub release are not published yet.
+
+## 0.4.0: structural relationships, released 2026-11-20
 
 Decided in [releases/0.4.0-plan.md](releases/0.4.0-plan.md). Rename grouping with usages, inlining detection and the refactorings view finish the structural-relationships track, alongside the language and format work in the [0.4.0 changelog section](../CHANGELOG.md#040---2026-11-19) and the Tree-sitter Swift engine from PR #213.
 
@@ -90,9 +111,8 @@ Decided in [releases/0.4.0-plan.md](releases/0.4.0-plan.md). Rename grouping wit
 | Refactorings view | [relationships/06](specs/relationships/06-refactorings-view.md) | Implemented and merged |
 | Validation and release | [relationships/07](specs/relationships/07-relationship-validation.md) | Implemented, 2026-11-19; [2026-11-19 validation](VALIDATION.md#2026-11-19-040-release-validation) recorded. The `no-new-wrong-pairs` gate passes with 0 wrong and 0 forced pairs. |
 | Tree-sitter Swift engine | [engines/05](specs/engines/05-tree-sitter.md) | Implemented and merged (PR #213) |
-| Tree-sitter C#, C and C++ | [engines/05](specs/engines/05-tree-sitter.md) | Implemented (phase T2) |
 
-The benchmark reports 583 cases, precision 1.000 and recall 0.943; the two-sided and merge corpora have no new wrong link or `join-mismatch` and all limits hold with the reference pass on. Plugin Verifier is compatible on all six IDE families with no internal or deprecated API use. The physical manual checks on IC 2025.1.3 and IU 2026.3 are pending, maintainer.
+The benchmark reports 583 cases, precision 1.000 and recall 0.943; the two-sided and merge corpora have no new wrong link or `join-mismatch` and all limits hold with the reference pass on. Plugin Verifier is compatible on all six IDE builds with no internal or deprecated API use. The physical manual checks on IC 2025.1.3 and IU 2026.3 are pending, maintainer. The `v0.4.0` GitHub release was published on 2026-11-20 with the signed zip attached. C#, C and C++ in the Tree-sitter engine were merged after the release and ship in 0.5.0.
 
 ## After 0.2.0: structural relationships
 
@@ -306,7 +326,7 @@ Let the reviewer mark a change in the outline as reviewed and show progress in t
 
 ### Relationship recall
 
-*(weak-point review)* The benchmark reports precision 1.000 but overall recall around 0.83 (0.821 on the held-out split), so about one refactoring in six is still shown as a removed and an added declaration. Work through the missed relationships listed in [VALIDATION.md](VALIDATION.md) by kind and language, for example extraction to several sources, and raise recall without lowering precision or forcing an ambiguous pair, under the benchmark's `no-new-wrong-pairs` gate.
+*(weak-point review)* The benchmark reported precision 1.000 but overall recall around 0.83 (0.821 on the held-out split) when this item was written; after the [2026-11-23 recall work](VALIDATION.md#2026-11-23-relationship-recall) the 0.5.0 run reports recall 0.966 (0.924 held-out), with 12 labelled relationships still missed. Work through the missed relationships listed in [VALIDATION.md](VALIDATION.md) by kind and language, for example extraction to several sources, and raise recall without lowering precision or forcing an ambiguous pair, under the benchmark's `no-new-wrong-pairs` gate.
 
 ### Formatting-only recall in Kotlin and Scala (implemented, 2026-11-16)
 
