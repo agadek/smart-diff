@@ -64,10 +64,10 @@ visible.
 - Other languages get an outline from the IDE's structure view; plain text and unsupported files list moved lines as
   `lines A–B → C–D`
 
-Scala, Python, Rust, JavaScript, TypeScript, Go, the stylesheet languages and PHP need their IDE plugins (Python and
-Rust are bundled in PyCharm and RustRover, JavaScript, TypeScript, CSS, SCSS and Less in WebStorm, IntelliJ IDEA
-Ultimate and the other paid IDEs, Go in GoLand, PHP in PhpStorm); the other formats use language support bundled
-with the IDE. Unsupported, malformed or oversized files stay in the plain
+Scala, Python, Rust, JavaScript, TypeScript, Go, the stylesheet languages, PHP and SQL need their IDE plugins (Python
+and Rust are bundled in PyCharm and RustRover, JavaScript, TypeScript, CSS, SCSS and Less in WebStorm, IntelliJ IDEA
+Ultimate and the other paid IDEs, Go in GoLand, PHP in PhpStorm, SQL in DataGrip, IntelliJ IDEA and the other paid
+IDEs); the other formats use language support bundled with the IDE. Unsupported, malformed or oversized files stay in the plain
 native diff with the reason shown.
 
 ### Settings
@@ -79,7 +79,7 @@ back to the plain native view.
 ## Compatibility
 
 IntelliJ-based IDEs from version 2025.1.3 (build 251) onward, including IntelliJ IDEA, PyCharm, RustRover, WebStorm,
-GoLand and PhpStorm.
+GoLand, PhpStorm and DataGrip.
 
 ## Install
 
