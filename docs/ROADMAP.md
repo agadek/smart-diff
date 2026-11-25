@@ -326,7 +326,7 @@ Let the reviewer mark a change in the outline as reviewed and show progress in t
 
 ### Fewer controls
 
-*(weak-point review)* The outline now has two views, a change-type filter, a hide-by-kind menu, Hide and Minimise, the viewer switcher and separate Changes tree options, each with its own setting. Review which controls are used, using the [usability study](#usability-validation) where it helps, and merge or remove the ones that overlap, so the UI stays small enough to test and maintain.
+*(weak-point review)* The outline now has two views, a change-type filter, a hide-by-kind menu, Hide and Minimise, the viewer switcher and separate Changes tree options, each with its own setting. Review which controls are used, using the [usability study](#usability-validation) where it helps, and merge or remove the ones that overlap, so the UI stays small enough to test and maintain. First step (2026-11-25): the outline and the Changes tree now share one change type filter and one settings group ([changes-tree/04](specs/changes-tree/04-hide-and-filter.md) R19 to R21, [outline/03](specs/outline/03-change-type-filter.md) R11), replacing the tree's separate filter.
 
 ### Settings button in the outline (implemented, 2026-11-15)
 

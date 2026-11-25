@@ -66,7 +66,7 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         /** Hide rows changed on both sides from the merge container tree. */
         var mergeHideBothSides: Boolean = false
 
-        /** The [ChangeType] names hidden from the outline, comma-separated. */
+        /** The [ChangeType] names hidden from the outline and the Changes tree, comma-separated (changes-tree/04 R19). */
         var hiddenChangeTypes: String = ""
 
         /** The [OutlineView] name the outline starts in (relationships/06 R2); `CONTAINER_TREE` by default. */
@@ -75,7 +75,10 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         /** The [RelationshipKind] names hidden from the refactorings view, comma-separated (relationships/06 R14). */
         var hiddenRelationshipKinds: String = ""
 
-        /** The [ChangeType] names hidden from the Changes tree, comma-separated and separate from the outline's. */
+        /**
+         * The Changes tree's former separate filter. It is read only to move a stored value into [hiddenChangeTypes]
+         * when the outline's filter is empty, and is then cleared (changes-tree/04 R21).
+         */
         var hiddenChangesTreeChangeTypes: String = ""
         /** Analyze languages without a dedicated provider through the IDE's structure view (languages/06 R10). */
         var useStructureViewFallback: Boolean = true
@@ -116,7 +119,7 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
     override fun getState(): SettingsState = current
 
     override fun loadState(state: SettingsState) {
-        current = state
+        current = migrated(state)
     }
 
     var showOutline: Boolean
@@ -202,11 +205,6 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         get() = current.hiddenChangeTypes.split(',').mapNotNullTo(LinkedHashSet()) { name -> ChangeType.entries.firstOrNull { it.name == name.trim() } }
         set(value) = update { hiddenChangeTypes = ChangeType.entries.filter { it in value }.joinToString(",") { it.name } }
 
-    /** The change types hidden from the Changes tree only; a stored name that is no longer a type is ignored. */
-    var hiddenChangesTreeChangeTypes: Set<ChangeType>
-        get() = current.hiddenChangesTreeChangeTypes.split(',').mapNotNullTo(LinkedHashSet()) { name -> ChangeType.entries.firstOrNull { it.name == name.trim() } }
-        set(value) = update { hiddenChangesTreeChangeTypes = ChangeType.entries.filter { it in value }.joinToString(",") { it.name } }
-
     /** The outline's view, the container tree or the refactorings view (relationships/06 R1, R2). */
     var outlineView: OutlineView
         get() = OutlineView.entries.firstOrNull { it.name == current.outlineView } ?: OutlineView.CONTAINER_TREE
@@ -274,6 +272,18 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
         null
     }
 
+    /**
+     * Moves the Changes tree's former separate filter into the shared one: the outline's stored filter wins, and the
+     * tree's is used only when the outline's is empty (changes-tree/04 R21).
+     */
+    private fun migrated(state: SettingsState): SettingsState {
+        val legacy = state.hiddenChangesTreeChangeTypes
+        if (legacy.isBlank()) return state
+        if (state.hiddenChangeTypes.isBlank()) state.hiddenChangeTypes = legacy
+        state.hiddenChangesTreeChangeTypes = ""
+        return state
+    }
+
     /** Replaces the state rather than changing it, so a reader on another thread sees either the old or the new values. */
     private fun update(change: SettingsState.() -> Unit) {
         val old = current
@@ -320,7 +330,7 @@ class SmartDiffSettings : PersistentStateComponent<SmartDiffSettings.SettingsSta
      */
     private fun SettingsState.treeSignature(): List<Any> =
         listOf(
-            showChangesSummary, showChangesDeclarations, hiddenChangesTreeChangeTypes,
+            showChangesSummary, showChangesDeclarations, hiddenChangeTypes,
             formattingOnlyInline, maxChars, maxDeclarations, timeoutMillis, useStructureViewFallback, treeSitterLanguages,
         )
 

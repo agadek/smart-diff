@@ -294,11 +294,14 @@ class MergeOutlineController private constructor(
         showResult(texts, joined, conflicts)
     }
 
-    /** Hides or shows changes of [type] from now on, rebuilding this outline without comparing again. */
+    /** Hides or shows changes of [type] from now on in every outline and the Changes tree, rebuilding this outline without comparing again. */
     fun setHidden(type: io.github.agadek.smartdiff.ui.ChangeType, hide: Boolean) {
         val settings = SmartDiffSettings.getInstance()
         settings.hiddenChangeTypes = if (hide) settings.hiddenChangeTypes + type else settings.hiddenChangeTypes - type
         rebuild()
+        // This outline is already rebuilt; the other outlines and the Changes trees rebuild from the shared setting.
+        displaySnapshot = displaySnapshot(settings)
+        ApplicationManager.getApplication().messageBus.syncPublisher(SmartDiffSettings.CHANGED).settingsChanged()
     }
 
     fun setHideBothSides(hide: Boolean) {

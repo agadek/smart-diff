@@ -400,7 +400,7 @@ class ChangesTreeCaretFollower internal constructor(
                 }
                 val path = innermost(summary.items, side, offset, editor.document)
                     ?: return Target.FileRow(summaryRow, retry = false)
-                val filtered = ChangesTreeFilter.filter(summary.items, settings.hiddenChangesTreeChangeTypes)
+                val filtered = ChangesTreeFilter.filter(summary.items, settings.hiddenChangeTypes)
                 val shown = OutlinePath.of(path).find(filtered.items)
                 if (shown.isEmpty()) Target.FileRow(summaryRow, retry = false) else Target.Declaration(summaryRow, OutlinePath.of(shown))
             }

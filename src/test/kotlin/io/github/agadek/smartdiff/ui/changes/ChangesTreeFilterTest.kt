@@ -278,7 +278,7 @@ class ChangesTreeFilterTest : BasePlatformTestCase() {
         val change = modified("Cart.java")
         summaryNode(change)
         ChangesSummaryService.getInstance(project).waitForSummaries()
-        settings.hiddenChangesTreeChangeTypes = setOf(ChangeType.ADDED, ChangeType.MOVED)
+        settings.hiddenChangeTypes = setOf(ChangeType.ADDED, ChangeType.MOVED)
 
         val node = summaryNode(change)!!
 
@@ -291,7 +291,7 @@ class ChangesTreeFilterTest : BasePlatformTestCase() {
         val change = modified("Parser.java")
         summaryNode(change)
         ChangesSummaryService.getInstance(project).waitForSummaries()
-        settings.hiddenChangesTreeChangeTypes = setOf(ChangeType.ADDED)
+        settings.hiddenChangeTypes = setOf(ChangeType.ADDED)
         val node = tree(listOf(change)).second.single() as SummaryChangeNode
 
         assertEquals("1 changed · 1 added · 1 hidden", node.summary)
@@ -306,7 +306,7 @@ class ChangesTreeFilterTest : BasePlatformTestCase() {
         val change = modified("Cart.java")
         summaryNode(change)
         ChangesSummaryService.getInstance(project).waitForSummaries()
-        settings.hiddenChangesTreeChangeTypes = ChangeType.entries.toSet()
+        settings.hiddenChangeTypes = ChangeType.entries.toSet()
         val (root, nodes) = tree(listOf(change))
         val node = nodes.single() as SummaryChangeNode
 
@@ -322,7 +322,7 @@ class ChangesTreeFilterTest : BasePlatformTestCase() {
         val change = modified("Cart.java")
         summaryNode(change)
         ChangesSummaryService.getInstance(project).waitForSummaries()
-        settings.hiddenChangesTreeChangeTypes = setOf(ChangeType.ADDED)
+        settings.hiddenChangeTypes = setOf(ChangeType.ADDED)
         val node = summaryNode(change)!!
         val rows = node.preorderEnumeration().toList().filterIsInstance<DeclarationNode>()
 
@@ -335,25 +335,21 @@ class ChangesTreeFilterTest : BasePlatformTestCase() {
         assertTrue("declarations off has no row to find", withoutRows.preorderEnumeration().toList().none { it is DeclarationNode })
     }
 
-    fun `test changing the tree filter leaves the outline filter unchanged`() {
-        // changes-tree/04-hide-and-filter R16
+    fun `test the tree filter is the outline's filter`() {
+        // changes-tree/04-hide-and-filter R19, R20
         settings.loadState(SmartDiffSettings.SettingsState())
-        settings.hiddenChangesTreeChangeTypes = setOf(ChangeType.MOVED)
+        ChangesTreeActions.installNow()
+        val manager = ActionManager.getInstance()
+        val filter = manager.getAction("SmartDiff.ChangesTree.HideChangeTypes") as DefaultActionGroup
+        val moved = filter.getChildren(manager).single { it.templatePresentation.text == ChangeType.MOVED.text }
+            as com.intellij.openapi.actionSystem.ToggleAction
+        val event = com.intellij.testFramework.TestActionEvent.createTestEvent(moved)
 
-        assertEquals("the outline still shows moved changes", emptySet<ChangeType>(), settings.hiddenChangeTypes)
+        moved.setSelected(event, true)
+        assertEquals("hiding moved in the tree hides it in the outline", setOf(ChangeType.MOVED), settings.hiddenChangeTypes)
 
         settings.hiddenChangeTypes = setOf(ChangeType.ADDED)
-        assertEquals("the tree still hides moved changes", setOf(ChangeType.MOVED), settings.hiddenChangesTreeChangeTypes)
-    }
-
-    fun `test the changes tree filter is stored separately and starts empty`() {
-        // changes-tree/04-hide-and-filter R17
-        settings.loadState(SmartDiffSettings.SettingsState())
-        assertEquals(emptySet<ChangeType>(), settings.hiddenChangesTreeChangeTypes)
-
-        settings.hiddenChangesTreeChangeTypes = setOf(ChangeType.REMOVED)
-        assertEquals("REMOVED", settings.state.hiddenChangesTreeChangeTypes)
-        assertEquals("the outline value is untouched", "", settings.state.hiddenChangeTypes)
+        assertFalse("hiding in the outline is shown in the tree's menu", moved.isSelected(event))
     }
 
     fun `test changing the filter rebuilds without another comparison`() {
@@ -367,7 +363,7 @@ class ChangesTreeFilterTest : BasePlatformTestCase() {
         listener.settingsChanged()
         val calls = engine.calls.get()
 
-        settings.hiddenChangesTreeChangeTypes = setOf(ChangeType.ADDED)
+        settings.hiddenChangeTypes = setOf(ChangeType.ADDED)
         listener.settingsChanged()
         summaryNode(change)
         ChangesSummaryService.getInstance(project).waitForSummaries()
@@ -393,12 +389,12 @@ class ChangesTreeFilterTest : BasePlatformTestCase() {
         assertTrue(node.summary.contains("added"))
         assertTrue(node.childCount > 0)
 
-        settings.hiddenChangesTreeChangeTypes = setOf(ChangeType.ADDED)
+        settings.hiddenChangeTypes = setOf(ChangeType.ADDED)
         val hiddenNode = summaryNode(added)!!
         assertTrue(hiddenNode.summary.contains("hidden"))
         assertEquals(0, hiddenNode.childCount)
 
-        settings.hiddenChangesTreeChangeTypes = emptySet()
+        settings.hiddenChangeTypes = emptySet()
         settings.showChangesDeclarations = false
         val leaf = summaryNode(added)!!
         assertTrue(leaf.isLeaf)

@@ -1,8 +1,8 @@
 # Hide and filter in the Changes tree
 
-Status: implemented, 2026-11-06
+Status: implemented, 2026-11-06; one filter shared with the outline (R16, R17 retired; R19 to R21), implemented 2026-11-25
 
-**Description:** The [Changes tree](../../GLOSSARY.md#changes-tree) has its own View Options toggles for the [summary line](../../GLOSSARY.md#summary-line) and the [declaration](../../GLOSSARY.md#declaration) rows, and its own [change type filter](../../GLOSSARY.md#change-type-filter) for the declaration rows, separate from the outline's.
+**Description:** The [Changes tree](../../GLOSSARY.md#changes-tree) has its own View Options toggles for the [summary line](../../GLOSSARY.md#summary-line) and the [declaration](../../GLOSSARY.md#declaration) rows, and the [change type filter](../../GLOSSARY.md#change-type-filter) it shares with the outline for the declaration rows.
 
 **Use case:** Before committing, a developer wants the platform's compact file list without the declaration rows, or wants to hide formatting-only and moved changes so only the edits they care about remain. They switch the rows off, or set a filter, from the tree's View Options menu and the tree changes at once, without another comparison.
 
@@ -23,14 +23,17 @@ Status: implemented, 2026-11-06
 - **R13** The summary still counts every change and, when the filter hides some, ends with how many are hidden, such as `· 2 hidden`.
 - **R14** A file whose every change is hidden stays in the tree, with no declaration rows, and its summary, when shown, ends with `· all hidden`.
 - **R15** Speed search in the tree finds declaration rows by their labels.
-- **R16** Changing the tree's filter never changes the outline's filter.
-- **R17** The tree's filter is remembered separately from the outline's, and starts with nothing hidden.
+- **R16** *(retired 2026-11-25, replaced by R19)* Changing the tree's filter never changes the outline's filter.
+- **R17** *(retired 2026-11-25, replaced by R19)* The tree's filter is remembered separately from the outline's, and starts with nothing hidden.
 - **R18** Changing the filter rebuilds the tree without comparing a file again.
+- **R19** The Changes tree and the outline share one change type filter, remembered as one setting that starts with nothing hidden.
+- **R20** Hiding a change type in the tree or in an outline updates every open tree and outline at once.
+- **R21** A tree filter remembered by an earlier version becomes the shared filter only when the outline's remembered filter hides nothing.
 
 ## Out of scope
 
 - Filtering the file rows, or hiding a file from the tree. The filter applies to declaration rows only.
-- The outline's change type filter and the "Hide from the outline" settings, which keep their own behavior.
+- [Comment-only](../../GLOSSARY.md#comment-only) and rewrite-only changes, which are outline-only labels; the tree's menu does not list them.
 - The modal commit dialog and the Git log's commit details, which have no hook for the tree.
 - Following the caret into the tree (issue #110) and opening a file row with double-click or Enter (issue #111), which are separate features.
 

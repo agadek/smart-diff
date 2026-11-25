@@ -42,10 +42,10 @@ class ChangesTreeDeclarationsAction : DumbAwareToggleAction(
     }
 }
 
-/** The "Hide Change Types" submenu of the tree's own filter (changes-tree/04 R7 to R12, R16, R17). */
+/** The "Hide Change Types" submenu of the filter the tree shares with the outline (changes-tree/04 R7 to R12, R19, R20). */
 class ChangesTreeHideChangeTypesGroup : DefaultActionGroup("Hide Change Types", true) {
     init {
-        templatePresentation.description = "Hide types of changes from the Changes tree"
+        templatePresentation.description = "Hide types of changes from the Changes tree and the structural outline"
         templatePresentation.icon = AllIcons.General.Filter
         ChangeType.withoutCommentOnly.forEach { add(HideChangeTypeAction(it)) }
     }
@@ -53,12 +53,12 @@ class ChangesTreeHideChangeTypesGroup : DefaultActionGroup("Hide Change Types", 
     private class HideChangeTypeAction(private val type: ChangeType) : DumbAwareToggleAction(type.text) {
         override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
 
-        override fun isSelected(e: AnActionEvent): Boolean = type in SmartDiffSettings.getInstance().hiddenChangesTreeChangeTypes
+        override fun isSelected(e: AnActionEvent): Boolean = type in SmartDiffSettings.getInstance().hiddenChangeTypes
 
         override fun setSelected(e: AnActionEvent, state: Boolean) {
             val settings = SmartDiffSettings.getInstance()
-            settings.hiddenChangesTreeChangeTypes =
-                if (state) settings.hiddenChangesTreeChangeTypes + type else settings.hiddenChangesTreeChangeTypes - type
+            settings.hiddenChangeTypes =
+                if (state) settings.hiddenChangeTypes + type else settings.hiddenChangeTypes - type
             notifyChangesTreeSettingsChanged()
         }
     }
@@ -105,7 +105,7 @@ internal object ChangesTreeActions {
     }
 }
 
-/** Rebuilds every open Changes tree after one of its toggles or its filter changes (changes-tree/04 R6, R18). */
+/** Rebuilds every open Changes tree and outline after a tree toggle or the shared filter changes (changes-tree/04 R6, R18, R20). */
 internal fun notifyChangesTreeSettingsChanged() {
     ApplicationManager.getApplication().messageBus.syncPublisher(SmartDiffSettings.CHANGED).settingsChanged()
 }

@@ -146,7 +146,7 @@ class ReviewTreeSummaryTest : BasePlatformTestCase() {
 
     fun `test the change type filter applies to review trees`() {
         // changes-tree/07 R13
-        settings.hiddenChangesTreeChangeTypes = setOf(ChangeType.ADDED)
+        settings.hiddenChangeTypes = setOf(ChangeType.ADDED)
         val change = modified("Cart.java")
         val tree = summarized(listOf(change))
 

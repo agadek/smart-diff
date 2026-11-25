@@ -1,6 +1,6 @@
 # Settings page
 
-Status: implemented, 2026-10-22; the outline view and relationship kind settings (R16 and R17) arrive with the [refactorings view](../relationships/06-refactorings-view.md), 2026-11-09; the structure-view fallback setting (R18) arrives with the [structure-view fallback](../languages/06-structure-view-fallback.md), 2026-11-13; the comment-only setting (R19) is implemented with [comment-only changes](../outline/11-comment-only-changes.md), 2026-11-16; the moved-code marker setting (R20) is implemented with [moved-code markers](../outline/13-moved-code-markers.md), 2026-11-16; the rewrite-only setting (R22) is implemented with [opt-in equivalence rules](../declarations/08-equivalence-rules.md), 2026-11-17; the changed-token setting (R23) is implemented with [fine-grained differencing](../declarations/10-fine-grained-differencing.md), 2026-11-17; the code move setting (R24) is implemented with [moves inside declarations](../relationships/08-moves-inside-declarations.md), 2026-11-23.
+Status: implemented, 2026-10-22; the outline view and relationship kind settings (R16 and R17) arrive with the [refactorings view](../relationships/06-refactorings-view.md), 2026-11-09; the structure-view fallback setting (R18) arrives with the [structure-view fallback](../languages/06-structure-view-fallback.md), 2026-11-13; the comment-only setting (R19) is implemented with [comment-only changes](../outline/11-comment-only-changes.md), 2026-11-16; the moved-code marker setting (R20) is implemented with [moved-code markers](../outline/13-moved-code-markers.md), 2026-11-16; the rewrite-only setting (R22) is implemented with [opt-in equivalence rules](../declarations/08-equivalence-rules.md), 2026-11-17; the changed-token setting (R23) is implemented with [fine-grained differencing](../declarations/10-fine-grained-differencing.md), 2026-11-17; the code move setting (R24) is implemented with [moves inside declarations](../relationships/08-moves-inside-declarations.md), 2026-11-23; one change type filter for the outline and the Changes tree (R11 retired, R26), implemented 2026-11-25.
 
 **Description:** A settings page under Settings | Tools | SMART Diff holds the plugin's options, for all projects.
 
@@ -18,7 +18,7 @@ Status: implemented, 2026-10-22; the outline view and relationship kind settings
 - **R8** A language without a chosen engine uses the first registered one.
 - **R9** The [analysis limits](../../GLOSSARY.md#analysis-limits) can be changed: largest file, most declarations per side and analysis time.
 - **R10** "Show declarations in the Changes tree" is on by default and is the tree's "Declarations" toggle.
-- **R11** "Hide from the Changes tree" has one checkbox per change type, all off by default, and matches the tree's own change type filter.
+- **R11** *(retired 2026-11-25, replaced by R26)* "Hide from the Changes tree" has one checkbox per change type, all off by default, and matches the tree's own change type filter.
 - **R12** The Changes tree's two toggles and its filter are remembered and are the same settings as in its View Options menu.
 - **R13** "Follow the caret in the Changes tree" is on by default.
 - **R14** Changing it does not clear summaries or rebuild the tree.
@@ -33,6 +33,7 @@ Status: implemented, 2026-10-22; the outline view and relationship kind settings
 - **R23** "Highlight changed tokens in the SMART Diff viewer" is on by default.
 - **R24** "Detect code moved inside declarations" is on by default.
 - **R25** "Compare languages the IDE cannot parse with Tree-sitter" is on by default.
+- **R26** "Hide from the outline and the Changes tree" is the one group of change type checkboxes, and matches both the outline's filter and the tree's "Hide Change Types" menu.
 
 ## References
 

@@ -67,7 +67,7 @@ class ChangesSummarySettingsListenerTest : BasePlatformTestCase() {
         val listener = ChangesSummarySettingsListener()
         val before = tree.rebuilds
 
-        settings.hiddenChangesTreeChangeTypes = setOf(ChangeType.ADDED)
+        settings.hiddenChangeTypes = setOf(ChangeType.ADDED)
         listener.settingsChanged()
         PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
 

@@ -748,7 +748,7 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
         maskEngines(RangeEngine())
         val (editor, file) = configuredFile("FilteredCart.java", NEW_TEXT)
         val change = change(file)
-        settings.hiddenChangesTreeChangeTypes = setOf(ChangeType.CHANGED)
+        settings.hiddenChangeTypes = setOf(ChangeType.CHANGED)
         val tree = summarizedTree(change)
         val follower = follower(tree) { editor.contentComponent }
 
@@ -758,7 +758,7 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
         assertEquals("the shown class container above the hidden method is selected", "class Cart", container?.item?.title)
         assertTrue("the hidden method is not a changed row", container?.item?.tags?.isEmpty() == true)
 
-        settings.hiddenChangesTreeChangeTypes = ChangeType.entries.toSet()
+        settings.hiddenChangeTypes = ChangeType.entries.toSet()
         val allHiddenTree = summarizedTree(change)
         val allHiddenFollower = follower(allHiddenTree) { editor.contentComponent }
         allHiddenFollower.followNow(editor, NEW_TEXT.indexOf("return 2"))
@@ -768,7 +768,7 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
             allHiddenTree.selectionPath?.lastPathComponent,
         )
 
-        settings.hiddenChangesTreeChangeTypes = emptySet()
+        settings.hiddenChangeTypes = emptySet()
         settings.showChangesDeclarations = false
         val fileOnlyTree = summarizedTree(change)
         val fileOnlyRow = summaryRow(fileOnlyTree, file)
@@ -824,7 +824,7 @@ class ChangesCaretFollowTest : BasePlatformTestCase() {
         settings.outlineMinimised = true
         settings.mergeGroupedBySide = false
         settings.mergeHideBothSides = true
-        settings.hiddenChangeTypes = setOf(ChangeType.ADDED)
+        // changes-tree/04-hide-and-filter R19: the change type filter is shared with the tree, so it is not listed here
         listener.settingsChanged()
 
         assertEquals("outline and merge display settings do not rebuild the tree", baseline, rebuilds.get())

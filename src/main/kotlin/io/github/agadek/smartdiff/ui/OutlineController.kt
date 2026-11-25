@@ -498,11 +498,17 @@ class OutlineController internal constructor(
         showResult(request, outcome.result, note, keepSelection = true, policy = outcome.whitespacePolicy)
     }
 
-    /** Hides or shows changes of [type] in every outline from now on, and rebuilds this one's rows without comparing again. */
+    /**
+     * Hides or shows changes of [type] in every outline and the Changes tree from now on, and rebuilds this one's rows
+     * without comparing again (outline/03 R8, R9, R11; changes-tree/04 R20).
+     */
     fun setHidden(type: ChangeType, hide: Boolean) {
         val settings = SmartDiffSettings.getInstance()
         settings.hiddenChangeTypes = if (hide) settings.hiddenChangeTypes + type else settings.hiddenChangeTypes - type
         rebuild()
+        // This outline is already rebuilt, so its own listener sees no display change; the others and the trees rebuild.
+        displaySnapshot = displaySnapshot(settings)
+        ApplicationManager.getApplication().messageBus.syncPublisher(SmartDiffSettings.CHANGED).settingsChanged()
     }
 
     /** Turns comment-only labels on or off in every outline, and rebuilds this one's rows without comparing again (outline/11 R2, R12). */
