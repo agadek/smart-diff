@@ -21,8 +21,18 @@ dependencies {
     intellijPlatform {
         intellijIdeaUltimate("2025.1.3")
         // IntelliJ IDEA Ultimate bundles the Database Tools and SQL plugin (languages/20-sql-details §1).
-        bundledPlugin("com.intellij.database")
-        testBundledPlugin("com.intellij.database")
+        // Its plugin.xml (IU 2025.1.3, plugins/DatabaseTools/lib/database-plugin.jar) depends on JSON, the Grid
+        // plugin and Images, and on the Grid plugin's content module intellij.grid.charts.impl, which needs the
+        // Charts plugin. The test sandbox loads only declared plugins, so without these it is present but disabled.
+        val sqlPluginDependencies = listOf(
+            "com.intellij.database",
+            "com.intellij.modules.json",
+            "intellij.grid.plugin",
+            "com.intellij.platform.images",
+            "intellij.charts",
+        )
+        bundledPlugins(sqlPluginDependencies)
+        testBundledPlugins(sqlPluginDependencies)
         testFramework(TestFrameworkType.Platform)
     }
 
@@ -39,7 +49,7 @@ kotlin {
 
 tasks.test {
     // The fixtures live in the root's test data, so a change to them reruns these tests.
-    inputs.dir(rootProject.file("src/test/testData/sql")).withPropertyName("sqlTestData").optional()
+    inputs.files(rootProject.fileTree("src/test/testData/sql")).withPropertyName("sqlTestData")
     systemProperty("smartdiff.updateGolden", providers.gradleProperty("smartdiff.updateGolden").getOrElse("false"))
     systemProperty(
         "smartdiff.validation.sql.corpus",

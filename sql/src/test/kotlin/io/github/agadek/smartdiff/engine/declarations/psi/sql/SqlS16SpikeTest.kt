@@ -196,9 +196,9 @@ class SqlS16SpikeTest : BasePlatformTestCase() {
             val method = element.javaClass.methods.firstOrNull { it.name == getter && it.parameterCount == 0 } ?: continue
             val value = try { method.invoke(element) } catch (t: Throwable) { "threw ${t.javaClass.simpleName}" }
             val shown = when (value) {
-                is PsiElement -> "${value.javaClass.simpleName}(\"${value.text.lineSequence().first().take(40)}\" ${value.textRange})"
-                is Array<*> -> value.joinToString(prefix = "[", postfix = "]") { (it as? PsiElement)?.let { e -> "${e.javaClass.simpleName}(\"${e.text.take(30)}\")" } ?: it.toString() }
-                is Collection<*> -> value.joinToString(prefix = "[", postfix = "]") { (it as? PsiElement)?.let { e -> "${e.javaClass.simpleName}(\"${e.text.take(30)}\")" } ?: it.toString() }
+                is PsiElement -> "${value.javaClass.simpleName}(\"${(value.text ?: "<null text>").lineSequence().first().take(40)}\" ${value.textRange})"
+                is Array<*> -> value.joinToString(prefix = "[", postfix = "]") { (it as? PsiElement)?.let { e -> "${e.javaClass.simpleName}(\"${(e.text ?: "<null text>").take(30)}\")" } ?: it.toString() }
+                is Collection<*> -> value.joinToString(prefix = "[", postfix = "]") { (it as? PsiElement)?.let { e -> "${e.javaClass.simpleName}(\"${(e.text ?: "<null text>").take(30)}\")" } ?: it.toString() }
                 else -> value?.toString()?.take(80)
             }
             println("S16 [$label]   $getter -> $shown")
