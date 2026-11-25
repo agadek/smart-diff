@@ -1,0 +1,20 @@
+case: move-in-file-1
+language: SQL
+corpus: sql
+category: move-in-file
+split: tuning
+expected:
+  relationships:
+    - kinds: [MOVE]
+      old: { path: "", kind: FUNCTION, name: "order_count", signature: "INTEGER" }
+      new: { path: "", kind: FUNCTION, name: "order_count", signature: "INTEGER" }
+  changes:
+    - subject: { path: "", kind: FUNCTION, name: "order_count", signature: "INTEGER" }
+      presence: MATCHED
+      content: UNCHANGED
+      moved: true
+    - subject: { path: "", kind: FUNCTION, name: "order_total", signature: "INTEGER" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "Two functions swap places; the second one is the one that moved."

@@ -57,6 +57,9 @@ dependencies {
         pluginModule(runtimeOnly(project(":css")))
         // The PHP provider is built the same way in :php (languages/19-php-details §2).
         pluginModule(runtimeOnly(project(":php")))
+        // The SQL provider is built the same way in :sql, on the Database Tools and SQL plugin bundled in IntelliJ IDEA
+        // Ultimate (languages/20-sql-details §2).
+        pluginModule(runtimeOnly(project(":sql")))
         // S9 spike and structure-view fallback tests: bundled with IntelliJ IDEA, test-only (languages/06); JSON and
         // Markdown are already on the classpath above.
         testBundledPlugin("com.intellij.properties")
@@ -74,8 +77,8 @@ dependencies {
     testImplementation("org.yaml:snakeyaml:2.3")
 }
 
-// languages/16-javascript-typescript-details §3, languages/17-go-details §3 and languages/19-php-details §3: the
-// verifier's ignored problems for the requested families.
+// languages/16-javascript-typescript-details §3, languages/17-go-details §3, languages/19-php-details §3 and
+// languages/20-sql-details §3: the verifier's ignored problems for the requested families.
 val verifierIgnoredProblems by tasks.registering(VerifierIgnoredProblems::class) {
     val families = verifierFamilies(providers.gradleProperty("smartdiff.verifier.ides").orNull)
     sources.from(verifierIgnoredProblemFiles(families).map { file("gradle/verifier/$it") })
@@ -168,6 +171,14 @@ intellijPlatform {
                     channels = listOf(ProductRelease.Channel.RELEASE)
                 }
             }
+            if ("datagrip" in verifierIdes) {
+                // languages/20-sql-details §3: DataGrip bundles the Database Tools and SQL plugin.
+                create(IntelliJPlatformType.DataGrip, "2025.1.3")
+                latest {
+                    types = listOf(IntelliJPlatformType.DataGrip)
+                    channels = listOf(ProductRelease.Channel.RELEASE)
+                }
+            }
             if ("eap" in verifierIdes) {
                 // platform/01 R1, R2: the newest IntelliJ IDEA early-access build, or the newest release when no
                 // early-access build is newer. A release is listed by version (2026.3.1), an EAP build by build
@@ -190,8 +201,8 @@ intellijPlatform {
 
 /** The verifier IDE families of -Psmartdiff.verifier.ides; `eap` is accepted but never in the default set (platform/01 R1, R4). */
 fun verifierFamilies(value: String?): Set<String> {
-    val known = setOf("idea", "pycharm", "rustrover", "webstorm", "goland", "phpstorm", "eap")
-    if (value == null) return setOf("idea", "pycharm", "rustrover", "webstorm", "goland", "phpstorm")
+    val known = setOf("idea", "pycharm", "rustrover", "webstorm", "goland", "phpstorm", "datagrip", "eap")
+    if (value == null) return setOf("idea", "pycharm", "rustrover", "webstorm", "goland", "phpstorm", "datagrip")
     return value.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toSet().also { families ->
         val unknown = families - known
         if (unknown.isNotEmpty()) {
@@ -202,15 +213,15 @@ fun verifierFamilies(value: String?): Set<String> {
 
 /**
  * The ignored-problems files under gradle/verifier for the requested verifier [families]: `idea` ignores the unresolved
- * JavaScript, Go, CSS and PHP plugin PSI, `webstorm` and `phpstorm` the unresolved Java plugin PSI
+ * JavaScript, Go, CSS, PHP and SQL plugin PSI, `webstorm`, `phpstorm` and `datagrip` the unresolved Java plugin PSI
  * (languages/16-javascript-typescript-details §3, languages/17-go-details §3, languages/18-css-details §3,
- * languages/19-php-details §3).
+ * languages/19-php-details §3, languages/20-sql-details §3).
  * CI runs one family per invocation, so each family gets only its own file; a run over several families gets them all.
  */
 fun verifierIgnoredProblemFiles(families: Set<String>): List<String> = buildList {
     if ("idea" in families) add("ignored-problems-idea.txt")
-    // PhpStorm, like WebStorm, has no Java plugin (languages/19-php-details §3).
-    if ("webstorm" in families || "phpstorm" in families) add("ignored-problems-webstorm.txt")
+    // PhpStorm and DataGrip, like WebStorm, have no Java plugin (languages/19-php-details §3, languages/20-sql-details §3).
+    if ("webstorm" in families || "phpstorm" in families || "datagrip" in families) add("ignored-problems-webstorm.txt")
 }
 
 /** Joins the requested families' ignored-problems files into the one file the verifier takes. */
@@ -254,10 +265,11 @@ val verifierFamiliesTest by tasks.registering {
     doLast {
         check(verifierFamilies("eap") == setOf("eap")) { "eap is an accepted family" }
         check("eap" !in verifierFamilies(null)) { "eap is not in the default set" }
-        check(verifierFamilies(null) == setOf("idea", "pycharm", "rustrover", "webstorm", "goland", "phpstorm")) { "the default set adds webstorm, goland and phpstorm" }
+        check(verifierFamilies(null) == setOf("idea", "pycharm", "rustrover", "webstorm", "goland", "phpstorm", "datagrip")) { "the default set adds webstorm, goland, phpstorm and datagrip" }
         check(verifierFamilies("webstorm") == setOf("webstorm")) { "webstorm is an accepted family" }
         check(verifierFamilies("goland") == setOf("goland")) { "goland is an accepted family" }
         check(verifierFamilies("phpstorm") == setOf("phpstorm")) { "phpstorm is an accepted family" }
+        check(verifierFamilies("datagrip") == setOf("datagrip")) { "datagrip is an accepted family" }
         check(runCatching { verifierFamilies("idea,nope") }.isFailure) { "an unknown family still fails" }
         check(branchOf("IU-2026.3.1") == 263 && branchOf("IU-271.1234.5") == 271 && branchOf("IC-2025.1") == 251) { "branches compare" }
         check(earlyAccessOrRelease("IU-271.1234.5", "IU-2026.3.1") == "IU-271.1234.5") { "a newer EAP build is verified" }
@@ -267,7 +279,8 @@ val verifierFamiliesTest by tasks.registering {
         check(verifierIgnoredProblemFiles(setOf("idea")) == listOf("ignored-problems-idea.txt")) { "idea ignores the JavaScript, Go, CSS and PHP PSI" }
         check(verifierIgnoredProblemFiles(setOf("webstorm")) == listOf("ignored-problems-webstorm.txt")) { "webstorm ignores the Java PSI" }
         check(verifierIgnoredProblemFiles(setOf("phpstorm")) == listOf("ignored-problems-webstorm.txt")) { "phpstorm ignores the Java PSI as webstorm does" }
-        check(verifierIgnoredProblemFiles(setOf("webstorm", "phpstorm")) == listOf("ignored-problems-webstorm.txt")) { "the Java file is passed once" }
+        check(verifierIgnoredProblemFiles(setOf("datagrip")) == listOf("ignored-problems-webstorm.txt")) { "datagrip ignores the Java PSI as webstorm does" }
+        check(verifierIgnoredProblemFiles(setOf("webstorm", "phpstorm", "datagrip")) == listOf("ignored-problems-webstorm.txt")) { "the Java file is passed once" }
         check(verifierIgnoredProblemFiles(setOf("pycharm", "rustrover", "goland", "eap")).isEmpty()) { "the other families ignore nothing" }
         val ignored = listOf("idea", "webstorm").associateWith { family ->
             file("gradle/verifier/ignored-problems-$family.txt").readLines().filter { it.isNotBlank() && !it.startsWith("//") }
@@ -280,12 +293,15 @@ val verifierFamiliesTest by tasks.registering {
                 Regex(pattern)
             }
         }
-        check(ignored.getValue("idea").all { "com\\.intellij\\.lang\\.(javascript|ecmascript6|typescript)" in it || "com\\.goide" in it || "com\\.intellij\\.psi\\.css" in it || "com\\.jetbrains\\.php" in it }) { "idea ignores only JavaScript, Go, CSS and PHP plugin packages" }
+        check(ignored.getValue("idea").all { "com\\.intellij\\.lang\\.(javascript|ecmascript6|typescript)" in it || "com\\.goide" in it || "com\\.intellij\\.psi\\.css" in it || "com\\.jetbrains\\.php" in it || "com\\.intellij\\.sql" in it }) { "idea ignores only JavaScript, Go, CSS, PHP and SQL plugin packages" }
         check(ignored.getValue("idea").any { "com\\.goide" in it }) { "idea ignores the Go PSI" }
         // languages/18-css-details §3: the CSS PSI, and nothing of the Sass or Less plugins, which no class uses.
         check(ignored.getValue("idea").any { "com\\.intellij\\.psi\\.css" in it }) { "idea ignores the CSS PSI" }
         check(ignored.values.flatten().none { Regex("plugins\\\\\\.(sass|scss|less)").containsMatchIn(it) }) { "no family ignores the Sass or Less plugins" }
         check(ignored.getValue("idea").any { "com\\.jetbrains\\.php" in it }) { "idea ignores the PHP PSI" }
+        // languages/20-sql-details §3: the SQL PSI, and nothing of the plugin's database model.
+        check(ignored.getValue("idea").any { "com\\.intellij\\.sql" in it }) { "idea ignores the SQL PSI" }
+        check(ignored.values.flatten().none { "com\\.intellij\\.database" in it }) { "no family ignores the database model" }
         check(ignored.getValue("webstorm").none { "javascript" in it || "ecmascript" in it || "typescript" in it }) { "webstorm keeps every JavaScript check" }
         check(ignored.getValue("webstorm").none { it.endsWith("com\\.intellij\\.psi") || ".*" in it || "[" in it }) { "webstorm ignores Java classes by name, not a com.intellij.psi prefix" }
     }

@@ -1,0 +1,20 @@
+case: function-rename-1
+language: SQL
+corpus: sql
+category: method-rename
+split: tuning
+expected:
+  relationships:
+    - kinds: [RENAME]
+      old: { path: "", kind: FUNCTION, name: "order_total", signature: "INTEGER" }
+      new: { path: "", kind: FUNCTION, name: "order_sum", signature: "INTEGER" }
+      usages: []
+  changes:
+    - subject: { path: "", kind: FUNCTION, name: "order_sum", signature: "INTEGER" }
+      presence: MATCHED
+      content: UNCHANGED
+    - subject: { path: "", kind: FUNCTION, name: "order_count", signature: "INTEGER" }
+      presence: MATCHED
+      content: UNCHANGED
+  ambiguous: []
+notes: "A function is renamed with the same body."

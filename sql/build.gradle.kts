@@ -49,17 +49,19 @@ kotlin {
 
 tasks.test {
     // The fixtures live in the root's test data, so a change to them reruns these tests.
-    inputs.files(rootProject.fileTree("src/test/testData/sql")).withPropertyName("sqlTestData")
+    inputs.dir(rootProject.file("src/test/testData/sql")).withPropertyName("sqlTestData")
+    inputs.file(rootProject.file("src/test/testData/relationships-corpus-sql.txt")).withPropertyName("sqlRelationshipCorpus")
     systemProperty("smartdiff.updateGolden", providers.gradleProperty("smartdiff.updateGolden").getOrElse("false"))
     systemProperty(
         "smartdiff.validation.sql.corpus",
         providers.gradleProperty("smartdiff.validation.sql.corpus").getOrElse(""),
     )
     systemProperty("smartdiff.spike.out", rootProject.layout.buildDirectory.dir("sql-spike").get().asFile.absolutePath)
-    // Spike S16 prints "S16 ..." lines; golden fixtures print "GOLDEN ..." lines; validation prints "SQL VALIDATION ...".
+    // Spike S16 prints "S16 ..." lines; golden fixtures print "GOLDEN ..." lines; validation prints "SQL VALIDATION ...";
+    // the benchmark prints "SQL BENCHMARK ...".
     addTestOutputListener(TestOutputListener { _, event ->
         val message = event.message.trimEnd()
-        if (message.startsWith("S16 ") || message.startsWith("GOLDEN ") || message.startsWith("SQL VALIDATION ")) {
+        if (message.startsWith("S16 ") || message.startsWith("GOLDEN ") || message.startsWith("SQL VALIDATION ") || message.startsWith("SQL BENCHMARK ")) {
             logger.lifecycle(message)
         }
     })

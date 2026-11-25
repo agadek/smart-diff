@@ -113,6 +113,11 @@ _Avoid_: block, group, header
 A block of a CSS, SCSS or Less stylesheet named by its selectors, such as `.button { … }`.
 _Avoid_: ruleset, style rule, selector block
 
+### SQL dialect
+
+The variant of SQL that a database accepts, such as PostgreSQL or MySQL, which decides how the SQL parser reads a file.
+_Avoid_: flavour, SQL language, database type
+
 ### Parse error
 
 Source that the language's parser could not read. Code with a parse error that changed is unanalyzed.

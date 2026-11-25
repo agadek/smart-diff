@@ -160,7 +160,8 @@ class SqlS16SpikeTest : BasePlatformTestCase() {
                 if (child is PsiWhiteSpace) continue
                 println("S16 [$label] top class=${child.javaClass.name} type=${child.node.elementType} range=${child.textRange} text=\"${child.text.lineSequence().first().take(60)}\"")
             }
-            if (label.endsWith("-SQL") || label == "postgres-PostgreSQL" || label == "mysql-MySQL") {
+            // Every element with its interfaces and accessors, only with -Dsmartdiff.spike.verbose=true: S16 is answered.
+            if (System.getProperty("smartdiff.spike.verbose").toBoolean() && (label.endsWith("-SQL") || label == "postgres-PostgreSQL" || label == "mysql-MySQL")) {
                 PsiTreeUtil.processElements(file) { element ->
                     if (element !is PsiWhiteSpace && element.firstChild != null) {
                         val cls = element.javaClass
