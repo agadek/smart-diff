@@ -1,0 +1,2 @@
+status: ANALYZED
+index customers_email  added  new 20

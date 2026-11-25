@@ -1,0 +1,2 @@
+status: ANALYZED
+index orders_customer  moved  old 18  new 27

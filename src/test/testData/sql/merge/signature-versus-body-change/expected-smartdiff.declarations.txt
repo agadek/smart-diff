@@ -1,0 +1,2 @@
+left: ANALYZED  right: ANALYZED
+function fee(DECIMAL)  CHANGED_ON_BOTH_SIDES  left: changed, signature changed  right: changed  base 12-16  left 12-16  right 12-16

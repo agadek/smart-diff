@@ -1,0 +1,2 @@
+left: ANALYZED  right: ANALYZED
+view rich_accounts  CHANGED_ON_BOTH_SIDES  left: formatting-only  right: changed  base 9-10  left 9-12  right 9-10

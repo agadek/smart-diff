@@ -1,0 +1,4 @@
+status: PARTIAL
+reason: some source could not be parsed and was not analyzed
+table customers  old 1-6  new 1-6
+  column email  unanalyzed  old 5  new 5
