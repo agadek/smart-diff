@@ -10,7 +10,7 @@ Status: implemented, 2026-11-25
 
 - **R1** SQL support works when the IDE has the Database Tools and SQL plugin, and the plugin loads without it.
 - **R2** Files of the SQL file type, such as `.sql` and `.ddl` files, are a [supported language](../../GLOSSARY.md#supported-language) when the plugin is present.
-- **R3** Both sides of a file are parsed in one [SQL dialect](../../GLOSSARY.md#sql-dialect): the first of PostgreSQL, MySQL, SQLite, Microsoft SQL Server, Oracle and Generic SQL that parses both sides without a [parse error](../../GLOSSARY.md#parse-error), or else the one with the fewest parse errors.
+- **R3** Every text of a comparison, both sides of a diff or the base and both sides of a merge, is parsed in one [SQL dialect](../../GLOSSARY.md#sql-dialect): the first of PostgreSQL, MySQL, SQLite, Microsoft SQL Server, Oracle and Generic SQL that parses all of them without a [parse error](../../GLOSSARY.md#parse-error), or else the one with the fewest parse errors in all of them.
 - **R4** `CREATE` statements of tables, views, materialized views, indexes, sequences, functions, procedures, triggers, types and schemas are [declarations](../../GLOSSARY.md#declaration).
 - **R5** A declaration is named by its object's name as written, with its schema or database qualifier (`billing.invoices`) and without identifier quotes.
 - **R6** The columns of a `CREATE TABLE` statement are declarations and members of their table.
@@ -25,10 +25,10 @@ Status: implemented, 2026-11-25
 
 ## Out of scope
 
-- Choosing the dialect from the project's SQL dialect settings; a diff of a revision has no project file to read them from, and R3 gives both sides one dialect.
+- Choosing the dialect from the project's SQL dialect settings; a diff of a revision has no project file to read them from, and R3 gives every text one dialect.
 - Changes made by `ALTER TABLE`, such as an added column, as changes to the table they alter; `ALTER` statements are content of the file region.
 - Extraction detection, inlining detection and moved code inside routine bodies, and grouping renames with their usages.
-- Statements inside a routine body, a PostgreSQL `CREATE SCHEMA … CREATE TABLE` element, or a MySQL `DELIMITER` block as separate declarations.
+- Statements inside a routine body, such as a MySQL `BEGIN … END` block, or inside a PostgreSQL `CREATE SCHEMA … CREATE TABLE` element, as separate declarations.
 
 ## References
 

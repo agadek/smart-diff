@@ -21,9 +21,10 @@ class SqlDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.INSIGNIFI
 
     override fun supports(languageId: String): Boolean = languageId == "SQL"
 
-    // languages/20-sql R3: one dialect for both sides, chosen by how well each parses them (details §2).
+    // languages/20-sql R3: one dialect for every text of the comparison, the other side of a merge included, chosen by
+    // how well each parses them (details §2).
     override fun dialect(project: Project, texts: List<CharSequence>, fileName: String?): Language? =
-        SqlInterop.dialect(project, texts.take(2), fileName)
+        SqlInterop.dialect(project, texts, fileName)
 
     override fun parse(project: Project, text: CharSequence, fileName: String?, dialect: Language?): PsiFile =
         SqlInterop.parse(project, text, fileName, dialect)

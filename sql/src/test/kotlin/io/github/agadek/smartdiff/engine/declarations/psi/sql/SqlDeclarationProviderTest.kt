@@ -179,12 +179,17 @@ class SqlDeclarationProviderTest : BasePlatformTestCase() {
         assertOffsetsLfAndCrlf(mysql)
     }
 
-    fun `test R3 both sides are parsed in the first dialect that reads them without errors`() {
+    fun `test R3 every text is parsed in the first dialect that reads them all without errors`() {
         // languages/20-sql R3
         assertEquals("PostgreSQL", dialectOf(schema))
         assertEquals("PostgreSQL", dialectOf(postgres))
         assertEquals("MySQL", dialectOf(mysql))
         assertEquals("one dialect for both sides", "MySQL", dialectOf("CREATE TABLE a (x INT);\n", mysql))
+        val base = "CREATE TABLE a (x INT);\n"
+        val left = "CREATE TABLE a (x INT, y INT);\n"
+        val right = "CREATE TABLE a (x INT) ENGINE=InnoDB;\n"
+        assertEquals("base and one side alone", "PostgreSQL", dialectOf(base, left))
+        assertEquals("a merge's base and both sides get one dialect", "MySQL", dialectOf(base, left, right))
         assertEquals(Status.ANALYZED, compare(mysql, mysql.replace("twice", "double_it")).status)
         assertEquals(Status.ANALYZED, compare(postgres, postgres.replace("RETURN a + b", "RETURN b + a")).status)
         assertNotNull("text no dialect reads still gets the dialect with the fewest errors", dialectOf("CREATE TABLE ( ;\n"))
@@ -234,6 +239,22 @@ class SqlDeclarationProviderTest : BasePlatformTestCase() {
         val insert = compare(schema, schema.replace("VALUES (1, 2, 3.5)", "VALUES (1, 2, 4.5)"))
         assertTrue("an INSERT is content of the file region", reported(insert).none { it.subject is Subject.Declaration })
         assertTrue("…which still reports the change", insert.hasReportedChanges)
+        val others = """
+            CREATE EXTENSION IF NOT EXISTS pgcrypto;
+            CREATE DOMAIN positive AS INTEGER CHECK (VALUE > 0);
+            CREATE ROLE reader;
+            GRANT SELECT ON orders TO reader;
+            SET search_path TO shop;
+            SELECT 1;
+            CREATE FUNCTION scratch_work() RETURNS VOID AS ${'$'}${'$'}
+            BEGIN
+                CREATE TEMPORARY TABLE scratch (x INT);
+            END;
+            ${'$'}${'$'} LANGUAGE plpgsql;
+        """.trimIndent() + "\n"
+        assertEquals("PostgreSQL", dialectOf(others))
+        assertEquals("extensions, domains, roles, GRANT, SET, SELECT and a body's CREATE", listOf("scratch_work"), tree(others).all.map { it.name })
+        assertEquals("a MySQL database", emptyList<String>(), tree("CREATE DATABASE shop;\n").all.map { it.name })
     }
 
     fun `test R8 ranges include the comments above and the semicolon or comma after`() {
@@ -244,13 +265,18 @@ class SqlDeclarationProviderTest : BasePlatformTestCase() {
         assertTrue(text.endsWith(");"))
         val customer = orders.children.single { it.name == "customer_id" }
         assertEquals("-- The customer who placed it.\n    customer_id INTEGER NOT NULL REFERENCES customers (id),", slice(schema, customer))
-        assertTrue("the last column has no comma", slice(schema, orders.children.last()).endsWith("DEFAULT 0,"))
+        assertTrue("the last column before a constraint keeps its comma", slice(schema, orders.children.last()).endsWith("DEFAULT 0,"))
         val commented = compare(schema, schema.replace("-- The customer who placed it.", "-- The customer who ordered."))
         assertEquals(listOf("customer_id"), reported(commented).filter { it.children.isEmpty() }.map { name(it) })
         val view = tree(schema).topLevel.single { it.name == "big_orders" }
         assertTrue(slice(schema, view).endsWith("total > 100;"))
         val detached = tree("-- header\n\nCREATE TABLE a (x INT);\n").topLevel.single()
         assertEquals("a comment after a blank line stays in the file region", "CREATE TABLE a (x INT);", slice("-- header\n\nCREATE TABLE a (x INT);\n", detached))
+        val delimited = "DELIMITER //\nCREATE PROCEDURE touch(IN n INT)\nBEGIN\n    UPDATE t SET c = n;\nEND //\nDELIMITER ;\n"
+        assertEquals("MySQL", dialectOf(delimited))
+        val procedure = tree(delimited).topLevel.single()
+        assertEquals(DeclarationKind.PROCEDURE to "touch", procedure.kind to procedure.name)
+        assertTrue("a custom delimiter ends the statement: ${slice(delimited, procedure)}", slice(delimited, procedure).endsWith("END //"))
     }
 
     fun `test R9 signatures are parameter types in order`() {

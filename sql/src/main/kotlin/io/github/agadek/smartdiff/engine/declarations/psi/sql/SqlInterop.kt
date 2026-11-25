@@ -1,6 +1,7 @@
 package io.github.agadek.smartdiff.engine.declarations.psi.sql
 
 import com.intellij.lang.Language
+import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiComment
 import com.intellij.psi.PsiElement
@@ -55,6 +56,7 @@ internal object SqlInterop {
         var best: Language? = null
         var fewest = Int.MAX_VALUE
         for (id in DIALECTS) {
+            ProgressManager.checkCanceled()
             val language = Language.findLanguageByID(id) ?: continue
             val errors = texts.sumOf { errors(parse(project, it, fileName, language)) }
             if (errors == 0) return@link language
@@ -73,7 +75,7 @@ internal object SqlInterop {
             ?: error("PsiFileFactory returned null for SQL")
     }
 
-    /** The parse errors of [file], for [dialect]. */
+    /** The number of parse errors in [file]. */
     private fun errors(file: PsiFile): Int = PsiTreeUtil.findChildrenOfType(file, PsiErrorElement::class.java).size
 
     /**
@@ -122,7 +124,10 @@ internal object SqlInterop {
     /** A table's columns, in source order: those of its element list (§4); constraints and an `AS` query are not read. */
     private fun columns(table: PsiElement): List<PsiElement> = buildList {
         for (child in children(table)) {
-            if (child is SqlColumnDefinition) add(child) else addAll(children(child).filterIsInstance<SqlColumnDefinition>())
+            when {
+                child is SqlColumnDefinition -> add(child)
+                type(child).endsWith("TABLE_ELEMENT_LIST") -> addAll(children(child).filterIsInstance<SqlColumnDefinition>())
+            }
         }
     }
 

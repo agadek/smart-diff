@@ -26,4 +26,4 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-INSERT INTO customers (id, name) VALUES (1, 'Grace');
+INSERT INTO customers (id, name) VALUES (1, 'Northwind');

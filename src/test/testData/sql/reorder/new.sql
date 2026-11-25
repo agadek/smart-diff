@@ -26,4 +26,4 @@ $$ LANGUAGE plpgsql;
 
 CREATE INDEX orders_customer ON orders (customer_id);
 
-INSERT INTO customers (id, name) VALUES (1, 'Ada');
+INSERT INTO customers (id, name) VALUES (1, 'Acme');

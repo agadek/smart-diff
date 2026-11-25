@@ -58,7 +58,7 @@ candidate (languages/20 details §10).
 of two open-source projects, cloned shallowly outside the repository: `sqlc-dev/sqlc` (a code generator with schemas
 and queries in several dialects, head `3ad8b20f`, 2026-10-22) and `pgvector/pgvector` (a PostgreSQL extension, head
 `e8f84dc`, 2026-11-24). The run covered 94 modified `.sql` files from 26 commits: 89 `ANALYZED`, 2 `PARTIAL` and 3 that
-fell back, with no `hidden` or `empty` flag. All 5 flagged files are sqlc test data for GoogleSQL and ClickHouse, dialects
+fell back, with no `hidden` or `empty` flag. All 5 files that were not `ANALYZED` are sqlc test data for GoogleSQL and ClickHouse, dialects
 outside the list of details §2; every pgvector file was `ANALYZED`.
 
 **Plugin Verifier.** `verifyPlugin` passed for every family, run one family at a time on the macOS IDE builds,

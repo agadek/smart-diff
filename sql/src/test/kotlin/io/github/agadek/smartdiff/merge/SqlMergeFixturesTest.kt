@@ -96,6 +96,7 @@ class SqlMergeFixturesTest : BasePlatformTestCase() {
             "comment-versus-change",
             "columns-added-on-both-sides",
             "signature-versus-body-change",
+            "dialect-from-every-side",
         )
     }
 }

@@ -58,7 +58,7 @@ dependencies {
         // The PHP provider is built the same way in :php (languages/19-php-details §2).
         pluginModule(runtimeOnly(project(":php")))
         // The SQL provider is built the same way in :sql, on the Database Tools and SQL plugin bundled in IntelliJ IDEA
-        // Ultimate (languages/20-sql-details §2).
+        // Ultimate (languages/20-sql-details §3).
         pluginModule(runtimeOnly(project(":sql")))
         // S9 spike and structure-view fallback tests: bundled with IntelliJ IDEA, test-only (languages/06); JSON and
         // Markdown are already on the classpath above.
@@ -276,7 +276,7 @@ val verifierFamiliesTest by tasks.registering {
         check(earlyAccessOrRelease("IU-263.100.1", "IU-2026.3.1") == "IU-2026.3.1") { "an EAP build on the release's branch is not newer" }
         check(earlyAccessOrRelease(null, "IU-2026.3.1") == "IU-2026.3.1") { "no EAP build verifies the release" }
         // languages/16-javascript-typescript-details §3: each family gets only its own ignored problems.
-        check(verifierIgnoredProblemFiles(setOf("idea")) == listOf("ignored-problems-idea.txt")) { "idea ignores the JavaScript, Go, CSS and PHP PSI" }
+        check(verifierIgnoredProblemFiles(setOf("idea")) == listOf("ignored-problems-idea.txt")) { "idea ignores the JavaScript, Go, CSS, PHP and SQL PSI" }
         check(verifierIgnoredProblemFiles(setOf("webstorm")) == listOf("ignored-problems-webstorm.txt")) { "webstorm ignores the Java PSI" }
         check(verifierIgnoredProblemFiles(setOf("phpstorm")) == listOf("ignored-problems-webstorm.txt")) { "phpstorm ignores the Java PSI as webstorm does" }
         check(verifierIgnoredProblemFiles(setOf("datagrip")) == listOf("ignored-problems-webstorm.txt")) { "datagrip ignores the Java PSI as webstorm does" }

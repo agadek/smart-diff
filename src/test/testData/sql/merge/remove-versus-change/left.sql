@@ -14,4 +14,3 @@ BEGIN
     RETURN amount * 0.01;
 END;
 $$ LANGUAGE plpgsql;
-

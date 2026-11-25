@@ -15,7 +15,7 @@ repositories {
 dependencies {
     // Compile against the root plugin's engine API and PSI base; the root packages this module as
     // pluginModule(runtimeOnly(project(":sql"))) so compileOnly avoids a root-compile <-> :sql-jar task cycle
-    // while the packaged plugin still contains these classes once (languages/20-sql-details §2).
+    // while the packaged plugin still contains these classes once (languages/20-sql-details §3).
     compileOnly(project(":"))
 
     intellijPlatform {
