@@ -2,21 +2,27 @@
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-25
+
 ### Added
 
-- JavaScript and TypeScript in the structural outline, JSX and TSX included, in IDEs with the JavaScript plugin (WebStorm, IntelliJ IDEA Ultimate and the other paid IDEs): functions, classes and their members, variables, interfaces, type aliases, enums, namespaces and `declare` modules, with TypeScript signatures by parameter type and JavaScript ones by parameter name. Whitespace is formatting-only except where a line break can end a statement without a semicolon, after `return`, `throw`, `break`, `continue` and `yield`, and in JSX text.
-- CSS, SCSS and Less in the structural outline, in IDEs with the CSS plugin (WebStorm, IntelliJ IDEA Ultimate and the other paid IDEs): rule sets named by their selectors, at-rules such as `@media`, `@supports`, `@layer`, `@container` and `@keyframes` as containers, nested rule sets, custom properties, SCSS and Less variables, SCSS mixins and functions and Less mixins, with comments above a declaration as part of it. Whitespace is formatting-only except a descendant combinator's and the spaces around a `+` or `-` operator; a renamed selector is a rename candidate, and a Less rule set turned into a mixin a kind change.
-- Go in the structural outline (with the Go plugin, bundled in GoLand): functions, methods shown as `Type.Name`, structs and their fields, interfaces and their methods, type aliases, defined types, constants and variables, with comments above a declaration as part of it. Extraction, inlining, rename candidates, kind changes, moved code, merges and the review trees work for Go as for the other languages.
-- PHP in the structural outline (with the PHP plugin, bundled in PhpStorm): namespaces, classes, interfaces, traits, enums and their cases, functions, methods, properties and constants, with PHPDoc comments and attributes as part of their declaration and signatures by parameter type and name. Whitespace is formatting-only except inside strings, heredocs and nowdocs. Extraction, inlining, rename candidates, kind changes, moved code, merges and the review trees work for PHP as for the other languages.
-- SQL in the structural outline (with the Database Tools and SQL plugin, bundled in DataGrip, IntelliJ IDEA and the other paid IDEs): tables and their columns, views and materialized views, indexes, sequences, functions and procedures with signatures by parameter type, triggers, types and schemas, named with their schema and without identifier quotes, with comments above a declaration as part of it. Each file is parsed in the first of the PostgreSQL, MySQL, SQLite, SQL Server, Oracle and Generic SQL dialects that reads both sides without errors. Whitespace is formatting-only except inside strings, quoted identifiers and dollar-quoted bodies; rename candidates, kind changes between a table and a view, moves, merges and the review trees work for SQL as for the other languages.
-- Moved code inside declarations: statements moved within a method or between methods of the same file are listed in the structural outline as `moved code lines A–B → C–D` under their new place, with `from <method>` and `code moved to <method>` notes, moved-code markers in both editors, the edits inside the moved code highlighted, and a `Moved code` entry in the refactorings view. Java, Kotlin, Scala 2, Scala 3 and Python; on by default, with a setting to turn it off.
-- C#, C and C++ files get a structural outline through bundled Tree-sitter grammars when the IDE has no language support for them, as Swift files already do: namespaces, types, members, functions, macros and `typedef`s, with C++ methods defined outside their class named `Type::name`, and a line break that ends or continues a preprocessor directive treated as a change.
-- Merge fixtures, relationship benchmark cases and a validation on real commits for Swift, C#, C and C++ in the Tree-sitter engine: renames, kind changes, moves, extraction and inlining are found with no wrong pair.
-- A validation of the changed-token highlights against Difftastic and GumTree on the release corpus (`./gradlew fineGrainedBaselines`, run by hand with both tools installed): no edit was found outside the highlighted tokens in Java, Kotlin, Scala 2, Scala 3 or Python.
+- JavaScript and TypeScript, JSX and TSX included, in the structural outline (with the JavaScript plugin, bundled in WebStorm, IntelliJ IDEA Ultimate and the other paid IDEs): functions, classes and their members, variables, interfaces, type aliases, enums, namespaces and `declare` modules. A line break that can end a statement, such as after `return`, counts as a change.
+- CSS, SCSS and Less in the structural outline (with the CSS plugin, bundled in WebStorm, IntelliJ IDEA Ultimate and the other paid IDEs): rule sets named by their selectors, at-rules such as `@media` and `@keyframes`, nested rule sets, custom properties, SCSS and Less variables, mixins and functions. A renamed selector is a rename candidate.
+- Go in the structural outline (with the Go plugin, bundled in GoLand): functions, methods shown as `Type.Name`, structs and their fields, interfaces, type aliases, defined types, constants and variables.
+- PHP in the structural outline (with the PHP plugin, bundled in PhpStorm): namespaces, classes, interfaces, traits, enums and their cases, functions, methods, properties and constants, with PHPDoc comments and attributes as part of their declaration.
+- SQL in the structural outline (with the Database Tools and SQL plugin, bundled in DataGrip, IntelliJ IDEA and the other paid IDEs): tables and their columns, views, indexes, sequences, functions and procedures, triggers, types and schemas. Each file is read in the first of the PostgreSQL, MySQL, SQLite, SQL Server, Oracle and Generic SQL dialects that parses both sides.
+- Extraction, inlining, rename candidates, kind changes, moves, merges and the review trees work for the new languages as for the others.
+- C#, C and C++ files get a structural outline through bundled Tree-sitter grammars when the IDE has no language support for them, as Swift files already do: namespaces, types, members, functions, macros and `typedef`s, with C++ methods defined outside their class named `Type::name`.
+- Moved code inside declarations: statements moved within a method or between methods of a file are listed as `moved code lines A–B → C–D` under their new place, with moved-code markers in both editors, the edits inside the moved code highlighted, and a `Moved code` entry in the refactorings view. Java, Kotlin, Scala 2, Scala 3 and Python; on by default, with a setting to turn it off.
 
 ### Changed
 
-- The structural outline and the Changes tree share one change type filter: hiding a type in either "Hide Change Types" menu hides it in both, and the Settings page has one "Hide from the outline and the Changes tree" group. A tree filter saved by 0.4.x carries over when the outline's filter hides nothing.
+- The structural outline and the Changes tree share one change type filter: hiding a type in either "Hide Change Types" menu hides it in both, and the Settings page has one "Hide from the outline and the Changes tree" group. A Changes tree filter saved by 0.4.x carries over when the outline's filter hides nothing.
+- More renames and inlinings are found: a short field, property or constant with an initializer that is otherwise unchanged is paired as a rename candidate, and an inlined helper is linked even when only a few of its tokens are kept.
+
+### Fixed
+
+- With the caret on unchanged code inside a changed class, such as a field or an unchanged method of a class whose header was reformatted, the outline and the Changes tree no longer select and frame the whole class.
 
 ## [0.4.0] - 2026-11-19
 
@@ -108,7 +114,8 @@
 - Scala 2 and Scala 3 support, when the Scala plugin is installed: classes, traits, objects, enums, methods, values, type aliases, givens and extension methods, with Scala 3 indentation changes never shown as formatting-only.
 - Unsupported, malformed or oversized files fall back to the native diff with the reason shown.
 
-[Unreleased]: https://github.com/agadek/smart-diff/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/agadek/smart-diff/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/agadek/smart-diff/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/agadek/smart-diff/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/agadek/smart-diff/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/agadek/smart-diff/compare/v0.1.1...v0.2.0
