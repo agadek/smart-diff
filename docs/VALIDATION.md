@@ -37,6 +37,57 @@ The Tree-sitter languages have their own run, with the same list format and the 
 
 Its report is written to `build/reports/smartdiff-treesitter-validation/`.
 
+## 2026-11-25: 0.5.0 release validation
+
+The release checks of [RELEASING.md](RELEASING.md) step 3 and 4 on `chore/release-0.5.0`, cut from main at `120258e` (PR #228). Matching and classification changed since 0.4.0 (moves inside declarations, relationship recall, the new languages), so none of the gates was skipped.
+
+### Versions and corpus
+
+- Engine: `smartdiff.declarations` **26**; Tree-sitter engine `smartdiff.treesitter` **2** (tree-sitter v0.25.3; swift 0.7.4; c-sharp v0.23.1; c v0.23.2; cpp v0.23.4). Reference pass: **2**.
+- IDE builds checked by Plugin Verifier: `IC-251.26927.53`, `IU-263.7307.353`, `PY-251.26927.74`, `PY-263.7307.351`, `RR-251.25410.170`, `RR-263.7307.349`, `WS-251.26927.40`, `WS-263.7307.348`, `GO-251.26927.50`, `GO-263.7307.354`, `PS-251.26927.60`, `PS-263.7307.352`, `DB-251.26094.87`, `DB-263.7307.336`. Scala plugin **2025.1.32** on 2025.1, Python plugin `251.26927.70`. The latest [early-access verifier run](https://github.com/agadek/smart-diff/actions/workflows/eap-verifier.yml) is **green** (2026-11-23, scheduled).
+- Full benchmark corpus revision: **`60f29d157c12`** (after the label fix below). The two-sided and merge corpora use the [0.4.0 lists](#2026-11-19-040-release-validation) with every clone's HEAD pinned to the same commits (okhttp `2b6399483639`, guava `b157643c41f9`, commons-lang `b9b30efb01e8`, Exposed `09f814c61c22`, moshi `889013ec2edb`, spring-petclinic `500158f73241`, cats `e28985fe2a0d`, zio `df4c5b29ddaa`, scala3 `3e003afbf385`).
+
+### Benchmark
+
+`RelationshipBenchmarkTest` on `relationships-corpus-full.txt` with `no-new-wrong-pairs` against the checked-in baseline: **623 cases**, precision **1.000**, recall **0.966**, 345 reported pairs of 357 labelled, wrong share 0.000, **0 forced pairs**; the gate **passes**. Held-out precision 1.000 and recall 0.924, tuning precision and recall 1.000. Usages 78 reported, 78 matched, 0 wrong. Reference evidence: `GROUPED=26`, `NOT_GROUPED=591`, `NONE=6`, usage median 0 ms / p95 5 ms / slowest 80 ms of the 1000 ms budget.
+
+| | 0.4.0 | 0.5.0 |
+| --- | --- | --- |
+| Cases | 583 | 623 |
+| Precision | 1.000 | 1.000 |
+| Recall | 0.943 (312 of 331) | 0.966 (345 of 357) |
+| Wrong / forced pairs | 0 / 0 | 0 / 0 |
+
+The 40 new cases are the `code-move` cases of [relationships/08](specs/relationships/08-moves-inside-declarations.md); the recall gain is the [2026-11-23 relationship recall](#2026-11-23-relationship-recall) work. The language subprojects' benchmarks (Go, PHP, SQL and the Tree-sitter languages) run in `check` and passed with it.
+
+**Label fix.** The first run reported one wrong pair, a `CODE_MOVE` inside scala3 `CheckCaptures.testAdapted` (commit `0b4d1a2`, held-out), and failed the gate. Checked against the commit: the `if debugSuccesses then tree match …` block, 45 of 45 adjacent token pairs the same, moves from the end of `testAdapted` into its new local `tryType`, so the move is right. The case was labelled before code moves existed and listed no relationship; its label now lists the code move. No engine change was made, and the rerun above has no wrong pair.
+
+### Two-sided corpus
+
+`CorpusValidationTest` with every clone's HEAD pinned:
+
+- Java and Kotlin list: **5114 files** from 234 commits with a modified file; 5109 `ANALYZED`, 1 `TOO_LARGE` and 4 `UNSUPPORTED`, no `hidden` or `empty` flag. 139 flagged: 3 extraction, 3 extraction-near-miss, 99 noisy, 7 rename, 23 rename-candidate, 1 same-name, 1 slow (the same generated HTML file as 0.4.0, 1748 ms, under the 5000 ms limit), 5 status and 1 uncertain. The harness now also selects commits touching `.go`, `.css`, `.scss`, `.less`, `.php` and `.sql` files, so the last-40 window of each clone moved slightly (0.4.0: 5128 files, 136 flagged). The 4 new `status` files are spring-petclinic `schema.sql` files, `UNSUPPORTED` because the root test IDE has no SQL plugin (SQL is validated in `:sql:test`); the native diff is shown for them. The Java and Kotlin flags are the reviewed kinds and files of 0.4.0 (guava `AbstractBiMapTest`, the spring-petclinic test renames, the Exposed and commons-lang extractions); no new wrong link or hidden change was found.
+- Scala list: **509 files** from 159 commits; 502 `ANALYZED`, 1 `PARTIAL` (the known scala3 `LazyListIterable.scala`) and 6 `UNSUPPORTED` zio website `.css` files, for the same reason as the `.sql` files. 39 flagged (0.4.0: 33 of 507): 4 extraction, 3 extraction-near-miss, 14 noisy, 13 rename, 7 rename-candidate, 2 same-name and 7 status; the 6 extra are the `.css` status rows. No `hidden` or `empty` flag and no new wrong link.
+
+### Merge validation
+
+`CorpusValidationTest` in merge mode on the 2026-11-02 list with the same pinned HEADs: **275 files from 121 merge commits**, 2 files missing from a parent or the base, no skipped merge commit. Flags: 47 `both-sides-clean`, 12 `conflict-one-side`, 6 `status`; coverage Java 50, Kotlin 67, Scala 2 117, Scala 3 41, all as in 0.4.0. There is **no `join-mismatch`** and no `hidden` flag; the report says `not ready` only because the flagged files require review, as before. Median merge comparison 35 ms against 28 ms for one base-side comparison, within the twice-the-side limit.
+
+### Limits
+
+`LimitsBenchmarkTest` on the six large files of 0.4.0 with the reference pass on: every comparison `ANALYZED`, or `PARTIAL` for the two Scala files' changed variants as before; median 62–258 ms per file and variant, slowest **258 ms** (0.4.0: 221 ms) against the 5000 ms analysis limit; the reference pass is 0–5 ms and never times out. R7 holds.
+
+### Build and Plugin Verifier
+
+- `./gradlew clean buildPlugin check` **passed**, including the language subprojects' tests and benchmarks; `build/distributions/smart-diff-0.5.0.zip`.
+- `./gradlew verifyPlugin -Psmartdiff.verifier.ides=<family>` **passed** for each of `idea`, `pycharm`, `rustrover`, `webstorm`, `goland`, `phpstorm` and `datagrip`, one family at a time as CI and the release workflow run it: all 14 IDE builds above `Compatible`, with no internal or deprecated API usage. Experimental API usages: IC/IU 50/52, PyCharm 25/51, RustRover 49/51, WebStorm 49/51, GoLand 49/51, PhpStorm 12/14, DataGrip 50/50; all are uses listed in [PLATFORM-API.md](PLATFORM-API.md).
+- `./gradlew checkPlatformApiInventory` **passed** after each family, with no inventory change.
+- `./gradlew verifyPluginProjectConfiguration verifyPluginStructure` **passed**.
+
+### Manual checks
+
+The physical checks on **IC 2025.1.3** and **IU 2026.3** — the 0.4.0 rows plus one code move, the shared change type filter and the caret-follow fix of #227, and one file each in JavaScript or TypeScript, Go, CSS, PHP, SQL, C# and C++ in their IDEs — are **pending, maintainer**. No manual result is claimed here.
+
 ## 2026-11-25: SQL provider, fixtures, benchmark cases and corpus validation
 
 [SQL](specs/languages/20-sql.md) R1 to R14 are implemented in the `sql/` subproject, built on IntelliJ IDEA Ultimate
