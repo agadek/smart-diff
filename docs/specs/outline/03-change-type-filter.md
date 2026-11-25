@@ -1,6 +1,6 @@
 # Change type filter
 
-Status: implemented, 2026-10-22
+Status: implemented, 2026-10-22; shared with the Changes tree (R11), implemented 2026-11-25
 
 **Description:** The [change type filter](../../GLOSSARY.md#change-type-filter) in the outline toolbar hides chosen [change types](../../GLOSSARY.md#change-type) from the [structural outline](../../GLOSSARY.md#structural-outline).
 
@@ -18,6 +18,7 @@ Status: implemented, 2026-10-22
 - **R8** The outline's filter is remembered and applies to every outline.
 - **R9** Changing the outline's filter updates the outline without comparing the file again.
 - **R10** While "Mark comment-only changes" is on, the filter can also hide [comment-only](../../GLOSSARY.md#comment-only) changes.
+- **R11** The outline's filter is also the [Changes tree](../../GLOSSARY.md#changes-tree)'s filter, so hiding a change type in either place hides it in both.
 
 ## References
 

@@ -379,6 +379,24 @@ class OutlineIntegrationTest : BasePlatformTestCase() {
         assertFalse("closing the diff releases the hold", sync.isDuringSyncScroll)
     }
 
+    fun `test hiding a change type in the outline tells the Changes trees and the other outlines`() {
+        // changes-tree/04-hide-and-filter R20; outline/03-change-type-filter R11
+        val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
+        val other = open(history(KOTLIN_OLD, KOTLIN_NEW, "Greeter.kt")).awaitResult()
+        var notified = 0
+        ApplicationManager.getApplication().messageBus.connect(testRootDisposable)
+            .subscribe(SmartDiffSettings.CHANGED, SmartDiffSettings.Listener { notified++ })
+        val treeRevision = settings.treeRevision
+
+        outline.setHidden(ChangeType.ADDED, true)
+        PlatformTestUtil.dispatchAllEventsInIdeEventQueue()
+
+        assertEquals("one settings change is published", 1, notified)
+        assertTrue("the Changes tree rebuilds for the shared filter", settings.treeRevision > treeRevision)
+        assertTrue("the other open outline hides added changes too", rows(other).none { it.endsWith("added") })
+        outline.setHidden(ChangeType.ADDED, false)
+    }
+
     fun `test hiding a change type rebuilds the outline and is remembered`() {
         val outline = open(history(JAVA_OLD, JAVA_NEW, "Greeter.java")).awaitResult()
 

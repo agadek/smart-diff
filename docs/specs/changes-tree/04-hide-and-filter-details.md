@@ -1,6 +1,6 @@
 # Hide and filter in the Changes tree: details
 
-Status: implemented, 2026-11-06
+Status: implemented, 2026-11-06; one filter shared with the outline (R19 to R21), implemented 2026-11-25
 
 Feature: [Hide and filter in the Changes tree](04-hide-and-filter.md)
 
@@ -12,7 +12,7 @@ Feature: [Hide and filter in the Changes tree](04-hide-and-filter.md)
 - `SummaryChangeNode` renders the platform's file row and, when the setting is on, appends the grey summary or reason. `DeclarationNode` renders one outline row and already exposes its label through `getTextPresentation` for speed search.
 - `ChangesSummaryService` keeps the cache of computed `FileSummary` values. `FileSummary` keeps the summary text without a hidden suffix and the unfiltered outline rows, so the tree can filter and recount without asking an engine to compare again.
 - `ChangesTreeFilter` is the pure pass over those rows. It returns `FilteredRows(items, hiddenCount)` and appends the hidden suffix to the summary.
-- `SmartDiffSettings` holds the two toggles and the tree's own hidden types. `SmartDiffConfigurable` shows the same settings on the Settings page.
+- `SmartDiffSettings` holds the two toggles and the change types hidden from both the outline and the tree (R19). `SmartDiffConfigurable` shows the same settings on the Settings page.
 - `smartdiff-vcs.xml` registers the new actions, so an IDE without VCS support does not load them.
 
 ### View Options actions
@@ -60,6 +60,17 @@ The tree reuses the outline's [change types](../outline/03-change-type-filter.md
 
 The result is a `FilteredRows(rows, hiddenCount)` value. `ChangeType` has five entries, so the filter state has at most 32 combinations and no per-file recomputation is needed.
 
+### One filter for the outline and the tree (R19 to R21)
+
+The tree first had its own filter (decision of 2026-11-05, issue #112). The [fewer controls](../../ROADMAP.md#fewer-controls) review found that this gave two "Hide Change Types" menus and two settings groups for the same rules, each to test and to keep in step, so the tree now reads the outline's filter.
+
+- The tree's menu, the outline's menu, the merge outline's menu and the Settings page all read and write `SmartDiffSettings.hiddenChangeTypes`. `ChangesTreeFilter.filter` takes that set. The tree's menu lists `ChangeType.withoutCommentOnly`, since the tree has no comment-only or rewrite-only labels; when the shared set hides them, the tree has no row with only those tags, so nothing extra is hidden there.
+- `hiddenChangeTypes` is in `treeSignature`, so a change moves the tree revision and the listener rebuilds every open tree (R20). It is still not in `analysisSignature`, so the summary cache is kept (R18).
+- `OutlineController.setHidden` and `MergeOutlineController.setHidden` rebuild their own rows, store the new display snapshot so their own listener sees no change, and publish `SmartDiffSettings.CHANGED`. Every other open outline rebuilds through its `settingsChanged`, and every open tree through `ChangesSummarySettingsListener` (R20). The tree's actions already published `CHANGED`.
+- The settings page has one group, "Hide from the outline and the Changes tree", with the comment-only and rewrite-only boxes enabled only while those labels are marked (settings/01 R26).
+
+**Migration (R21).** `SettingsState.hiddenChangesTreeChangeTypes` stays as a field only so a stored value can be read. `SmartDiffSettings.loadState` moves it: when the outline's stored filter is empty and the tree's is not, the tree's value becomes `hiddenChangeTypes`; when both are set, the outline's value wins, because it is the one the outline and the SMART Diff viewer already follow. The field is then cleared, so it is never written again. Taking the union instead would hide changes in the outline that the user never hid there, against product rule P3.
+
 ### Summary line and all hidden
 
 `FileSummary` keeps the summary text that the service computes without a filter, for example `2 changed · 1 added`. The modifier adds the suffix from the filter pass:
@@ -77,15 +88,15 @@ The base summary still counts every change, because it is computed before filter
 | Field | Default | Meaning |
 | --- | --- | --- |
 | `showChangesDeclarations` | `true` | Show the declaration rows under each file; the tree's "Declarations" toggle |
-| `hiddenChangesTreeChangeTypes` | `""` | The hidden types of the tree's filter, stored by `ChangeType` name like `hiddenChangeTypes` |
+| `hiddenChangesTreeChangeTypes` | `""` | The former tree filter; read once to migrate it into `hiddenChangeTypes`, then cleared (R21) |
 
-`showChangesSummary` already exists and keeps its `true` default. `hiddenChangesTreeChangeTypes` is parsed like `hiddenChangeTypes`: unknown names are ignored, and an empty value means nothing is hidden. It is a different field from `hiddenChangeTypes`, so the outline's filter and the tree's filter never change each other. Both filters start empty, which keeps product rule P3.
+`showChangesSummary` already exists and keeps its `true` default. Before R19 the tree's filter was the separate `hiddenChangesTreeChangeTypes` field; it is now the shared `hiddenChangeTypes`, parsed the same way: unknown names are ignored, and an empty value means nothing is hidden. It starts empty, which keeps product rule P3.
 
-The Settings page adds a "Show declarations in the Changes tree" checkbox under the existing summary checkbox, and a separate "Hide from the Changes tree:" group with one checkbox per change type next to "Hide from the outline:". Both the page and the tree actions bind to the same accessors, so changing either place changes the other after the page is applied or the action runs. The existing comment that hidden changes still count in the summary applies to both filters.
+The Settings page adds a "Show declarations in the Changes tree" checkbox under the existing summary checkbox. Its change type checkboxes are the one "Hide from the outline and the Changes tree:" group (R19, settings/01 R26). Both the page and the tree actions bind to the same accessors, so changing either place changes the other after the page is applied or the action runs. The existing comment that hidden changes still count in the summary applies to both filters.
 
 Rebuilds go through `refreshChangesView`, which publishes `ChangesViewModifier.TOPIC`; the modifier runs again and reuses the cached `FileSummary`. The cache is not cleared for the two toggles or the tree's filter. To keep the existing "engine or limit change gives a new summary" behavior without clearing on every Apply:
 
-- `SmartDiffSettings` marks a revision when an analysis-affecting setting changes: the limits and the formatting-only layout, which changes the cached rows. Display-only settings such as the two toggles, the two filters, the outline toggle and the merge settings do not mark it.
+- `SmartDiffSettings` marks a revision when an analysis-affecting setting changes: the limits and the formatting-only layout, which changes the cached rows. Display-only settings such as the two toggles, the shared filter, the outline toggle and the merge settings do not mark it.
 - `EngineDefaults` marks a revision when a language's engine changes.
 - `ChangesSummaryService` records the `AnalysisStamp` made from both revisions and the confidence policy with the cache entries it guards. Both `summaries()` and `settingsChanged()` compare the current stamp with the recorded one and clear the cache when it differs. A request also carries its stamp, so a comparison that finishes after the cache was cleared is not stored under the new stamp.
 - `ChangesSummarySettingsListener` keeps only the last tree and analysis revisions, engine revision and confidence value it saw, to decide whether a change affects the tree; it holds no summaries. On `SmartDiffSettings.CHANGED` it asks each open project's existing service to apply the current stamp, then rebuilds every open project's tree when the tree display/filter revision, an analysis revision, `EngineDefaults.revision` or the confidence policy changed; it skips the rebuild when only the caret-follow setting or another display-only outline or merge setting changed (changes-tree/05 R4, settings/01 R14).
@@ -122,9 +133,12 @@ The tests name the requirement they check, for example `// changes-tree/04-hide-
 | R13 | `ChangesTreeFilterTest` `test the tree summary counts hidden changes and ends with the hidden count`: `· 2 hidden`; the base counts do not change. |
 | R14 | `ChangesTreeFilterTest` `test a file whose changes are all hidden stays with all hidden in its summary and no rows`: the file remains in the tree, has no children, is still includable, and ends with `· all hidden`. |
 | R15 | `ChangesTreeFilterTest` `test speed search text of a declaration row is its label`: `getTextPresentation` equals the outline label for shown rows, and a hidden row is absent. |
-| R16 | `ChangesTreeFilterTest` `test changing the tree filter leaves the outline filter unchanged`; `SmartDiffSettingsTest` `test the two filters are separate settings` |
-| R17 | `SmartDiffSettingsTest` `test the changes tree filter is stored separately and starts empty`; `ChangesTreeFilterTest` `test the changes tree filter is stored separately and starts empty`: the default is empty, unknown names are ignored, and the outline's stored value is untouched. |
+| R16 | Retired; replaced by R19. |
+| R17 | Retired; replaced by R19. |
 | R18 | `ChangesTreeFilterTest` `test changing the filter rebuilds without another comparison`: a counting engine runs once per file, and changing the filter leaves the count unchanged. |
+| R19 | `SmartDiffSettingsTest` `test the outline and the Changes tree share one filter`: the filter starts empty and only `hiddenChangeTypes` is written; `ChangesTreeFilterTest` `test the tree filter is the outline's filter`: the tree's menu writes and reads the outline's setting. |
+| R20 | `ChangesTreeFilterTest` `test the tree filter is the outline's filter`; `OutlineIntegrationTest` `test hiding a change type in the outline tells the Changes trees and the other outlines`: one `CHANGED` event, the tree revision moves and a second open outline drops its added row; `SmartDiffSettingsTest` `test only the changes tree and analysis settings move the tree revision`; `ChangesSummarySettingsListenerTest` `test the change type filter rebuilds the review trees` |
+| R21 | `SmartDiffSettingsTest` `test a stored tree filter moves into the shared filter only when the outline's is empty` |
 
 ### Manual checks
 
@@ -136,10 +150,10 @@ M1 is the View Options placement check and M2 checks the toggles; the rest cover
 | M2 Toggles rebuild at once | Toggle each action and watch the tree change without a comparison progress bar or a recomputed summary. Confirm the other toggle and the filter keep their state (R2, R6). |
 | M3 Declarations off | Turn Declarations off: no file has an expand arrow; double-click and Enter on a summarized file row open its diff as for a file without a summary; selection, checkbox and commit include the file only. Turn it on: children return and the file row keeps its diff behavior (R4; after #111). |
 | M4 Structural Summary off | Turn Structural Summary off: no grey summary after any file, and a file with a reason shows no grey reason either; if Declarations is on, its rows remain (R3). |
-| M5 Settings page mirrors the tree | Open Settings \| Tools \| SMART Diff. Confirm the same two checkboxes and the separate "Hide from the Changes tree" group. Change one place, apply, and confirm the tree and the other place agree (R5, R17). |
+| M5 Settings page mirrors the tree | Open Settings \| Tools \| SMART Diff. Confirm the same two checkboxes and the one "Hide from the outline and the Changes tree" group. Change one place, apply, and confirm the tree, the outline and the page agree (R5, R19). |
 | M6 Filter rules | Hide each type in turn. Confirm hiding changed also hides a signature change; a moved and changed method stays while either type is shown; uncertain, rename candidate and unanalyzed rows never disappear; a hidden container with shown children stays without labels (R7 to R11). |
 | M7 Hidden counts and all hidden | Hide one type with two matching changes: the summary ends `· 2 hidden` and keeps its full counts. Hide every type for a file whose changes are all of those types: it stays in the tree, is still included in the commit, has no rows, and its summary ends `· all hidden` (R13, R14). |
-| M8 Separate filters and persistence | Hide changed in the tree, then open a diff: its outline still shows changed rows. Hide moved in the outline, then reopen the tree: its rows are unchanged. Restart the IDE and confirm both filters and both toggles are remembered separately (R16, R17). |
+| M8 Shared filter and persistence | Hide changed in the tree, then open a diff: its outline hides changed rows too. With the diff and the Local Changes tree both open, show changed again from the outline's menu: the tree's changed rows come back at once. Restart the IDE and confirm the filter and both toggles are remembered (R19, R20). Starting from a profile saved by 0.4.x with only a tree filter set, confirm the outline now hides the same types (R21). |
 | M9 Speed search | Type a shown declaration's name in the tree: the row is found. Hide its type or turn Declarations off: the row is not found (R15). |
 
 Both target IDEs expose the View Options group, so M1 checks the eye menu on each; the toolbar fallback is only for a build where the group is absent or rejects the actions. The filter stays enabled while Declarations are off, so the user can set it before turning the rows on. Turning Declarations back on uses the rebuilt tree, with files and containers collapsed as changes-tree/02 R6 describes.

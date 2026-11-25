@@ -370,7 +370,7 @@ _Avoid_: change category
 
 ### Change type filter
 
-The menu of change types to hide, in the structural outline or in the Changes tree. Each view remembers its own filter.
+The menu of change types to hide, in the structural outline or in the Changes tree. Both views share one remembered filter.
 _Avoid_: hide filter, outline filter
 
 ### Relationship kind filter

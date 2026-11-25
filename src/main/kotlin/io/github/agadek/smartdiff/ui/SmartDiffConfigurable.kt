@@ -120,7 +120,7 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                 row { radioButton("Container tree", OutlineView.CONTAINER_TREE) }
                 row { radioButton("Refactorings", OutlineView.REFACTORINGS) }
             }.bind(settings::outlineView)
-            buttonsGroup("Hide from the outline:") {
+            buttonsGroup("Hide from the outline and the Changes tree:") {
                 for (type in ChangeType.entries) {
                     row {
                         val box = checkBox(type.text).bindSelected(
@@ -134,7 +134,8 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                     }
                 }
                 row {
-                    comment("Hidden changes still count in the file summary. Uncertain and unanalyzed changes are always shown.")
+                    // settings/01 R6, R26: one filter for the outline and the Changes tree.
+                    comment("Hidden changes still count in the file summary. Uncertain and unanalyzed changes are always shown. The Changes tree has no comment-only or rewrite-only labels.")
                 }
             }
             buttonsGroup("Hide from the refactorings view:") {
@@ -150,20 +151,6 @@ class SmartDiffConfigurable : BoundConfigurable("SMART Diff") {
                     comment("Hidden relationships still leave their declarations in Other changes.")
                 }
             }
-            buttonsGroup("Hide from the Changes tree:") {
-                for (type in ChangeType.withoutCommentOnly) {
-                    row {
-                        checkBox(type.text).bindSelected(
-                            { type in settings.hiddenChangesTreeChangeTypes },
-                            { hide -> settings.hiddenChangesTreeChangeTypes = if (hide) settings.hiddenChangesTreeChangeTypes + type else settings.hiddenChangesTreeChangeTypes - type },
-                        )
-                    }
-                }
-                row {
-                    comment("The tree has its own filter, separate from the outline's. Hidden changes still count in its summary.")
-                }
-            }
-
             group("Default Comparison Engine") {
                 val languages = languagesWithEngines(engines)
                 if (languages.isEmpty()) row { comment("No installed comparison engine supports a language of this IDE.") }

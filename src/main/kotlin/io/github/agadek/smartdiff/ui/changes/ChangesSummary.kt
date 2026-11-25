@@ -92,7 +92,7 @@ class ChangesSummaryModifier internal constructor(
         var hasDeclarationRows = false
         for ((node, summary) in nodes.zip(summaries)) {
             if (summary == null) continue
-            val filtered = ChangesTreeFilter.filter(summary.items, settings.hiddenChangesTreeChangeTypes)
+            val filtered = ChangesTreeFilter.filter(summary.items, settings.hiddenChangeTypes)
             val rows = if (showDeclarations) filtered.items else emptyList()
             if (!showSummary && rows.isEmpty()) continue
             val parent = node.parent as? ChangesBrowserNode<*> ?: continue

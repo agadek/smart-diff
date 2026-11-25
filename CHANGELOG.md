@@ -14,6 +14,10 @@
 - Merge fixtures, relationship benchmark cases and a validation on real commits for Swift, C#, C and C++ in the Tree-sitter engine: renames, kind changes, moves, extraction and inlining are found with no wrong pair.
 - A validation of the changed-token highlights against Difftastic and GumTree on the release corpus (`./gradlew fineGrainedBaselines`, run by hand with both tools installed): no edit was found outside the highlighted tokens in Java, Kotlin, Scala 2, Scala 3 or Python.
 
+### Changed
+
+- The structural outline and the Changes tree share one change type filter: hiding a type in either "Hide Change Types" menu hides it in both, and the Settings page has one "Hide from the outline and the Changes tree" group. A tree filter saved by 0.4.x carries over when the outline's filter hides nothing.
+
 ## [0.4.0] - 2026-11-19
 
 ### Added
