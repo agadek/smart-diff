@@ -58,7 +58,10 @@ An optional dependency that an IDE does not bundle and the Marketplace does not 
 
 | Family | Absent dependency | Ignored |
 | --- | --- | --- |
-| `idea` | JavaScript, Go and CSS plugins, in IntelliJ IDEA Community | Unresolved packages and classes under `com.intellij.lang.javascript`, `com.intellij.lang.ecmascript6` and `com.intellij.lang.typescript`, `com.goide` ([languages/17 details §3](specs/languages/17-go-details.md#3-plugin-verifier)) and `com.intellij.psi.css` ([languages/18 details §3](specs/languages/18-css-details.md#3-plugin-verifier)) |
-| `webstorm` | Java plugin, in WebStorm | The Java plugin classes `JavaDeclarationProvider` and `JavaReferenceResolver` use, each by name, and the `com.intellij.lang.java` and `com.intellij.pom.java` packages |
+| `idea` | JavaScript, Go, CSS, PHP and SQL plugins, in IntelliJ IDEA Community | Unresolved packages and classes under `com.intellij.lang.javascript`, `com.intellij.lang.ecmascript6` and `com.intellij.lang.typescript`, `com.goide` ([languages/17 details §3](specs/languages/17-go-details.md#3-plugin-verifier)), `com.intellij.psi.css` ([languages/18 details §3](specs/languages/18-css-details.md#3-plugin-verifier)), `com.jetbrains.php` ([languages/19 details §3](specs/languages/19-php-details.md#3-plugin-verifier)) and `com.intellij.sql` ([languages/20 details §3](specs/languages/20-sql-details.md#3-build-target-and-plugin-verifier)), in `ignored-problems-idea.txt` |
+| `webstorm` | Java plugin, in WebStorm | The Java plugin classes `JavaDeclarationProvider` and `JavaReferenceResolver` use, each by name, and the `com.intellij.lang.java` and `com.intellij.pom.java` packages, in `ignored-problems-webstorm.txt` |
+| `phpstorm` | Java plugin, in PhpStorm | The same Java plugin problems as `webstorm`, from the same `ignored-problems-webstorm.txt` ([languages/19 details §3](specs/languages/19-php-details.md#3-plugin-verifier)) |
+| `datagrip` | Java plugin, in DataGrip | The same Java plugin problems as `webstorm`, from the same `ignored-problems-webstorm.txt` ([languages/20 details §3](specs/languages/20-sql-details.md#3-build-target-and-plugin-verifier)) |
+| `pycharm`, `rustrover`, `goland` | none | Nothing |
 
 Ignored problems are not uses of the API this inventory lists. They stay in each target's report, in `ignored-problems.txt`. A new class in an ignored family fails verification until it is reviewed and added to the file.
