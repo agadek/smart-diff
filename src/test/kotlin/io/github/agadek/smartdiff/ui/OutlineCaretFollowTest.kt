@@ -184,6 +184,96 @@ class OutlineCaretFollowTest : BasePlatformTestCase() {
         assertSame(classRow, outline.panel.selectedItem())
     }
 
+    fun `test an unchanged line of a container with an own change elsewhere keeps the selection`() {
+        // outline/07 R12: the class's own change is on its header line, so the unchanged field does not frame the class.
+        val old = """
+            class Greeter {
+                private final String name = "x";
+
+                String hello() { return "hi"; }
+            }
+        """.trimIndent() + "\n"
+        val new = """
+            class Greeter implements Runnable {
+                private final String name = "x";
+
+                String hello() { return "hello"; }
+                public void run() { }
+            }
+        """.trimIndent() + "\n"
+        val shown = open(history(old, new, "Greeter.java"))
+        val outline = shown.awaitResult()
+        val classRow = allItems((outline.state as OutlineState.Shown).items).single { it.title.startsWith("class Greeter") }
+        assertFalse("the class has a change of its own here", classRow.isContainerOnly)
+        select(outline, "method hello()  changed")
+
+        moveCaret(outline, OutlineController.CaretSide.NEW, new.indexOf("private final") + 2)
+        outline.fireCaretFollow()
+        assertEquals("method hello()  changed", outline.panel.selectedItem()?.label)
+
+        moveCaret(outline, OutlineController.CaretSide.NEW, new.indexOf("implements") + 2)
+        outline.fireCaretFollow()
+        assertSame("the changed header line still selects the class", classRow, outline.panel.selectedItem())
+    }
+
+    fun `test an unchanged line of a reformatted class does not frame the whole class`() {
+        // outline/07 R12: a class whose own change is only formatting, with changed methods, as in the noisy-change demo.
+        val old = """
+            public class OrderService {
+                private final int limit = 10;
+
+                public int total() {
+                    return 1;
+                }
+
+                public int count() {
+                    return 0;
+                }
+            }
+        """.trimIndent() + "\n"
+        val new = """
+            public class OrderService
+            {
+                private final int limit = 10;
+
+                public int total()
+                {
+                    return 2;
+                }
+
+                public int count() {
+                    return 0;
+                }
+            }
+        """.trimIndent() + "\n"
+        val shown = open(history(old, new, "OrderService.java"))
+        val outline = shown.awaitResult()
+        val classRow = allItems((outline.state as OutlineState.Shown).items).single { it.title.startsWith("class OrderService") }
+        assertTrue("the class has a label of its own: ${classRow.label}", classRow.tags.isNotEmpty())
+
+        moveCaret(outline, OutlineController.CaretSide.NEW, new.indexOf("private final") + 2)
+        outline.fireCaretFollow()
+        assertNull("a field of the class selects nothing", outline.panel.selectedItem())
+        assertTrue("nothing is framed", outline.navigator.shown.isEmpty())
+
+        moveCaret(outline, OutlineController.CaretSide.NEW, new.indexOf("\n{") + 1)
+        outline.fireCaretFollow()
+        assertNull("the reformatted brace line of the class selects nothing either", outline.panel.selectedItem())
+        assertTrue("nothing is framed", outline.navigator.shown.isEmpty())
+
+        moveCaret(outline, OutlineController.CaretSide.NEW, new.indexOf("return 0") + 2)
+        outline.fireCaretFollow()
+        assertNull("an unchanged method of the class selects nothing", outline.panel.selectedItem())
+
+        moveCaret(outline, OutlineController.CaretSide.NEW, new.indexOf("return 2") + 2)
+        outline.fireCaretFollow()
+        assertEquals("method total()  changed", outline.panel.selectedItem()?.label)
+
+        moveCaret(outline, OutlineController.CaretSide.NEW, new.indexOf("return 0") + 2)
+        outline.fireCaretFollow()
+        assertEquals("the selection stays on the method", "method total()  changed", outline.panel.selectedItem()?.label)
+    }
+
     fun `test following frames the row without scrolling either editor or moving focus`() {
         // outline/07 R4
         val shown = open(history(SCROLL_OLD, SCROLL_NEW, "LongFile.java"))

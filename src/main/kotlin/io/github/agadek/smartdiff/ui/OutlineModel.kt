@@ -132,6 +132,39 @@ class OutlineItem(
     val isContainerOnly: Boolean
         get() = kind == ItemKind.CHANGE && tags.isEmpty() && children.isNotEmpty()
 
+    /**
+     * Whether following the caret at [offset] on the old side ([old]) or the new side may select this row (outline/07
+     * R11, R12). A row that is not a declaration containing other declarations always may. A container shown only for
+     * its changed children never may. A matched container that did not move, with a change of its own, may only on a
+     * line that its own change touches: a line of one of its changed runs or detail spans, or its first line when it was
+     * renamed (a kind change is a signature change and has runs). A container whose own change has no changed runs or
+     * detail spans, such as a formatting-only one, is never selected by following, not even on its reformatted lines,
+     * so formatting noise never frames the whole container. So a caret on an unchanged line of the container, such
+     * as a field of a class with a reformatted header, does not frame the whole container. A container that was added,
+     * removed or moved, or whose own source was not compared by tokens, may anywhere in its range. Functions are never
+     * treated as containers. [lineOf] maps an offset on that side to its line.
+     */
+    internal fun followsCaretAt(old: Boolean, offset: Int, lineOf: (Int) -> Int): Boolean {
+        if (kind != ItemKind.CHANGE) return true
+        val node = node
+        // A function's nested declarations or code moves, such as a local class, do not make it a container: a caret on
+        // any line of a changed function selects it (R1).
+        if (node?.isCallable == true || (children.isEmpty() && (node == null || node.children.isEmpty()))) return true
+        if (tags.isEmpty()) return false
+        if (node == null || node.presence != Presence.MATCHED || node.moved) return true
+        if (node.content == Content.CHANGED && !node.comparedByTokens) return true
+        val line = lineOf(offset)
+        val range = if (old) oldRange else newRange
+        if (range != null && node.renamedFrom != null && lineOf(range.start) == line) return true
+        return (node.changedRuns + details).any { pair ->
+            val span = (if (old) pair.old else pair.new) ?: return@any false
+            lineOf(span.start) <= line && line <= lineOf(maxOf(span.start, span.end - 1))
+        }
+    }
+
+    private val ChangeNode.isCallable: Boolean
+        get() = (subject as? Subject.Declaration)?.kind in CALLABLE_KINDS
+
     /** The row's text, which is also its accessible name: the title, the labels, the note, the confidence and its mark. */
     val label: String get() {
         val labels = tags.map { it.text } + listOfNotNull(note, confidence?.name?.lowercase()) +
@@ -739,3 +772,9 @@ object OutlineModel {
         return if (first == last) "line $first" else "lines $first-$last"
     }
 }
+
+/** Declarations whose nested declarations are part of their body, so they are never followed as containers (outline/07 R12). */
+private val CALLABLE_KINDS = setOf(
+    DeclarationKind.METHOD, DeclarationKind.FUNCTION, DeclarationKind.CONSTRUCTOR, DeclarationKind.INITIALIZER,
+    DeclarationKind.DESTRUCTOR, DeclarationKind.OPERATOR, DeclarationKind.SUBSCRIPT, DeclarationKind.INDEXER,
+)

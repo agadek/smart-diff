@@ -24,7 +24,10 @@ closing the diff removes them. Only the caret of these two editors is followed; 
    event arrives, so a click that moves the caret before focus settles is followed. Following works while usages are being
    resolved, because the documents have not changed.
 3. It walks the rows the tree shows, depth first in tree order, and keeps every row that is not a group, is not a
-   container shown only for its changed children (a `CHANGE` row with no labels and with children, R11), and whose range
+   container shown only for its changed children (a `CHANGE` row with no labels and with children, R11), is not a
+   container whose own change lies on other lines (`OutlineItem.followsCaretAt`: the caret's line against the lines of
+   the node's `changedRuns` and the row's `details` on that side, plus the first line for a rename; a container with neither, such as a formatting-only one, never matches, R12), and
+   whose range
    on the caret's side contains the offset: `oldRange` for the old side, `newRange` for the new side (R2). A range
    contains the offset when `start <= offset < end`, or `offset == end` for the last character of the document.
 4. Among the matches it picks the one with the shortest range on that side, the innermost declaration (R1). On a tie
@@ -86,6 +89,7 @@ still scrolls.
 | R9 | Plugin Verifier reports no new internal, experimental or deprecated usage |
 | R10 | `OutlineCaretFollowTest` `test a scrolling selection in the outline does not trigger following`, `test a scrolling selection in the outline supersedes a recorded caret move`, `test a caret move in an editor without focus does not change the selection`, `test a caret move is followed after focus moves to the editor` |
 | R11 | `OutlineCaretFollowTest` `test an unchanged line of a container shown only for its changed members keeps the selection`, `test a container with a change of its own is still followed` |
+| R12 | `OutlineCaretFollowTest` `test an unchanged line of a container with an own change elsewhere keeps the selection`, `test an unchanged line of a reformatted class does not frame the whole class` |
 | outline/01 R27 | `OutlineIntegrationTest` `test a rebuild keeps the selected row without scrolling the editors` |
 
 Tests use `BasePlatformTestCase` with a real two-sided diff viewer, as `OutlineIntegrationTest` does, and drive the
