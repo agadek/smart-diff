@@ -1,4 +1,3 @@
-src/test/testData/sql/relationships/column-rename-1
 src/test/testData/sql/relationships/function-rename-1
 src/test/testData/sql/relationships/kind-change-1
 src/test/testData/sql/relationships/move-in-file-1

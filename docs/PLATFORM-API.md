@@ -2,7 +2,7 @@
 
 Every API the plugin uses that Plugin Verifier reports as experimental, internal, deprecated or scheduled for removal, and the PSI of every optional plugin dependency and the Kotlin Analysis API ([platform/01](specs/platform/01-platform-api-stability.md) R6). Each one is used only by its adapter, which the architecture test checks (R7), and `./gradlew checkPlatformApiInventory` fails when a verifier report names a use by a plugin class that no class or member row of this table lists (R8); a package row names an optional plugin's whole PSI for the architecture test and lists no reported use.
 
-Written from the Plugin Verifier reports of IntelliJ IDEA 2025.1 (IC-251.26927.53) and 2026.3 (IU-263.7307.200), PyCharm 2025.1 and 2026.3, and RustRover 2025.1 and 2026.3, on 2026-11-17, GoLand 2025.1 and 2026.3 and PhpStorm 2025.1 and 2026.3 on 2026-11-24, and from the imports of the main, `rust`, `go` and `php` source sets. A public replacement was checked once in 2025.1, the lowest supported build (R9).
+Written from the Plugin Verifier reports of IntelliJ IDEA 2025.1 (IC-251.26927.53) and 2026.3 (IU-263.7307.200), PyCharm 2025.1 and 2026.3, and RustRover 2025.1 and 2026.3, on 2026-11-17, GoLand 2025.1 and 2026.3 and PhpStorm 2025.1 and 2026.3 on 2026-11-24, DataGrip 2025.1 and the latest DataGrip on 2026-11-25, and from the imports of the main, `rust`, `go`, `php` and `sql` source sets. A public replacement was checked once in 2025.1, the lowest supported build (R9).
 
 ## Inventory
 
@@ -32,6 +32,7 @@ The API column names a class, a class and member as `Class#member`, or a package
 | `com.goide..` | non-public plugin PSI | `io.github.agadek.smartdiff.engine.declarations.psi.go..` | `GO_PROVIDER` | Go files get the analysis fallback (R11) | None: the Go plugin is closed source and publishes no stable PSI API |
 | `com.intellij.psi.css..` | non-public plugin PSI | `io.github.agadek.smartdiff.engine.declarations.psi.css..` | `CSS_PROVIDER` | CSS, SCSS and Less files get the analysis fallback (R11) | None: the CSS plugin is closed source and publishes no stable PSI API; the SCSS and Less constructs are read by element type name, so no Sass or Less class is used ([languages/18 details §1](specs/languages/18-css-details.md#1-packaging-and-ide-versions)) |
 | `com.jetbrains.php..` | non-public plugin PSI | `io.github.agadek.smartdiff.engine.declarations.psi.php..` | `PHP_PROVIDER` | PHP files get the analysis fallback (R11) | None: the PHP plugin is closed source and publishes no stable PSI API |
+| `com.intellij.sql..` | non-public plugin PSI | `io.github.agadek.smartdiff.engine.declarations.psi.sql..` | `SQL_PROVIDER` | SQL files get the analysis fallback (R11) | None: the Database Tools and SQL plugin is closed source and publishes no stable PSI API; the provider uses its `com.intellij.sql.psi` interfaces and nothing of its `com.intellij.database` model ([languages/20 details §1](specs/languages/20-sql-details.md#1-packaging-and-ide-versions)) |
 | `org.jetbrains.kotlin.analysis..` | Kotlin Analysis API, not used | `io.github.agadek.smartdiff.references.KotlinReferenceResolver` | `KOTLIN_REFERENCES` | Kotlin renames without grouped usages (R12) | Not needed: the resolver uses `PsiReference.resolve()` only |
 
 Each optional plugin subproject's own architecture test checks its plugin's row, and the root's checks the others:
@@ -40,7 +41,8 @@ Each optional plugin subproject's own architecture test checks its plugin's row,
 - `javascript`: the JavaScript plugin row;
 - `go`: the `com.goide..` row;
 - `css`: the `com.intellij.psi.css..` row;
-- `php`: the `com.jetbrains.php..` row.
+- `php`: the `com.jetbrains.php..` row;
+- `sql`: the `com.intellij.sql..` row.
 
 ## Replaced
 

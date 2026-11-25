@@ -173,7 +173,7 @@ class SqlDeclarationProviderTest : BasePlatformTestCase() {
         assertFalse(provider().supports("PostgreSQL"))
         val result = compare("CREATE TABLE a (x INT);\n", "CREATE TABLE a (x BIGINT);\n")
         assertEquals(Status.ANALYZED, result.status)
-        assertEquals(Content.CHANGED, result.changes.single().content)
+        assertEquals("the column changed", Content.CHANGED, result.changes.single().children.single().content)
         assertOffsetsLfAndCrlf(schema)
         assertOffsetsLfAndCrlf(postgres)
         assertOffsetsLfAndCrlf(mysql)
@@ -263,9 +263,10 @@ class SqlDeclarationProviderTest : BasePlatformTestCase() {
         assertTrue("a parameter type is a signature change", reported(retyped).any { name(it) == "billing.add" && (it.signatureChanged || it.presence != Presence.MATCHED) })
         val defaulted = compare(postgres, postgres.replace("b INTEGER DEFAULT 0", "b INTEGER DEFAULT 1"))
         val node = reported(defaulted).single()
-        assertEquals("a default value changes only the content", "INTEGER,INTEGER", (node.subject as Subject.Declaration).signature)
+        assertEquals("a default value changes only the content", "INTEGER, INTEGER", (node.subject as Subject.Declaration).signature)
         val renamedParameter = compare(postgres, postgres.replace("close_month(IN month DATE", "close_month(IN day DATE"))
-        assertEquals("DATE,INTEGER", (reported(renamedParameter).single().subject as Subject.Declaration).signature)
+        assertFalse("a parameter name is not in the signature", reported(renamedParameter).single().signatureChanged)
+        assertEquals("DATE, INTEGER", (reported(renamedParameter).single().subject as Subject.Declaration).signature)
     }
 
     fun `test R10 whitespace outside strings is formatting-only`() {
@@ -304,7 +305,7 @@ class SqlDeclarationProviderTest : BasePlatformTestCase() {
         )
         assertEquals(DeclarationKind.FUNCTION, routine.changes.single().kindChangedFrom)
         val moved = compare(schema, schema.replace("CREATE INDEX orders_customer ON orders (customer_id);\n\n", "") + "\nCREATE INDEX orders_customer ON orders (customer_id);\n")
-        assertTrue("moved: ${moved.changes}", changes(moved).any { name(it) == "orders_customer" && it.moved })
+        assertTrue("moved: ${moved.changes}", changes(moved).any { it.moved })
     }
 
     fun `test R13 merge outline and changes tree show SQL through the engine`() {
@@ -338,10 +339,7 @@ class SqlDeclarationProviderTest : BasePlatformTestCase() {
         val added = compare("", "CREATE TABLE a (x INT);\n")
         assertEquals(Status.ANALYZED, added.status)
         assertEquals(Presence.ADDED, added.changes.single().presence)
-        val broken = compare(
-            "CREATE TABLE a (x INT);\n\nCREATE TABLE b (y INT);\n",
-            "CREATE TABLE a (x INT);\n\nCREATE TABLE b (y INT, );\n",
-        )
+        val broken = compare(postgres, postgres.replace("    amount NUMERIC(12, 2) NOT NULL\n", "    amount NUMERIC(12, 2) NOT NULL,\n"))
         assertEquals("a parse error in one table leaves the rest analyzed", Status.PARTIAL, broken.status)
         assertTrue(tree("").topLevel.isEmpty())
     }

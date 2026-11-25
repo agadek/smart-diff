@@ -56,6 +56,7 @@ visible.
 
 - Java, Kotlin (including `.gradle.kts` scripts), Scala 2 and Scala 3, Groovy and Gradle scripts, Python, Rust,
   JavaScript and TypeScript (JSX and TSX included), Go, PHP
+- SQL: tables and their columns, views, indexes, sequences, functions, procedures, triggers, types and schemas
 - CSS, SCSS and Less: rule sets, at-rules such as `@media` and `@keyframes`, custom properties, variables and mixins
 - Swift, through a bundled Tree-sitter grammar when the IDE has no Swift support
 - Shell scripts, JSON, JSON with comments and JSON5, YAML, TOML, Java properties, XML and HTML, Markdown; for JSON and

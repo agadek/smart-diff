@@ -129,7 +129,7 @@ Each phase is one pull request, or a spec pull request and a code pull request, 
 | B3 | CSS, SCSS and Less provider | B1 | Implemented 2026-11-24 in [languages/18](specs/languages/18-css.md) |
 | B4 | PHP provider | B0 | Implemented 2026-11-24 in [languages/19](specs/languages/19-php.md), with the `phpstorm` verifier family |
 | B5 | Ruby provider | B0 | Not started |
-| B6 | SQL provider | B0, or a raised build target (§6) | Not started |
+| B6 | SQL provider | B0, or a raised build target (§6) | Implemented 2026-11-25 in [languages/20](specs/languages/20-sql.md) on the B0 pattern, with the `datagrip` verifier family |
 
 **Order** (decided 2026-11-13: the fallback and the dedicated providers run in parallel). After Python and Rust, two tracks start together:
 
@@ -142,6 +142,6 @@ The two tracks share only the new kinds in `DeclarationKind` (`ITEM` from G1; `K
 
 - **F1 Fallback first or dedicated providers first (decided 2026-11-13).** Both in parallel, as two tracks (§5).
 - **F2 Fallback default.** Whether the structure-view setting is on by default. The proposal is on, with the summary-line note, since the alternative is the plain native diff and the provider never claims formatting-only.
-- **F3 Build target for SQL.** SQL is in IntelliJ IDEA's free tier from 2025.3, but not in the 2025.1.3 Community target. Either SQL waits for the minimum platform to reach 2025.3, which changes P6, or it uses the paid-IDE pattern of B0.
+- **F3 Build target for SQL (decided 2026-11-25).** SQL is in IntelliJ IDEA's free tier from 2025.3, but not in the 2025.1.3 Community target. SQL uses the paid-IDE pattern of B0: a `sql/` subproject on IntelliJ IDEA Ultimate 2025.1.3, which bundles the Database Tools and SQL plugin, so the minimum platform and P6 stay as they are ([languages/20 details §3](specs/languages/20-sql-details.md#3-build-target-and-plugin-verifier)).
 - **F4 XML attribute order (decided 2026-11-16).** A reordered attribute is reported as a changed tag, since attributes are content ([languages/13](specs/languages/13-xml.md)); reporting it as moved would need attribute-level declarations, which would crowd the outline.
 - **F5 Ruby and PHP licensing.** Whether RubyMine and PhpStorm now have a free noncommercial licence, which affects who can use those providers but not how they are built. Re-checked in B0.
