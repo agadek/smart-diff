@@ -1,5 +1,7 @@
 # SMART Diff
 
+[![JetBrains Marketplace](https://img.shields.io/jetbrains/plugin/v/36327-smart-diff?label=JetBrains%20Marketplace&logo=jetbrains)](https://plugins.jetbrains.com/plugin/36327-smart-diff)
+[![Downloads](https://img.shields.io/jetbrains/plugin/d/36327-smart-diff?logo=jetbrains)](https://plugins.jetbrains.com/plugin/36327-smart-diff)
 [![Sponsor on GitHub](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/agadek)
 [![Support on Ko-fi](https://img.shields.io/badge/Support-Ko--fi-ff5e5b?logo=kofi&logoColor=white)](https://ko-fi.com/gadek)
 
@@ -14,6 +16,8 @@ extractions, inlinings and renames show up as single rows. The native text diff 
 
 *A noisy change to `OrderService.java`: the brace style was reformatted throughout, and a few methods were added,
 moved, extracted or removed. The outline lists the refactorings first and groups the reformat as formatting-only.*
+
+JetBrains Marketplace: [plugins.jetbrains.com/plugin/36327-smart-diff](https://plugins.jetbrains.com/plugin/36327-smart-diff)
 
 Source code: [github.com/agadek/smart-diff](https://github.com/agadek/smart-diff)
 
@@ -83,12 +87,12 @@ GoLand, PhpStorm and DataGrip.
 
 ## Install
 
-Download `smart-diff-<version>-signed.zip` from the [latest release](https://github.com/agadek/smart-diff/releases/latest),
-then in the IDE open *Settings | Plugins*, click the gear icon, choose **Install Plugin from Disk…** and select the zip.
-Don't unpack it first.
+Install SMART Diff from the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/36327-smart-diff): in the IDE
+open *Settings | Plugins | Marketplace*, search for **SMART Diff** and click **Install**.
 
-Once the JetBrains Marketplace listing is approved, you can also search for **SMART Diff** in
-*Settings | Plugins | Marketplace*.
+To install a release by hand, download `smart-diff-<version>-signed.zip` from the
+[latest release](https://github.com/agadek/smart-diff/releases/latest), then in *Settings | Plugins* click the gear
+icon, choose **Install Plugin from Disk…** and select the zip. Don't unpack it first.
 
 ## Requirements
 
