@@ -1,357 +1,181 @@
 # SMART Diff Roadmap
 
-Status: 2026-11-25. Items after the shipped baseline are candidates, not commitments; their order is a proposal. Scope details live in the [product scope](specs/README.md#product-scope), the [feature specifications](specs/README.md) and the [technical specification](TECHNICAL-SPECIFICATION.md).
+Status: 2026-11-26. The open items are candidates, not commitments, and their order is a proposal. Scope details live in the [product scope](specs/README.md#product-scope), the [feature specifications](specs/README.md) and the [technical specification](TECHNICAL-SPECIFICATION.md); what each release contains is in the [changelog](../CHANGELOG.md).
 
-0.5.0 is prepared on the release branch with version `0.5.0` and a dated [changelog](../CHANGELOG.md) section; see [0.5.0](#050-more-languages-and-moves-inside-declarations-prepared-2026-11-25). 0.4.0 was released on 2026-11-20; its [plan](releases/0.4.0-plan.md) records the merged work. 0.3.0 was released on 2026-11-10; the [0.3.0 plan](releases/0.3.0-plan.md) records its remaining manual rows.
+The latest release is 0.5.0, published on 2026-11-26 on GitHub and on the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/36327-smart-diff).
 
-## Shipped baseline
+## Releases
 
-0.1.0, 0.1.1 and 0.2.0 (2026-11-05) are released. 0.3.0 was released on 2026-11-10; see [0.3.0](#030-changes-tree-in-the-ide-released-2026-11-10). 0.4.0 was released on 2026-11-20; see [0.4.0](#040-structural-relationships-released-2026-11-20). 0.5.0 is prepared with version `0.5.0` on 2026-11-25; see [0.5.0](#050-more-languages-and-moves-inside-declarations-prepared-2026-11-25).
+| Release | Date | Theme | Record |
+| --- | --- | --- | --- |
+| 0.1.0 | 2026-10-22 | Structural outline for Java, Kotlin and Scala, Changes tree summary, noise pass | [Validation](VALIDATION.md#2026-10-22-010-noise-pass) |
+| 0.1.1 | 2026-10-23 | Extraction detection | [Changelog](../CHANGELOG.md#011---2026-10-23) |
+| 0.2.0 | 2026-11-05 | Three-way merge outline, declaration rows in the Changes tree | [Merge validation](VALIDATION.md#2026-11-02-merge-validation-rerun), [corpus rerun](VALIDATION.md#2026-11-04-two-sided-corpus-rerun) |
+| 0.3.0 | 2026-11-10 | Changes tree in the IDE: hide and filter, caret follow, rename grouping step 1 | [Plan](releases/0.3.0-plan.md), [manual check](releases/0.3.0-manual-check.md) |
+| 0.4.0 | 2026-11-20 | Structural relationships, Python, Rust, data formats, Swift | [Plan](releases/0.4.0-plan.md), [validation](VALIDATION.md#2026-11-19-040-release-validation) |
+| 0.5.0 | 2026-11-26 | JavaScript and TypeScript, Go, CSS, PHP, SQL, C#, C and C++, moves inside declarations, one shared filter, Marketplace distribution | [Validation](VALIDATION.md#2026-11-25-050-release-validation) |
 
-- Structural outline for two-sided diffs, attached to the native diff, per file only. It opens by default, with a setting to turn it off and a toolbar button in every diff to switch to the plain native diff.
-- Comparison engine interface, registry, per-language default, and engine dropdown ([ADR 0004](adr/0004-pluggable-comparison-engines.md)).
-- Declaration engine for Java, Kotlin, Scala 2 and Scala 3, using IntelliJ PSI ([ADR 0001](adr/0001-declaration-level-first-release.md), [ADR 0002](adr/0002-parser-neutral-model-with-psi-first.md)); Scala needs the Scala plugin.
-- Conservative classification: added, removed, changed, moved, formatting-only, uncertain, unanalyzed ([ADR 0003](adr/0003-conservative-classification.md)), plus rename candidates, kind changes and signature changes. Renamed declarations, classes included, are paired as rename candidates rather than reported literally.
-- Extraction detection for Java, Kotlin, Scala 2 and Scala 3 (0.1.1).
-- Changes tree summary (0.1.0) and declaration rows in Local Changes and the Commit tool window (0.2.0).
-- Structural outline for three-way merges and three-sided diffs, for Java, Kotlin, Scala 2 and Scala 3 (0.2.0; merge validation results and review are in [VALIDATION.md](VALIDATION.md)).
-- IntelliJ Platform 2025.1 and newer, checked by Plugin Verifier on 2025.1 and the latest release.
+## Open
 
-Specified in [outline/01](specs/outline/01-structural-outline.md), [outline/02](specs/outline/02-outline-toggle.md), [outline/05](specs/outline/05-analysis-fallback.md), [engines/01](specs/engines/01-comparison-engines.md) to [engines/03](specs/engines/03-analysis-limits.md), [declarations/01](specs/declarations/01-declaration-matching.md), [declarations/02](specs/declarations/02-change-classification.md), [declarations/06](specs/declarations/06-change-labels.md), [languages/01](specs/languages/01-java.md) to [languages/03](specs/languages/03-scala.md), [changes-tree/01](specs/changes-tree/01-changes-tree-summary.md), [changes-tree/03](specs/changes-tree/03-coverage-and-scale.md) and [merge/01](specs/merge/01-merge-join.md) to [merge/05](specs/merge/05-scala-merges.md). The features accepted on 2026-11-01 have requirement-named tests and are implemented.
-
-## 0.1.0: noise pass
-
-Decided 2026-10-22, from the validation on real commits before 0.1.0 ([VALIDATION.md](VALIDATION.md)). It shipped in 0.1.0; the rerun is in [VALIDATION.md](VALIDATION.md#2026-10-22-010-noise-pass).
+Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.md#semanticdiff) on 2026-10-22, and items marked *(weak-point review)* from a review of the plugin's strengths and weaknesses on 2026-11-13.
 
 | Item | Spec |
 | --- | --- |
-| [Rename candidates](#rename-candidates) | [declarations/03](specs/declarations/03-rename-candidates.md) |
-| [Overload pairing by similarity](#overload-pairing-by-similarity) | [declarations/01](specs/declarations/01-declaration-matching.md) R5 |
-| [Readable labels](#readable-labels) | [outline/01](specs/outline/01-structural-outline.md), [languages/02](specs/languages/02-kotlin.md) |
-| [Full nothing-hidden coverage in the validation](#full-nothing-hidden-coverage-in-the-validation) | [engines/02](specs/engines/02-engine-contract.md) |
-
-### Rename candidates
-
-Pair a removed and an added declaration of the same kind in the same container, with the same or a similar body, as an uncertain rename candidate; includes renamed classes. Renames reported as removed + added were the largest remaining noise in the validation (70 of 1279 files), most at the same lines with the same body (technical spec Q2).
-
-### Overload pairing by similarity
-
-When every overload of a name changes signature at once (an added parameter, `T?` → `T`), pair each with the most similar one by parameter list and body instead of leaving all of them uncertain (7 files in the validation).
-
-### Readable labels
-
-Keep a single space where the source separates words in a type (`Class<out Annotation>`, not `Class<outAnnotation>`), and show a Kotlin receiver before the name (`Date.formatIsoDate()`). Matching keys may stay as they are.
-
-### Full nothing-hidden coverage in the validation
-
-A nothing-hidden check cheap enough for large files, so the corpus validation covers every file (414 of 1279 were too large for the current one).
-
-## 0.2.0: three-way merge outline, released 2026-11-05
-
-Decided 2026-10-30. It came before everything else under [Later](#later), and its [structural outline for three-way merges](#structural-outline-for-three-way-merges) for Java, Kotlin, Scala 2 and Scala 3 ships in this release. Its features are specified in [docs/specs/merge/](specs/README.md#merges).
-
-| Work | Spec | State |
-| --- | --- | --- |
-| Join of the two comparisons | [merge/01](specs/merge/01-merge-join.md) | Implemented, PR #40 |
-| Merge outline and three-sided diffs | [merge/02](specs/merge/02-merge-outline.md), [merge/03](specs/merge/03-three-sided-diffs.md) | Implemented, PRs #42 to #44 |
-| Merge window | [merge/04](specs/merge/04-merge-window.md) | Implemented, PRs #46 and #47 |
-| Scala merges and golden merge fixtures | [merge/05](specs/merge/05-scala-merges.md) | Implemented, PR #49 |
-| Validation on real merge commits | [merge/06](specs/merge/06-merge-validation.md) | Implemented, PR #48; results and review in [VALIDATION.md](VALIDATION.md) |
-| Outline for languages without an engine, and the "not analyzed" reason in the Changes tree | [outline/01](specs/outline/01-structural-outline.md), [changes-tree/01](specs/changes-tree/01-changes-tree-summary.md) | Implemented, PR #37 |
-
-0.2.0 was released on 2026-11-05. The merge gate passes: the [2026-11-02 rerun](VALIDATION.md#2026-11-02-merge-validation-rerun) meets merge/06 R15 to R17 and R32, and the flagged files are reviewed. The two-sided corpus gate passes too: the [2026-11-04 rerun](VALIDATION.md#2026-11-04-two-sided-corpus-rerun) covers the Java and Kotlin list and the Scala list, zio included, with every clone's HEAD pinned; it has 1970 files, 1968 `ANALYZED` and 2 `PARTIAL`, no fallback and no `hidden` or `empty` flag, and the Java and Kotlin half reproduces the [2026-10-23 run](VALIDATION.md#2026-10-23-extraction-detection) exactly. The Scala half's zio and scala3 windows differ from the recorded run, and each of its 28 flagged files is reviewed in that section. The requirement-named tests for the features accepted on 2026-11-01 (outline/05, declarations/06 and changes-tree/03) are done, and those features are implemented. The tag and GitHub release are published with the signed plugin attached.
-
-## 0.3.0: Changes tree in the IDE, released 2026-11-10
-
-Decided 2026-11-07 in [releases/0.3.0-plan.md](releases/0.3.0-plan.md). The release finishes the Changes tree work started after 0.2.0 and includes the outline, matching and scroll fixes already on main. It adds no new relationship kind.
-
-| Work | Spec | State |
-| --- | --- | --- |
-| Changes tree hide and filter, with View Options toggles and the tree's own filter | [changes-tree/04](specs/changes-tree/04-hide-and-filter.md) | Implemented and merged, PR #124 |
-| Commit preview revisions off the UI thread, and the platform preview for summarized rows | [changes-tree/02](specs/changes-tree/02-changes-tree-declarations.md) | Implemented and merged, PRs #127 and #130 |
-| Changes tree follows the caret | [changes-tree/05](specs/changes-tree/05-changes-tree-caret-follow.md) | Implemented and merged, PR #131; the 2026-11-09 release-head re-check passes R7 and R8 (PR #137); R3 splitter, R5 inclusion/count and R11 remain |
-| Outline Hide and Minimise controls and the Structural Outline shortcut | [outline/02](specs/outline/02-outline-toggle.md) | Implemented and merged, PR #120 |
-| SMART Diff viewer icon | [outline/04](specs/outline/04-smart-diff-viewer.md) | Implemented and merged, PR #116 |
-| Selected moved declaration's frames stay aligned while scrolling | [outline/01](specs/outline/01-structural-outline.md), [merge/03](specs/merge/03-three-sided-diffs.md) | Implemented and merged, PR #121 |
-| Scored whole-file relationship matching | [relationships/03](specs/relationships/03-relationship-matching.md) | Implemented and merged, PR #95 |
-| Rename grouping, step 1 for Java | [relationships/04](specs/relationships/04-rename-grouping.md) | Implemented and merged, PR #129; step 2 is 0.4.0 |
-| Release preparation | [RELEASING.md](RELEASING.md) | Released 2026-11-10; tag `v0.3.0` at `bff3a35`, signed zip attached |
-
-The [2026-11-08 release checks](VALIDATION.md#2026-11-08-030-release-checks) pass: the two-sided corpus and the merge validation reproduce the 2026-11-04 results with every flagged file reviewed, the relationship benchmark reports no new wrong pair, and Plugin Verifier is compatible on both target IDEs with the same experimental API usages as 0.2.0 and no internal or deprecated usage. `pluginVersion` is 0.3.0 and the changelog section is dated. The 2026-11-09 release-head re-check on `f912d8c` passes caret-follow R7 and R8 (PR #137 is merged at `afc7457`); main now carries #132 (relationships/04 step 2) as 0.4.0 work. The remaining manual rows are listed in the [manual runIde checklist](releases/0.3.0-manual-check.md): R3 splitter, R5 inclusion/count, R11, #111 R16, #144 splitter/control, the section A/B partials, and #112 M3's no-arrow detail, M6 and the IC 2025.1 M8 comparison. M7 and M9 pass on both IDEs. #108 is verified and accepted from its 2026-11-09 record. The `v0.3.0` GitHub release was published on 2026-11-10 from tag `v0.3.0` (`bff3a35`), with the signed zip attached; the remaining manual rows are documented as partial or inconclusive.
-
-## 0.5.0: more languages and moves inside declarations, prepared 2026-11-25
-
-The work merged on main after 0.4.0, listed in the [0.5.0 changelog section](../CHANGELOG.md#050---2026-11-25). No separate plan: each item has its own spec and roadmap section.
-
-| Work | Spec | State |
-| --- | --- | --- |
-| Moves inside declarations | [relationships/08](specs/relationships/08-moves-inside-declarations.md) | Implemented and merged (PR #217) |
-| Relationship recall: short initialized fields, inlining past scattered tokens | [relationships/03](specs/relationships/03-relationship-matching.md) R21, [relationships/05](specs/relationships/05-inlining-detection.md) R21 | Implemented and merged (PR #218) |
-| Fine-grained differencing validation | [declarations/10](specs/declarations/10-fine-grained-differencing.md) R21, R22 | Recorded (PR #219) |
-| Tree-sitter C#, C and C++, with merge fixtures, benchmark cases and corpus validation | [engines/05](specs/engines/05-tree-sitter.md) | Implemented and merged (PRs #220, #225) |
-| JavaScript and TypeScript | [languages/16](specs/languages/16-javascript-typescript.md) | Implemented and merged (PR #221) |
-| Go | [languages/17](specs/languages/17-go.md) | Implemented and merged (PR #222) |
-| CSS, SCSS and Less | [languages/18](specs/languages/18-css.md) | Implemented and merged (PR #223) |
-| PHP | [languages/19](specs/languages/19-php.md) | Implemented and merged (PR #224) |
-| SQL | [languages/20](specs/languages/20-sql.md) | Implemented and merged (PR #226) |
-| Caret follow on unchanged code of a changed container | [outline/07](specs/outline/07-outline-caret-follow.md) R12, [changes-tree/05](specs/changes-tree/05-changes-tree-caret-follow.md) R13 | Fixed and merged (PR #227) |
-| One change type filter for the outline and the Changes tree | [outline/03](specs/outline/03-change-type-filter.md) | Implemented and merged (PR #228) |
-| Release validation | [RELEASING.md](RELEASING.md) | [2026-11-25 validation](VALIDATION.md#2026-11-25-050-release-validation) recorded |
-
-The benchmark reports 623 cases, precision 1.000 and recall 0.966 with 0 wrong and 0 forced pairs (one held-out label that predated code moves was corrected); the two-sided and merge corpora have no new wrong link, hidden change or `join-mismatch`, and all limits hold with the reference pass on. Plugin Verifier is compatible on all seven IDE families. The physical manual checks are pending, maintainer. `pluginVersion` is 0.5.0 and the changelog section is dated; the tag and GitHub release are not published yet.
-
-## 0.4.0: structural relationships, released 2026-11-20
-
-Decided in [releases/0.4.0-plan.md](releases/0.4.0-plan.md). Rename grouping with usages, inlining detection and the refactorings view finish the structural-relationships track, alongside the language and format work in the [0.4.0 changelog section](../CHANGELOG.md#040---2026-11-19) and the Tree-sitter Swift engine from PR #213.
-
-| Work | Spec | State |
-| --- | --- | --- |
-| Rename grouping with usages (Java, Kotlin K2, Scala 2/3) | [relationships/04](specs/relationships/04-rename-grouping.md) | Implemented and merged |
-| Inlining detection | [relationships/05](specs/relationships/05-inlining-detection.md) | Implemented and merged |
-| Refactorings view | [relationships/06](specs/relationships/06-refactorings-view.md) | Implemented and merged |
-| Validation and release | [relationships/07](specs/relationships/07-relationship-validation.md) | Implemented, 2026-11-19; [2026-11-19 validation](VALIDATION.md#2026-11-19-040-release-validation) recorded. The `no-new-wrong-pairs` gate passes with 0 wrong and 0 forced pairs. |
-| Tree-sitter Swift engine | [engines/05](specs/engines/05-tree-sitter.md) | Implemented and merged (PR #213) |
-
-The benchmark reports 583 cases, precision 1.000 and recall 0.943; the two-sided and merge corpora have no new wrong link or `join-mismatch` and all limits hold with the reference pass on. Plugin Verifier is compatible on all six IDE builds with no internal or deprecated API use. The physical manual checks on IC 2025.1.3 and IU 2026.3 are pending, maintainer. The `v0.4.0` GitHub release was published on 2026-11-20 with the signed zip attached. C#, C and C++ in the Tree-sitter engine were merged after the release and ship in 0.5.0.
-
-## After 0.2.0: structural relationships
-
-Proposed 2026-11-01 as the next item after 0.2.0. The benchmark harness, the full labelled matrix and the R29 baseline are implemented (2026-11-02). Relationships between declarations (renames, moves, kind changes, extractions, inlinings) become one list with a confidence and evidence, measured by the benchmark before any matcher change. Planned in [STRUCTURAL-RELATIONSHIPS.md](STRUCTURAL-RELATIONSHIPS.md) and [RELATIONSHIP-BENCHMARK.md](RELATIONSHIP-BENCHMARK.md); the model is decided in [ADR 0008](adr/0008-relationships-are-the-source-of-truth-for-pairing.md). It supersedes the design of [rename grouping across usages](#rename-grouping-across-usages) and [moves inside declarations](#moves-inside-declarations), and informs extraction detection and the merge outline without rescheduling either.
-
-| Step | Spec | Done when |
-| --- | --- | --- |
-| Benchmark and today's baseline | [relationships/01](specs/relationships/01-relationship-benchmark.md) | Done: the [2026-11-02 baseline](VALIDATION.md#2026-11-02-relationship-benchmark-baseline) is a run with no shortfall |
-| Relationship model, with today's fields computed from it | [relationships/02](specs/relationships/02-relationship-model.md) (implemented 2026-11-04) | The outline, Changes tree and merge outline are unchanged, the contract checks relationships, and the benchmark reads the list with the baseline's scores |
-| Better pairing over the whole file | [relationships/03](specs/relationships/03-relationship-matching.md) (implemented 2026-11-04) | The benchmark shows no new wrong pairs and no lower held-out precision; the benchmark output is unchanged, and two corpus files now pair reordered renames |
-| Rename grouped with its usages | [relationships/04](specs/relationships/04-rename-grouping.md) | Implemented (2026-11-07): Java, Kotlin K2 and Scala 2/3 usages group into the rename; the full 440-case usage gate passes with no wrongly grouped usage, while unresolved or also-changed usages stay ordinary changes |
-| Inlining detection | [relationships/05](specs/relationships/05-inlining-detection.md) | Implemented (2026-11-08): the inlining cases pass in all four corpora and every linked declaration stays visible |
-| Refactorings view | [relationships/06](specs/relationships/06-refactorings-view.md) | Implemented (2026-11-09): the view shows every change the container tree shows, with relationship rows, confidence words, evidence, kind filtering and per-rename usage colours; the automated checks pass, and the [manual IDE check](VALIDATION.md#2026-11-09-refactorings-view-manual-check) is outstanding |
-| Validation and release | [relationships/07](specs/relationships/07-relationship-validation.md) | Implemented, 2026-11-19; results recorded in [VALIDATION.md](VALIDATION.md#2026-11-19-040-release-validation); the benchmark gate passes with 0 wrong and 0 forced pairs |
-| Relationships across files | Not specified; only if the product scope is extended | A separate design and benchmark exist |
-
-It also covers the later [rename grouping across usages](#rename-grouping-across-usages) item, through a separate reference pass.
-
-## Later
-
-Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.md#semanticdiff) on 2026-10-22: features it has that SMART Diff lacks. Items marked *(weak-point review)* came from a review of the plugin's strengths and weaknesses on 2026-11-13, for weak points no other item covered. Their order among the other items is still open.
-
-| Item | Spec |
-| --- | --- |
-| [Multi-file summary in the Changes tree](#multi-file-summary-in-the-changes-tree) | [changes-tree/01](specs/changes-tree/01-changes-tree-summary.md), [changes-tree/02](specs/changes-tree/02-changes-tree-declarations.md) |
-| [Scala](#scala) | [languages/03](specs/languages/03-scala.md) |
-| [Structural outline for three-way merges](#structural-outline-for-three-way-merges) | [merge/01](specs/merge/01-merge-join.md) to [merge/06](specs/merge/06-merge-validation.md) |
-| [Extraction detection](#extraction-detection) | [declarations/05](specs/declarations/05-extraction-detection.md); inlining in [relationships/05](specs/relationships/05-inlining-detection.md) |
-| [Rename grouping across usages](#rename-grouping-across-usages) | [relationships/04](specs/relationships/04-rename-grouping.md) |
-| [Usability validation](#usability-validation) | [outline/06](specs/outline/06-usability-validation.md) |
-| [Summaries for added and deleted files](#summaries-for-added-and-deleted-files) | [changes-tree/06](specs/changes-tree/06-added-deleted-file-summaries.md) |
-| [Python](#python) | [languages/04](specs/languages/04-python.md) |
-| [Rust](#rust) | [languages/05](specs/languages/05-rust.md) |
-| [Go](#go) | [languages/17](specs/languages/17-go.md) (implemented 2026-11-24) |
-| [CSS, SCSS and Less](#css-scss-and-less) | [languages/18](specs/languages/18-css.md) (implemented 2026-11-24) |
-| [PHP](#php) | [languages/19](specs/languages/19-php.md) (implemented 2026-11-24) |
-| [Hide comment-only changes](#hide-comment-only-changes) | [outline/11](specs/outline/11-comment-only-changes.md) |
-| [Formatting-only recall in Kotlin and Scala](#formatting-only-recall-in-kotlin-and-scala) | [declarations/07](specs/declarations/07-kotlin-scala-formatting.md) |
-| [Reviewed marks in the outline](#reviewed-marks-in-the-outline) | [outline/12](specs/outline/12-reviewed-marks.md) (implemented 2026-11-16) |
-| [Visual links for moved code](#visual-links-for-moved-code) | [outline/13](specs/outline/13-moved-code-markers.md) |
-| [Moved lines in unsupported files](#moved-lines-in-unsupported-files) | [engines/04](specs/engines/04-moved-lines.md) (implemented 2026-11-16) |
-| [Expand context to the enclosing declaration](#expand-context-to-the-enclosing-declaration) | [outline/14](specs/outline/14-expand-to-declaration.md) (implemented 2026-11-16) |
-| [Summary in pull request reviews and the Git log](#summary-in-pull-request-reviews-and-the-git-log) | [changes-tree/07](specs/changes-tree/07-review-tree-summaries.md) (implemented 2026-11-17) |
-| [Opt-in equivalence rules](#opt-in-equivalence-rules) | [declarations/08](specs/declarations/08-equivalence-rules.md) (implemented 2026-11-17), [declarations/09](specs/declarations/09-kotlin-scala-equivalence-rules.md) for Kotlin and Scala (implemented 2026-11-17) |
-| [Moves inside declarations](#moves-inside-declarations) | [relationships/08](specs/relationships/08-moves-inside-declarations.md) (implemented, 2026-11-23) |
-| [Fine-grained differencing](#fine-grained-differencing) | [declarations/10](specs/declarations/10-fine-grained-differencing.md) (implemented, 2026-11-23) |
-| [Platform API stability](#platform-api-stability) | [platform/01](specs/platform/01-platform-api-stability.md) (implemented 2026-11-17) |
-| [Tree-sitter support](#tree-sitter-support) | [engines/05](specs/engines/05-tree-sitter.md) (implemented: Swift 2026-11-18; C#, C and C++ and the T3 validation 2026-11-24) |
-| [More languages](#more-languages) | [Format coverage plan](FORMAT-COVERAGE.md); feature specs with each phase |
-| Every other item below | Not specified yet |
-
-### Multi-file summary in the Changes tree
-
-Implemented for 0.2.0. Show changed declarations for each file inside the IDE's existing Changes/Commit tree, rather than in a new panel (technical spec Q3).
-
-- **Level 1 (implemented):** a summary next to each file, for example `Parser.kt  2 changed · 1 added`, in the Local Changes view and the Commit tool window ([technical spec §9.4](TECHNICAL-SPECIFICATION.md#94-changes-tree-summary)).
-- **Level 2 (implemented):** expandable declarations under each file, the same rows as the file's outline. Double-click or Enter on one opens the file's diff with that declaration selected in the outline, and a row with children expands through its expansion control; the rows are computed with the summary, so they follow edits the same way ([technical spec §9.4](TECHNICAL-SPECIFICATION.md#94-changes-tree-summary)).
-- **Spike (done 2026-10-22, S5):** the Local Changes and Commit tree takes the summary through the public `changesViewModifier` extension point ([ADR 0006](adr/0006-changes-tree-summary-through-changes-view-modifier.md)). The modal commit dialog has no such hook, so it shows no summary; the Git log's commit details and the pull request trees take theirs through the tree's model property ([ADR 0013](adr/0013-review-tree-summaries-through-the-tree-model-property.md)).
-
-### Scala
-
-Implemented in 0.1.0, when the Scala plugin is installed ([languages/03](specs/languages/03-scala.md)). A Scala provider for the declaration engine, using the JetBrains Scala plugin's PSI. It needed no change to the engine interface, the matcher or the UI.
-
-- **Packaging:** the provider registers in its own optional descriptor, `META-INF/smartdiff-scala.xml`, which depends on `org.intellij.scala`. The plugin keeps loading without Scala.
-- **Dialects:** Scala 2 and Scala 3. Text-built PSI has no module, so the provider chooses the dialect itself from both texts, by parse errors and Scala 3 syntax (spike S4, done). Scala 3 optional braces make indentation significant, so Scala 3 uses an indentation-significant whitespace policy next to the Kotlin line-break one (technical spec §8).
-- **Declaration kinds:** classes, traits, objects (including companions and package objects), enums and enum cases, `def`, `val`/`var`, type aliases, Scala 3 givens and extension methods, and top-level definitions. This adds `TRAIT`, `GIVEN` and `EXTENSION` to `DeclarationKind` (decided 2026-10-22, technical spec §6.8).
-- **Naming and signatures:** anonymous givens are named by their type, an extension block is a container named by its receiver type, `val (a, b) = …` is one property named `(a, b)`, and parameter lists are joined with `;`, keeping `using`/`implicit` (decided 2026-10-22, technical spec §6.8).
-- **Build and CI:** the Scala plugin is not bundled, so the build pins a Marketplace version compatible with the lowest supported IDE. Plugin Verifier runs on both target IDEs and resolves the optional Scala dependency for each (2025.1.32 on 2025.1.3 and 2026.3.26 on 2026.3 in the 2026-11-05 run), so the provider's and the reference resolver's use of that non-public PSI is in its internal- or experimental-API report and is reviewed there.
-- **Fixtures:** the standard set of the [technical specification](TECHNICAL-SPECIFICATION.md#12-testing) for both dialects, plus companion objects, givens, extension methods and a braces-versus-indentation change in Scala 3.
-
-### Structural outline for three-way merges
-
-It comes right after the [Changes tree level 2](#multi-file-summary-in-the-changes-tree) (decided 2026-10-23). Show which declarations changed on each side of a merge, to help the user understand conflicts before resolving them, in the merge window and in three-sided diffs, for Java, Kotlin, Scala 2 and Scala 3. SMART Diff still never resolves or edits anything (merge conflict resolution stays a non-goal). Implemented for 0.2.0; the merge validation results and review are in [VALIDATION.md](VALIDATION.md) ([merge/06](specs/merge/06-merge-validation.md)). Designed in [THREE-WAY-MERGE.md](THREE-WAY-MERGE.md) (proposal, 2026-10-23).
-
-- **Approach:** run the selected comparison engine twice, base → left and base → right, and join both results on base-side ranges. No change to the engine interface; the request gains an optional hint so the Scala dialect is chosen from all three texts.
-- **Groups:** changed on both sides (likely conflicts), changed only on one side, uncertain; the same change on both sides is marked as such.
-- **Integration:** a `DiffExtension` for three-sided diffs, and for the merge window a `MergeTool` registered first that decorates the platform's own merge viewer, decided by spike S6 ([ADR 0007](adr/0007-merge-outline-attaches-through-a-delegating-merge-tool.md)). Base ranges are tracked into the editable result pane.
-- **Phases:** spike S6 (done 2026-10-23, [THREE-WAY-MERGE.md §12](THREE-WAY-MERGE.md#12-spike-s6-results)), the join, three-sided diffs, the merge window and the merge fixtures (done 2026-11-01), then a validation on replayed merge commits. Tracked in [0.2.0](#020-three-way-merge-outline-released-2026-11-05).
-- **Decided 2026-10-23** ([THREE-WAY-MERGE.md §10](THREE-WAY-MERGE.md#10-decisions)): grouped by side with a toggle to the container tree; sides named by the merge window's titles, shortened; rows changed on both sides that merged without a conflict marked as such; the outline follows the existing setting; the item comes right after the Changes tree level 2.
-
-### More languages
-
-Add declaration-engine providers for further languages and file formats the host IDE parses, after [Scala](#scala), each with the fixtures the [technical specification](TECHNICAL-SPECIFICATION.md#12-testing) requires. [Python](#python) and [Rust](#rust) come first, because the 2026-11-13 review named the narrow language scope as the plugin's largest weakness.
-
-*(gap review)* SemanticDiff supports 14+ languages and formats. Structured data files (JSON, XML, YAML) are a cheap addition on top of the IDE's own parsers: keys and elements are the declarations, and reordered keys in formats where order carries no meaning can be reported as moved.
-
-Proposed 2026-11-13: the [format coverage plan](FORMAT-COVERAGE.md) covers every typical format of the JetBrains platform, grouped by what each needs:
-
-- **Free PSI on the current build target:** Groovy and Gradle build scripts, Kotlin build scripts, Markdown, shell scripts and HTML. Groovy declarations and build-script sections for `.gradle` and `.gradle.kts` files are implemented (M2, 2026-11-14/2026-11-15).
-- **Paid or closed plugins, tied to another IDE:** JavaScript and TypeScript, Go, CSS, PHP, Ruby and SQL, built with the pattern spike S8 chooses for Rust. JavaScript and TypeScript, JSX and TSX included, are implemented (B0, B1, 2026-11-24) in [languages/16](specs/languages/16-javascript-typescript.md), with the `javascript/` subproject on IntelliJ IDEA Ultimate and a `webstorm` verifier family as the build pattern for the other paid IDEs. Go is implemented (B2, 2026-11-24) in [languages/17](specs/languages/17-go.md), with a `goland` verifier family. CSS, SCSS and Less are implemented (B3, 2026-11-24) in [languages/18](specs/languages/18-css.md). PHP is implemented (B4, 2026-11-24) in [languages/19](specs/languages/19-php.md), with a `phpstorm` verifier family. SQL is implemented (B6, 2026-11-25) in [languages/20](specs/languages/20-sql.md), on IntelliJ IDEA Ultimate 2025.1.3 without raising the build target, with a `datagrip` verifier family.
-- **Structured data:** JSON, YAML, TOML, properties and XML, with keys as declarations ([ADR 0009](adr/0009-structured-data-keys-are-declarations.md), accepted). JSON (including JSON with comments and JSON5) is implemented (D0, D1, 2026-11-13). YAML is implemented (D2, 2026-11-14). Properties and TOML are implemented (D3, 2026-11-15) in [languages/11](specs/languages/11-properties.md) and [languages/12](specs/languages/12-toml.md). XML is implemented (D4, 2026-11-16) in [languages/13](specs/languages/13-xml.md); HTML on the same provider is implemented (D4b, 2026-11-16) in [languages/15](specs/languages/15-html.md).
-- **Every other language:** a provider built on the IDE's structure view, used when no dedicated provider exists ([ADR 0010](adr/0010-structure-view-provider-for-languages-without-their-own.md), accepted).
-- **Not supported through PSI:** C# and the other Rider languages, C and C++ in CLion Nova, and Swift, whose language support is not in IntelliJ PSI; they wait for [Tree-sitter support](#tree-sitter-support).
-- **Phases:** G0 and G1 (structure view, spike S9), D0 to D4b (data formats, spike S10), B0 to B6 (paid IDEs), M1 to M3 (Markdown, Groovy and build scripts, shell; M2 implemented 2026-11-14/2026-11-15, M3 implemented 2026-11-14). The structure-view track and the dedicated providers run in parallel (decided 2026-11-13), starting with G0, D0 and JSON and YAML, then TypeScript and Go ([plan §5](FORMAT-COVERAGE.md#5-phases)).
-- **G0/G1 implemented 2026-11-13:** the structure-view fallback provider covers languages with a structure view and no dedicated provider (on by default, with the `· structure view` summary note and an `ITEM` kind), as specified in [languages/06](specs/languages/06-structure-view-fallback.md). S9 passed on text-built JSON, YAML, Markdown, properties and Groovy in platform tests and golden fixtures; see [languages/06 details](specs/languages/06-structure-view-fallback-details.md) and [technical specification §13](TECHNICAL-SPECIFICATION.md#13-prototype-spikes). D2 (YAML) adds a dedicated YAML provider; the fallback still applies to other languages.
-
-### Python
-
-Proposed 2026-11-13 ([languages/04](specs/languages/04-python.md), [details](specs/languages/04-python-details.md)). A Python provider for the declaration engine, using the Python plugin's PSI (`PythonCore`), bundled in PyCharm and installed from the Marketplace in IntelliJ IDEA. Like Scala, it needs no change to the engine interface, the matcher or the UI.
-
-- **Packaging:** an optional descriptor, `META-INF/smartdiff-python.xml`, on `PythonCore`; the build pins a Marketplace `PythonCore` for IntelliJ IDEA Community 2025.1.3, as it does the Scala plugin.
-- **Declaration kinds:** classes, functions and methods with their decorators, and names assigned at module level or in a class body (a new `VARIABLE` kind), including definitions under `if` or `try` at those levels; nothing inside a function body.
-- **Signatures:** parameter names with `*`, `**` and `/`, since Python calls by keyword and most parameters have no type.
-- **Whitespace:** the Scala 3 indentation-significant policy, the dedicated rule [ADR 0003](adr/0003-conservative-classification.md) asked for, so re-indenting is never formatting-only.
-- **Verifier:** adds PyCharm 2025.1 and the latest PyCharm, in a verifier matrix with one job per IDE family.
-- **Phases:** P0 build, optional dependency and spike S7; P1 the provider and golden fixtures; P2 rename grouping, merge and benchmark fixtures and a corpus validation. They run in parallel with Rust (decided 2026-11-13).
-
-### Rust
-
-Proposed 2026-11-13 ([languages/05](specs/languages/05-rust.md), [details](specs/languages/05-rust-details.md)). A Rust provider for the declaration engine, using the JetBrains Rust plugin's PSI (`com.jetbrains.rust`), bundled in RustRover and a paid Marketplace plugin in IntelliJ IDEA Ultimate, CLion and PyCharm Professional.
-
-- **Packaging:** an optional descriptor, `META-INF/smartdiff-rust.xml`, on `com.jetbrains.rust`. The plugin cannot be installed in IntelliJ IDEA Community, the build target, so spike S8 chooses between a RustRover submodule and an Ultimate build target, recorded in an ADR.
-- **Declaration kinds:** functions, structs, unions, enums and variants, named fields, traits, `impl` blocks named `Trait for Type`, modules, type aliases, constants, statics and `macro_rules!` macros, with new kinds for the Rust ones.
-- **Whitespace:** insignificant, as in Java, except inside macro invocations, where spacing can reach the macro.
-- **Verifier:** adds RustRover 2025.1 and the latest RustRover; the Rust PSI is closed source and reviewed in the internal-API report, behind one adapter class.
-- **Phases:** R0 spike S8, build target and optional dependency; R1 the provider and golden fixtures; R2 merge and benchmark fixtures and a corpus validation. Rename grouping waits until S8 shows in-file references resolve without Cargo.
-
-### Go
-
-Implemented 2026-11-24 ([languages/17](specs/languages/17-go.md), [details](specs/languages/17-go-details.md)), phase B2 of the [format coverage plan](FORMAT-COVERAGE.md#5-phases). A Go provider for the declaration engine, using the JetBrains Go plugin's PSI (`org.jetbrains.plugins.go`), bundled in GoLand and a free Marketplace plugin in IntelliJ IDEA Ultimate.
-
-- **Packaging:** an optional descriptor, `META-INF/smartdiff-go.xml`, on `org.jetbrains.plugins.go`, built in a `go/` subproject on IntelliJ IDEA Ultimate 2025.1.3 as Rust is (spike S13).
-- **Declaration kinds:** functions, methods shown as `Type.Name`, structs, interfaces, type aliases and defined types (a new `TYPE` kind), struct fields and interface methods, and top-level constants and variables, one per spec of a grouped declaration; a declaration's range includes the comment lines above it.
-- **Whitespace:** line breaks are significant and spaces are not, since a line break can end a Go statement.
-- **Verifier:** adds GoLand 2025.1 and the latest GoLand; the Go PSI is closed source and reviewed in the internal-API report, behind one adapter class.
-- **Not yet:** grouping renames with their usages; S13 showed in-file references resolve without a Go SDK, so it can follow as its own change.
-
-### CSS, SCSS and Less
-
-Implemented 2026-11-24 ([languages/18](specs/languages/18-css.md), [details](specs/languages/18-css-details.md)), phase B3 of the [format coverage plan](FORMAT-COVERAGE.md#5-phases). A stylesheet provider for the declaration engine, using the JetBrains CSS plugin's PSI (`com.intellij.css`), bundled with its Sass and Less dialect plugins in WebStorm, IntelliJ IDEA Ultimate and the other paid IDEs.
-
-- **Packaging:** an optional descriptor, `META-INF/smartdiff-css.xml`, on `com.intellij.css`, built in a `css/` subproject on IntelliJ IDEA Ultimate 2025.1.3. SCSS and Less constructs are read by element type name, so no Sass or Less class is used and either dialect plugin may be absent.
-- **Declaration kinds:** rule sets named by their selectors (a new `RULE` kind), at-rules with a block, such as `@media`, `@supports`, `@layer`, `@container` and `@keyframes`, named by their prelude (`AT_RULE`), custom properties and SCSS and Less variables, SCSS mixins (`MIXIN`) and functions and Less mixins; nested rule sets are members of their rule set, and a declaration's range includes the comment lines above it.
-- **Whitespace:** formatting-only, except a descendant combinator's whitespace and whitespace next to a `+` or `-` operator.
-- **Not yet:** grouping a renamed selector with its usages, rule sets inside SCSS control directives, the indented Sass syntax, and a relationship benchmark corpus.
-
-### PHP
-
-Implemented 2026-11-24 ([languages/19](specs/languages/19-php.md), [details](specs/languages/19-php-details.md)), phase B4 of the [format coverage plan](FORMAT-COVERAGE.md#5-phases). A PHP provider for the declaration engine, using the JetBrains PHP plugin's PSI (`com.jetbrains.php`), bundled in PhpStorm and a free Marketplace plugin in IntelliJ IDEA Ultimate.
-
-- **Packaging:** an optional descriptor, `META-INF/smartdiff-php.xml`, on `com.jetbrains.php`, built in a `php/` subproject on IntelliJ IDEA Ultimate 2025.1.3 as Go is (spike S15).
-- **Declaration kinds:** namespaces as containers, classes, interfaces, traits, enums and their cases, functions, methods and constructors, properties, class constants and top-level constants, one per name of a statement that declares several; a declaration's range includes the PHPDoc and comments above it and its attributes. No new kind.
-- **Signatures:** parameter types, `&` and `...` markers and names, since PHP 8 calls can name their arguments; promoted constructor properties are part of the constructor.
-- **Whitespace:** insignificant, as in Java, except inside string literals, heredocs and nowdocs.
-- **Verifier:** adds PhpStorm 2025.1 and the latest PhpStorm; the PHP PSI is closed source and reviewed in the internal-API report, behind one adapter class.
-- **Not yet:** grouping renames with their usages; S15 showed in-file references resolve without an interpreter, so it can follow as its own change. Blade and Twig templates are out of scope.
-
-### Tree-sitter support
-
-A Tree-sitter provider or engine for languages the host IDE cannot parse, after native packaging and grammar licence review ([research](RESEARCH.md#difftastic-and-alternatives)). Specified in [engines/05](specs/engines/05-tree-sitter.md) (proposed, 2026-11-17) and [ADR 0015](adr/0015-tree-sitter-languages-are-chosen-by-file-name.md): a `Declarations (Tree-sitter)` engine with bundled grammars for Swift, C#, C and C++ in files the IDE opens as plain text or TextMate files, chosen by the file name's extension, reusing the declaration engine's matching and classification. Spike S12 chose the runtime on 2026-11-17 ([ADR 0016](adr/0016-tree-sitter-runs-in-a-native-helper-process.md)): one native helper executable per platform with all four grammars, run as a child process, which parses both sides of a 1 MB file in 0.3 to 0.5 s, keeps the IDE running when it fails and adds about 7.5 MB for six platforms. The JNI binding, WebAssembly grammars and the Java binding were ruled out. Rider and CLion Nova stay out of scope until S12 records what they offer.
-
-Swift was implemented on 2026-11-18 and C#, C and C++ on 2026-11-24. Phase T3 (2026-11-24) added merge fixtures, relationship benchmark cases and a corpus validation for the four languages ([VALIDATION.md](VALIDATION.md#2026-11-24-tree-sitter-merge-fixtures-benchmark-cases-and-corpus-validation)): no wrong or missed relationship and no hidden change, but about a third of the changed C and C++ files were partly unanalyzed, because the grammars' error recovery around macros moves declaration boundaries. Possible follow-ups: better recovery around macros in C and C++, and moves inside declarations, which need changed runs from this engine.
-
-### Fine-grained differencing
-
-A second comparison engine that highlights changed expressions inside declarations, using the result model's `details`. Compare a project-owned matcher with Difftastic and GumTree as baselines.
-
-*(gap review)* This is SemanticDiff's central feature and the largest gap: inside the diff itself, formatting noise is hidden and only the changed tokens are highlighted, so a reviewer does not have to read every changed line of a declaration that is only partly reformatted. The outline currently judges formatting per declaration while the native diff still shows every line.
-
-Specified in [declarations/10](specs/declarations/10-fine-grained-differencing.md) (implemented, 2026-11-23) and [ADR 0014](adr/0014-changed-runs-come-from-the-declaration-engine.md): instead of a second engine, the declaration engine compares the tokens of each changed declaration under its whitespace policy and reports changed runs, which the SMART Diff viewer highlights in place of the native word highlights, behind an on-by-default setting. Lines inside a changed declaration that were only reformatted keep their line colour without word highlights. Difftastic and GumTree are baselines in the validation, not part of the plugin; the [2026-11-23 validation](VALIDATION.md#2026-11-23-fine-grained-differencing-against-difftastic-and-gumtree) found no edit outside the changed runs.
-
-### Extraction detection
-
-Link an added method or function to the code it was extracted from. When most of its body repeats one run of code that a changed declaration on the old side no longer has, label it "extracted from <declaration>" and frame that code on the old side when it is selected; the source declaration shows the extracted code in its details. Extracting into a new class is covered through the class's added methods. Implemented in 0.1.1 for Java, Kotlin, Scala 2 and Scala 3. Specified in [EXTRACTION-DETECTION.md](EXTRACTION-DETECTION.md). The reverse, inlining, is [relationships/05](specs/relationships/05-inlining-detection.md) and is implemented (2026-11-08); cross-file extraction stays [later](EXTRACTION-DETECTION.md#11-later).
-
-### Rename grouping across usages
-
-*(gap review)* Group a rename with every usage it changed, so the reviewer reads "renamed `foo` → `bar`, 12 usages" once instead of each changed call site. The 0.1.0 rename candidates pair the declaration only; edits that only follow a rename stay as ordinary changes. Implemented in [relationships/04](specs/relationships/04-rename-grouping.md) for Java, Kotlin K2 and Scala 2/3 (2026-11-07), as part of [STRUCTURAL-RELATIONSHIPS.md](STRUCTURAL-RELATIONSHIPS.md). Applies to declarations and local variables, and needs the same conservative confirmation as rename candidates. Like SemanticDiff, give each rename its own highlight color so its occurrences can be followed through the diff.
-
-### Moves inside declarations
-
-*(gap review)* Detect moved statements and blocks within and between declarations, and show the edits made inside the moved code. The shipped engine reports moves for whole declarations only. [Extraction detection](#extraction-detection) covers code moved into a new method; this covers the rest. The relationship model in [STRUCTURAL-RELATIONSHIPS.md](STRUCTURAL-RELATIONSHIPS.md) is the design it follows.
-
-Specified in [relationships/08](specs/relationships/08-moves-inside-declarations.md) (proposed, 2026-11-17) and implemented 2026-11-23, after [fine-grained differencing](#fine-grained-differencing), whose changed runs it reads: whole statements removed from a matched declaration and added to the same or another matched declaration, paired by similarity with the conservative margins of the matcher, become `CODE_MOVE` relationships. The outline lists each as `moved code lines A–B → C–D` under its target, with `moved` and `changed` labels, moved-code markers and the edits inside highlighted on selection, for Java, Kotlin, Scala 2, Scala 3 and Python, behind an on-by-default setting and gated by labelled benchmark cases.
-
-### Usability validation
-
-Decided 2026-11-01 as the check that the outline meets its main goal. A small, repeatable study compares finding changed declarations with the outline and with the native diff, and records time and accuracy. Specified in [outline/06](specs/outline/06-usability-validation.md) (accepted, 2026-11-10); the study kit is prepared in [docs/usability-study](usability-study/README.md), and the sessions are pending. The corpus validation in [VALIDATION.md](VALIDATION.md) stays the record of analysis quality; the study is separate.
-
-### Summaries for added and deleted files
-
-Give added and deleted files in the Changes tree a summary and declaration rows, as every declaration of the file added or removed. Today they get none; 0.2.0 keeps that. Specified in [changes-tree/06](specs/changes-tree/06-added-deleted-file-summaries.md) (accepted, 2026-11-10).
-
-### Hide comment-only changes
-
-*(gap review)* An opt-in toggle in the diff that hides declarations whose only change is in comments, or marks them as comment-only. Comments count as changes by default ([change classification](specs/declarations/02-change-classification.md)), and the shipped engine has no global ignore rule, so this stays off unless the user turns it on. Specified in [outline/11](specs/outline/11-comment-only-changes.md) (implemented, 2026-11-16) as an opt-in `comment-only` label in the outline that the change type filter can hide.
-
-### Opt-in equivalence rules
-
-*(gap review)* Language-specific rules that treat some syntax rewrites as unchanged, for example redundant parentheses, the base of an integer literal, or string escapes. [ADR 0003](adr/0003-conservative-classification.md) left these out on purpose because each rule is a behavioural claim; reconsider them as opt-in rules, one language at a time, each with fixtures that prove it. Implemented as [declarations/08](specs/declarations/08-equivalence-rules.md) (2026-11-17) and [ADR 0012](adr/0012-opt-in-equivalence-rules.md) for Java first: numeric literals in another base or format, strings and characters with other escapes, and redundant parentheses, each its own setting, mark a declaration `rewrite-only` in the outline, which the change type filter can hide, as comment-only changes are. Kotlin and Scala rules followed in [declarations/09](specs/declarations/09-kotlin-scala-equivalence-rules.md) (implemented, 2026-11-17): numeric literals, string escapes and redundant parentheses in both, and redundant braces in Kotlin string templates, under the same option.
-
-### Summary in pull request reviews and the Git log
-
-*(gap review)* SemanticDiff has a full pull request review UI. The IDE equivalent is showing the changed-declarations summary in the GitHub and GitLab pull request changes trees, in the Git log's commit details and in the modal commit dialog. `changesViewModifier` does not reach these ([ADR 0006](adr/0006-changes-tree-summary-through-changes-view-modifier.md)), so this starts with a spike for another hook. Specified in [changes-tree/07](specs/changes-tree/07-review-tree-summaries.md) (proposed, 2026-11-16) for the Git log's commit details and GitHub and GitLab pull request changes: the same summary line and declaration rows as the Changes tree, with spike S11 choosing the hook for each tree and a context menu popup where a tree has none. Implemented 2026-11-17: spike S11 found that all three trees take the summary through the tree's `model` property ([ADR 0013](adr/0013-review-tree-summaries-through-the-tree-model-property.md)), so no tree needs the popup; the two Changes tree settings and its filter apply to them. The modal commit dialog stays out of scope.
-
-### Reviewed marks in the outline
-
-Let the reviewer mark a change in the outline as reviewed and show progress in the summary line, for example `5 of 8 reviewed`. A mark resets when that declaration changes again. SemanticDiff's pull request viewer tracks reviewed files the same way. Implemented 2026-11-16 in [outline/12](specs/outline/12-reviewed-marks.md): the context menu and Space mark and unmark change rows and the file region, marks persist per project in the workspace file and are dropped when the declaration's text changes, the summary ends with `N of M reviewed`, and an off-by-default "Hide Reviewed" filter leaves reviewed changes out. Marks are local to the diff when its file has no path in the project.
-
-### Expand context to the enclosing declaration
-
-*(gap review)* When the native diff collapses unchanged fragments, offer to expand a fragment to the whole surrounding declaration instead of a fixed number of lines. SemanticDiff expands context by complete blocks. Implemented 2026-11-16 in [outline/14](specs/outline/14-expand-to-declaration.md): an "Expand Declaration" action in the outline's and the editors' context menus expands every collapsed unchanged fragment in a changed declaration, on both sides, and leaves the rest collapsed, without comparing again or changing the diff's collapse setting. A relationship row expands the fragments of every declaration it frames.
-
-### Visual links for moved code (implemented, 2026-11-16)
-
-*(gap review)* Show where moved code came from without selecting it first: mark moved declarations in both editors and link the old and new positions, for example in the gutter or the scrollbar. SemanticDiff boxes moved blocks and shows them on a minimap. Today the outline frames a moved declaration on both sides only when it is selected. Implemented in [outline/13](specs/outline/13-moved-code-markers.md): gutter icons and thin scrollbar marks on both sides name the other side's line, follow the outline's filters and setting, and select the moved declaration's row when clicked.
-
-### Moved lines in unsupported files (implemented, 2026-11-16)
-
-*(gap review)* For files no engine can analyze, a fallback that treats each line as one token and still reports moved lines, as SemanticDiff's fallback diff does. These files currently get only the plain native diff. Implemented in [engines/04](specs/engines/04-moved-lines.md): two-sided diffs of plain text and of languages without an engine are compared by lines, and the outline lists each moved block of at least 3 lines, framed on both sides with moved-code markers, and one file region row for the rest, behind an on-by-default setting.
-
-### Relationship recall
-
-*(weak-point review)* The benchmark reported precision 1.000 but overall recall around 0.83 (0.821 on the held-out split) when this item was written; after the [2026-11-23 recall work](VALIDATION.md#2026-11-23-relationship-recall) the 0.5.0 run reports recall 0.966 (0.924 held-out), with 12 labelled relationships still missed. Work through the missed relationships listed in [VALIDATION.md](VALIDATION.md) by kind and language, for example extraction to several sources, and raise recall without lowering precision or forcing an ambiguous pair, under the benchmark's `no-new-wrong-pairs` gate.
-
-### Formatting-only recall in Kotlin and Scala (implemented, 2026-11-16)
-
-*(weak-point review)* The 0.3.0 manual check labelled an intended formatting-only change to `price()` as `changed` in Kotlin and Scala 2, and the benchmark's formatting-only recall is below 1. Find which whitespace and line-break cases the Kotlin and Scala policies treat as content, add fixtures for them, and classify them as formatting-only where the language allows it, keeping Scala 3 indentation significant. Implemented in [declarations/07](specs/declarations/07-kotlin-scala-formatting.md): line breaks inside brackets and next to tokens that continue or close an expression become formatting, and a whole Scala 3 declaration re-indented by the same amount is formatting-only. The [benchmark record](VALIDATION.md#2026-11-16-kotlin-and-scala-formatting-only-line-breaks) shows formatting-only accuracy 1.000 in every language and no lower recall.
+| [Close the open manual checks](#close-the-open-manual-checks) | Each feature's details file |
+| [Usability study sessions](#usability-validation) | [outline/06](specs/outline/06-usability-validation.md) (accepted) |
+| [Relationship recall](#relationship-recall) | [relationships/03](specs/relationships/03-relationship-matching.md), [relationships/05](specs/relationships/05-inlining-detection.md) |
+| [C and C++ macro recovery](#c-and-c-macro-recovery) | [engines/05](specs/engines/05-tree-sitter.md) |
+| [Moves inside declarations in Tree-sitter languages](#moves-inside-declarations-in-tree-sitter-languages) | [engines/05](specs/engines/05-tree-sitter.md), [relationships/08](specs/relationships/08-moves-inside-declarations.md) |
+| [Ruby](#ruby) | [Format coverage plan](FORMAT-COVERAGE.md) phase B5; not specified yet |
+| [Rename grouping in more languages](#rename-grouping-in-more-languages) | [relationships/04](specs/relationships/04-rename-grouping.md) |
+| [Later](#later) | Not specified yet |
 
 ### Close the open manual checks
 
-*(weak-point review)* Several 0.3.0 manual IDE rows are recorded as partial or inconclusive, among them the outline filter toggle, the Structural Outline shortcut and its toolbar position, caret follow through the Local Changes splitter, result-edit following in the merge window, and the merge window's `not tracked` note, and the [refactorings view manual check](VALIDATION.md#2026-11-09-refactorings-view-manual-check) is outstanding. Re-run them, fix any real failure, and move the rows that can be driven through the real action path into UI tests, so fewer release rows depend on a manual run.
+*(weak-point review)* Several physical IDE rows are recorded as partial, inconclusive or pending. The code for each is merged and covered by automated tests; what is missing is a run in a real IDE:
+
+- **Changes tree caret follow** ([changes-tree/05](specs/changes-tree/05-changes-tree-caret-follow.md), issue #110, closed as delivered): R3 through the Local Changes splitter preview, R5 commit inclusion and R11. The splitter preview could not be produced on IC 2025.1 in the 0.3.0 runs ([manual check](releases/0.3.0-manual-check.md#d-changes-tree-caret-follow-110-r1r11)).
+- **Other 0.3.0 rows:** the outline filter toggle, the Structural Outline shortcut and its toolbar position, result-edit following in the merge window and the merge window's `not tracked` note, listed in the [0.3.0 manual check](releases/0.3.0-manual-check.md).
+- **The [refactorings view manual check](VALIDATION.md#2026-11-09-refactorings-view-manual-check).**
+- **The 0.4.0 and 0.5.0 physical checks** on IC 2025.1.3 and IU 2026.3, pending since each release's validation.
+
+Re-run them, fix any real failure, and move the rows that can be driven through the real action path into UI tests, so fewer release rows depend on a manual run.
+
+### Usability validation
+
+Decided 2026-11-01 as the check that the outline meets its main goal. A small, repeatable study compares finding changed declarations with the outline and with the native diff, and records time and accuracy. Specified in [outline/06](specs/outline/06-usability-validation.md) (accepted, 2026-11-10); the study kit is prepared in [docs/usability-study](usability-study/README.md), and the sessions, with at least 5 participants, are pending. No release text may claim that the outline makes reviews faster until the study passes outline/06 R7. Its results also show which outline controls are used, which decides whether more of them can be merged after the [shared filter](#fewer-controls).
+
+### Relationship recall
+
+*(weak-point review)* The 0.5.0 benchmark run reports precision 1.000 and recall 0.966 (0.924 held-out), with 12 labelled relationships still missed, after the [2026-11-23 recall work](VALIDATION.md#2026-11-23-relationship-recall). Work through the missed relationships listed in [VALIDATION.md](VALIDATION.md) by kind and language, for example extraction to several sources, and raise recall without lowering precision or forcing an ambiguous pair, under the benchmark's `no-new-wrong-pairs` gate.
+
+### C and C++ macro recovery
+
+The T3 validation ([VALIDATION.md](VALIDATION.md#2026-11-24-tree-sitter-merge-fixtures-benchmark-cases-and-corpus-validation)) found no wrong or missed relationship and no hidden change, but about a third of the changed C and C++ files were partly unanalyzed, because the grammars' error recovery around macros moves declaration boundaries. Recover declaration boundaries around common macro patterns, without expanding macros, which stays out of scope.
+
+### Moves inside declarations in Tree-sitter languages
+
+[Moves inside declarations](#moves-inside-declarations) work for Java, Kotlin, Scala 2, Scala 3 and Python. Swift, C#, C and C++ need changed runs from the Tree-sitter engine first.
+
+### Ruby
+
+Phase B5 of the [format coverage plan](FORMAT-COVERAGE.md#5-phases): a Ruby provider on the JetBrains Ruby plugin's PSI (`org.jetbrains.plugins.ruby`), bundled in RubyMine, built on the paid-IDE pattern the other B phases use, with a RubyMine verifier family. Modules, classes, methods, singleton methods and constants are declarations; `attr_*` and DSL calls stay content. RubyMine's licensing is open question F5.
+
+### Rename grouping in more languages
+
+Renames are grouped with their usages for Java, Kotlin K2, Scala 2, Scala 3 and Python. Rust, JavaScript and TypeScript, Go, PHP, CSS and SQL pair renames as rename candidates but leave usages as ordinary changes. The Rust, Go and PHP spikes showed that in-file references resolve without an SDK, so each needs only its own reference resolver for [relationships/04](specs/relationships/04-rename-grouping.md). The Tree-sitter languages have no reference resolution, so they stay out.
+
+### Later
+
+- **Relationships across files and cross-file extraction:** not specified; only if the product scope is extended, with a separate design and benchmark ([extraction detection §11](EXTRACTION-DETECTION.md#11-later)).
+- **More stylesheet coverage:** rule sets inside SCSS control directives and the indented Sass syntax ([languages/18](specs/languages/18-css.md)).
+- **Third-party engines:** consider making the `comparisonEngine` extension point public once a second production engine has used the result model without breaking changes (technical spec Q5).
+- **Licence:** whether the PolyForm Noncommercial license, which rules out most use at work, stays as it is or gains a commercial option is the maintainer's decision and stays an open question.
+
+## Delivered
+
+Each item below is implemented and released; its spec holds the requirements and the design.
+
+### Structural relationships
+
+Relationships between declarations (renames, moves, kind changes, extractions, inlinings) are one list with a confidence and evidence, measured by the benchmark before any matcher change ([STRUCTURAL-RELATIONSHIPS.md](STRUCTURAL-RELATIONSHIPS.md), [RELATIONSHIP-BENCHMARK.md](RELATIONSHIP-BENCHMARK.md), [ADR 0008](adr/0008-relationships-are-the-source-of-truth-for-pairing.md)): the benchmark ([relationships/01](specs/relationships/01-relationship-benchmark.md)), the model ([relationships/02](specs/relationships/02-relationship-model.md)), whole-file matching ([relationships/03](specs/relationships/03-relationship-matching.md)), rename grouping ([relationships/04](specs/relationships/04-rename-grouping.md)), inlining ([relationships/05](specs/relationships/05-inlining-detection.md)), the refactorings view ([relationships/06](specs/relationships/06-refactorings-view.md)) and the release validation ([relationships/07](specs/relationships/07-relationship-validation.md)). Shipped across 0.3.0 and 0.4.0.
+
+### Rename candidates
+
+A removed and an added declaration of the same kind in the same container, with the same or a similar body, pair as an uncertain rename candidate, classes included ([declarations/03](specs/declarations/03-rename-candidates.md), 0.1.0). Overloads that all change signature at once pair by similarity ([declarations/01](specs/declarations/01-declaration-matching.md) R5).
+
+### Rename grouping across usages
+
+*(gap review)* A rename is read once with every usage it changed, each rename with its own highlight colour, for Java, Kotlin K2, Scala 2, Scala 3 and Python ([relationships/04](specs/relationships/04-rename-grouping.md), 0.3.0 and 0.4.0). Other languages are [open](#rename-grouping-in-more-languages).
+
+### Extraction detection
+
+An added method linked to the code it was extracted from, labelled "extracted from <declaration>" and framed on the old side ([EXTRACTION-DETECTION.md](EXTRACTION-DETECTION.md), [declarations/05](specs/declarations/05-extraction-detection.md), 0.1.1). The reverse, inlining, is [relationships/05](specs/relationships/05-inlining-detection.md) (0.4.0).
+
+### Moves inside declarations
+
+*(gap review)* Statements moved within or between declarations become `CODE_MOVE` relationships, listed as `moved code lines A–B → C–D` with markers and the edits inside highlighted, for Java, Kotlin, Scala 2, Scala 3 and Python ([relationships/08](specs/relationships/08-moves-inside-declarations.md), 0.5.0).
+
+### Fine-grained differencing
+
+*(gap review)* The declaration engine compares the tokens of each changed declaration under its whitespace policy and reports changed runs, which the SMART Diff viewer highlights in place of the native word highlights ([declarations/10](specs/declarations/10-fine-grained-differencing.md), [ADR 0014](adr/0014-changed-runs-come-from-the-declaration-engine.md), 0.5.0). The [validation against Difftastic and GumTree](VALIDATION.md#2026-11-23-fine-grained-differencing-against-difftastic-and-gumtree) found no edit outside the changed runs.
+
+### Multi-file summary in the Changes tree
+
+A summary line and expandable declaration rows for each file in Local Changes and the Commit tool window, through the public `changesViewModifier` extension point ([changes-tree/01](specs/changes-tree/01-changes-tree-summary.md), [changes-tree/02](specs/changes-tree/02-changes-tree-declarations.md), [ADR 0006](adr/0006-changes-tree-summary-through-changes-view-modifier.md), 0.1.0 and 0.2.0), with hide and filter ([changes-tree/04](specs/changes-tree/04-hide-and-filter.md)) and caret follow ([changes-tree/05](specs/changes-tree/05-changes-tree-caret-follow.md)) in 0.3.0. The modal commit dialog has no hook and shows no summary.
+
+### Summaries for added and deleted files
+
+Added and deleted files get a summary and declaration rows, as every declaration added or removed ([changes-tree/06](specs/changes-tree/06-added-deleted-file-summaries.md), 0.4.0).
+
+### Summary in pull request reviews and the Git log
+
+*(gap review)* The Git log's commit details and GitHub and GitLab pull request changes show the same summary and declaration rows as the Changes tree, through the tree's `model` property ([changes-tree/07](specs/changes-tree/07-review-tree-summaries.md), [ADR 0013](adr/0013-review-tree-summaries-through-the-tree-model-property.md), 0.4.0).
+
+### Structural outline for three-way merges
+
+The declarations changed on each side of a merge, in the merge window and in three-sided diffs, grouped by side, for Java, Kotlin, Scala 2 and Scala 3 and later every language with a provider ([THREE-WAY-MERGE.md](THREE-WAY-MERGE.md), [merge/01](specs/merge/01-merge-join.md) to [merge/06](specs/merge/06-merge-validation.md), [ADR 0007](adr/0007-merge-outline-attaches-through-a-delegating-merge-tool.md), 0.2.0). SMART Diff never resolves or edits anything.
+
+### Scala
+
+Scala 2 and Scala 3 through the Scala plugin's PSI, in an optional descriptor, with the dialect chosen from both texts ([languages/03](specs/languages/03-scala.md), 0.1.0).
+
+### Python
+
+Python through `PythonCore`, with the indentation-significant whitespace policy ([languages/04](specs/languages/04-python.md), 0.4.0).
+
+### Rust
+
+Rust through the JetBrains Rust plugin, in a `rust/` subproject on IntelliJ IDEA Ultimate ([languages/05](specs/languages/05-rust.md), [ADR 0011](adr/0011-rust-provider-build-target-spike.md), 0.4.0).
+
+### More languages
+
+The [format coverage plan](FORMAT-COVERAGE.md) is delivered except phase B5, [Ruby](#ruby): the structure-view fallback for every other language ([languages/06](specs/languages/06-structure-view-fallback.md)); JSON, YAML, properties, TOML, XML and HTML with keys as declarations ([ADR 0009](adr/0009-structured-data-keys-are-declarations.md), [languages/07](specs/languages/07-json.md) to [languages/15](specs/languages/15-html.md)); Groovy and Gradle scripts, shell and Markdown (0.4.0); and, on the paid-IDE build pattern, JavaScript and TypeScript, Go, CSS, SCSS and Less, PHP and SQL ([languages/16](specs/languages/16-javascript-typescript.md) to [languages/20](specs/languages/20-sql.md), 0.5.0).
+
+### Tree-sitter support
+
+A `Declarations (Tree-sitter)` engine with bundled grammars for Swift (0.4.0) and C#, C and C++ (0.5.0) in files the IDE opens as plain text or TextMate files, run in a native helper process ([engines/05](specs/engines/05-tree-sitter.md), [ADR 0015](adr/0015-tree-sitter-languages-are-chosen-by-file-name.md), [ADR 0016](adr/0016-tree-sitter-runs-in-a-native-helper-process.md)). Follow-ups are [open](#c-and-c-macro-recovery).
+
+### Moved lines in unsupported files
+
+*(gap review)* Files no engine can analyze are compared by lines, and moved blocks of at least 3 lines are listed and framed ([engines/04](specs/engines/04-moved-lines.md), 0.4.0).
+
+### Hide comment-only changes
+
+*(gap review)* An opt-in `comment-only` label that the change type filter can hide ([outline/11](specs/outline/11-comment-only-changes.md), 0.4.0).
+
+### Opt-in equivalence rules
+
+*(gap review)* Opt-in rules that mark numeric literal, string escape and redundant parenthesis rewrites `rewrite-only`, for Java ([declarations/08](specs/declarations/08-equivalence-rules.md), [ADR 0012](adr/0012-opt-in-equivalence-rules.md)) and Kotlin and Scala ([declarations/09](specs/declarations/09-kotlin-scala-equivalence-rules.md)), 0.4.0.
+
+### Formatting-only recall in Kotlin and Scala
+
+*(weak-point review)* Line breaks inside brackets and next to continuing tokens are formatting, and a Scala 3 declaration re-indented as a whole is formatting-only ([declarations/07](specs/declarations/07-kotlin-scala-formatting.md), 0.4.0).
+
+### Reviewed marks in the outline
+
+Mark changes reviewed, see `N of M reviewed` in the summary line and hide reviewed rows ([outline/12](specs/outline/12-reviewed-marks.md), 0.4.0).
+
+### Visual links for moved code
+
+*(gap review)* Gutter icons and scrollbar marks on both sides of a moved declaration ([outline/13](specs/outline/13-moved-code-markers.md), 0.4.0).
+
+### Expand context to the enclosing declaration
+
+*(gap review)* An "Expand Declaration" action expands every collapsed unchanged fragment in a changed declaration ([outline/14](specs/outline/14-expand-to-declaration.md), 0.4.0).
+
+### Settings button in the outline
+
+A toolbar button that opens *Settings | Tools | SMART Diff*, with open outlines picking up applied settings ([outline/10](specs/outline/10-outline-settings-button.md), 0.4.0).
 
 ### Platform API stability
 
-*(weak-point review)* The plugin uses experimental platform API (`ChangesViewNodeAction`), the Scala plugin's internal PSI and the Kotlin Analysis API, and sets no `untilBuild`, so an IDE or Scala plugin update can break it without warning. Run Plugin Verifier against EAP builds on a schedule, keep each experimental or internal use behind one adapter with a fallback that degrades to the native diff, and replace a use when a public API becomes available. Implemented as [platform/01](specs/platform/01-platform-api-stability.md) (2026-11-17): a weekly early-access Plugin Verifier run, an inventory in `docs/PLATFORM-API.md` with one adapter per API enforced by an architecture test, and a guard that turns off only the feature whose API is missing, so the native diff keeps working.
-
-### Marketplace distribution
-
-*(weak-point review)* The plugin is installed from disk from the GitHub release, so it gets no automatic updates and cannot be found from the IDE. The release workflow can already publish to the JetBrains Marketplace when the `PUBLISH_TO_MARKETPLACE` variable is set ([RELEASING.md](RELEASING.md)); turn that on and complete the Marketplace listing. Whether the PolyForm Noncommercial license, which rules out most use at work, stays as it is or gains a commercial option is the maintainer's decision and is recorded here as an open question.
+*(weak-point review)* A weekly early-access Plugin Verifier run, an inventory in [PLATFORM-API.md](PLATFORM-API.md) with one adapter per API, and a guard that turns off only the feature whose API is missing ([platform/01](specs/platform/01-platform-api-stability.md), 0.4.0).
 
 ### Fewer controls
 
-*(weak-point review)* The outline now has two views, a change-type filter, a hide-by-kind menu, Hide and Minimise, the viewer switcher and separate Changes tree options, each with its own setting. Review which controls are used, using the [usability study](#usability-validation) where it helps, and merge or remove the ones that overlap, so the UI stays small enough to test and maintain. First step (2026-11-25): the outline and the Changes tree now share one change type filter and one settings group ([changes-tree/04](specs/changes-tree/04-hide-and-filter.md) R19 to R21, [outline/03](specs/outline/03-change-type-filter.md) R11), replacing the tree's separate filter.
+*(weak-point review)* The outline and the Changes tree share one change type filter and one settings group ([changes-tree/04](specs/changes-tree/04-hide-and-filter.md) R19 to R21, [outline/03](specs/outline/03-change-type-filter.md) R11), replacing the tree's separate filter (0.5.0). Whether more controls can be merged waits for the [usability study](#usability-validation).
 
-### Settings button in the outline (implemented, 2026-11-15)
+### Marketplace distribution
 
-A settings button in the outline panel's toolbar that opens *Settings | Tools | SMART Diff*, so the outline's options, such as opening automatically, how formatting-only changes are shown, the default engine and the analysis limits, can be reached from the diff instead of through the IDE's settings dialog. Specified in [outline/10](specs/outline/10-outline-settings-button.md) (implemented, 2026-11-15), which also makes open outlines pick up applied settings without being reopened.
-
-### Third-party engines
-
-Consider making the `comparisonEngine` extension point public once a second production engine has used the result model without breaking changes (technical spec Q5).
+*(weak-point review)* The plugin is published on the [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/36327-smart-diff), so it can be found and updated from the IDE ([MARKETPLACE.md](MARKETPLACE.md), [RELEASING.md](RELEASING.md)).
