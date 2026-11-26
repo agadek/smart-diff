@@ -1,6 +1,6 @@
 # SMART Diff usability study: guide for participants
 
-SMART Diff is looking for volunteers for a 15-minute usability session. The study checks whether the plugin's structural outline helps a reviewer find a changed declaration faster than the IDE's normal diff, without more wrong answers.
+SMART Diff is looking for volunteers for a 15–25 minute usability session. The study checks whether the plugin's structural outline helps a reviewer find a changed declaration faster than the IDE's normal diff, without more wrong answers.
 
 This page is for participants. It describes the session and does not show the tasks or their answers. The facilitator's material is in this folder's [README](README.md).
 
@@ -26,7 +26,7 @@ Open an issue in [agadek/smart-diff](https://github.com/agadek/smart-diff/issues
 
 ## The session
 
-The session takes about 15 minutes. It runs on the maintainer's prepared IntelliJ IDEA setup, either in person or over a screen-sharing call where you control the IDE, so you don't install anything.
+The session takes 15–25 minutes. It runs on the maintainer's prepared IntelliJ IDEA setup, either in person or over a screen-sharing call where you control the IDE, so you don't install anything.
 
 1. **Welcome (2 minutes).** You get a short introduction and can ask questions about how the session works.
 2. **Five tasks (up to 3 minutes each).** For each task, one small real code change is shown as a diff. You are told whether the outline is shown for that task. Then one question is read aloud, for example which method was added.
@@ -69,4 +69,4 @@ The screening answer is recorded as yes or no next to your code. Your role, empl
 
 To invite a person directly, send them a link to this page with a short note, for example:
 
-> Could you give me about 15 minutes for a usability session of SMART Diff, a JetBrains plugin for reviewing diffs? You'll look at five real code changes and say which declaration changed and how; I time each answer. You need to read Java, Kotlin and Scala, and nothing about you is recorded except an anonymous code and the times. Details: https://github.com/agadek/smart-diff/blob/main/docs/usability-study/participant-guide.md
+> Could you give me 15–25 minutes for a usability session of SMART Diff, a JetBrains plugin for reviewing diffs? You'll look at five real code changes and say which declaration changed and how; I time each answer. You need to read Java, Kotlin and Scala, and nothing about you is recorded except an anonymous code and the times. Details: https://github.com/agadek/smart-diff/blob/main/docs/usability-study/participant-guide.md

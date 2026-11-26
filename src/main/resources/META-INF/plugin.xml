@@ -18,7 +18,7 @@
         </ul>
         Scala, Python, Rust, JavaScript, TypeScript, Go, CSS, SCSS, Less, PHP and SQL support need their IDE plugins installed (Python and Rust are bundled in PyCharm and RustRover, JavaScript, TypeScript, CSS, SCSS and Less in WebStorm, IntelliJ IDEA Ultimate and the other paid IDEs, Go in GoLand, PHP in PhpStorm, SQL in DataGrip, IntelliJ IDEA and the other paid IDEs); the other formats use language support bundled with the IDE. Settings are under <i>Settings | Tools | SMART Diff</i>.
         <br/><br/>
-        Help test SMART Diff: volunteers who read Java, Kotlin and Scala are wanted for a 15-minute usability session.
+        Help test SMART Diff: volunteers who read Java, Kotlin and Scala are wanted for a 15–25 minute usability session.
         See the <a href="https://github.com/agadek/smart-diff/blob/main/docs/usability-study/participant-guide.md">participant guide</a>.
         <br/><br/>
         Free for noncommercial use under the

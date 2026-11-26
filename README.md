@@ -133,7 +133,7 @@ CI runs both on every pull request (`.github/workflows/build.yml`).
 
 ## Take part in the usability study
 
-Volunteers who read Java, Kotlin and Scala are wanted for a 15-minute session that measures whether the structural
+Volunteers who read Java, Kotlin and Scala are wanted for a 15–25 minute session that measures whether the structural
 outline helps reviewers find changed declarations faster. Names are never recorded. See the
 [participant guide](docs/usability-study/participant-guide.md) for what happens and how to volunteer.
 
