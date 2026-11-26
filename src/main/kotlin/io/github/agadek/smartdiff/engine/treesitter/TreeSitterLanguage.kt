@@ -58,6 +58,12 @@ internal interface TreeSitterLanguage {
 
     /** Symbol names of leaves whose text is split into words and whitespace, such as a C macro's body (§7). */
     val splitLeaves: Set<String> get() = emptySet()
+
+    /** Whether [recover] can return a text to parse again. */
+    val recovers: Boolean get() = false
+
+    /** The text to parse again when a side has a parse error, or null when no pattern matches (engines/06). */
+    fun recover(text: CharSequence): MacroRecovery? = null
 }
 
 /** Swift, with `tree-sitter-swift` (engines/05 R8, R16, R19). */

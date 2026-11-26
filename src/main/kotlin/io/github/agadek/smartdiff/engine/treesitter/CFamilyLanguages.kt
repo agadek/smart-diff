@@ -29,6 +29,11 @@ internal abstract class CFamilyLanguage(override val id: String, override val gr
 
     override fun isOpaque(type: String) = type in opaque
 
+    /** engines/06: macro patterns read as blank space. */
+    override val recovers = true
+
+    override fun recover(text: CharSequence): MacroRecovery? = CMacroRecovery.recover(text)
+
     override fun isDocComment(text: String) = text.startsWith("///") || text.startsWith("//!") ||
         (text.startsWith("/**") && !text.startsWith("/**/")) || text.startsWith("/*!")
 
@@ -42,10 +47,11 @@ internal abstract class CFamilyLanguage(override val id: String, override val gr
 
     /**
      * The line break that ends each directive, and every backslash line continuation inside one (R18): a directive
-     * starts at its `#` keyword and runs to the first line break without a backslash before it.
+     * starts at its `#` keyword and runs to the first line break without a backslash before it. Directive lines that
+     * macro recovery read as blank space are not in the tree; their line breaks come from the recovery (engines/06 R18).
      */
     override fun significantLineBreaks(syntax: TreeSitterSyntax): Set<Int> = with(syntax) {
-        val breaks = HashSet<Int>()
+        val breaks = HashSet<Int>(recovery?.lineBreaks.orEmpty())
         var scanned = 0
         for (node in 0 until tree.size) {
             val directive = (!isNamed(node) && type(node).startsWith("#")) || type(node) == "preproc_directive"

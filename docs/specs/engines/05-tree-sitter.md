@@ -27,7 +27,7 @@ Status: implemented, 2026-11-24 (Swift 2026-11-18; C#, C and C++, and the valida
 - **R17** In C#, C and C++, whitespace and line breaks outside string literals and preprocessor directives are [formatting-only](../../GLOSSARY.md#formatting-only) when nothing else changed.
 - **R18** In C and C++, a line break that ends or continues a preprocessor directive is a change.
 - **R19** In Swift, a line break is formatting-only where it is formatting-only in Kotlin.
-- **R20** Source that a grammar cannot parse is [unanalyzed](../../GLOSSARY.md#unanalyzed), and the rest of the file is analyzed.
+- **R20** Source that a grammar cannot parse is [unanalyzed](../../GLOSSARY.md#unanalyzed), and the rest of the file is analyzed; in C and C++, [macro recovery](06-c-cpp-macro-recovery.md) parses around common macro patterns first.
 - **R21** Rename candidates, kind changes, moves, extraction detection and inlining detection work for Tree-sitter languages as for Java.
 - **R22** The engine works in the IDE on macOS, Linux and Windows, on x64 and arm64.
 - **R23** When the parser cannot be loaded, Tree-sitter languages behave as with the setting off, and the IDE log has one warning for the session.
@@ -46,7 +46,7 @@ Status: implemented, 2026-11-24 (Swift 2026-11-18; C#, C and C++, and the valida
 - Objective-C, F#, VB.NET and other languages, which can follow with their own grammars.
 - Grouping renames with their usages, which needs reference resolution that Tree-sitter does not provide.
 - Choosing between C and C++ for a `.h` file by its contents.
-- Expanding macros, or declarations that only a macro generates.
+- Expanding macros, or declarations that only a macro generates; [macro recovery](06-c-cpp-macro-recovery.md) reads common macro patterns as blank space instead.
 - Fine-grained differencing with Tree-sitter, and with it [moves inside declarations](../relationships/08-moves-inside-declarations.md), which read the changed runs; and Tree-sitter for languages the IDE parses.
 
 ## References
@@ -64,3 +64,4 @@ Status: implemented, 2026-11-24 (Swift 2026-11-18; C#, C and C++, and the valida
 - [Format coverage plan](../../FORMAT-COVERAGE.md#25-group-e-not-supported-and-why)
 - [Research: Difftastic and alternatives](../../RESEARCH.md#difftastic-and-alternatives)
 - [Roadmap: Tree-sitter support](../../ROADMAP.md#tree-sitter-support)
+- [C and C++ macro recovery](06-c-cpp-macro-recovery.md)

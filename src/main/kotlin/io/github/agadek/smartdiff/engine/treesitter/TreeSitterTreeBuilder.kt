@@ -75,19 +75,31 @@ internal object TreeSitterTreeBuilder {
     }
 
     /**
-     * The start of [node] widened over the doc comments directly above it, with no blank line between (R15). Its
-     * attributes are already inside the node.
+     * The start of [node] widened over the doc comments directly above it, with no blank line between (R15), and over the
+     * attribute macros that macro recovery read as blank space directly before it (engines/06 R6). Its attributes are
+     * already inside the node.
      */
     private fun withDocComment(node: Int, syntax: TreeSitterSyntax, language: TreeSitterLanguage): Int {
         val parent = syntax.tree.parent(node).takeIf { it >= 0 } ?: return syntax.start(node)
         val siblings = syntax.children(parent)
+        val prefixes = syntax.recovery?.prefixes.orEmpty()
+        fun adjacent(from: Int, to: Int): Boolean {
+            val gap = syntax.text.substring(from, to)
+            return gap.isBlank() && gap.count { it == '\n' } <= 1
+        }
         var start = syntax.start(node)
         var index = siblings.indexOf(node) - 1
-        while (index >= 0) {
+        while (true) {
+            val previousEnd = if (index >= 0) syntax.end(siblings[index]) else syntax.start(parent)
+            val prefix = prefixes.lastOrNull { it.end <= start && it.start >= previousEnd }
+            if (prefix != null && adjacent(prefix.end, start)) {
+                start = prefix.start
+                continue
+            }
+            if (index < 0) break
             val previous = siblings[index]
-            val gap = syntax.text.substring(syntax.end(previous), start)
             val isDoc = syntax.type(previous) in language.comments && language.isDocComment(syntax.text(previous))
-            if (!isDoc || gap.isNotBlank() || gap.count { it == '\n' } > 1) break
+            if (!isDoc || !adjacent(syntax.end(previous), start)) break
             start = syntax.start(previous)
             index--
         }

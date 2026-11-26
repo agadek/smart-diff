@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- C and C++ files with macros the grammar cannot read, such as export and `constexpr` macros, namespace macros on lines of their own and `foreach`-style block macros, are parsed again around those macros, so far fewer declarations are unanalyzed. Nothing is expanded, and the macros are still compared.
+
 ## [0.5.0] - 2026-11-25
 
 ### Added
