@@ -1,6 +1,6 @@
 # Usability validation
 
-Status: accepted, 2026-11-10
+Status: accepted, 2026-11-26
 
 **Description:** A small, repeatable study compares how quickly reviewers find changed [declarations](../../GLOSSARY.md#declaration) with the [structural outline](../../GLOSSARY.md#structural-outline) and with the [native diff](../../GLOSSARY.md#native-diff) alone.
 
@@ -10,14 +10,17 @@ Status: accepted, 2026-11-10
 
 - **R1** A study uses at least 5 review tasks, each from a real multi-hunk change in a [supported language](../../GLOSSARY.md#supported-language).
 - **R2** Each task has one expected answer: the declaration that contains the change and how it changed.
-- **R3** At least 5 participants take part, and each knows the task's language but not the change.
-- **R4** Each participant does every task once with the outline and once with the native diff alone.
+- **R3** *(retired)* At least 5 participants take part, and each knows the task's language but not the change.
+- **R4** *(retired)* Each participant does every task once with the outline and once with the native diff alone.
 - **R5** The order of the two conditions alternates between tasks and participants.
 - **R6** The study records time to answer and whether the answer was right, for each task and condition.
 - **R7** The outline passes when the median time is at least 20% shorter than with the native diff and the number of wrong answers does not rise.
 - **R8** The method, the tasks and the results are recorded in [VALIDATION.md](../../VALIDATION.md), separate from the corpus classification results.
 - **R9** A later study can repeat the same tasks and compare its results with the recorded baseline.
 - **R10** The study never records names or other personal data of participants.
+- **R11** Each participant does every task once, either with the outline or with the native diff alone.
+- **R12** Each task is done by as many participants with the outline as with the native diff alone, and each participant uses both conditions.
+- **R13** At least 6 participants take part, and each knows the task's language but not the change.
 
 ## Out of scope
 
