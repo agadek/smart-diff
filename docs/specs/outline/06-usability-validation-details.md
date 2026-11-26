@@ -29,7 +29,7 @@ The study is done by the maintainer, not by an external lab. Participants may be
 
 ### Why these thresholds
 
-The 20% threshold is a choice: it is large enough to matter for a reviewer's time and small enough to be plausible for a study this size. The pilot in the Decisions section measures the run-to-run variation before the main study; if the variation is 20 points or more, the study is reported as inconclusive rather than lowering the threshold. The accuracy guard keeps a faster but wrong answer from passing. The sample is small on purpose: it is a release check, not a research result.
+The 20% threshold is a choice: it is large enough to matter for a reviewer's time and small enough to be plausible for a study this size. The pilot in the Decisions section measures the run-to-run variation before the main study; if the variation is 20% or more, the study is reported as inconclusive rather than lowering the threshold. The accuracy guard keeps a faster but wrong answer from passing. The sample is small on purpose: it is a release check, not a research result.
 
 ### Failure behavior
 
@@ -50,7 +50,7 @@ The study compares the [container tree](../../GLOSSARY.md#container-tree) with t
 
 ## Decisions
 
-- **Pilot size and variation.** The pilot has 2 participants, X01 and X02, who are not counted in the main study. Each does the five tasks once, all with the native diff, but each run is labelled with the condition the order schedule would give it: X01 follows P01's row and X02 follows P02's row. The analysis then computes the same relative difference as the main study between the runs labelled native and the runs labelled outline. Since no run used the outline, that difference is the variation from participants and tasks alone. If it is below 10 percentage points, 20% is above the observed variation. If it is 10–20 points, the main study may run but its result is reported with that caution. If it is 20 points or more, the 20% threshold is not above variation, so the study is reported as inconclusive and the tasks or timing are revised before the main study.
+- **Pilot size and variation.** The pilot has 2 participants, X01 and X02, who are not counted in the main study. Each does the five tasks once, all with the native diff, but each run is labelled with the condition the order schedule would give it: X01 follows P01's row and X02 follows P02's row. The analysis then computes the same relative difference as the main study, the absolute difference of the two medians divided by the median of the runs labelled native, between the runs labelled native and the runs labelled outline. Since no run used the outline, that difference is the variation from participants and tasks alone. If it is below 10%, 20% is above the observed variation. If it is 10–20%, the main study may run but its result is reported with that caution. If it is 20% or more, the 20% threshold is not above variation, so the study is reported as inconclusive and the tasks or timing are revised before the main study.
 - **Fewer than 6 participants.** The study is reported as inconclusive, and so is an odd number of participants (R12). The bar is not lowered and the feature is not marked implemented; the maintainer waits for more participants or records the study as not run.
 - **Comparison condition.** Only the container tree against the native diff, as the feature says. The refactorings view is out of scope for this study.
 
@@ -67,5 +67,5 @@ The study compares the [container tree](../../GLOSSARY.md#container-tree) with t
 | R8, R9 | The dated VALIDATION.md section and the stored task sheet; `analyze.py` can be run again on a later sheet |
 | R10 | Review of the published record for personal data before it is committed |
 | R11 | `analyze.py` requires every participant to have every task exactly once and rejects missing or duplicate rows |
-| R12 | `analyze.py` checks each run's condition against the order schedule and reports an odd number of participants as inconclusive |
+| R12 | `analyze.py` checks each run's condition against the order schedule and reports an odd number of participants, or codes that are not P01 to PN, as inconclusive |
 | R13 | The attendance sheet records `qualified=yes` for every participant; fewer than 6 participants is reported as inconclusive |

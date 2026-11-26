@@ -25,7 +25,7 @@ Each participant does every task once, in the condition the order schedule gives
 
 ## Order schedule
 
-The facilitator reads the tasks in the order T1 to T5. `N` means the task is done with the native diff alone, `O` with the outline. Participant codes are anonymous and assigned in order.
+The facilitator reads the tasks in the order T1 to T5. `N` means the task is done with the native diff alone, `O` with the outline. Participant codes are anonymous and assigned in order without gaps; `analyze.py` reports a set that is not P01 to PN as inconclusive, since only contiguous codes split the conditions evenly.
 
 | Participant | T1 | T2 | T3 | T4 | T5 |
 | --- | --- | --- | --- | --- | --- |
@@ -52,9 +52,9 @@ Run the pilot before the main sessions, with 2 participants, `X01` and `X02`, wh
 
 - Each pilot participant does the five tasks once, all with the native diff, with the same setup and timing. Use `pilot-sheet-template.csv` with `participant,task,time_seconds`.
 - `analyze.py --pilot` labels each run with the condition the schedule would give it (X01 follows P01's row, X02 follows P02's) and computes the same relative difference as the main study between the two labels. No run used the outline, so the difference is the variation from participants and tasks alone.
-- If the difference is below 10 percentage points, the 20% threshold is above the observed variation; run the main study.
-- If it is 10–20 points, run the main study but report this caution with the result.
-- If it is 20 points or more, the 20% threshold is not above variation. Do not run the main study; report the pilot as inconclusive and revise the tasks or timing.
+- If the difference is below 10% (relative, as in the main analysis: the absolute difference divided by the native-labelled median), the 20% threshold is above the observed variation; run the main study.
+- If it is 10–20%, run the main study but report this caution with the result.
+- If it is 20% or more, the 20% threshold is not above variation. Do not run the main study; report the pilot as inconclusive and revise the tasks or timing.
 
 ## Fewer than 6 participants
 

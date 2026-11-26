@@ -138,6 +138,10 @@ def analyze(rows: list[dict[str, str]]) -> int:
         per_task_wrong[task][condition] += is_wrong
 
     print(f"participants: {len(participants)}")
+    numbers = sorted(_number(participant, "P") for participant in participants)
+    if numbers != list(range(1, len(numbers) + 1)):
+        print("INCONCLUSIVE: participant codes must run P01 to PN without gaps, so the conditions stay balanced (R12).")
+        return 2
     if len(participants) % 2 == 1:
         print(f"INCONCLUSIVE: an odd number of participants ({len(participants)}) leaves the conditions unbalanced (R12).")
         return 2
@@ -203,17 +207,17 @@ def analyze_pilot(rows: list[dict[str, str]]) -> int:
                 return 2
     as_native = _median(labelled["native"])
     as_outline = _median(labelled["outline"])
-    difference = abs(as_native - as_outline) / min(as_native, as_outline) * 100.0
+    difference = abs(as_native - as_outline) / as_native * 100.0
     print("pilot participants: 2")
     print(f"runs labelled native: median {as_native:.1f} s; runs labelled outline: median {as_outline:.1f} s (all native)")
-    print(f"variation between the labels: {difference:.1f} percentage points")
+    print(f"variation between the labels: {difference:.1f}% of the runs labelled native")
     if difference < 10.0:
         print("PILOT OK: the 20% threshold is above the observed variation.")
         return 0
     if difference < 20.0:
         print("PILOT CAUTION: 20% is above variation but close; report the pilot with the result.")
         return 0
-    print("PILOT INCONCLUSIVE: variation is at least 20 points; revise the tasks or timing before the main study.")
+    print("PILOT INCONCLUSIVE: variation is at least 20%; revise the tasks or timing before the main study.")
     return 2
 
 
@@ -242,6 +246,8 @@ def _self_test() -> int:
         expect(analyze([r for r in rows_for(6, 75) if not (r["participant"] == "P06" and r["task"] == "T5")]), 2,
                "a missing run should be inconclusive"),
         expect(analyze(rows_for(6, 75) + rows_for(1, 75)), 2, "a repeated run should be inconclusive"),
+        expect(analyze([r for r in rows_for(8, 75) if r["participant"] not in {"P06", "P08"}]), 2,
+               "four odd and two even participants should be inconclusive"),
         expect(analyze([dict(r, condition="outline") if r["participant"] == "P01" and r["task"] == "T1" else r
                         for r in rows_for(6, 75)]), 2, "a run off the order schedule should be inconclusive"),
         expect(analyze(rows_for(6, 75, outline_wrong_first=True)), 1, "a faster but wrong outline should fail"),
@@ -255,7 +261,7 @@ def _self_test() -> int:
         return 1
     uneven = [{"participant": p, "task": t, "time_seconds": "100" if p == "X01" else "50"}
               for p in ("X01", "X02") for t in TASKS]
-    if not expect(analyze_pilot(uneven), 2, "a pilot whose labels differ by 20 points or more should be inconclusive"):
+    if not expect(analyze_pilot(uneven), 2, "a pilot whose labels differ by 20% or more should be inconclusive"):
         return 1
     print("self-test passed")
     return 0
