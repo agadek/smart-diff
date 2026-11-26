@@ -1,0 +1,6 @@
+status: ANALYZED
+namespace detail  old 7-23  new 7-24
+  function to_unsigned(T)  changed  old 9-12  new 9-12
+  struct node  old 14-21  new 14-22
+    method set(int)  added  new 20
+function report_error(const char*)  changed  old 31  new 32

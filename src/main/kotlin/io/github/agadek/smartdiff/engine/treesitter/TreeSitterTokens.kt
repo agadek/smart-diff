@@ -52,8 +52,8 @@ internal class TreeSitterTokens private constructor(private val starts: IntArray
         /**
          * The tokens of [text] as [tree] covers it. [comments] and [strings] are symbol names: a comment leaf is a
          * comment token, and a string node is one token, so whitespace inside a string literal is content (R17).
-         * Text between leaves is whitespace; any other text there, which a grammar should never leave, is one content
-         * token, so it is never ignored. A line break at an offset in [lineBreaks] is a content token of its own, and a
+         * Text between leaves is whitespace; any other text there, which a grammar leaves only where macro recovery
+         * read it as blank space, is content tokens, one per word, so it is never ignored. A line break at an offset in [lineBreaks] is a content token of its own, and a
          * leaf whose symbol is in [splitLeaves] is split into words and whitespace (engines/05-tree-sitter-details §7).
          */
         fun of(
@@ -64,7 +64,9 @@ internal class TreeSitterTokens private constructor(private val starts: IntArray
             strings: Set<String>,
             lineBreaks: Set<Int> = emptySet(),
             splitLeaves: Set<String> = emptySet(),
+            literals: List<MaskedLiteral> = emptyList(),
         ): TreeSitterTokens {
+            val literalAt = literals.associateBy { it.range.start }
             val starts = mutableListOf<Int>()
             val tokens = mutableListOf<Token>()
             var position = 0
@@ -84,14 +86,28 @@ internal class TreeSitterTokens private constructor(private val starts: IntArray
                 if (end > from) add(from, Token("WHITE_SPACE", text.substring(from, end), TokenKind.WHITESPACE))
                 position = end
             }
+            /**
+             * Text between leaves: whitespace, or source the parse did not see, such as a macro that macro recovery read
+             * as blank space (engines/06 R5), split into words, each one content token, and whitespace.
+             */
             fun gap(end: Int) {
-                if (end > position) {
-                    val gap = text.substring(position, end)
-                    if (gap.isBlank()) {
-                        whitespace(end)
+                while (position < end) {
+                    var next = position
+                    val literal = literalAt[position]
+                    if (literal != null) {
+                        // A masked literal or comment is one token, as the grammar would give it (engines/06 R5).
+                        val to = minOf(literal.range.end, end).coerceAtLeast(position + 1)
+                        val kind = if (literal.comment) TokenKind.COMMENT else TokenKind.OTHER
+                        add(position, Token(if (literal.comment) "comment" else "TEXT", text.substring(position, to), kind))
+                        position = to
+                    } else if (text[position].isWhitespace()) {
+                        while (next < end && text[next].isWhitespace()) next++
+                        whitespace(next)
                     } else {
-                        add(position, Token("TEXT", gap, TokenKind.OTHER))
-                        position = end
+                        // A word ends where a literal or comment starts, as `printf(` before `"…"`.
+                        while (next < end && !text[next].isWhitespace() && (next == position || next !in literalAt)) next++
+                        add(position, Token("TEXT", text.substring(position, next), TokenKind.OTHER))
+                        position = next
                     }
                 }
             }

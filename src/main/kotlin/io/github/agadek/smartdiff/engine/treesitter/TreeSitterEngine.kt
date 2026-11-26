@@ -67,16 +67,40 @@ class TreeSitterEngine internal constructor(
         request: ComparisonRequest,
         cancellation: Cancellation,
     ): Pair<DeclarationTree, DeclarationTree> {
-        val (oldSyntax, newSyntax) = helpers.use(cancellation) { helper ->
+        // engines/06 R3: the other side of a three-way merge is read the same way, so the base is read alike in both.
+        val texts = listOf(request.oldText, request.newText) + if (language.recovers) request.relatedTexts else emptyList()
+        val parses = helpers.use(cancellation) { helper ->
             // One check whether or not the names are cached, so every comparison checks cancellation equally often.
             cancellation.checkCanceled()
             val grammarNames = names.getOrPut(language.grammar) { helper.names(language.grammar) }
-            val old = helper.parse(language.grammar, request.oldText, cancellation)
-            val new = helper.parse(language.grammar, request.newText, cancellation)
-            TreeSitterSyntax(old, grammarNames, request.oldText) to TreeSitterSyntax(new, grammarNames, request.newText)
+            val trees = texts.map { helper.parse(language.grammar, it, cancellation) }
+            val first = texts.indices.map { TreeSitterSyntax(trees[it], grammarNames, texts[it]) }
+            // engines/06 R1, R2: a second parse only when a version has a parse error and the language has a recovery.
+            if (trees.none(::hasParseError)) return@use listOf(first)
+            val recoveries = texts.map(language::recover)
+            if (recoveries.all { it == null }) return@use listOf(first)
+            // R3: every version is parsed again; one without a pattern parses as it did.
+            val recovered = texts.indices.map { i ->
+                recoveries[i]?.let { TreeSitterSyntax(helper.parse(language.grammar, it.text, cancellation), grammarNames, texts[i], it) }
+                    ?: first[i]
+            }
+            listOf(first, recovered)
         }
-        return TreeSitterTreeBuilder.build(oldSyntax, language, cancellation) to
-            TreeSitterTreeBuilder.build(newSyntax, language, cancellation)
+        val candidates = parses.map { syntaxes -> syntaxes.map { TreeSitterTreeBuilder.build(it, language, cancellation) } }
+        // engines/06 R1, R3: the parse that leaves less source unanalyzed in all versions together, the first on a tie.
+        val chosen = candidates.minBy { trees -> trees.sumOf(::unanalyzed) }
+        return chosen[0] to chosen[1]
+    }
+
+    private fun hasParseError(tree: TreeSitterTree): Boolean = (0 until tree.size).any { tree.isError(it) || tree.isMissing(it) }
+
+    /** The characters of [tree] in a declaration or file region with a parse error, without their children's. */
+    private fun unanalyzed(tree: DeclarationTree): Int {
+        val declarations = tree.all.filter { it.hasParseError }.sumOf { declaration ->
+            declaration.range.length - declaration.children.sumOf { it.range.length }
+        }
+        val region = if (tree.fileRegion.hasParseError) tree.fileRegion.ranges.sumOf { it.length } else 0
+        return declarations + region
     }
 
     companion object {
@@ -86,7 +110,7 @@ class TreeSitterEngine internal constructor(
          * The engine version and the version of each grammar and the runtime (R29). Raise the leading number when the
          * tree builder or a language table changes; the build checks that the grammar versions match the pinned sources.
          */
-        const val VERSION = "2 (tree-sitter v0.25.3; swift 0.7.4-with-generated-files; c-sharp v0.23.1; c v0.23.2; cpp v0.23.4)"
+        const val VERSION = "3 (tree-sitter v0.25.3; swift 0.7.4-with-generated-files; c-sharp v0.23.1; c v0.23.2; cpp v0.23.4)"
 
         internal val LANGUAGES: List<TreeSitterLanguage> = listOf(SwiftLanguage, CSharpLanguage, CLanguage, CppLanguage)
 

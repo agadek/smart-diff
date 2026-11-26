@@ -17,7 +17,7 @@ internal object TreeSitterTreeBuilder {
     fun build(syntax: TreeSitterSyntax, language: TreeSitterLanguage, cancellation: Cancellation): DeclarationTree {
         val tokens = TreeSitterTokens.of(
             syntax.tree, syntax.names, syntax.text, language.comments, language.strings,
-            language.significantLineBreaks(syntax), language.splitLeaves,
+            language.significantLineBreaks(syntax), language.splitLeaves, syntax.recovery?.literals.orEmpty(),
         )
         var visited = 0
 
@@ -75,19 +75,35 @@ internal object TreeSitterTreeBuilder {
     }
 
     /**
-     * The start of [node] widened over the doc comments directly above it, with no blank line between (R15). Its
-     * attributes are already inside the node.
+     * The start of [node] widened over the doc comments directly above it, with no blank line between (R15), and over the
+     * attribute macros that macro recovery read as blank space directly before it (engines/06 R6). Its attributes are
+     * already inside the node.
      */
     private fun withDocComment(node: Int, syntax: TreeSitterSyntax, language: TreeSitterLanguage): Int {
         val parent = syntax.tree.parent(node).takeIf { it >= 0 } ?: return syntax.start(node)
         val siblings = syntax.children(parent)
+        fun adjacent(from: Int, to: Int): Boolean {
+            val gap = syntax.text.substring(from, to)
+            return gap.isBlank() && gap.count { it == '\n' } <= 1
+        }
         var start = syntax.start(node)
         var index = siblings.indexOf(node) - 1
-        while (index >= 0) {
+        while (true) {
+            // The root starts at its first leaf, after any masked text, so a top-level declaration looks back to 0.
+            val previousEnd = when {
+                index >= 0 -> syntax.end(siblings[index])
+                parent == syntax.root -> 0
+                else -> syntax.start(parent)
+            }
+            val prefix = syntax.recovery?.prefixBefore(start)?.takeIf { it.start >= previousEnd }
+            if (prefix != null && adjacent(prefix.end, start)) {
+                start = prefix.start
+                continue
+            }
+            if (index < 0) break
             val previous = siblings[index]
-            val gap = syntax.text.substring(syntax.end(previous), start)
             val isDoc = syntax.type(previous) in language.comments && language.isDocComment(syntax.text(previous))
-            if (!isDoc || gap.isNotBlank() || gap.count { it == '\n' } > 1) break
+            if (!isDoc || !adjacent(syntax.end(previous), start)) break
             start = syntax.start(previous)
             index--
         }

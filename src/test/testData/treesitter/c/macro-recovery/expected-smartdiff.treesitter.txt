@@ -1,0 +1,3 @@
+status: ANALYZED
+function jv_string_fmt(const char*, ...)  changed  old 12  new 12
+function jv_count(jv)  changed  old 14-28  new 14-28

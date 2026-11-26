@@ -24,7 +24,6 @@ Items marked *(gap review)* came from a comparison with [SemanticDiff](RESEARCH.
 | [Close the open manual checks](#close-the-open-manual-checks) | Each feature's details file |
 | [Usability study sessions](#usability-validation) | [outline/06](specs/outline/06-usability-validation.md) (accepted) |
 | [Relationship recall](#relationship-recall) | [relationships/03](specs/relationships/03-relationship-matching.md), [relationships/05](specs/relationships/05-inlining-detection.md) |
-| [C and C++ macro recovery](#c-and-c-macro-recovery) | [engines/05](specs/engines/05-tree-sitter.md) |
 | [Moves inside declarations in Tree-sitter languages](#moves-inside-declarations-in-tree-sitter-languages) | [engines/05](specs/engines/05-tree-sitter.md), [relationships/08](specs/relationships/08-moves-inside-declarations.md) |
 | [Ruby](#ruby) | [Format coverage plan](FORMAT-COVERAGE.md) phase B5; not specified yet |
 | [Rename grouping in more languages](#rename-grouping-in-more-languages) | [relationships/04](specs/relationships/04-rename-grouping.md) |
@@ -48,10 +47,6 @@ Decided 2026-11-01 as the check that the outline meets its main goal. A small, r
 ### Relationship recall
 
 *(weak-point review)* The 0.5.0 benchmark run reports precision 1.000 and recall 0.966 (0.924 held-out), with 12 labelled relationships still missed, after the [2026-11-23 recall work](VALIDATION.md#2026-11-23-relationship-recall). Work through the missed relationships listed in [VALIDATION.md](VALIDATION.md) by kind and language, for example extraction to several sources, and raise recall without lowering precision or forcing an ambiguous pair, under the benchmark's `no-new-wrong-pairs` gate.
-
-### C and C++ macro recovery
-
-The T3 validation ([VALIDATION.md](VALIDATION.md#2026-11-24-tree-sitter-merge-fixtures-benchmark-cases-and-corpus-validation)) found no wrong or missed relationship and no hidden change, but about a third of the changed C and C++ files were partly unanalyzed, because the grammars' error recovery around macros moves declaration boundaries. Recover declaration boundaries around common macro patterns, without expanding macros, which stays out of scope.
 
 ### Moves inside declarations in Tree-sitter languages
 
@@ -134,7 +129,11 @@ The [format coverage plan](FORMAT-COVERAGE.md) is delivered except phase B5, [Ru
 
 ### Tree-sitter support
 
-A `Declarations (Tree-sitter)` engine with bundled grammars for Swift (0.4.0) and C#, C and C++ (0.5.0) in files the IDE opens as plain text or TextMate files, run in a native helper process ([engines/05](specs/engines/05-tree-sitter.md), [ADR 0015](adr/0015-tree-sitter-languages-are-chosen-by-file-name.md), [ADR 0016](adr/0016-tree-sitter-runs-in-a-native-helper-process.md)). Follow-ups are [open](#c-and-c-macro-recovery).
+A `Declarations (Tree-sitter)` engine with bundled grammars for Swift (0.4.0) and C#, C and C++ (0.5.0) in files the IDE opens as plain text or TextMate files, run in a native helper process ([engines/05](specs/engines/05-tree-sitter.md), [ADR 0015](adr/0015-tree-sitter-languages-are-chosen-by-file-name.md), [ADR 0016](adr/0016-tree-sitter-runs-in-a-native-helper-process.md)). Moves inside declarations for these languages are [open](#moves-inside-declarations-in-tree-sitter-languages).
+
+### C and C++ macro recovery
+
+*(T3 validation)* A C or C++ file that the grammar cannot fully parse is parsed again with common macro patterns, such as export and `constexpr` macros, namespace macros on lines of their own, `foreach`-style block macros and conditionals inside function bodies, read as blank space and still compared ([engines/06](specs/engines/06-c-cpp-macro-recovery.md), next release). Nothing is expanded. The [validation](VALIDATION.md#2026-11-26-c-and-c-macro-recovery) reran the T3 corpus.
 
 ### Moved lines in unsupported files
 

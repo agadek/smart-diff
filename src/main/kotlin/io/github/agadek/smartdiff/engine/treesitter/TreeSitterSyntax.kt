@@ -2,9 +2,16 @@ package io.github.agadek.smartdiff.engine.treesitter
 
 /**
  * Navigation over one side's [TreeSitterTree]: children, fields and node text by name, for the language tables
- * (engines/05-tree-sitter-details §5). Node indices are those of the tree.
+ * (engines/05-tree-sitter-details §5). Node indices are those of the tree. [text] is always the side's own text, also
+ * when the tree was parsed from a [MacroRecovery]'s text, so tokens and names read the source as written (engines/06 R5).
  */
-internal class TreeSitterSyntax(val tree: TreeSitterTree, val names: TreeSitterNames, val text: CharSequence) {
+internal class TreeSitterSyntax(
+    val tree: TreeSitterTree,
+    val names: TreeSitterNames,
+    val text: CharSequence,
+    /** The macro recovery the tree was parsed with (engines/06); the tree's offsets are [text]'s either way. */
+    val recovery: MacroRecovery? = null,
+) {
     private val firstChild = IntArray(tree.size) { -1 }
     private val nextSibling = IntArray(tree.size) { -1 }
 

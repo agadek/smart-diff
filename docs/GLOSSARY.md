@@ -123,6 +123,11 @@ _Avoid_: flavour, SQL language, database type
 Source that the language's parser could not read. Code with a parse error that changed is unanalyzed.
 _Avoid_: syntax error, broken code
 
+### Macro recovery
+
+A second parse of a C or C++ file with a parse error, in which common macro patterns are read as blank space and still compared, so the grammar finds the declarations around them. Specified in [C and C++ macro recovery](specs/engines/06-c-cpp-macro-recovery.md).
+_Avoid_: macro expansion, preprocessing
+
 ## Matching
 
 ### Counterpart

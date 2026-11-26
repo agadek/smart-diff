@@ -37,6 +37,32 @@ The Tree-sitter languages have their own run, with the same list format and the 
 
 Its report is written to `build/reports/smartdiff-treesitter-validation/`.
 
+## 2026-11-26: C and C++ macro recovery
+
+[C and C++ macro recovery](specs/engines/06-c-cpp-macro-recovery.md) on the engine `smartdiff.treesitter` 3, with the
+same grammars as the 2026-11-24 run. `TreeSitterCorpusValidationTest` ran again on the T3 corpus's C and C++ commits:
+the 40 most recent non-merge commits of `jqlang/jq` (head `5c001b18`) and `fmtlib/fmt` (head `3be6709f`), with the
+2026-11-24 list. The 2026-11-24 results are in brackets.
+
+| Language | Files | ANALYZED | PARTIAL | FAILED | hidden | empty |
+| --- | --- | --- | --- | --- | --- | --- |
+| C | 51 | 43 (33) | 8 (18) | 0 (0) | 0 | 0 |
+| C++ | 89 | 79 (54) | 10 (34) | 0 (1) | 0 | 0 |
+
+Partly unanalyzed C and C++ files fell from 52 of 140 to 18, and jq's `opcode_list.h`, a file of macro invocations, no
+longer fails. No file was flagged `hidden`, `empty` or `slow`; the slowest were fmt's `format.h` (291 ms) and jq's
+`builtin.c` (226 ms), against 145 ms before, since a file with a parse error is now parsed twice. One C++ file is
+`same-name` and 7 are `noisy`, as listed in the report.
+
+The 18 `PARTIAL` files are jq's `builtin.c` (5 commits, a `#define` and `#include` inside an initializer list), the
+generated `parser.c`, `lexer.c` and `lexer.h`, and fmt's `format.h` (6 commits, `extern template` declarations the
+grammar does not read), `fmt.cc`, `fmt-c.h` and `test/xchar-test.cc`. These are preprocessor directives inside
+expressions and grammar gaps that are not macros, out of scope for engines/06.
+
+Before the corpus run, the rules were measured on the default branches of jq, fmt, redis, curl, nlohmann/json, leveldb
+and libuv (1,052 C and C++ files, each parsed alone): files with unanalyzed source went from 366 to 165 and unanalyzed
+characters fell by 72%. Local CI passed: `buildPlugin check` and `verifyPlugin` for each of the seven verifier families.
+
 ## 2026-11-25: 0.5.0 release validation
 
 The release checks of [RELEASING.md](RELEASING.md) step 3 and 4 on `chore/release-0.5.0`, cut from main at `120258e` (PR #228). Matching and classification changed since 0.4.0 (moves inside declarations, relationship recall, the new languages), so none of the gates was skipped.
