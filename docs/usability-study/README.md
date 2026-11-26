@@ -32,3 +32,4 @@ This kit prepares the small usability study in [outline/06](../specs/outline/06-
 - [pilot-sheet-template.csv](pilot-sheet-template.csv) — the two native pilot runs.
 - [analyze.py](analyze.py) — the R6/R7 analysis and the pilot check; `--self-test` checks the arithmetic.
 - [dry-run.md](dry-run.md) — the non-participant dry run record.
+- [participant-guide.md](participant-guide.md) — the public guide and invitation for participants; it shows no task or answer. Linked from the project README and the Marketplace description.

@@ -17,6 +17,8 @@ The kit for the first manual upload of SMART Diff to the [JetBrains Marketplace]
 | Since build | `251` (2025.1); no until build — every later IDE is supported |
 | Channel | `default` |
 
+The description links to the [usability study participant guide](usability-study/participant-guide.md) to recruit volunteers. The Marketplace reads the description from the uploaded archive, so the link appears on the listing with the next release after 0.5.0.
+
 The listing must not claim that the outline makes reviews faster: the usability study ([outline/06](specs/outline/06-usability-validation.md)) has not reached R7. The description and [0.5.0 changelog](../CHANGELOG.md#050---2026-11-25) make no speed claim.
 
 ## Categories and tags
