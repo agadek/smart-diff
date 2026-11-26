@@ -188,4 +188,22 @@ class CMacroRecoveryTest {
         val text = "FMT_BEGIN_NAMESPACE\nFMT_API void f();\n#ifndef WIN32\nstatic\n#endif\nvoid g(void) {}\n"
         assertEquals(listOf("FMT_API", "#ifndef WIN32"), recovery.prefixes.map { text.substring(it.start, it.end) })
     }
+
+    // engines/06 R5: literals and comments inside masks are listed whole
+    @Test
+    fun `masked literals and comments are kept whole`() {
+        val text = "void f() {\n#if A\n  g();\n#else\n  printf(\"a  b\", 'c'); // two  spaces\n#endif\n}\n"
+        val literals = CMacroRecovery.recover(text)!!.literals.map { text.substring(it.range.start, it.range.end) to it.comment }
+        assertEquals(listOf("\"a  b\"" to false, "'c'" to false, "// two  spaces" to true), literals)
+    }
+
+    // engines/06 R6
+    @Test
+    fun `the prefix before an offset is found by binary search`() {
+        val text = "FMT_API void f();\nFMT_API void g();\n"
+        val recovery = CMacroRecovery.recover(text)!!
+        assertEquals(null, recovery.prefixBefore(0))
+        assertEquals(0, recovery.prefixBefore(text.indexOf("void f"))!!.start)
+        assertEquals(text.indexOf("FMT_API void g"), recovery.prefixBefore(text.length)!!.start)
+    }
 }

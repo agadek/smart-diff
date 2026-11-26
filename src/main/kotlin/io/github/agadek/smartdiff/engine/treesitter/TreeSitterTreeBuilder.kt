@@ -17,7 +17,7 @@ internal object TreeSitterTreeBuilder {
     fun build(syntax: TreeSitterSyntax, language: TreeSitterLanguage, cancellation: Cancellation): DeclarationTree {
         val tokens = TreeSitterTokens.of(
             syntax.tree, syntax.names, syntax.text, language.comments, language.strings,
-            language.significantLineBreaks(syntax), language.splitLeaves,
+            language.significantLineBreaks(syntax), language.splitLeaves, syntax.recovery?.literals.orEmpty(),
         )
         var visited = 0
 
@@ -82,7 +82,6 @@ internal object TreeSitterTreeBuilder {
     private fun withDocComment(node: Int, syntax: TreeSitterSyntax, language: TreeSitterLanguage): Int {
         val parent = syntax.tree.parent(node).takeIf { it >= 0 } ?: return syntax.start(node)
         val siblings = syntax.children(parent)
-        val prefixes = syntax.recovery?.prefixes.orEmpty()
         fun adjacent(from: Int, to: Int): Boolean {
             val gap = syntax.text.substring(from, to)
             return gap.isBlank() && gap.count { it == '\n' } <= 1
@@ -90,8 +89,13 @@ internal object TreeSitterTreeBuilder {
         var start = syntax.start(node)
         var index = siblings.indexOf(node) - 1
         while (true) {
-            val previousEnd = if (index >= 0) syntax.end(siblings[index]) else syntax.start(parent)
-            val prefix = prefixes.lastOrNull { it.end <= start && it.start >= previousEnd }
+            // The root starts at its first leaf, after any masked text, so a top-level declaration looks back to 0.
+            val previousEnd = when {
+                index >= 0 -> syntax.end(siblings[index])
+                parent == syntax.root -> 0
+                else -> syntax.start(parent)
+            }
+            val prefix = syntax.recovery?.prefixBefore(start)?.takeIf { it.start >= previousEnd }
             if (prefix != null && adjacent(prefix.end, start)) {
                 start = prefix.start
                 continue

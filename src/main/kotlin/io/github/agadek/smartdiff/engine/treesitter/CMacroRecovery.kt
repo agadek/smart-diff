@@ -13,10 +13,29 @@ internal class MacroRecovery(
     val masks: List<MacroMask>,
     /** Line breaks that end or continue a masked directive line, which stay content (engines/06 R18). */
     val lineBreaks: Set<Int>,
+    /**
+     * The string and character literals and the comments inside masked ranges, sorted by start: each stays one token,
+     * so respacing inside it is a change, as outside masks (R5).
+     */
+    val literals: List<MaskedLiteral> = emptyList(),
 ) {
-    /** The masked ranges a declaration's range starts at when they come directly before it (R6). */
+    /** The masked ranges a declaration's range starts at when they come directly before it (R6), sorted. */
     val prefixes: List<TextRange> = masks.filter { it.prefix }.map { it.range }
+
+    /** The last of [prefixes] that ends at or before [offset], found by binary search; null when none does. */
+    fun prefixBefore(offset: Int): TextRange? {
+        var low = 0
+        var high = prefixes.size
+        while (low < high) {
+            val mid = (low + high) ushr 1
+            if (prefixes[mid].end <= offset) low = mid + 1 else high = mid
+        }
+        return prefixes.getOrNull(low - 1)
+    }
 }
+
+/** A literal or comment inside a masked range; [comment] is true for a comment. */
+internal class MaskedLiteral(val range: TextRange, val comment: Boolean)
 
 internal class MacroMask(val range: TextRange, val kind: MacroPattern, val prefix: Boolean = kind.prefix)
 
@@ -58,7 +77,26 @@ internal object CMacroRecovery {
             for (at in token.start until token.end) if (text[at] == '\n') lineBreaks += at
             if (token.end < text.length && text[token.end] == '\n') lineBreaks += token.end
         }
-        return MacroRecovery(String(chars), sorted, lineBreaks)
+        return MacroRecovery(String(chars), sorted, lineBreaks, literals(text, sorted))
+    }
+
+    /** The literals and comments in [masks], scanned again so those inside masked directive lines are found too. */
+    private fun literals(text: CharSequence, masks: List<MacroMask>): List<MaskedLiteral> = buildList {
+        for (mask in masks) {
+            var i = mask.range.start
+            val end = mask.range.end
+            while (i < end) {
+                val c = text[i]
+                val next = when {
+                    text.startsWith("//", i) -> text.indexOf('\n', i).let { if (it < 0 || it > end) end else it }.also { add(MaskedLiteral(TextRange(i, it), true)) }
+                    text.startsWith("/*", i) -> text.indexOf("*/", i + 2).let { if (it < 0 || it + 2 > end) end else it + 2 }.also { add(MaskedLiteral(TextRange(i, it), true)) }
+                    c == '"' || c == '\'' -> minOf(end, skipString(text, i, raw = i > 0 && text[i - 1] == 'R' && c == '"'))
+                        .also { add(MaskedLiteral(TextRange(i, it), false)) }
+                    else -> i + 1
+                }
+                i = maxOf(next, i + 1)
+            }
+        }
     }
 
     internal enum class Kind { IDENTIFIER, NUMBER, STRING, PUNCTUATION, DIRECTIVE }
@@ -461,8 +499,9 @@ internal object CMacroRecovery {
                 val next = tokens.getOrNull(end)
                 if (next == null || next.lineStart || next.kind == Kind.DIRECTIVE) {
                     val followed = next == null || next.kind != Kind.PUNCTUATION || next.text in setOf("}", "~", "*", "&", "::", "[")
-                    // `TYPE` alone on a line above `name(…)` is a return type, unless the file uses it as an attribute.
-                    val returnType = next != null && end == i + 1 && next.kind == Kind.IDENTIFIER && text(end + 1) == "(" &&
+                    // `TYPE` alone on a line above `name(…)` is a return type, unless the file uses it as an attribute or
+                    // the name is a macro name too.
+                    val returnType = next != null && end == i + 1 && next.kind == Kind.IDENTIFIER && !isMacro(end) && text(end + 1) == "(" &&
                         token.text !in learned
                     if (followed && !returnType) {
                         mask(token.start, tokens[end - 1].end, MacroPattern.MACRO_LINE)

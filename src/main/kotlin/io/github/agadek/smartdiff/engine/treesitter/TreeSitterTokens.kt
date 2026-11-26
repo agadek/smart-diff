@@ -64,7 +64,9 @@ internal class TreeSitterTokens private constructor(private val starts: IntArray
             strings: Set<String>,
             lineBreaks: Set<Int> = emptySet(),
             splitLeaves: Set<String> = emptySet(),
+            literals: List<MaskedLiteral> = emptyList(),
         ): TreeSitterTokens {
+            val literalAt = literals.associateBy { it.range.start }
             val starts = mutableListOf<Int>()
             val tokens = mutableListOf<Token>()
             var position = 0
@@ -91,11 +93,19 @@ internal class TreeSitterTokens private constructor(private val starts: IntArray
             fun gap(end: Int) {
                 while (position < end) {
                     var next = position
-                    if (text[position].isWhitespace()) {
+                    val literal = literalAt[position]
+                    if (literal != null) {
+                        // A masked literal or comment is one token, as the grammar would give it (engines/06 R5).
+                        val to = minOf(literal.range.end, end).coerceAtLeast(position + 1)
+                        val kind = if (literal.comment) TokenKind.COMMENT else TokenKind.OTHER
+                        add(position, Token(if (literal.comment) "comment" else "TEXT", text.substring(position, to), kind))
+                        position = to
+                    } else if (text[position].isWhitespace()) {
                         while (next < end && text[next].isWhitespace()) next++
                         whitespace(next)
                     } else {
-                        while (next < end && !text[next].isWhitespace()) next++
+                        // A word ends where a literal or comment starts, as `printf(` before `"…"`.
+                        while (next < end && !text[next].isWhitespace() && (next == position || next !in literalAt)) next++
                         add(position, Token("TEXT", text.substring(position, next), TokenKind.OTHER))
                         position = next
                     }

@@ -77,7 +77,7 @@ class CMacroRecoveryTreeTest {
         assertTrue(contentTokens(report).contains("FMT_API"))
         val error = tree.all().single { it.name == "format_error" }
         assertEquals(text.indexOf("/** An error. */"), error.range.start)
-        assertTrue(contentTokens(error).contains("FMT_SO_VISIBILITY(\"default\")"))
+        assertTrue(contentTokens(error).containsAll(listOf("FMT_SO_VISIBILITY(", "\"default\"")))
         val newText = text.replace("FMT_API void report_error", "FMT_EXPORT void report_error")
         val (_, newTree) = trees(text, newText)
         assertNotEquals(contentTokens(report), contentTokens(newTree.all().single { it.name == "report_error" }))
@@ -127,5 +127,30 @@ class CMacroRecoveryTreeTest {
         val first = tree.fileRegion.tokens.filter { it.kind != TokenKind.WHITESPACE }.take(3)
         assertEquals(listOf("#ifndef", "FMT_ARGS_H_", "\n"), first.map { it.text })
         assertEquals(TreeSitterTokens.LINE_BREAK, first[2].type)
+    }
+
+    // engines/06 R5: a string in a masked branch is one token, so respacing it is a change
+    @Test
+    fun `respacing a string in a masked branch changes the function`() {
+        val old = "int f(int x) {\n#ifdef WIN32\n  puts(\"a\");\n#else\n  printf(\" \"); /* note  here */\n#endif\n  return x;\n}\nFMT_BEGIN_NAMESPACE\n"
+        val new = old.replace("printf(\" \")", "printf(\"  \")")
+        val (oldTree, newTree) = trees(old, new, LanguageIds.TREE_SITTER_C)
+        val before = oldTree.all().single { it.name == "f" }
+        val after = newTree.all().single { it.name == "f" }
+        assertTrue(contentTokens(before).contains("\" \""))
+        assertNotEquals(contentTokens(before), contentTokens(after))
+        assertTrue(before.ownTokens.any { it.kind == TokenKind.COMMENT && it.text == "/* note  here */" })
+    }
+
+    // engines/06 R5: a string in masked macro arguments is one token, so respacing it is a change
+    @Test
+    fun `respacing a string in masked macro arguments changes the declaration`() {
+        val old = "FMT_BEGIN_NAMESPACE\nLIB_DEPRECATED(\"use  g\") static int h(void);\n"
+        val new = old.replace("use  g", "use g")
+        val (oldTree, newTree) = trees(old, new)
+        val before = oldTree.all().single { it.name == "h" }
+        val after = newTree.all().single { it.name == "h" }
+        assertTrue(contentTokens(before).toString(), contentTokens(before).contains("\"use  g\""))
+        assertNotEquals(contentTokens(before), contentTokens(after))
     }
 }
