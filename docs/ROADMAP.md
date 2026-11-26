@@ -43,7 +43,7 @@ Re-run them, fix any real failure, and move the rows that can be driven through 
 
 ### Usability validation
 
-Decided 2026-11-01 as the check that the outline meets its main goal. A small, repeatable study compares finding changed declarations with the outline and with the native diff, and records time and accuracy. Specified in [outline/06](specs/outline/06-usability-validation.md) (accepted, 2026-11-10); the study kit is prepared in [docs/usability-study](usability-study/README.md), and the sessions, with at least 5 participants, are pending. No release text may claim that the outline makes reviews faster until the study passes outline/06 R7. Its results also show which outline controls are used, which decides whether more of them can be merged after the [shared filter](#fewer-controls).
+Decided 2026-11-01 as the check that the outline meets its main goal. A small, repeatable study compares finding changed declarations with the outline and with the native diff, and records time and accuracy. Specified in [outline/06](specs/outline/06-usability-validation.md) (accepted, 2026-11-10; revised 2026-11-26 so each participant does each task once); the study kit is prepared in [docs/usability-study](usability-study/README.md), and the sessions, with at least 6 participants, are pending. No release text may claim that the outline makes reviews faster until the study passes outline/06 R7. Its results also show which outline controls are used, which decides whether more of them can be merged after the [shared filter](#fewer-controls).
 
 ### Relationship recall
 
