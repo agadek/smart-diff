@@ -11,6 +11,8 @@ import io.github.agadek.smartdiff.engine.declarations.psi.java.JavaEquivalenceRu
 import io.github.agadek.smartdiff.engine.declarations.psi.java.javaTokens
 import io.github.agadek.smartdiff.engine.declarations.psi.kotlin.KotlinEquivalenceRules
 import io.github.agadek.smartdiff.engine.declarations.psi.kotlin.kotlinTokens
+import io.github.agadek.smartdiff.engine.declarations.psi.python.PythonEquivalenceRules
+import io.github.agadek.smartdiff.engine.declarations.psi.python.pythonTokens
 
 /** The rule set of a node, [ContentClassifier.rewriteRules], on Java tokens (declarations/08 R4 to R7). */
 class RewriteRulesClassifierTest : BasePlatformTestCase() {
@@ -89,6 +91,19 @@ class RewriteRulesClassifierTest : BasePlatformTestCase() {
             kotlinRules("fun f() = \"$d{x}\\u0021\"", "fun f() = \"${d}x!\""),
         )
         assertEquals(setOf(EquivalenceRule.KOTLIN_TEMPLATE_BRACES), kotlinRules("fun f() = \"$d{x}!\"", "fun f() = \"${d}x!\""))
+    }
+
+    // declarations/11-javascript-python-go-equivalence-rules R1
+    fun `test Python parentheses and a trailing comma together are the smallest set`() {
+        fun pythonRules(old: String, new: String) = ContentClassifier.rewriteRules(
+            pythonTokens(old), pythonTokens(new), WhitespacePolicy.INDENTATION_SIGNIFICANT, parseError = false, rules = PythonEquivalenceRules.ALL,
+        )
+        assertEquals(
+            setOf(EquivalenceRule.PYTHON_REDUNDANT_PARENTHESES, EquivalenceRule.PYTHON_TRAILING_COMMAS),
+            pythonRules("f((a), b,)\n", "f(a, b)\n"),
+        )
+        assertEquals(setOf(EquivalenceRule.PYTHON_TRAILING_COMMAS), pythonRules("f(a, b,)\n", "f(a, b)\n"))
+        assertEquals(emptySet<EquivalenceRule>(), pythonRules("f(a, b,)  # old\n", "f(a, b)  # new\n"))
     }
 
     // declarations/09-kotlin-scala-equivalence-rules R1

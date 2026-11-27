@@ -474,6 +474,23 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
         assertTrue("a rule no stored name turns off stays on", EquivalenceRule.JAVA_REDUNDANT_PARENTHESES in settings.rewriteOnlyRules)
     }
 
+    // declarations/11-javascript-python-go-equivalence-rules R2, R3
+    fun `test the JavaScript, Python and Go rules are on for a user who turned another rule off`() {
+        settings.loadState(SmartDiffSettings.SettingsState().apply {
+            markRewriteOnly = true
+            disabledEquivalenceRules = "${EquivalenceRule.JAVA_STRING_ESCAPES.name}, ${EquivalenceRule.KOTLIN_STRING_ESCAPES.name}"
+        })
+        val added = EquivalenceRule.entries.filter { it.language in setOf("JavaScript and TypeScript", "Python", "Go") }
+        assertEquals(13, added.size)
+        assertTrue(settings.rewriteOnlyRules.containsAll(added))
+
+        settings.disabledEquivalenceRules = setOf(EquivalenceRule.PYTHON_STRING_QUOTES.name)
+        assertFalse(EquivalenceRule.PYTHON_STRING_QUOTES in settings.rewriteOnlyRules)
+        assertTrue("turning a Python rule off leaves JavaScript's on", EquivalenceRule.JS_STRING_QUOTES in settings.rewriteOnlyRules)
+        assertTrue("and Go's", EquivalenceRule.GO_STRING_LITERALS in settings.rewriteOnlyRules)
+        assertTrue("and Kotlin's", EquivalenceRule.KOTLIN_STRING_ESCAPES in settings.rewriteOnlyRules)
+    }
+
     // declarations/08-equivalence-rules R2, R3; settings/01-settings-page R22
     fun `test the settings page round-trips rewrite-only marking and its rules`() {
         settings.loadState(SmartDiffSettings.SettingsState())
@@ -491,7 +508,8 @@ class SmartDiffSettingsTest : BasePlatformTestCase() {
             assertEquals(EquivalenceRule.entries.map { it.displayName }, rules.map { it.text })
             val labels = UIUtil.findComponentsOfType(panel, javax.swing.JLabel::class.java).map { it.text }
             val groups = EquivalenceRule.entries.map { it.language }.distinct()
-            assertEquals(listOf("Java", "Kotlin", "Scala"), groups)
+            // declarations/11 R2: the JavaScript and TypeScript, Python and Go groups follow Scala.
+            assertEquals(listOf("Java", "Kotlin", "Scala", "JavaScript and TypeScript", "Python", "Go"), groups)
             assertEquals(groups, labels.filter { it in groups })
             val hide = boxes.single { it.text == ChangeType.REWRITE_ONLY.text }
             assertFalse("the option starts off", mark.isSelected)

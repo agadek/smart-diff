@@ -8,6 +8,7 @@ import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.GuardedFeature
 import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
+import io.github.agadek.smartdiff.engine.declarations.model.EquivalenceRuleImpl
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationInfo
 import io.github.agadek.smartdiff.engine.declarations.psi.PsiDeclarationProvider
 
@@ -52,6 +53,9 @@ class JavaScriptDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.IN
     }
 
     override fun significantWhitespace(file: PsiFile): List<TextRange> = JavaScriptInterop.significantWhitespace(file)
+
+    // declarations/11 R4 to R8, R20, R21
+    override val equivalenceRules: List<EquivalenceRuleImpl> get() = JavaScriptEquivalenceRules.ALL
 
     private fun kind(name: String): DeclarationKind? = when (name) {
         "FUNCTION" -> DeclarationKind.FUNCTION

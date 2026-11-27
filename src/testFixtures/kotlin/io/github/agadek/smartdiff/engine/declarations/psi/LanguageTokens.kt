@@ -7,7 +7,7 @@ import io.github.agadek.smartdiff.engine.declarations.model.Token
 import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
 
 /** [text] as [language]'s lexer tokens, the way the providers record them (declarations/08, 09). Needs the IDE. */
-internal fun languageTokens(language: Language, text: String): List<Token> {
+fun languageTokens(language: Language, text: String): List<Token> {
     val definition = LanguageParserDefinitions.INSTANCE.forLanguage(language)
     val lexer = definition.createLexer(ProjectManager.getInstance().defaultProject)
     val tokens = mutableListOf<Token>()
@@ -26,5 +26,5 @@ internal fun languageTokens(language: Language, text: String): List<Token> {
 }
 
 /** The meaningful token texts of [tokens], joined by single spaces, to read a rewrite in a test. */
-internal fun tokenTexts(tokens: List<Token>): String =
+fun tokenTexts(tokens: List<Token>): String =
     tokens.filter { it.kind != TokenKind.WHITESPACE }.joinToString(" ") { it.text }
