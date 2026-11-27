@@ -34,12 +34,12 @@ Status: implemented, 2026-11-24
 - Flow type annotations; a Flow file is read as JavaScript.
 - Members of object literals, such as Vue options objects or `module.exports = { … }`.
 - Grouping renames with their usages; a JavaScript reference resolver is its own change to [relationships/04](../relationships/04-rename-grouping.md).
-- Opt-in equivalence rules for JavaScript.
 - Relationship benchmark fixtures and a corpus validation, which follow as their own phase.
 
 ## References
 
 - [Details](16-javascript-typescript-details.md)
+- [JavaScript, Python and Go equivalence rules](../declarations/11-javascript-python-go-equivalence-rules.md), the opt-in rewrite-only rules for JavaScript and TypeScript
 - [ADR 0003](../../adr/0003-conservative-classification.md)
 - [ADR 0011](../../adr/0011-rust-provider-build-target-spike.md), amended for paid IDEs
 - [Format coverage plan: B0 and B1](../../FORMAT-COVERAGE.md#5-phases)
