@@ -1,6 +1,6 @@
 # JavaScript, Python and Go equivalence rules: details
 
-Status: proposed, 2026-11-27
+Status: implemented, 2026-11-27
 
 **Feature:** [JavaScript, Python and Go equivalence rules](11-javascript-python-go-equivalence-rules.md)
 

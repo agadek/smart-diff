@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- "Mark rewrite-only changes" has rules for JavaScript and TypeScript, Python and Go: numeric literals in another base or format, strings with other quotes or escapes, trailing commas, redundant parentheses, and in Go the order of the imports in an import block. A function a formatter or a clean-up pass touched, such as Prettier, Black or `gofmt -s`, can show as `rewrite-only` instead of `changed`. Each rule has its own checkbox on the settings page, on by default.
+
 ### Changed
 
 - C and C++ files with macros the grammar cannot read, such as export and `constexpr` macros, namespace macros on lines of their own and `foreach`-style block macros, are parsed again around those macros, so far fewer declarations are unanalyzed. Nothing is expanded, and the macros are still compared.

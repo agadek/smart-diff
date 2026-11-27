@@ -66,7 +66,7 @@ The summary counts every change, hidden or not, and ends with how many are hidde
 | [08 Opt-in equivalence rules](declarations/08-equivalence-rules.md) | implemented, 2026-11-17 |
 | [09 Kotlin and Scala equivalence rules](declarations/09-kotlin-scala-equivalence-rules.md) | implemented, 2026-11-17 |
 | [10 Fine-grained differencing](declarations/10-fine-grained-differencing.md) | implemented, 2026-11-23 |
-| [11 JavaScript, Python and Go equivalence rules](declarations/11-javascript-python-go-equivalence-rules.md) | proposed, 2026-11-27 |
+| [11 JavaScript, Python and Go equivalence rules](declarations/11-javascript-python-go-equivalence-rules.md) | implemented, 2026-11-27 |
 
 ## Languages
 

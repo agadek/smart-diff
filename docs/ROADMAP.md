@@ -145,7 +145,7 @@ A `Declarations (Tree-sitter)` engine with bundled grammars for Swift (0.4.0) an
 
 ### Opt-in equivalence rules
 
-*(gap review)* Opt-in rules that mark numeric literal, string escape and redundant parenthesis rewrites `rewrite-only`, for Java ([declarations/08](specs/declarations/08-equivalence-rules.md), [ADR 0012](adr/0012-opt-in-equivalence-rules.md)) and Kotlin and Scala ([declarations/09](specs/declarations/09-kotlin-scala-equivalence-rules.md)), 0.4.0.
+*(gap review)* Opt-in rules that mark numeric literal, string escape and redundant parenthesis rewrites `rewrite-only`, for Java ([declarations/08](specs/declarations/08-equivalence-rules.md), [ADR 0012](adr/0012-opt-in-equivalence-rules.md)) and Kotlin and Scala ([declarations/09](specs/declarations/09-kotlin-scala-equivalence-rules.md)), 0.4.0. JavaScript and TypeScript, Python and Go add quote, trailing comma and redundant parenthesis rules, and Go an import order rule ([declarations/11](specs/declarations/11-javascript-python-go-equivalence-rules.md)).
 
 ### Formatting-only recall in Kotlin and Scala
 
