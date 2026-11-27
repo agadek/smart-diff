@@ -149,8 +149,8 @@ class ParenthesesScan(
         if (needsArgumentList(before) && !inArgumentList) return false
         if (!fitsAfter(tokens, indices, close, allowed, inArgumentList)) return false
         if (tokens[indices[open + 1]].type in excludedFirst) return false
-        if (contentOnOneLine && hasLineBreak(tokens, indices[open] + 1, indices[close])) return false
-        if (before in sameLineAfter && hasLineBreak(tokens, indices[open] + 1, indices[open + 1])) return false
+        if (contentOnOneLine && hasLineBreak(tokens, indices[open] + 1, indices[close], comments = true)) return false
+        if (before in sameLineAfter && hasLineBreak(tokens, indices[open] + 1, indices[open + 1], comments = true)) return false
         var depth = 0
         for (position in open + 1 until close) {
             val type = tokens[indices[position]].type
@@ -175,9 +175,13 @@ class ParenthesesScan(
         return hasLineBreak(tokens, indices[close] + 1, nextIndex) && startsStatement(next)
     }
 
-    /** Whether a whitespace token from [from] until [until] has a line break. */
-    private fun hasLineBreak(tokens: List<Token>, from: Int, until: Int): Boolean = (from until until).any { i ->
-        layout(tokens[i]) && tokens[i].kind != TokenKind.COMMENT && (tokens[i].text.contains('\n') || tokens[i].text.contains('\r'))
+    /**
+     * Whether a whitespace token from [from] until [until] has a line break; with [comments], also a comment, since a
+     * block comment with a line break ends a statement for JavaScript's ASI (declarations/11 R8).
+     */
+    private fun hasLineBreak(tokens: List<Token>, from: Int, until: Int, comments: Boolean = false): Boolean = (from until until).any { i ->
+        val token = tokens[i]
+        layout(token) && (comments || token.kind != TokenKind.COMMENT) && (token.text.contains('\n') || token.text.contains('\r'))
     }
 
     companion object {

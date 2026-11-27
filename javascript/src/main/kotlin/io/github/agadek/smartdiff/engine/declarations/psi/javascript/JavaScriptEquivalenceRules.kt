@@ -73,7 +73,8 @@ object JavaScriptEquivalenceRules {
     object StringQuotes : EquivalenceRuleImpl {
         override val rule = EquivalenceRule.JS_STRING_QUOTES
 
-        private val DIRECTIVE_BEFORE = setOf("JS:LBRACE", "JS:SEMICOLON")
+        /** A string after one of these can start or continue a directive prologue; after a string, ASI may end it. */
+        private val DIRECTIVE_BEFORE = setOf("JS:LBRACE", "JS:SEMICOLON", "JS:STRING_LITERAL")
         private val DIRECTIVE_AFTER = setOf("JS:SEMICOLON", "JS:RBRACE")
 
         override fun rewrite(tokens: List<Token>): List<Token> {
@@ -87,7 +88,10 @@ object JavaScriptEquivalenceRules {
             }
         }
 
-        /** Whether the string at [p] among [indices] can be a directive: alone at the start of a statement list. */
+        /**
+         * Whether the string at [p] among [indices] can be a directive: alone at the start of a statement list, or
+         * after another string, which ASI can end without a `;` (`'use client'` then `'use strict'` on the next line).
+         */
         private fun mayBeDirective(tokens: List<Token>, indices: List<Int>, p: Int): Boolean {
             val previous = indices.getOrNull(p - 1)?.let { tokens[it] }
             if (previous != null && previous.type !in DIRECTIVE_BEFORE) return false

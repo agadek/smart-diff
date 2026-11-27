@@ -54,6 +54,9 @@ class JavaScriptRedundantParenthesesRuleTest : BasePlatformTestCase() {
         differ("function f() { return (\n  x\n); }", "function f() { return x; }")
         differ("function f() { throw (\n  e\n); }", "function f() { throw e; }")
         same("function f() { return (x\n); }", "function f() { return x\n; }")
+        // A block comment with a line break ends the statement for ASI as a line break does.
+        differ("function f() { return (/*\n*/ x); }", "function f() { return /*\n*/ x; }")
+        same("function f() { return (/* note */ x); }", "function f() { return /* note */ x; }")
     }
 
     // declarations/11-javascript-python-go-equivalence-rules R8

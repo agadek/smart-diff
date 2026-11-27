@@ -51,7 +51,7 @@ Each `JS:STRING_LITERAL` token, which holds its quotes, is decoded and written b
 - `\n \t \r \b \f \v \' \" \\`, `\0` not followed by a digit, `\xHH`, `\uHHHH` and `\u{H…}` up to `10FFFF` are decoded.
 - A line continuation (`\` before a line break), `\1` to `\9`, `\0` followed by a digit, and any other escape keep the literal's text: some are legacy octal, the rest identity escapes whose meaning a reviewer should see.
 - The canonical text writes `"` and `\` as `\"` and `\\`, a line feed and a carriage return as `\n` and `\r`, every other non-printable character, U+2028 and U+2029 included, as `\uXXXX`, and every other character as itself.
-- **Directives.** A string literal that can be a directive keeps its meaning: one whose previous meaningful token is `{`, `;` or none, and whose next is `;`, `}`, a line break or none. Such a literal is rewritten only when neither its body has a backslash nor a quote character of either kind, and then only its quotes change: `'use strict'` and `"use strict"` are the same, `'use\x20strict'` and `'use strict'` are not. Other expression statements in that position are treated the same way, which is conservative.
+- **Directives.** A string literal that can be a directive keeps its meaning: one whose previous meaningful token is `{`, `;`, another string literal (ASI ends a directive without `;`, as in `'use client'` followed by `'use strict'`) or none, and whose next is `;`, `}`, a line break or none. Such a literal is rewritten only when neither its body has a backslash nor a quote character of either kind, and then only its quotes change: `'use strict'` and `"use strict"` are the same, `'use\x20strict'` and `'use strict'` are not. Other expression statements in that position are treated the same way, which is conservative.
 - Template literals are `JS:BACKQUOTE` and `JS:STRING_TEMPLATE_PART` tokens and are never rewritten. JSX attribute values are `XML_ATTRIBUTE_VALUE_TOKEN` tokens in JSX and TSX and are never rewritten either; in a `.ts` file, where `<a b="c"/>` is not JSX, the lexer reads `"c"` as a string literal of a comparison.
 
 ### JavaScript trailing commas (R6)
@@ -70,7 +70,7 @@ Removes a `JS:COMMA` whose next meaningful token is `JS:RPAR`, `JS:RBRACKET` or 
 
 A statement end is `JS:SEMICOLON`, `JS:RBRACE`, the end of the tokens, or a line break followed by a keyword that starts a statement (`const`, `let`, `var`, `function`, `class`, `return`, `throw`, `if`, `for`, `while`, `do`, `try`, `switch`, `break`, `continue`, `import`, `export`) outside `(` and `[`. An identifier on the next line is not trusted: with automatic semicolon insertion and TypeScript's `as` and `satisfies`, it can continue the expression.
 
-After `return` and `throw`, `sameLineAfter` keeps a pair whose content starts on the line after the `(`: without the parentheses, `return` followed by a line break returns `undefined`. This keeps the common `return (` + JSX + `)` layout a change, which is the conservative answer.
+After `return` and `throw`, `sameLineAfter` keeps a pair whose content starts on the line after the `(`, a block comment with a line break counting as one: without the parentheses, `return` followed by a line break returns `undefined`. This keeps the common `return (` + JSX + `)` layout a change, which is the conservative answer.
 
 What the table never matches (R8): an operand, a call's own parentheses and an IIFE (followed by `(` or preceded by a name), an arrow function's parameters (followed by `=>`) and its body (preceded by `=>`), `(0, obj.f)()` (a comma inside), `delete`, `typeof`, `void`, `new` and `await` operands (preceded by the keyword), and a `for` header (preceded by `for`). Template substitutions open with their own token, which is a bracket for the scan.
 
@@ -116,7 +116,7 @@ So `(x,)`, `return x,` (no closing bracket at all), `a[1,]` and `tuple[int,]` st
 | `=` and every augmented assignment (`+=`, `-=`, `*=`, `/=`, `//=`, `%=`, `**=`, `@=`, `&=`, `\|=`, `^=`, `<<=`, `>>=`) | statement end, `,`, `)` |
 | `(`, `,` | `,`, `)` |
 
-A statement end is the end of the tokens, `Py:SEMICOLON`, or `Py:STATEMENT_BREAK`, the zero-length token the lexer puts at the end of each logical line. A line break alone is never a statement end, so a backslash continuation and an implicit line join keep the pair. The `,` row needs the pair directly inside `(` or `[`, as in declarations/09.
+`contentOnOneLine` counts a line break inside a comment too. A statement end is the end of the tokens, `Py:SEMICOLON`, or `Py:STATEMENT_BREAK`, the zero-length token the lexer puts at the end of each logical line. A line break alone is never a statement end, so a backslash continuation and an implicit line join keep the pair. The `,` row needs the pair directly inside `(` or `[`, as in declarations/09.
 
 ### Go numeric literals (R14)
 
@@ -156,6 +156,8 @@ Imports belong to the [file region](../../GLOSSARY.md#file-region) (languages/17
 3. Sort the specs by path text, then alias, and write the block back as `import`, a space, `(`, then for each spec a line break, a tab, the alias and a space when there is one, the path and a `new line` token, then a line break and `)`.
 
 Line breaks between specs are written the same way on both sides, so blank lines between groups do not count; their only meaning is to gofmt. Specs in separate `import` declarations are never merged, and an alias stays with its path.
+
+The rule claims only the same set of imports under the same names (declarations/08 R19). Before Go 1.21, package initialization order could depend on import order, and `_` imports exist for their side effects; the label says nothing about either.
 
 ### Failure
 

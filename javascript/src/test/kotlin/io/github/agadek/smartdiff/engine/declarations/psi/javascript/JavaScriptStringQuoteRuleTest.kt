@@ -49,6 +49,9 @@ class JavaScriptStringQuoteRuleTest : BasePlatformTestCase() {
         assertTrue(sameUnder(rule, "function f() {\n  'use strict'\n  return 1\n}", "function f() {\n  \"use strict\"\n  return 1\n}"))
         assertFalse(sameUnder(rule, "function f() {\n  'use\\x20strict'\n}", "function f() {\n  'use strict'\n}"))
         assertFalse(sameUnder(rule, "'a\"b';", "\"a\\\"b\";"))
+        // A second directive after the first, ended by ASI with no `;`, keeps its meaning too.
+        assertFalse(sameUnder(rule, "'use client'\n'use\\x20strict'\nf()", "'use client'\n'use strict'\nf()"))
+        assertTrue(sameUnder(rule, "'use client'\n'use strict'\nf()", "\"use client\"\n\"use strict\"\nf()"))
     }
 
     // declarations/11-javascript-python-go-equivalence-rules R5
