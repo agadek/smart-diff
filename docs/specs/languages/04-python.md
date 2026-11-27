@@ -41,5 +41,6 @@ Status: implemented, 2026-11-15
 ## References
 
 - [Details](04-python-details.md)
+- [JavaScript, Python and Go equivalence rules](../declarations/11-javascript-python-go-equivalence-rules.md), the opt-in rewrite-only rules for Python
 - [ADR 0003](../../adr/0003-conservative-classification.md)
 - [Roadmap: Python](../../ROADMAP.md#python)

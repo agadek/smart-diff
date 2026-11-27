@@ -23,7 +23,7 @@ Status: implemented, 2026-11-17
 - **R13** The Scala rules are the same in Scala 2 and Scala 3, and line breaks and indentation are compared as for each dialect's [formatting-only](../../GLOSSARY.md#formatting-only) rules ([declarations/07](07-kotlin-scala-formatting.md)).
 - **R14** The Kotlin rules apply in `.kt` files and in `.kts` scripts, Gradle build scripts included.
 - **R15** A Kotlin or Scala declaration never uses another language's rules, and Java declarations are marked as before.
-- **R16** Languages other than Java, Kotlin and Scala never produce rewrite-only declarations.
+- **R16** Languages other than Java, Kotlin and Scala never produce rewrite-only declarations; JavaScript, TypeScript, Python and Go get their rules in [declarations/11](11-javascript-python-go-equivalence-rules.md) (its R22).
 
 ## Out of scope
 

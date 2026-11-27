@@ -13,6 +13,10 @@ import io.github.agadek.smartdiff.engine.api.EquivalenceRule.KOTLIN_NUMERIC_LITE
 import io.github.agadek.smartdiff.engine.api.EquivalenceRule.KOTLIN_REDUNDANT_PARENTHESES
 import io.github.agadek.smartdiff.engine.api.EquivalenceRule.KOTLIN_STRING_ESCAPES
 import io.github.agadek.smartdiff.engine.api.EquivalenceRule.KOTLIN_TEMPLATE_BRACES
+import io.github.agadek.smartdiff.engine.api.EquivalenceRule.PYTHON_NUMERIC_LITERALS
+import io.github.agadek.smartdiff.engine.api.EquivalenceRule.PYTHON_REDUNDANT_PARENTHESES
+import io.github.agadek.smartdiff.engine.api.EquivalenceRule.PYTHON_STRING_QUOTES
+import io.github.agadek.smartdiff.engine.api.EquivalenceRule.PYTHON_TRAILING_COMMAS
 import io.github.agadek.smartdiff.engine.api.EquivalenceRule.SCALA_NUMERIC_LITERALS
 import io.github.agadek.smartdiff.engine.api.EquivalenceRule.SCALA_REDUNDANT_PARENTHESES
 import io.github.agadek.smartdiff.engine.api.EquivalenceRule.SCALA_STRING_ESCAPES
@@ -66,12 +70,56 @@ class RewriteOnlyEngineTest : ProviderTestCase() {
     }
 
     // declarations/08-equivalence-rules R18; declarations/09-kotlin-scala-equivalence-rules R16
-    fun `test a Python file with the same edits stays changed`() {
-        val old = "def hex():\n    return 0x1F\n\n\ndef grouped(a, b):\n    return (a + b)\n"
-        val new = "def hex():\n    return 31\n\n\ndef grouped(a, b):\n    return a + b\n"
-        val result = compare(old, new, "Python", "a.py")
+    fun `test a Groovy file with the same edits stays changed`() {
+        // declarations/11 R22: Python now has rules, so the language without them is Groovy.
+        val old = "class A {\n    int hex() { return 0x1F }\n    int grouped(int a, int b) { return (a + b) }\n}\n"
+        val new = "class A {\n    int hex() { return 31 }\n    int grouped(int a, int b) { return a + b }\n}\n"
+        val result = compare(old, new, "Groovy", "A.groovy")
         assertRules(result, "hex", emptySet(), old, new)
         assertRules(result, "grouped", emptySet(), old, new)
+    }
+
+    // declarations/11-javascript-python-go-equivalence-rules R1, R9 to R12, R21
+    fun `test a Python function with each rule is rewrite-only`() {
+        val old = listOf(
+            "def hex():\n    return 0x1F\n",
+            "def quoted():\n    return 'A\\x21'\n",
+            "def comma(a, b,):\n    return [a, b,]\n",
+            "def grouped(a, b):\n    return (a + b)\n",
+            "def fixed():\n    return 1\n",
+        ).joinToString("\n\n")
+        val new = listOf(
+            "def hex():\n    return 31\n",
+            "def quoted():\n    return \"A!\"\n",
+            "def comma(a, b):\n    return [a, b]\n",
+            "def grouped(a, b):\n    return a + b\n",
+            "def fixed():\n    return 2\n",
+        ).joinToString("\n\n")
+        val result = compare(old, new, "Python", "a.py")
+        assertRules(result, "hex", setOf(PYTHON_NUMERIC_LITERALS), old, new)
+        assertRules(result, "quoted", setOf(PYTHON_STRING_QUOTES), old, new)
+        assertRules(result, "comma", setOf(PYTHON_TRAILING_COMMAS), old, new)
+        assertRules(result, "grouped", setOf(PYTHON_REDUNDANT_PARENTHESES), old, new)
+        assertRules(result, "fixed", emptySet(), old, new)
+    }
+
+    // declarations/11-javascript-python-go-equivalence-rules R1, R11
+    fun `test a Python tuple comma and a comment change stay changed`() {
+        val old = "def single():\n    return (1,)\n\n\ndef noted():\n    return 0x1F  # hex\n"
+        val new = "def single():\n    return (1)\n\n\ndef noted():\n    return 31  # decimal\n"
+        val result = compare(old, new, "Python", "a.py")
+        assertRules(result, "single", emptySet(), old, new)
+        assertRules(result, "noted", emptySet(), old, new)
+    }
+
+    // declarations/11-javascript-python-go-equivalence-rules R21
+    fun `test Python never uses another language's rules`() {
+        // Kotlin's \$ escape is an unknown escape to Python, and a quoted character is a string, not Go's rune.
+        val old = "def dollar():\n    return 'a\\$'\n\n\ndef rune():\n    return '\\x61'\n"
+        val new = "def dollar():\n    return 'a$'\n\n\ndef rune():\n    return 97\n"
+        val result = compare(old, new, "Python", "a.py")
+        assertRules(result, "dollar", emptySet(), old, new)
+        assertRules(result, "rune", emptySet(), old, new)
     }
 
     // declarations/09-kotlin-scala-equivalence-rules R1, R4 to R7, R15

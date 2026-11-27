@@ -100,6 +100,30 @@ class RewriteOnlyOutlineTest {
         )
     }
 
+    // declarations/11-javascript-python-go-equivalence-rules R3
+    @Test
+    fun `a disabled Python rule keeps a Python row changed and leaves Java, JavaScript and Go rows rewrite-only`() {
+        val mixed = result.copy(
+            fileRegion = null,
+            changes = listOf(
+                node("java", setOf(JAVA_REDUNDANT_PARENTHESES)),
+                node("javascript", setOf(EquivalenceRule.JS_TRAILING_COMMAS)),
+                node("python", setOf(EquivalenceRule.PYTHON_TRAILING_COMMAS)),
+                node("go", setOf(EquivalenceRule.GO_TRAILING_COMMAS)),
+            ),
+        )
+        val rows = render(OutlineModel.build(mixed, "", "", formattingInline = true, rewriteOnly = all - EquivalenceRule.PYTHON_TRAILING_COMMAS))
+        assertEquals(
+            """
+            method java()  rewrite-only
+            method javascript()  rewrite-only
+            method python()  changed
+            method go()  rewrite-only
+            """.trimIndent(),
+            rows,
+        )
+    }
+
     // declarations/08-equivalence-rules R15
     @Test
     fun `the summary counts rewrite-only after comment-only`() {

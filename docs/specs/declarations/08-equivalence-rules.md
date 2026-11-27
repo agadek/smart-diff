@@ -30,7 +30,7 @@ Status: implemented, 2026-11-17
 
 ## Out of scope
 
-- Languages other than Java; Kotlin and Scala get theirs in [declarations/09](09-kotlin-scala-equivalence-rules.md), and the others each get their own rules and fixtures later, one language at a time.
+- Languages other than Java; Kotlin and Scala get theirs in [declarations/09](09-kotlin-scala-equivalence-rules.md), JavaScript and TypeScript, Python and Go in [declarations/11](11-javascript-python-go-equivalence-rules.md), and the others each get their own rules and fixtures later, one language at a time.
 - The Changes tree summary and its declaration rows, the merge outline and [three-sided diffs](../../GLOSSARY.md#three-sided-diff), which keep counting rewrite-only declarations as changed.
 - The relationship benchmark and the corpus validation, whose classification does not change.
 - Rewrites that need types or name resolution, such as `this.` qualification, a redundant cast, `final` on a local variable, or a constant replaced by its value.

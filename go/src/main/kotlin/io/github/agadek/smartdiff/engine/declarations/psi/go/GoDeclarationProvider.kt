@@ -11,6 +11,7 @@ import com.intellij.psi.util.PsiTreeUtil
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.GuardedFeature
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
+import io.github.agadek.smartdiff.engine.declarations.model.EquivalenceRuleImpl
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationInfo
 import io.github.agadek.smartdiff.engine.declarations.psi.PsiDeclarationProvider
 
@@ -23,6 +24,9 @@ class GoDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.LINE_BREAK
     override val guardedFeature: GuardedFeature get() = GuardedFeature.GO_PROVIDER
 
     override fun supports(languageId: String): Boolean = languageId == "go"
+
+    // declarations/11 R14 to R19, R21
+    override val equivalenceRules: List<EquivalenceRuleImpl> get() = GoEquivalenceRules.ALL
 
     override fun parse(project: Project, text: CharSequence, fileName: String?, dialect: Language?): PsiFile =
         GoInterop.parse(project, text)

@@ -39,6 +39,7 @@ import com.jetbrains.python.psi.PyWithStatement
 import io.github.agadek.smartdiff.engine.api.DeclarationKind
 import io.github.agadek.smartdiff.engine.api.TextRange
 import io.github.agadek.smartdiff.engine.api.WhitespacePolicy
+import io.github.agadek.smartdiff.engine.declarations.model.EquivalenceRuleImpl
 import io.github.agadek.smartdiff.engine.declarations.psi.DeclarationInfo
 import io.github.agadek.smartdiff.engine.declarations.psi.PsiDeclarationProvider
 
@@ -60,6 +61,9 @@ class PythonDeclarationProvider : PsiDeclarationProvider(WhitespacePolicy.INDENT
             .createFileFromText(fileName ?: "SmartDiff.py", PythonLanguage.getInstance(), text, false, false)
 
     override fun whitespacePolicy(file: PsiFile): WhitespacePolicy = WhitespacePolicy.INDENTATION_SIGNIFICANT
+
+    // declarations/11 R9 to R13, R21
+    override val equivalenceRules: List<EquivalenceRuleImpl> get() = PythonEquivalenceRules.ALL
 
     override fun topLevel(file: PsiFile): List<PsiElement> = members(file)
 

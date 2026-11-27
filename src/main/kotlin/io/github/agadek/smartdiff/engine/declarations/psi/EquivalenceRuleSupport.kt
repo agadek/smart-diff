@@ -2,9 +2,13 @@ package io.github.agadek.smartdiff.engine.declarations.psi
 
 import io.github.agadek.smartdiff.engine.declarations.model.Token
 import io.github.agadek.smartdiff.engine.declarations.model.TokenKind
+import java.math.BigDecimal
+import java.math.BigInteger
+
+// The helpers are public so the javascript and go modules, which compile against the root plugin, share them (declarations/11).
 
 /** Whether the canonical text of an escape rule writes [c] as itself (declarations/08, 09). */
-internal fun printableInLiteral(c: Char): Boolean {
+fun printableInLiteral(c: Char): Boolean {
     if (Character.isISOControl(c) || !Character.isDefined(c)) return false
     return when (Character.getType(c).toByte()) {
         Character.FORMAT, Character.LINE_SEPARATOR, Character.PARAGRAPH_SEPARATOR, Character.SPACE_SEPARATOR -> c == ' '
@@ -13,16 +17,74 @@ internal fun printableInLiteral(c: Char): Boolean {
 }
 
 /** Whether [c] is a hexadecimal digit. */
-internal fun isHexDigit(c: Char): Boolean = c in '0'..'9' || c in 'a'..'f' || c in 'A'..'F'
+fun isHexDigit(c: Char): Boolean = c in '0'..'9' || c in 'a'..'f' || c in 'A'..'F'
+
+/** The exact decimal [value] as a canonical text: equal texts for equal values, short even for a huge exponent. */
+fun canonicalDecimal(value: BigDecimal): String =
+    if (value.signum() == 0) "0" else value.stripTrailingZeros().toString()
 
 /**
- * The redundant parentheses scan shared by the Kotlin and Scala rules (declarations/09 R7, R8, R11, R12): removes, from
+ * The exact value of a hexadecimal floating-point literal's digits after `0x`, such as `1.8p1`, or null when [text] has
+ * no binary exponent (Java and Go).
+ */
+fun hexFloatValue(text: String): BigDecimal? {
+    val p = text.indexOfFirst { it == 'p' || it == 'P' }
+    if (p < 0) return null
+    val mantissa = text.substring(0, p)
+    val exponent = text.substring(p + 1).toInt()
+    val dot = mantissa.indexOf('.')
+    val whole = mantissa.replace(".", "")
+    if (whole.isEmpty() || !whole.all(::isHexDigit)) return null
+    val fractionDigits = if (dot < 0) 0 else mantissa.length - dot - 1
+    val binaryExponent = exponent - 4 * fractionDigits
+    val m = BigDecimal(BigInteger(whole, 16))
+    return if (binaryExponent >= 0) m.multiply(BigDecimal(BigInteger.TWO.pow(binaryExponent)))
+    else m.divide(BigDecimal(BigInteger.TWO.pow(-binaryExponent))) // a power of two always divides exactly
+}
+
+/** Whether [token] is whitespace or a comment, which the scans skip. */
+fun isLayoutToken(token: Token): Boolean = token.kind == TokenKind.WHITESPACE || token.kind == TokenKind.COMMENT
+
+/** The indices of the meaningful tokens of [tokens]: those that are not [layout]. */
+fun meaningfulIndices(tokens: List<Token>, layout: (Token) -> Boolean = ::isLayoutToken): List<Int> =
+    tokens.indices.filter { !layout(tokens[it]) }
+
+/**
+ * Removes every [comma] token whose next meaningful token is one of [closes] and whose previous meaningful token is
+ * none of [notAfter], when [removable] agrees (declarations/11 R6, R11, R16). [removable] gets the meaningful indices,
+ * the comma's position among them and the position of the closing bracket.
+ */
+fun removeTrailingCommas(
+    tokens: List<Token>,
+    comma: String,
+    closes: Set<String>,
+    notAfter: Set<String>,
+    layout: (Token) -> Boolean = ::isLayoutToken,
+    removable: (indices: List<Int>, comma: Int, close: Int) -> Boolean = { _, _, _ -> true },
+): List<Token> {
+    val indices = meaningfulIndices(tokens, layout)
+    val drop = mutableSetOf<Int>()
+    for (position in indices.indices) {
+        val token = tokens[indices[position]]
+        if (token.type != comma) continue
+        val next = indices.getOrNull(position + 1)?.let { tokens[it] } ?: continue
+        if (next.type !in closes) continue
+        val previous = indices.getOrNull(position - 1)?.let { tokens[it] } ?: continue
+        if (previous.type in notAfter) continue
+        if (removable(indices, position, position + 1)) drop += indices[position]
+    }
+    return if (drop.isEmpty()) tokens else tokens.filterIndexed { index, _ -> index !in drop }
+}
+
+/**
+ * The redundant parentheses scan shared by the Kotlin, Scala, JavaScript, Python and Go rules (declarations/09 R7, R8,
+ * R11, R12; declarations/11 R7, R8, R12, R13, R17, R18): removes, from
  * the inside out, a matched pair whose content is not empty and has no [excludedTopLevel] token at its top level and no
  * [excludedAnywhere] token, when the meaningful tokens around it fit one row of [allowedAfter]. A statement end is
  * [STATEMENT_END] in that table: one of [statementEnds], the end of the tokens, or a line break followed by one of
  * [startsStatement] while the pair is not inside `(` or `[`.
  */
-internal class ParenthesesScan(
+class ParenthesesScan(
     private val lpar: String,
     private val rpar: String,
     private val lbracket: String,
@@ -36,6 +98,17 @@ internal class ParenthesesScan(
     private val allowedAfter: (before: String) -> Set<String>?,
     /** Whether the row of [before] also needs the pair to be directly inside `(` or `[` (an argument). */
     private val needsArgumentList: (before: String) -> Boolean,
+    /** Content that starts with one of these tokens keeps its pair (Python's `*` and `**`). */
+    private val excludedFirst: Set<String> = emptySet(),
+    /** Whether content with a line break keeps its pair (Python's implicit line joining). */
+    private val contentOnOneLine: Boolean = false,
+    /** For these tokens before the `(`, a line break between the `(` and its content keeps the pair (JavaScript's ASI). */
+    private val sameLineAfter: Set<String> = emptySet(),
+    /**
+     * The tokens the scan skips, whitespace and comments by default. JavaScript also skips whitespace its provider
+     * marked significant, which keeps its text but not its kind.
+     */
+    private val layout: (Token) -> Boolean = ::isLayoutToken,
 ) {
 
     fun rewrite(tokens: List<Token>): List<Token> {
@@ -46,7 +119,7 @@ internal class ParenthesesScan(
         }
     }
 
-    private fun meaningful(token: Token) = token.kind != TokenKind.WHITESPACE && token.kind != TokenKind.COMMENT
+    private fun meaningful(token: Token) = !layout(token)
 
     /** The innermost removable pair, as the indices of its `(` and `)`, or null when none is. */
     private fun removable(tokens: List<Token>): Pair<Int, Int>? {
@@ -75,6 +148,9 @@ internal class ParenthesesScan(
         val inArgumentList = enclosing == lpar || enclosing == lbracket
         if (needsArgumentList(before) && !inArgumentList) return false
         if (!fitsAfter(tokens, indices, close, allowed, inArgumentList)) return false
+        if (tokens[indices[open + 1]].type in excludedFirst) return false
+        if (contentOnOneLine && hasLineBreak(tokens, indices[open] + 1, indices[close], comments = true)) return false
+        if (before in sameLineAfter && hasLineBreak(tokens, indices[open] + 1, indices[open + 1], comments = true)) return false
         var depth = 0
         for (position in open + 1 until close) {
             val type = tokens[indices[position]].type
@@ -96,10 +172,16 @@ internal class ParenthesesScan(
         if (STATEMENT_END !in allowed) return false
         if (next.type in statementEnds) return true
         if (inArgumentList) return false
-        val lineBreak = (indices[close] + 1 until nextIndex).any { i ->
-            tokens[i].kind == TokenKind.WHITESPACE && (tokens[i].text.contains('\n') || tokens[i].text.contains('\r'))
-        }
-        return lineBreak && startsStatement(next)
+        return hasLineBreak(tokens, indices[close] + 1, nextIndex) && startsStatement(next)
+    }
+
+    /**
+     * Whether a whitespace token from [from] until [until] has a line break; with [comments], also a comment, since a
+     * block comment with a line break ends a statement for JavaScript's ASI (declarations/11 R8).
+     */
+    private fun hasLineBreak(tokens: List<Token>, from: Int, until: Int, comments: Boolean = false): Boolean = (from until until).any { i ->
+        val token = tokens[i]
+        layout(token) && (comments || token.kind != TokenKind.COMMENT) && (token.text.contains('\n') || token.text.contains('\r'))
     }
 
     companion object {
